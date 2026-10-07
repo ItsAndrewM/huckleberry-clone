@@ -49,7 +49,8 @@ Access configuration (all created through the API):
 | Team domain | `https://misty-wildflower-0505.cloudflareaccess.com` |
 | Access app | "BT spike", self-hosted, destination `bt-spike.dinocode.workers.dev` (hostname-based, not worker-level) |
 | AUD tag | `c4145355825538d1636f12261872cbdecec07626bb121a3c30309f5a83e07151` |
-| Login methods | One-time PIN (only one allowed so far, instant redirect). Google pending |
+| Login methods | One-time PIN and Google are both configured. The "BT spike" app still allows only One-time PIN (instant redirect) until Google is enabled on it |
+| Google login method | Added 7 Oct 2026 with PKCE on. Cloudflare's connection test passed and returned the expected name and email. Google side: project "BT Access" (`bt-access-510920`) in Andrew's personal Google account, OAuth consent screen "Baby tracker" (External, **Testing**, both caregivers listed as test users), Web client "Cloudflare Access" with the team domain as JavaScript origin and `<team domain>/cdn-cgi/access/callback` as redirect URI |
 | Policies | "BT caregivers" (allow): armcmillan22@gmail.com, foster.d.emily@gmail.com. "BT admin service token" (service auth): `bt-spike-admin` |
 | Sessions | Global 730 h, app 730 h (the one-month maximum) |
 | Service token | `bt-spike-admin`, Client ID `92e7b7c0380bafbb8b65a2e3ef4e91b4.access`, expires 2027-10-07. Secret in `spike/.admin-token.env` (gitignored, mode 600) |
@@ -148,7 +149,7 @@ Note for the runbook: `onNextSessionRestoreBookmark()` takes effect only after t
 ## Remaining checks — how to run them
 
 1. ~~Zero Trust and the Access app~~ (done; see "Deployed environment").
-2. **Google login method (Andrew, Google Cloud + Zero Trust dashboard):** follow [Cloudflare's Google IdP steps](https://developers.cloudflare.com/cloudflare-one/integrations/identity-providers/google/). JavaScript origin `https://misty-wildflower-0505.cloudflareaccess.com`, redirect URI `https://misty-wildflower-0505.cloudflareaccess.com/cdn-cgi/access/callback`. The client secret goes into the Zero Trust dashboard only. Claude then allows Google on the "BT spike" app.
+2. ~~Google login method~~ (done; see "Deployed environment"). Cloudflare's [Google IdP steps](https://developers.cloudflare.com/cloudflare-one/integrations/identity-providers/google/) leave out one thing: a new External consent screen starts in **Testing**, where only listed test users can sign in. Any future caregiver must be added as a test user, or the app published. Still to do: allow Google on the "BT spike" app.
 3. **S1–S4 on each iPhone:** open the URL in Safari → Share → Add to Home Screen. Open the installed app and use the spike page buttons (results appear in the on-page log; screenshot them):
    - S1: sign in; kill the app; reopen after 1 h; revoke the session in Zero Trust → reopen → tap "Sign in". Record whether it ends signed in inside the standalone window.
    - S2: tap "open WebSocket" → expect `open` and an echo containing your caregiver id.
