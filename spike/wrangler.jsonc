@@ -1,0 +1,38 @@
+// Throwaway spike Worker for Step 0 (docs/implementation-plan.md §2).
+// Not the production config. Deleted once docs/spike-results.md is complete.
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "bt-spike",
+  // Personal account. Pinned so a deploy can never land in another account wrangler is logged into.
+  "account_id": "6624f09210327baade61004af0d9be84",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-08-22",
+  "workers_dev": true,
+  // Only the workers.dev hostname is exposed; it is the one the Access app covers.
+  "preview_urls": false,
+  "assets": {
+    "directory": "./public",
+    "binding": "ASSETS",
+    "not_found_handling": "single-page-application",
+    // D1: only /api/* reaches the Worker first; everything else is Static Assets.
+    "run_worker_first": ["/api/*"]
+  },
+  "durable_objects": {
+    "bindings": [{ "name": "HOUSEHOLD", "class_name": "HouseholdDO" }]
+  },
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["HouseholdDO"] }],
+  "vars": {
+    // Team domain and the "BT spike" Access app's AUD tag. Empty disables JWT verification.
+    "ACCESS_TEAM_DOMAIN": "https://misty-wildflower-0505.cloudflareaccess.com",
+    "ACCESS_AUD": "c4145355825538d1636f12261872cbdecec07626bb121a3c30309f5a83e07151",
+    // Client ID of the admin service token (the JWT's `common_name`), D6/S5.
+    "ADMIN_SERVICE_TOKEN_CN": "92e7b7c0380bafbb8b65a2e3ef4e91b4.access"
+  },
+  // S5: local stub identity for `wrangler dev`. Remove `identity` to check the 401 path.
+  "access": {
+    "dev": {
+      "aud": "spike-local-aud",
+      "identity": { "email": "andrew@example.test", "name": "Andrew (dev stub)" }
+    }
+  }
+}
