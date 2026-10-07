@@ -8,7 +8,7 @@ The spike code lives in `spike/`. It is throwaway and will be deleted once this 
 
 | # | Check | Where it runs | Status |
 |---|---|---|---|
-| S1 | Installed PWA sign-in survives kill/reopen and forced expiry | Deployed + both iPhones | **Pending** (needs Zero Trust org and devices) |
+| S1 | Installed PWA sign-in survives kill/reopen and forced expiry | Deployed + both iPhones | **Forced expiry passes on Andrew's iPhone (Google).** One-hour reopen and Emily's iPhone pending |
 | S2 | WebSocket upgrade from installed PWA authenticates; identity present on upgrade | Deployed + iPhone | **Desktop Chrome passes** (Access JWT verified on the upgrade). iPhone PWA pending |
 | S3 | `opaqueredirect` on expiry vs `TypeError` offline | Deployed + iPhone | **Partly answered.** Signed out, `/api/me` returns 302 to the team login page (cross-origin), so a `redirect: 'manual'` fetch should see `opaqueredirect`. Confirm in the browser |
 | S4 | Does Access gate Static Assets? Does the SW-cached shell open offline / signed out? | Deployed + iPhone | **Partly answered.** Access gates everything on the hostname, including `/`, SPA routes and `/sw.js` (302 to login when signed out). Device test still needed for the offline shell |
@@ -109,6 +109,17 @@ Run with `wrangler dev`, results from `curl`:
 ### S2 — WebSocket through Access (desktop passes; iPhone pending)
 
 A signed-in browser `fetch('/api/spike/identity')` returned `via: "jwt"`, `hasCtxAccess: false`. User-token claims: `email`, `sub` (a stable user UUID), `policy_id` (the "BT caregivers" policy), `country`, `identity_nonce`, `type: "app"`, and `aud` as an **array**. The service token's `aud` was a string. `exp - iat` = 730 h. The WebSocket results are under S7.
+
+### S1 — installed iPhone PWA sign-in (Andrew's iPhone: forced expiry passes)
+
+1. Andrew signed in with Google in Safari (Access log 20:12:20 UTC, `connection: google`), then added the app to the Home Screen.
+2. Claude revoked his Access sessions through the API (`POST /access/organizations/revoke_user`, 20:13:54 UTC).
+3. Force-quitting and reopening the installed app showed Cloudflare's login page. iOS displays that out-of-scope domain in a minimal in-app browser bar inside the standalone app, not in Safari.
+4. He signed in with Google there (Access log 20:16:28 UTC, `connection: google`, allowed). He landed back on the app page reading "(standalone, SW-controlled)", and `/api/me` returned 200 as `cg-andrew`.
+5. Inside the standalone app, `/api/spike/identity` returned `via: "jwt"`, `hasCtxAccess: false`, and a token issued at the re-login (`exp - iat` = 730 h).
+6. While signed in, "Sign in (/api/login)" just reloads the page: the Worker 302s straight back to the return path.
+
+Still to do: the one-hour reopen without a revoke, and the same run on Emily's iPhone.
 
 ### S6 — Effect http-api + sql-sqlite-do + `transactionSync` (pass)
 
