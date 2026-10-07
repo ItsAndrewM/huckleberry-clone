@@ -2,7 +2,7 @@
 
 Gate for M1 (see `implementation-plan.md` §2). M1 starts only when every row below has a recorded result and the S1/S2 fallback decision is made.
 
-**Gate pending: Emily's S1 forced logout and one-hour reopen.** Everything else has passed and both fallback decisions are recorded at the end.
+**Gate pending: Emily's S1 one-hour reopen** (due after 00:50 UTC on 8 Oct). Everything else has passed and both fallback decisions are recorded at the end.
 
 Device coverage, decided by Andrew on 7 Oct 2026: S1 checks how iOS keeps the Access session in an installed app, which can differ per phone (iOS version, Safari settings), so it runs on both iPhones. S2–S4 test WebKit and app behaviour that both phones share, so one phone each is enough: S2 on Emily's, S3 and S4 on Andrew's.
 
@@ -12,7 +12,7 @@ The spike code lives in `spike/`. It is throwaway and will be deleted once this 
 
 | # | Check | Where it runs | Status |
 |---|---|---|---|
-| S1 | Installed PWA sign-in survives kill/reopen and forced expiry | Deployed + both iPhones | **Andrew's iPhone passes; Emily's pending.** Andrew (Google): install and sign-in, forced expiry with re-login inside the installed app, and a reopen more than an hour later still signed in. Emily (Google): install and sign-in pass; forced expiry and the one-hour reopen are still to run |
+| S1 | Installed PWA sign-in survives kill/reopen and forced expiry | Deployed + both iPhones | **Andrew's iPhone passes; Emily's pending.** Andrew (Google): install and sign-in, forced expiry with re-login inside the installed app, and a reopen more than an hour later still signed in. Emily (Google): install and sign-in, and forced expiry with re-login inside the installed app, pass; the one-hour reopen is still to run |
 | S2 | WebSocket upgrade from installed PWA authenticates; identity present on upgrade | Deployed + iPhone | **Pass** (one iPhone, by decision): desktop Chrome, and the installed PWA on Emily's iPhone (Access JWT verified on the upgrade, socket tagged `cg-emily`). No ticket fallback needed |
 | S3 | `opaqueredirect` on expiry vs `TypeError` offline | Deployed + iPhone | **Pass** (one iPhone, by decision; reported by Andrew on his; no screenshot). Signed out, `/api/me` returns 302 to the team login page (cross-origin), which a `redirect: 'manual'` fetch sees as `opaqueredirect` |
 | S4 | Does Access gate Static Assets? Does the SW-cached shell open offline / signed out? | Deployed + iPhone | **Pass** (one iPhone, by decision; offline reopen reported by Andrew on his; no screenshot). Access gates everything on the hostname, including `/`, SPA routes and `/sw.js` (302 to login when signed out). Offline, the installed app opens the cached shell |
@@ -129,7 +129,9 @@ A signed-in browser `fetch('/api/spike/identity')` returned `via: "jwt"`, `hasCt
 
 **Emily's iPhone:** installed the app and signed in with Google (Access log 20:48:21 UTC, `connection: google`, allowed; her token's `iat` matches). The installed app reads "(standalone, SW-controlled)", `/api/me` returns 200 as `cg-emily`, and identity arrives `via: "jwt"` under the "BT caregivers" policy.
 
-**Still to run on Emily's iPhone:** forced expiry (Claude revokes her Access sessions; she reopens the installed app, signs in with Google and should land back inside it) and, an hour after that sign-in, a reopen that should still be signed in.
+**Emily's forced expiry (pass):** Claude revoked her Access sessions at 23:44:34 UTC. She reopened the installed app, signed in with Google (Access log 23:49:53 UTC, `connection: google`, allowed) and landed back inside it: "(standalone, SW-controlled)", `/api/me` 200 as `cg-emily`, identity `via: "jwt"` with `iat` matching the login and `exp - iat` = 730 h.
+
+**Still to run on Emily's iPhone:** a reopen more than an hour after the 23:49:53 UTC sign-in, which should still be signed in.
 
 **One-hour reopen (Andrew's iPhone):** reopened more than an hour after the 20:16:28 UTC sign-in and was still signed in. The Access log shows no further login by Andrew between 20:16:28 and 23:21 UTC, so the installed app kept and reused the Access session cookie across that time.
 
@@ -173,7 +175,7 @@ Note for the runbook: `onNextSessionRestoreBookmark()` takes effect only after t
 
 1. ~~Zero Trust and the Access app~~ (done; see "Deployed environment").
 2. ~~Google login method~~ (done; see "Deployed environment"). Cloudflare's [Google IdP steps](https://developers.cloudflare.com/cloudflare-one/integrations/identity-providers/google/) leave out one thing: a new External consent screen starts in **Testing**, where only listed test users can sign in. Any future caregiver must be added as a test user, or the app published. Google is now allowed on the "BT spike" app next to the PIN.
-3. **S1–S4 on the iPhones** (see Results). S1 runs on both phones; S2–S4 ran on one phone each, by Andrew's decision. Still to do: Emily's S1 forced expiry and one-hour reopen. The steps: open the URL in Safari → Share → Add to Home Screen. Open the installed app and use the spike page buttons (results appear in the on-page log; screenshot them):
+3. **S1–S4 on the iPhones** (see Results). S1 runs on both phones; S2–S4 ran on one phone each, by Andrew's decision. Still to do: Emily's S1 one-hour reopen. The steps: open the URL in Safari → Share → Add to Home Screen. Open the installed app and use the spike page buttons (results appear in the on-page log; screenshot them):
    - S1: sign in; kill the app; reopen after 1 h; revoke the session in Zero Trust → reopen → tap "Sign in". Record whether it ends signed in inside the standalone window.
    - S2: tap "open WebSocket" → expect `open` and an echo containing your caregiver id.
    - S3: after revoking the session, tap "fetch /api/me" → expect `type: "opaqueredirect"`. In airplane mode → expect `TypeError`.
@@ -183,5 +185,5 @@ Note for the runbook: `onNextSessionRestoreBookmark()` takes effect only after t
 
 ## Decisions to record before M1
 
-- **S1 fallback: Google (provisional until Emily's S1 is in).** Google sign-in works inside the installed app on both iPhones, and on Andrew's it survived a forced logout and a one-hour reopen, so the one-time-PIN fallback is not needed so far. The spike's Access app still offers the PIN; M1.16 decides whether production keeps it as a backup.
+- **S1 fallback: Google (provisional until Emily's one-hour reopen is in).** Google sign-in works inside the installed app on both iPhones and recovered from a forced logout on both; on Andrew's it also survived a one-hour reopen. The one-time-PIN fallback is not needed so far. The spike's Access app still offers the PIN; M1.16 decides whether production keeps it as a backup.
 - **S2 fallback: direct Access on the upgrade request.** The installed PWA's WebSocket upgrade authenticates through the hostname Access app and the Worker's JWT check. No `ws-ticket` endpoint.

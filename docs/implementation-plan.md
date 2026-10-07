@@ -265,7 +265,7 @@ Spec scenarios that become named fixtures: the 15+15 min / 50+50 mL feed (AC 4),
 
 | Item | Impact | Mitigation / owner |
 |---|---|---|
-| iOS standalone PWA cookie jar vs the Access/Google bounce (S1) | Could invalidate the auth design | **Mostly resolved in Step 0.** Google sign-in works inside the installed PWA on both iPhones. On Andrew's it also recovered from a forced logout and survived a reopen more than an hour later; the same two checks on Emily's are pending. OTP fallback not needed so far |
+| iOS standalone PWA cookie jar vs the Access/Google bounce (S1) | Could invalidate the auth design | **Mostly resolved in Step 0.** Google sign-in works inside the installed PWA on both iPhones. Both recovered from a forced logout. Andrew's also survived a reopen more than an hour later; Emily's one-hour reopen is pending. OTP fallback not needed so far |
 | Effect 4 and `@effect/sql-sqlite-do` are days old | API churn, bundle size | Pin exact versions. D2 keeps Effect out of the transactional core, so swapping the HTTP layer is cheap |
 | Access on WebSocket upgrades from the installed PWA (S2) | Live updates | **Resolved in Step 0.** Works from desktop Chrome and the installed iPhone PWA with the hostname app and JWT verification. No ticket needed |
 | Static Assets and Access interaction (S4) | Assets get no `ctx.access`; the shell and `/sw.js` require sign-in | D5 verifies the JWT. The service worker installs and updates only while signed in. The installed app's cached shell opens offline (S4 pass) |
