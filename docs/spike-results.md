@@ -9,12 +9,12 @@ The spike code lives in `spike/`. It is throwaway and will be deleted once this 
 | # | Check | Where it runs | Status |
 |---|---|---|---|
 | S1 | Installed PWA sign-in survives kill/reopen and forced expiry | Deployed + both iPhones | **Pending** (needs Zero Trust org and devices) |
-| S2 | WebSocket upgrade from installed PWA authenticates; identity present on upgrade | Deployed + iPhone | **Pending**. Server side is ready (`/api/ws`; `/api/spike/identity` reports `via`, `hasCtxAccess`, `hasJwtHeader`, `upgrade`) |
+| S2 | WebSocket upgrade from installed PWA authenticates; identity present on upgrade | Deployed + iPhone | **Desktop Chrome passes** (Access JWT verified on the upgrade). iPhone PWA pending |
 | S3 | `opaqueredirect` on expiry vs `TypeError` offline | Deployed + iPhone | **Partly answered.** Signed out, `/api/me` returns 302 to the team login page (cross-origin), so a `redirect: 'manual'` fetch should see `opaqueredirect`. Confirm in the browser |
 | S4 | Does Access gate Static Assets? Does the SW-cached shell open offline / signed out? | Deployed + iPhone | **Partly answered.** Access gates everything on the hostname, including `/`, SPA routes and `/sw.js` (302 to login when signed out). Device test still needed for the offline shell |
 | S5 | `access.dev` stub works; removing it → 401. Service token identity distinguishable | Local + deployed | **Pass** |
 | S6 | Effect 4 `http-api` + `@effect/sql-sqlite-do` in a DO with a `transactionSync` core; bundle size | Local | **Pass** |
-| S7 | Hibernation keeps tags; `getWebSockets(tag)` closes by caregiver | Local (workerd eviction) | **Pass** locally; re-confirm on deploy |
+| S7 | Hibernation keeps tags; `getWebSockets(tag)` closes by caregiver | Local + deployed | **Pass** (deployed: real hibernation, then close-on-disable from the woken instance) |
 | S8 | PITR bookmark → restore on a test DO | Deployed | **Pass** |
 | — | Access + Workers constraints (new) | Docs, then deployed | **Confirmed: with Static Assets the Worker gets no `ctx.access`.** D5 must use JWT verification. See "Access on Workers" |
 
@@ -105,6 +105,10 @@ Run with `wrangler dev`, results from `curl`:
 - The service token cannot use caregiver routes (`/api/me` → 401: no email). `/api/admin/*` accepts only this Client ID.
 - Signed out, every path (assets and API) → 302 to `misty-wildflower-0505.cloudflareaccess.com/cdn-cgi/access/login/bt-spike.dinocode.workers.dev`.
 
+### S2 — WebSocket through Access (desktop passes; iPhone pending)
+
+A signed-in browser `fetch('/api/spike/identity')` returned `via: "jwt"`, `hasCtxAccess: false`. User-token claims: `email`, `sub` (a stable user UUID), `policy_id` (the "BT caregivers" policy), `country`, `identity_nonce`, `type: "app"`, and `aud` as an **array**. The service token's `aud` was a string. `exp - iat` = 730 h. The WebSocket results are under S7.
+
 ### S6 — Effect http-api + sql-sqlite-do + `transactionSync` (pass)
 
 - `HttpApiBuilder.layer(Api)` + `HttpRouter.toWebHandler(..., HttpServer.layerServices)` runs inside a DO. `layerServices` supplies a no-op FileSystem, so no Node APIs are needed and no `nodejs_compat` flag.
@@ -123,7 +127,10 @@ Run with `wrangler dev`, results from `curl`:
 - `ctx.acceptWebSocket(server, ["caregiver:<id>"])` + `serializeAttachment` works. `getWebSockets("caregiver:<id>")` returns only that caregiver's sockets, and closing them (code 4401) leaves the other caregiver connected.
 - `evictDurableObject(stub)` (default `webSockets: "hibernate"`) tears down the instance while the client socket stays open. The next message wakes a **new** instance (different in-memory id), and the attachment and tags are intact. The woken instance can still close by tag.
 - A socket upgrade for an unknown caregiver → 401.
-- Re-confirm on the deployed Worker as part of S2 (leave the PWA idle > 10 s, then send).
+- **Deployed (desktop Chrome, signed in with the one-time PIN as armcmillan22@gmail.com):**
+  1. `wss://bt-spike.dinocode.workers.dev/api/ws` opened through the hostname Access app. The Worker verified the Access JWT on the upgrade request, and the DO tagged the socket `caregiver:cg-andrew`. Echo round trip ≈ 40 ms.
+  2. After ~40 s idle, the next message was answered by a **different** DO instance (`590c6524…` → `f7c630bb…`). The client socket never closed, and the attachment (`cg-andrew`, email, `connectedAt`) was intact.
+  3. `POST /api/admin/caregiver/disable` (service token) returned `closedSockets: 1`. The browser received close code **4401** "caregiver disabled". Re-seeding re-enabled the caregiver and `/api/me` returned 200 again.
 
 ### S8 — point-in-time recovery (pass)
 
