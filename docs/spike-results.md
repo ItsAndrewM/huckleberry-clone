@@ -69,7 +69,7 @@ Spike response:
 - **Confirmed on deploy:** `/api/spike/identity` returned `hasCtxAccess: false`, `hasJwtHeader: true`, `via: "jwt"`. The real Access JWT verified against the team JWKS and AUD.
 - The deployed JWT's `aud` was a **string**, while the docs show an array; `jose` accepts both. A service-token JWT's lifetime (`exp - iat`) equals the app session (730 h).
 
-Plan changes this implies (to apply before M1):
+Plan changes this implies (applied to `implementation-plan.md` on 7 Oct 2026):
 
 1. **D5:** "The Worker verifies the Access JWT (`Cf-Access-Jwt-Assertion`) against the team JWKS, the team issuer and the app's AUD tag." Everything else in D5 stands.
 2. **Step 0 setup / M1.16:** protect the app with a hostname-based self-hosted Access application, not a worker-level policy (WebSockets).
