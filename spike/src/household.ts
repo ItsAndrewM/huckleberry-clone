@@ -161,6 +161,9 @@ export class HouseholdDO extends DurableObject<Env> {
     const url = new URL(request.url)
     if (url.pathname === "/api/ws") return this.acceptSocket(request)
     if (url.pathname === "/api/spike/sockets") {
+      if (caregiverFor(this.ctx.storage.sql, request.headers.get("x-bt-email") ?? undefined) === undefined) {
+        return Response.json({ _tag: "Unauthorized" }, { status: 401 })
+      }
       const tag = url.searchParams.get("tag") ?? undefined
       return Response.json({ count: this.ctx.getWebSockets(tag).length })
     }

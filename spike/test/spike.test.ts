@@ -154,7 +154,8 @@ describe("S7 hibernatable sockets tagged by caregiver", () => {
     andrew1.send("ping")
     expect(await reply).toMatchObject({ echo: "ping", attachment: { caregiverId: "cg-andrew" } })
 
-    const counts = async (tag: string) => (await (await stub().fetch(`${BASE}/api/spike/sockets?tag=${tag}`)).json<{ count: number }>()).count
+    const counts = async (tag: string) =>
+      (await (await asCaregiver("emily@example.test", `/api/spike/sockets?tag=${tag}`)).json<{ count: number }>()).count
     expect(await counts("caregiver:cg-andrew")).toBe(2)
     expect(await counts("caregiver:cg-emily")).toBe(1)
 
@@ -188,6 +189,14 @@ describe("S7 hibernatable sockets tagged by caregiver", () => {
     expect(await stub().disableCaregiver("andrew@example.test")).toBe(1)
     expect(await andrewClosed).toBe(4401)
     emily.close()
+  })
+
+  it("socket counts require an active caregiver", async () => {
+    expect((await asCaregiver("stranger@example.test", "/api/spike/sockets")).status).toBe(401)
+    expect((await stub().fetch(`${BASE}/api/spike/sockets`)).status).toBe(401)
+    expect((await asCaregiver("emily@example.test", "/api/spike/sockets")).status).toBe(200)
+    await stub().disableCaregiver("emily@example.test")
+    expect((await asCaregiver("emily@example.test", "/api/spike/sockets")).status).toBe(401)
   })
 
   it("rejects a socket for an unknown caregiver", async () => {

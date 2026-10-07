@@ -143,7 +143,7 @@ On the deployed DO, using the service token:
 
 Locally, `getCurrentBookmark()` returns `00000000-00000000-00000000-00000000000000000000000000000000` and `getBookmarkForTime()` throws *"This Durable Object's storage back-end does not implement point-in-time recovery."* Must be run against a deployed DO.
 
-Note for the runbook: `onNextSessionRestoreBookmark()` takes effect only after the DO restarts, and `ctx.abort()` throws to its caller by design. The spike splits this into two RPCs: `pitrScheduleRestore(bookmark)` returns the undo bookmark, then `restart()` aborts (its error is expected and ignored). M5.3's script should do the same and verify by reading data back.
+Note for the runbook: `onNextSessionRestoreBookmark()` takes effect only after the DO restarts, and `ctx.abort()` throws to its caller by design. The spike splits this into two RPCs: `pitrScheduleRestore(bookmark)` returns the undo bookmark, then `restart()` aborts (its error is expected and ignored). M5.3's script should do the same and verify by reading data back. It should also cover an interruption between the two calls, and afterwards revalidate caregiver `active` state and close sockets of caregivers the restore disabled, since a restore can change who is allowed in.
 
 ## Remaining checks — how to run them
 
