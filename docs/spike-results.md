@@ -2,16 +2,18 @@
 
 Gate for M1 (see `implementation-plan.md` §2). M1 starts only when every row below has a recorded result and the S1/S2 fallback decision is made.
 
+**Gate cleared on 7 Oct 2026.** Every check passes and both fallback decisions are recorded at the end. The remaining Step 0 housekeeping is tearing down the spike.
+
 The spike code lives in `spike/`. It is throwaway and will be deleted once this page is complete. Run it with `cd spike && pnpm install && pnpm test`.
 
 ## Status
 
 | # | Check | Where it runs | Status |
 |---|---|---|---|
-| S1 | Installed PWA sign-in survives kill/reopen and forced expiry | Deployed + both iPhones | **Passes on both iPhones with Google**: forced expiry and re-login inside the installed app (Andrew), install and sign-in (Emily). The one-hour reopen is **deferred**: not yet run on either phone |
+| S1 | Installed PWA sign-in survives kill/reopen and forced expiry | Deployed + both iPhones | **Pass** with Google on both iPhones: install and sign-in (both), forced expiry with re-login inside the installed app (Andrew), and a reopen more than an hour later still signed in (Andrew) |
 | S2 | WebSocket upgrade from installed PWA authenticates; identity present on upgrade | Deployed + iPhone | **Pass**: desktop Chrome, and the installed PWA on Emily's iPhone (Access JWT verified on the upgrade, socket tagged `cg-emily`). No ticket fallback needed |
-| S3 | `opaqueredirect` on expiry vs `TypeError` offline | Deployed + iPhone | **Partly answered.** Signed out, `/api/me` returns 302 to the team login page (cross-origin), so a `redirect: 'manual'` fetch should see `opaqueredirect`. Confirm in the browser |
-| S4 | Does Access gate Static Assets? Does the SW-cached shell open offline / signed out? | Deployed + iPhone | **Partly answered.** Access gates everything on the hostname, including `/`, SPA routes and `/sw.js` (302 to login when signed out). Device test still needed for the offline shell |
+| S3 | `opaqueredirect` on expiry vs `TypeError` offline | Deployed + iPhone | **Pass** (reported by Andrew on his iPhone; no screenshot). Signed out, `/api/me` returns 302 to the team login page (cross-origin), which a `redirect: 'manual'` fetch sees as `opaqueredirect` |
+| S4 | Does Access gate Static Assets? Does the SW-cached shell open offline / signed out? | Deployed + iPhone | **Pass** (offline reopen reported by Andrew on his iPhone; no screenshot). Access gates everything on the hostname, including `/`, SPA routes and `/sw.js` (302 to login when signed out). Offline, the installed app opens the cached shell |
 | S5 | `access.dev` stub works; removing it → 401. Service token identity distinguishable | Local + deployed | **Pass** |
 | S6 | Effect 4 `http-api` + `@effect/sql-sqlite-do` in a DO with a `transactionSync` core; bundle size | Local | **Pass** |
 | S7 | Hibernation keeps tags; `getWebSockets(tag)` closes by caregiver | Local + deployed | **Pass** (deployed: real hibernation, then close-on-disable from the woken instance) |
@@ -125,7 +127,7 @@ A signed-in browser `fetch('/api/spike/identity')` returned `via: "jwt"`, `hasCt
 
 **Emily's iPhone:** installed the app and signed in with Google (Access log 20:48:21 UTC, `connection: google`, allowed; her token's `iat` matches). The installed app reads "(standalone, SW-controlled)", `/api/me` returns 200 as `cg-emily`, and identity arrives `via: "jwt"` under the "BT caregivers" policy.
 
-**Deferred:** the one-hour reopen without a revoke has not been run on either phone. It is the only part of S1 that shows whether iOS keeps the Access cookie in an installed app over time; run it before M1.16.
+**One-hour reopen (Andrew's iPhone):** reopened more than an hour after the 20:16:28 UTC sign-in and was still signed in. The Access log shows no further login by Andrew between 20:16:28 and 23:21 UTC, so the installed app kept and reused the Access session cookie across that time.
 
 ### S6 — Effect http-api + sql-sqlite-do + `transactionSync` (pass)
 
@@ -167,7 +169,7 @@ Note for the runbook: `onNextSessionRestoreBookmark()` takes effect only after t
 
 1. ~~Zero Trust and the Access app~~ (done; see "Deployed environment").
 2. ~~Google login method~~ (done; see "Deployed environment"). Cloudflare's [Google IdP steps](https://developers.cloudflare.com/cloudflare-one/integrations/identity-providers/google/) leave out one thing: a new External consent screen starts in **Testing**, where only listed test users can sign in. Any future caregiver must be added as a test user, or the app published. Google is now allowed on the "BT spike" app next to the PIN.
-3. **S1–S4 on each iPhone:** open the URL in Safari → Share → Add to Home Screen. Open the installed app and use the spike page buttons (results appear in the on-page log; screenshot them):
+3. ~~S1–S4 on each iPhone~~ (done; see Results). For reference, the steps were: open the URL in Safari → Share → Add to Home Screen. Open the installed app and use the spike page buttons (results appear in the on-page log; screenshot them):
    - S1: sign in; kill the app; reopen after 1 h; revoke the session in Zero Trust → reopen → tap "Sign in". Record whether it ends signed in inside the standalone window.
    - S2: tap "open WebSocket" → expect `open` and an echo containing your caregiver id.
    - S3: after revoking the session, tap "fetch /api/me" → expect `type: "opaqueredirect"`. In airplane mode → expect `TypeError`.
@@ -177,5 +179,5 @@ Note for the runbook: `onNextSessionRestoreBookmark()` takes effect only after t
 
 ## Decisions to record before M1
 
-- S1 fallback (Google vs one-time PIN): _pending S1_
-- S2 fallback (direct Access on upgrade vs `ws-ticket`): _pending S2_
+- **S1 fallback: Google.** Google sign-in works inside the installed app on both iPhones, so the one-time-PIN fallback is not needed. The spike's Access app still offers the PIN; M1.16 decides whether production keeps it as a backup.
+- **S2 fallback: direct Access on the upgrade request.** The installed PWA's WebSocket upgrade authenticates through the hostname Access app and the Worker's JWT check. No `ws-ticket` endpoint.

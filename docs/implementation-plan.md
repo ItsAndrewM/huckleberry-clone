@@ -265,10 +265,10 @@ Spec scenarios that become named fixtures: the 15+15 min / 50+50 mL feed (AC 4),
 
 | Item | Impact | Mitigation / owner |
 |---|---|---|
-| iOS standalone PWA cookie jar vs the Access/Google bounce (S1) | Could invalidate the auth design | Spike first; OTP fallback is pre-agreed |
+| iOS standalone PWA cookie jar vs the Access/Google bounce (S1) | Could invalidate the auth design | **Resolved in Step 0.** Google sign-in works inside the installed PWA on both iPhones, survives a reopen more than an hour later, and recovers from a forced logout. OTP fallback not needed |
 | Effect 4 and `@effect/sql-sqlite-do` are days old | API churn, bundle size | Pin exact versions. D2 keeps Effect out of the transactional core, so swapping the HTTP layer is cheap |
-| Access on WebSocket upgrades from the installed PWA (S2) | Live updates | Desktop Chrome confirmed with the hostname app and JWT verification. iPhone PWA pending; ticket fallback if it fails |
-| Static Assets and Access interaction (S4) | Assets get no `ctx.access`; the shell and `/sw.js` require sign-in | D5 verifies the JWT. The service worker installs and updates only while signed in; the offline-shell device check is still pending |
+| Access on WebSocket upgrades from the installed PWA (S2) | Live updates | **Resolved in Step 0.** Works from desktop Chrome and the installed iPhone PWA with the hostname app and JWT verification. No ticket needed |
+| Static Assets and Access interaction (S4) | Assets get no `ctx.access`; the shell and `/sw.js` require sign-in | D5 verifies the JWT. The service worker installs and updates only while signed in. The installed app's cached shell opens offline (S4 pass) |
 | Import source unknown | M2 blocked | Ask now; M3 can go first |
 | WHO extreme-value handling and dataset choice | Wrong percentiles | M4.2 gate; display stays off until it passes |
 | Two-person, single-environment ops | A bad migration hits live data | Migrations are forward-only and tested against an export of production data in a preview DO before deploy. Take a PITR bookmark before every deploy (add to the deploy script) |
