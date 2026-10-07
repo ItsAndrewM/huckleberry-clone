@@ -1,10 +1,14 @@
 // Worker entry for the spike. Mirrors the production shape planned for M1.4:
 // Access check -> header hygiene -> forward to the single household DO (D1, D5, D6).
+import { resolveIdentity, stringClaim } from "./access.ts"
+
 export { HouseholdDO } from "./household.ts"
 
 export interface Env {
   ASSETS: Fetcher
   HOUSEHOLD: DurableObjectNamespace<import("./household.ts").HouseholdDO>
+  ACCESS_TEAM_DOMAIN: string
+  ACCESS_AUD: string
   ADMIN_SERVICE_TOKEN_CN: string
 }
 
@@ -26,26 +30,24 @@ export const safeReturnPath = (raw: string | null): string => {
   return raw
 }
 
-/**
- * Service tokens show up in `ctx.access` without an email; the Common Name is
- * what distinguishes them (S5). The exact field is recorded in spike-results.md.
- */
-const serviceTokenName = (identity: CloudflareAccessIdentity): string | undefined => {
-  const cn = identity["common_name"] ?? identity["service_token_id"]
-  return typeof cn === "string" && cn !== "" ? cn : undefined
-}
-
 export default {
   async fetch(request, env, ctx): Promise<Response> {
     const url = new URL(request.url)
     if (!url.pathname.startsWith("/api/")) return env.ASSETS.fetch(request)
 
-    const identity = await ctx.access?.getIdentity()
-    if (identity === undefined) return json(401, { _tag: "Unauthorized" })
+    const resolved = await resolveIdentity(request, env, ctx)
+    if (resolved === undefined) return json(401, { _tag: "Unauthorized" })
+    const { claims } = resolved
 
     // Spike-only: echo exactly what Access gives us, for S2/S5 records.
     if (url.pathname === "/api/spike/identity") {
-      return json(200, { aud: ctx.access?.aud, identity, upgrade: request.headers.get("upgrade") })
+      return json(200, {
+        via: resolved.via,
+        hasCtxAccess: ctx.access !== undefined,
+        hasJwtHeader: request.headers.has("cf-access-jwt-assertion"),
+        upgrade: request.headers.get("upgrade"),
+        claims,
+      })
     }
 
     if (url.pathname === "/api/login") {
@@ -58,8 +60,9 @@ export default {
     const stub = env.HOUSEHOLD.get(env.HOUSEHOLD.idFromName("household"))
 
     if (url.pathname.startsWith("/api/admin/")) {
-      const token = serviceTokenName(identity)
-      if (token === undefined || env.ADMIN_SERVICE_TOKEN_CN === "" || token !== env.ADMIN_SERVICE_TOKEN_CN) {
+      // Service-token JWTs carry the token's Client ID as `common_name` and an empty `sub`.
+      const clientId = stringClaim(claims, "common_name")
+      if (clientId === undefined || env.ADMIN_SERVICE_TOKEN_CN === "" || clientId !== env.ADMIN_SERVICE_TOKEN_CN) {
         return json(403, { _tag: "Forbidden" })
       }
       if (url.pathname === "/api/admin/caregiver/disable" && request.method === "POST") {
@@ -74,15 +77,18 @@ export default {
       if (url.pathname === "/api/admin/pitr/bookmark") return json(200, await stub.pitrBookmark())
       if (url.pathname === "/api/admin/pitr/restore" && request.method === "POST") {
         const { bookmark } = await request.json<{ bookmark: string }>()
-        return json(200, await stub.pitrRestore(bookmark))
+        const { undoBookmark } = await stub.pitrScheduleRestore(bookmark)
+        await stub.restart().catch(() => undefined)
+        return json(200, { undoBookmark, restarted: true })
       }
       return json(404, { _tag: "NotFound" })
     }
 
-    if (typeof identity.email !== "string" || identity.email === "") return json(401, { _tag: "Unauthorized" })
+    const email = stringClaim(claims, "email")
+    if (email === undefined) return json(401, { _tag: "Unauthorized" })
 
     const headers = stripInternalHeaders(request)
-    headers.set("x-bt-email", identity.email.toLowerCase())
+    headers.set("x-bt-email", email.toLowerCase())
     return stub.fetch(new Request(request, { headers }))
   },
 } satisfies ExportedHandler<Env>

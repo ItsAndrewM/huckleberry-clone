@@ -215,15 +215,20 @@ export class HouseholdDO extends DurableObject<Env> {
   }
 
   // S8: point-in-time recovery.
-  async pitrBookmark(): Promise<{ bookmark: string; counter: unknown }> {
+  async pitrBookmark(): Promise<{ bookmark: string; counter: { value: number; version: number } }> {
     const bookmark = await this.ctx.storage.getCurrentBookmark()
-    const counter = this.ctx.storage.sql.exec("SELECT value, version FROM counter WHERE id = 1").one()
-    return { bookmark, counter }
+    const counter = this.ctx.storage.sql
+      .exec<{ value: number; version: number }>("SELECT value, version FROM counter WHERE id = 1")
+      .one()
+    return { bookmark, counter: { value: counter.value, version: counter.version } }
   }
 
-  async pitrRestore(bookmark: string): Promise<{ undoBookmark: string }> {
-    const undoBookmark = await this.ctx.storage.onNextSessionRestoreBookmark(bookmark)
-    this.ctx.abort("restoring PITR bookmark")
-    return { undoBookmark }
+  async pitrScheduleRestore(bookmark: string): Promise<{ undoBookmark: string }> {
+    return { undoBookmark: await this.ctx.storage.onNextSessionRestoreBookmark(bookmark) }
+  }
+
+  // The restore applies on the next session start; abort() throws to the caller by design.
+  restart(): void {
+    this.ctx.abort("restart to apply PITR restore")
   }
 }
