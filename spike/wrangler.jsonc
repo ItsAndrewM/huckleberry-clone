@@ -1,0 +1,32 @@
+// Throwaway spike Worker for Step 0 (docs/implementation-plan.md §2).
+// Not the production config. Deleted once docs/spike-results.md is complete.
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "bt-spike",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-08-22",
+  "workers_dev": true,
+  "assets": {
+    "directory": "./public",
+    "binding": "ASSETS",
+    "not_found_handling": "single-page-application",
+    // D1: only /api/* reaches the Worker first; everything else is Static Assets.
+    "run_worker_first": ["/api/*"]
+  },
+  "durable_objects": {
+    "bindings": [{ "name": "HOUSEHOLD", "class_name": "HouseholdDO" }]
+  },
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["HouseholdDO"] }],
+  "vars": {
+    // Common Name of the Access service token used by the admin script (D6, S5).
+    // Filled in after the token is created in Zero Trust.
+    "ADMIN_SERVICE_TOKEN_CN": ""
+  },
+  // S5: local stub identity for `wrangler dev`. Remove `identity` to check the 401 path.
+  "access": {
+    "dev": {
+      "aud": "spike-local-aud",
+      "identity": { "email": "andrew@example.test", "name": "Andrew (dev stub)" }
+    }
+  }
+}
