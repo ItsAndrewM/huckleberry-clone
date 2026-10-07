@@ -8,8 +8,8 @@ The spike code lives in `spike/`. It is throwaway and will be deleted once this 
 
 | # | Check | Where it runs | Status |
 |---|---|---|---|
-| S1 | Installed PWA sign-in survives kill/reopen and forced expiry | Deployed + both iPhones | **Forced expiry passes on Andrew's iPhone (Google).** One-hour reopen and Emily's iPhone pending |
-| S2 | WebSocket upgrade from installed PWA authenticates; identity present on upgrade | Deployed + iPhone | **Desktop Chrome passes** (Access JWT verified on the upgrade). iPhone PWA pending |
+| S1 | Installed PWA sign-in survives kill/reopen and forced expiry | Deployed + both iPhones | **Passes on both iPhones with Google**: forced expiry and re-login inside the installed app (Andrew), install and sign-in (Emily). The one-hour reopen is **deferred**: not yet run on either phone |
+| S2 | WebSocket upgrade from installed PWA authenticates; identity present on upgrade | Deployed + iPhone | **Pass**: desktop Chrome, and the installed PWA on Emily's iPhone (Access JWT verified on the upgrade, socket tagged `cg-emily`). No ticket fallback needed |
 | S3 | `opaqueredirect` on expiry vs `TypeError` offline | Deployed + iPhone | **Partly answered.** Signed out, `/api/me` returns 302 to the team login page (cross-origin), so a `redirect: 'manual'` fetch should see `opaqueredirect`. Confirm in the browser |
 | S4 | Does Access gate Static Assets? Does the SW-cached shell open offline / signed out? | Deployed + iPhone | **Partly answered.** Access gates everything on the hostname, including `/`, SPA routes and `/sw.js` (302 to login when signed out). Device test still needed for the offline shell |
 | S5 | `access.dev` stub works; removing it → 401. Service token identity distinguishable | Local + deployed | **Pass** |
@@ -106,7 +106,11 @@ Run with `wrangler dev`, results from `curl`:
 - The service token cannot use caregiver routes (`/api/me` → 401: no email). `/api/admin/*` accepts only this Client ID.
 - Signed out, every path (assets and API) → 302 to `misty-wildflower-0505.cloudflareaccess.com/cdn-cgi/access/login/bt-spike.dinocode.workers.dev`.
 
-### S2 — WebSocket through Access (desktop passes; iPhone pending)
+### S2 — WebSocket through Access (pass: desktop and installed iPhone PWA)
+
+**Installed PWA (Emily's iPhone, 20:49 UTC):** `ws: open`, then an echo of "hello" with attachment `{"caregiverId":"cg-emily", …}` about 30 ms later. The upgrade request from the standalone app authenticated through the hostname Access app and the Worker's JWT check. The `ws-ticket` fallback is not needed.
+
+**Desktop:**
 
 A signed-in browser `fetch('/api/spike/identity')` returned `via: "jwt"`, `hasCtxAccess: false`. User-token claims: `email`, `sub` (a stable user UUID), `policy_id` (the "BT caregivers" policy), `country`, `identity_nonce`, `type: "app"`, and `aud` as an **array**. The service token's `aud` was a string. `exp - iat` = 730 h. The WebSocket results are under S7.
 
@@ -119,7 +123,9 @@ A signed-in browser `fetch('/api/spike/identity')` returned `via: "jwt"`, `hasCt
 5. Inside the standalone app, `/api/spike/identity` returned `via: "jwt"`, `hasCtxAccess: false`, and a token issued at the re-login (`exp - iat` = 730 h).
 6. While signed in, "Sign in (/api/login)" just reloads the page: the Worker 302s straight back to the return path.
 
-Still to do: the one-hour reopen without a revoke, and the same run on Emily's iPhone.
+**Emily's iPhone:** installed the app and signed in with Google (Access log 20:48:21 UTC, `connection: google`, allowed; her token's `iat` matches). The installed app reads "(standalone, SW-controlled)", `/api/me` returns 200 as `cg-emily`, and identity arrives `via: "jwt"` under the "BT caregivers" policy.
+
+**Deferred:** the one-hour reopen without a revoke has not been run on either phone. It is the only part of S1 that shows whether iOS keeps the Access cookie in an installed app over time; run it before M1.16.
 
 ### S6 — Effect http-api + sql-sqlite-do + `transactionSync` (pass)
 
