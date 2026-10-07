@@ -10,13 +10,13 @@ The spike code lives in `spike/`. It is throwaway and will be deleted once this 
 |---|---|---|---|
 | S1 | Installed PWA sign-in survives kill/reopen and forced expiry | Deployed + both iPhones | **Pending** (needs Zero Trust org and devices) |
 | S2 | WebSocket upgrade from installed PWA authenticates; identity present on upgrade | Deployed + iPhone | **Pending**. Server side is ready (`/api/ws`; `/api/spike/identity` reports `via`, `hasCtxAccess`, `hasJwtHeader`, `upgrade`) |
-| S3 | `opaqueredirect` on expiry vs `TypeError` offline | Deployed + iPhone | **Pending**. Harness button "S3" in the spike page |
-| S4 | Does Access gate Static Assets? Does the SW-cached shell open offline / signed out? | Deployed + iPhone | **Pending**. Locally the shell is served with no identity (expected: assets bypass the Worker) |
-| S5 | `access.dev` stub works; removing it → 401. Service token identity distinguishable | Local ✅ / Deployed (service token) pending | **Local half passes**. Docs: service-token JWTs carry the Client ID as `common_name` and an empty `sub` |
+| S3 | `opaqueredirect` on expiry vs `TypeError` offline | Deployed + iPhone | **Partly answered.** Signed out, `/api/me` returns 302 to the team login page (cross-origin), so a `redirect: 'manual'` fetch should see `opaqueredirect`. Confirm in the browser |
+| S4 | Does Access gate Static Assets? Does the SW-cached shell open offline / signed out? | Deployed + iPhone | **Partly answered.** Access gates everything on the hostname, including `/`, SPA routes and `/sw.js` (302 to login when signed out). Device test still needed for the offline shell |
+| S5 | `access.dev` stub works; removing it → 401. Service token identity distinguishable | Local + deployed | **Pass** |
 | S6 | Effect 4 `http-api` + `@effect/sql-sqlite-do` in a DO with a `transactionSync` core; bundle size | Local | **Pass** |
 | S7 | Hibernation keeps tags; `getWebSockets(tag)` closes by caregiver | Local (workerd eviction) | **Pass** locally; re-confirm on deploy |
-| S8 | PITR bookmark → restore on a test DO | Deployed | **Pending** (needs the service token). Local workerd has no PITR backend (see below) |
-| — | Access + Workers constraints (new) | Docs, then deployed | **Two documented blockers for the plan as written**; see "Access on Workers" below |
+| S8 | PITR bookmark → restore on a test DO | Deployed | **Pass** |
+| — | Access + Workers constraints (new) | Docs, then deployed | **Confirmed: with Static Assets the Worker gets no `ctx.access`.** D5 must use JWT verification. See "Access on Workers" |
 
 ## Pinned versions
 
@@ -42,6 +42,19 @@ The spike uses these exact versions. M1.1 copies them into the root `package.jso
 - Startup time 31 ms. Bundle 1,164 KiB raw / 238 KiB gzip.
 - Before Access is attached, verified with `curl`: `/` and SPA routes → 200 (shell only, no data). Every `/api/*` path → 401, including with a forged unsigned `Cf-Access-Jwt-Assertion` and with a spoofed `x-bt-email`.
 
+Access configuration (all created through the API):
+
+| Item | Value |
+|---|---|
+| Team domain | `https://misty-wildflower-0505.cloudflareaccess.com` |
+| Access app | "BT spike", self-hosted, destination `bt-spike.dinocode.workers.dev` (hostname-based, not worker-level) |
+| AUD tag | `c4145355825538d1636f12261872cbdecec07626bb121a3c30309f5a83e07151` |
+| Login methods | One-time PIN (only one allowed so far, instant redirect). Google pending |
+| Policies | "BT caregivers" (allow): armcmillan22@gmail.com, foster.d.emily@gmail.com. "BT admin service token" (service auth): `bt-spike-admin` |
+| Sessions | Global 730 h, app 730 h (the one-month maximum) |
+| Service token | `bt-spike-admin`, Client ID `92e7b7c0380bafbb8b65a2e3ef4e91b4.access`, expires 2027-10-07. Secret in `spike/.admin-token.env` (gitignored, mode 600) |
+| Caregivers seeded | `cg-andrew` → armcmillan22@gmail.com, `cg-emily` → foster.d.emily@gmail.com |
+
 ## Access on Workers — two documented constraints
 
 From the [Workers Cloudflare Access docs](https://developers.cloudflare.com/workers/configuration/cloudflare-access/) (updated 18 Aug 2026):
@@ -49,11 +62,19 @@ From the [Workers Cloudflare Access docs](https://developers.cloudflare.com/work
 1. **Worker-level Access policies do not support WebSockets.** Upgrade requests to a Worker protected by a worker-level policy fail with 403. A hostname-based self-hosted Access application is required instead. The plan's Step 0 setup ("Access attached at the Worker level") must change to a self-hosted app on the hostname.
 2. **Workers with Static Assets do not receive `ctx.access`.** They run behind an internal router Worker that protects the assets but does not pass `ctx.access` to the user Worker. D1 (Static Assets + `run_worker_first: ["/api/*"]`) and D5 (identity from `ctx.access`) conflict.
 
-Spike response, to be confirmed on the deployed Worker:
+Spike response:
 
 - The Access app is a self-hosted application on `bt-spike.dinocode.workers.dev`, not a worker-level policy.
 - `spike/src/access.ts` prefers `ctx.access` and otherwise verifies the `Cf-Access-Jwt-Assertion` header with `jose`: RS256 only, issuer = team domain, audience = the app's AUD tag, keys from `<team>/cdn-cgi/access/certs`. `/api/spike/identity` reports which path produced the identity (`via`). Unit tests cover valid, wrong audience, wrong issuer, expired, unsigned and tampered tokens.
-- If confirmed, D5 changes to: "The Worker verifies the Access JWT (`Cf-Access-Jwt-Assertion`) against the team JWKS and the app's AUD tag." Everything else in D5 stands.
+- **Confirmed on deploy:** `/api/spike/identity` returned `hasCtxAccess: false`, `hasJwtHeader: true`, `via: "jwt"`. The real Access JWT verified against the team JWKS and AUD.
+- The deployed JWT's `aud` was a **string**, while the docs show an array; `jose` accepts both. A service-token JWT's lifetime (`exp - iat`) equals the app session (730 h).
+
+Plan changes this implies (to apply before M1):
+
+1. **D5:** "The Worker verifies the Access JWT (`Cf-Access-Jwt-Assertion`) against the team JWKS, the team issuer and the app's AUD tag." Everything else in D5 stands.
+2. **Step 0 setup / M1.16:** protect the app with a hostname-based self-hosted Access application, not a worker-level policy (WebSockets).
+3. **S4 / threat model:** assets do **not** bypass Access on a hostname app. The shell and `/sw.js` are only reachable signed in, so the service worker installs and updates only while signed in.
+4. **D6:** the admin identity is the service token's **Client ID** in `common_name`, not its name.
 
 ## Results
 
@@ -71,7 +92,18 @@ Run with `wrangler dev`, results from `curl`:
 
 **Finding:** `@cloudflare/vitest-pool-workers` 0.22.0 does **not** apply `access.dev` from `wrangler.jsonc`; `ctx.access` is `undefined` inside the pool. Worker-entry tests therefore call the default export's `fetch(request, env, ctx)` with a hand-built `ctx.access` (see `spike/test/spike.test.ts`, `withAccess`). Production M1.4 tests should do the same. It is more deterministic anyway and covers the "no `ctx.access`" path. No `DEV_IDENTITY` fallback is needed.
 
-**Still to do (deployed):** create an Access service token, call `/api/spike/identity` with `CF-Access-Client-Id`/`CF-Access-Client-Secret`, and record the identity shape. Per the [application token docs](https://developers.cloudflare.com/cloudflare-one/access-controls/applications/http-apps/authorization-cookie/application-token/), a service-token JWT has `common_name` = the token's **Client ID** (e.g. `…​.access`) and `sub: ""`. `ADMIN_SERVICE_TOKEN_CN` is therefore the Client ID, which is not secret.
+**Deployed (pass):** with `CF-Access-Client-Id`/`CF-Access-Client-Secret`, `/api/spike/identity` returned:
+
+```json
+{ "via": "jwt", "hasCtxAccess": false, "hasJwtHeader": true,
+  "claims": { "type": "app", "sub": "", "common_name": "92e7b7c0380bafbb8b65a2e3ef4e91b4.access",
+              "iss": "https://misty-wildflower-0505.cloudflareaccess.com", "aud": "c4145355…f5a83e07151", … } }
+```
+
+- `common_name` is the token's Client ID, matching the [application token docs](https://developers.cloudflare.com/cloudflare-one/access-controls/applications/http-apps/authorization-cookie/application-token/). `ADMIN_SERVICE_TOKEN_CN` is therefore the Client ID, which is not secret.
+- Wrong secret → 401 (no login redirect, because `service_auth_401_redirect` is on).
+- The service token cannot use caregiver routes (`/api/me` → 401: no email). `/api/admin/*` accepts only this Client ID.
+- Signed out, every path (assets and API) → 302 to `misty-wildflower-0505.cloudflareaccess.com/cdn-cgi/access/login/bt-spike.dinocode.workers.dev`.
 
 ### S6 — Effect http-api + sql-sqlite-do + `transactionSync` (pass)
 
@@ -93,7 +125,14 @@ Run with `wrangler dev`, results from `curl`:
 - A socket upgrade for an unknown caregiver → 401.
 - Re-confirm on the deployed Worker as part of S2 (leave the PWA idle > 10 s, then send).
 
-### S8 — point-in-time recovery (pending, deploy needed)
+### S8 — point-in-time recovery (pass)
+
+On the deployed DO, using the service token:
+
+1. Seeded `cg-andrew` and `cg-emily`. Took bookmark B1 (`00000000-00000008-…`).
+2. Seeded `cg-pitr-probe` → caregivers were andrew, emily, probe.
+3. `POST /api/admin/pitr/restore {B1}` → `restarted: true` and an undo bookmark.
+4. Next read: caregivers were andrew and emily; the probe was gone. The bookmark epoch moved to `00000001-…`.
 
 Locally, `getCurrentBookmark()` returns `00000000-00000000-00000000-00000000000000000000000000000000` and `getBookmarkForTime()` throws *"This Durable Object's storage back-end does not implement point-in-time recovery."* Must be run against a deployed DO.
 
@@ -101,15 +140,15 @@ Note for the runbook: `onNextSessionRestoreBookmark()` takes effect only after t
 
 ## Remaining checks — how to run them
 
-1. **Zero Trust (Andrew, dashboard):** enable Zero Trust on the personal account and pick a team name. Then add Google as a login method (needs a Google OAuth client; the redirect URI is `https://<team>.cloudflareaccess.com/cdn-cgi/access/callback`).
-2. **Access app (Claude, API):** self-hosted app on `bt-spike.dinocode.workers.dev`, 730 h session, an allow policy for exactly the two emails, a service token with a Service Auth policy, and `service_auth_401_redirect`. Set `ACCESS_TEAM_DOMAIN`, `ACCESS_AUD` and `ADMIN_SERVICE_TOKEN_CN` (the Client ID) in `wrangler.jsonc` and redeploy. Seed both caregivers through `/api/admin/caregiver/seed` with the service token.
+1. ~~Zero Trust and the Access app~~ (done; see "Deployed environment").
+2. **Google login method (Andrew, Google Cloud + Zero Trust dashboard):** follow [Cloudflare's Google IdP steps](https://developers.cloudflare.com/cloudflare-one/integrations/identity-providers/google/). JavaScript origin `https://misty-wildflower-0505.cloudflareaccess.com`, redirect URI `https://misty-wildflower-0505.cloudflareaccess.com/cdn-cgi/access/callback`. The client secret goes into the Zero Trust dashboard only. Claude then allows Google on the "BT spike" app.
 3. **S1–S4 on each iPhone:** open the URL in Safari → Share → Add to Home Screen. Open the installed app and use the spike page buttons (results appear in the on-page log; screenshot them):
    - S1: sign in; kill the app; reopen after 1 h; revoke the session in Zero Trust → reopen → tap "Sign in". Record whether it ends signed in inside the standalone window.
    - S2: tap "open WebSocket" → expect `open` and an echo containing your caregiver id.
    - S3: after revoking the session, tap "fetch /api/me" → expect `type: "opaqueredirect"`. In airplane mode → expect `TypeError`.
    - S4: in airplane mode and when signed out, reopen the app → does the shell load (the "SW-controlled" label)? Check whether `/` is gated by Access when signed out.
-4. **S5 service token:** `curl -H "CF-Access-Client-Id: …" -H "CF-Access-Client-Secret: …" https://<host>/api/spike/identity` → paste the identity JSON here.
-5. **S8:** with the service token, call `GET /api/admin/pitr/bookmark`, then increment the counter, then `POST /api/admin/pitr/restore {bookmark}`. Then `GET /api/spike/counter` should show the old value.
+4. ~~S5 service token~~ (pass).
+5. ~~S8~~ (pass).
 
 ## Decisions to record before M1
 

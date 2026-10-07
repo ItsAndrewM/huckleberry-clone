@@ -215,12 +215,19 @@ export class HouseholdDO extends DurableObject<Env> {
   }
 
   // S8: point-in-time recovery.
-  async pitrBookmark(): Promise<{ bookmark: string; counter: { value: number; version: number } }> {
+  async pitrBookmark(): Promise<{
+    bookmark: string
+    counter: { value: number; version: number }
+    caregivers: Array<{ id: string; email: string; active: boolean }>
+  }> {
     const bookmark = await this.ctx.storage.getCurrentBookmark()
-    const counter = this.ctx.storage.sql
-      .exec<{ value: number; version: number }>("SELECT value, version FROM counter WHERE id = 1")
-      .one()
-    return { bookmark, counter: { value: counter.value, version: counter.version } }
+    const sql = this.ctx.storage.sql
+    const counter = sql.exec<{ value: number; version: number }>("SELECT value, version FROM counter WHERE id = 1").one()
+    const caregivers = sql
+      .exec<{ id: string; email: string; active: number }>("SELECT id, email, active FROM caregivers ORDER BY id")
+      .toArray()
+      .map((c) => ({ id: c.id, email: c.email, active: c.active === 1 }))
+    return { bookmark, counter: { value: counter.value, version: counter.version }, caregivers }
   }
 
   async pitrScheduleRestore(bookmark: string): Promise<{ undoBookmark: string }> {

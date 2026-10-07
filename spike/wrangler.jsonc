@@ -22,11 +22,11 @@
   },
   "migrations": [{ "tag": "v1", "new_sqlite_classes": ["HouseholdDO"] }],
   "vars": {
-    // Filled in once Zero Trust is enabled and the Access app exists. Empty disables JWT verification.
-    "ACCESS_TEAM_DOMAIN": "",
-    "ACCESS_AUD": "",
+    // Team domain and the "BT spike" Access app's AUD tag. Empty disables JWT verification.
+    "ACCESS_TEAM_DOMAIN": "https://misty-wildflower-0505.cloudflareaccess.com",
+    "ACCESS_AUD": "c4145355825538d1636f12261872cbdecec07626bb121a3c30309f5a83e07151",
     // Client ID of the admin service token (the JWT's `common_name`), D6/S5.
-    "ADMIN_SERVICE_TOKEN_CN": ""
+    "ADMIN_SERVICE_TOKEN_CN": "92e7b7c0380bafbb8b65a2e3ef4e91b4.access"
   },
   // S5: local stub identity for `wrangler dev`. Remove `identity` to check the 401 path.
   "access": {
