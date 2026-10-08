@@ -81,7 +81,7 @@ Deliverables: `docs/spike-results.md`, pinned versions in the root `package.json
 
 Pure functions. Each takes `now` and `tz` as arguments; nothing reads the clock or the device timezone.
 
-- `time/` — `Instant` (epoch ms, UTC), `LocalDate`, `zonedDayBounds(date, tz)`, `localDateOf(instant, tz)`, `isoWeekBounds`, `monthBounds`, `resolveLocal(dateTime, tz) → {kind: 'ok'|'ambiguous'|'nonexistent', ...}` (D11), `startOfDate(date, tz)` (the first instant of a local date, which isn't always 00:00), `canonicalTimeZone(name)` (seed script, Settings). Strings that aren't real dates, weeks, months or zones throw `RangeError`.
+- `time/` — `Instant` (epoch ms, UTC), `LocalDate`, `zonedDayBounds(date, tz)`, `localDateOf(instant, tz)`, `isoWeekBounds`, `monthBounds`, `resolveLocal(dateTime, tz) → {kind: 'ok'|'ambiguous'|'nonexistent', ...}` (D11), `startOfDate(date, tz)` (the first instant of a local date, which isn't always 00:00), `canonicalTimeZone(name)` (seed script, Settings). Functions that take a date, week, month or zone string throw `RangeError` when it isn't real; `canonicalTimeZone` returns `null` instead, so callers can test a name without catching.
 - `interval/` — half-open `[start, end)` intervals: `overlaps`, `splitByDays(interval, tz)`, `clipTo(period)`.
 - `timer/` — `nursingElapsed(segments, now)` (sum of closed + open), `sleepElapsed(session, now)`, `formatElapsed`.
 - `feed/` — `feedSummary(feed, now)` → left/right/total seconds, breast-milk/formula/total mL. `sessionBounds(components)`.
