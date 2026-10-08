@@ -12,9 +12,12 @@ export { affectedPeriods, type PeriodKey } from "./invalidation/affected-periods
 export {
   addDaysToDate,
   datesBetween,
+  isIsoWeek,
+  isLocalDate,
   type IsoWeek,
   isoWeekMonday,
   isoWeekOfDate,
+  isYearMonth,
   type LocalDate,
   monthOfDate,
   nextMonth,
