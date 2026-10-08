@@ -17,8 +17,11 @@ describe("canonicalTimeZone", () => {
 })
 
 describe("a zone that never went through canonicalTimeZone", () => {
-  it("makes zone math throw instead of returning NaN", () => {
-    expect(() => resolveLocal("2026-10-06T12:00", "Not/A_Zone")).toThrow(RangeError)
-    expect(() => startOfDate("2026-10-06", "Not/A_Zone")).toThrow(RangeError)
-  })
+  it.each(["Not/A_Zone", "constructor", "__proto__", "Not/A_Zone-05", "+05:30"])(
+    "makes zone math throw on %j instead of returning NaN or guessing an offset",
+    (zone) => {
+      expect(() => resolveLocal("2026-10-06T12:00", zone)).toThrow(RangeError)
+      expect(() => startOfDate("2026-10-06", zone)).toThrow(RangeError)
+    },
+  )
 })

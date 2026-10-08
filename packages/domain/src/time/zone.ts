@@ -14,8 +14,16 @@ export const canonicalTimeZone = (name: string): TimeZone | null => {
   }
 }
 
+const knownZones = new Set<TimeZone>()
+
+const assertKnownZone = (zone: TimeZone) => {
+  if (knownZones.has(zone)) return
+  if (canonicalTimeZone(zone) === null)
+    throw new RangeError(`Expected an IANA time zone like America/Vancouver, got "${zone}"`)
+  knownZones.add(zone)
+}
+
 export const offsetMsAt = (zone: TimeZone, instant: Instant): number => {
-  const minutes = tzOffset(zone, new Date(instant))
-  if (Number.isNaN(minutes)) throw new RangeError(`No UTC offset for "${zone}" at ${instant}`)
-  return minutes * MINUTE_MS
+  assertKnownZone(zone)
+  return tzOffset(zone, new Date(instant)) * MINUTE_MS
 }
