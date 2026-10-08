@@ -1,4 +1,4 @@
-import type { BottlePortion, Instant, NursingSegment } from "../../src/index.ts"
+import type { BottlePortion, Instant, Interval, NursingSegment } from "../../src/index.ts"
 
 interface ClosedSegment extends NursingSegment {
   readonly endedAt: Instant
@@ -61,3 +61,5 @@ export const AC21_DST_SEGMENTS = [
     endedAt: at("2026-03-29T01:10:00Z"),
   },
 ]
+
+export const AC12_MIDNIGHT_SLEEP: Interval = { start: at("2026-10-07T06:30:00Z"), end: at("2026-10-07T08:00:00Z") }

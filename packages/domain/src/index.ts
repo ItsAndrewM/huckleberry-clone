@@ -7,6 +7,7 @@ export {
   sessionBounds,
   type Side,
 } from "./feed/feed.ts"
+export { clipTo, type DayPiece, durationMs, overlaps, splitByDays } from "./interval/interval.ts"
 export {
   addDaysToDate,
   datesBetween,
