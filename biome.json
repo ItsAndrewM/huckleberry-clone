@@ -31,7 +31,10 @@
               "level": "error",
               "options": {
                 "patterns": [
-                  { "group": ["@bt/**"], "message": "@bt/domain imports nothing else from the workspace (plan §1)." },
+                  {
+                    "group": ["@bt/**", "../**/contracts", "../**/contracts/**", "../**/apps/**"],
+                    "message": "@bt/domain imports nothing else from the workspace (plan §1)."
+                  },
                   {
                     "group": [
                       "effect",
@@ -67,7 +70,7 @@
                     "message": "Dates and time zones go through @bt/domain only (D12)."
                   },
                   {
-                    "group": ["@bt/web", "@bt/worker"],
+                    "group": ["@bt/web", "@bt/worker", "../**/apps/**"],
                     "message": "@bt/contracts may import @bt/domain only (plan §1)."
                   }
                 ]
@@ -90,7 +93,10 @@
                     "group": ["date-fns", "date-fns/**", "@date-fns/**"],
                     "message": "Dates and time zones go through @bt/domain only (D12)."
                   },
-                  { "group": ["@bt/worker", "@bt/worker/**"], "message": "The client never imports Worker code." }
+                  {
+                    "group": ["@bt/worker", "@bt/worker/**", "../**/worker", "../**/worker/**"],
+                    "message": "The client never imports Worker code."
+                  }
                 ]
               }
             }
@@ -111,7 +117,10 @@
                     "group": ["date-fns", "date-fns/**", "@date-fns/**"],
                     "message": "Dates and time zones go through @bt/domain only (D12)."
                   },
-                  { "group": ["@bt/web", "@bt/web/**"], "message": "The Worker never imports client code." }
+                  {
+                    "group": ["@bt/web", "@bt/web/**", "../**/web", "../**/web/**"],
+                    "message": "The Worker never imports client code."
+                  }
                 ]
               }
             }
