@@ -33,11 +33,12 @@ The spike uses these exact versions. M1.1 copies them into the pnpm catalog in `
 | `wrangler` | 4.148.0 | |
 | `@cloudflare/workers-types` | 5.20261006.1 | |
 | `@cloudflare/vitest-pool-workers` | 0.22.0 | Requires `vitest` ^4.1; **not** compatible with vitest 5 |
+| `@cloudflare/vitest-plugin` | 1.3.7 | M1.1: replaces `@cloudflare/vitest-pool-workers` (renamed upstream, same `cloudflareTest` API, ships wrangler 4.148.0) |
 | `vitest` | 4.1.11 | |
 | `typescript` | 5.9.3 | |
 | `jose` | 6.2.12 | Access JWT verification (WebCrypto, no `nodejs_compat`) |
 | Node | 22.x | pnpm 10.x |
-| `compatibility_date` | 2026-08-22 | Newest date the workerd inside `vitest-pool-workers` 0.22.0 accepts. Raise it when the pool catches up |
+| `compatibility_date` | 2026-08-22 | Newest date the workerd inside `vitest-pool-workers` 0.22.0 accepts. Raise it when the pool catches up. M1.1 raises it to 2026-10-06 |
 
 ## Deployed environment
 
