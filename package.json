@@ -1,0 +1,27 @@
+{
+  "name": "baby-tracker",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@10.32.1",
+  "engines": {
+    "node": ">=22.18.0 <23"
+  },
+  "scripts": {
+    "dev": "pnpm --filter @bt/web dev",
+    "build": "pnpm --filter @bt/web build",
+    "lint": "biome ci .",
+    "format": "biome check --write .",
+    "typecheck": "tsc -p tsconfig.json && pnpm -r typecheck",
+    "test": "vitest run",
+    "bundle:check": "node scripts/check-bundle-size.ts",
+    "e2e": "playwright test",
+    "pins:check": "node scripts/check-pins.ts"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "catalog:",
+    "@playwright/test": "catalog:",
+    "@types/node": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
+  }
+}
