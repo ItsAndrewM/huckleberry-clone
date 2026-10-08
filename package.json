@@ -14,7 +14,8 @@
     "typecheck": "tsc -p tsconfig.json && pnpm -r typecheck",
     "test": "vitest run",
     "bundle:check": "node scripts/check-bundle-size.ts",
-    "e2e": "playwright test"
+    "e2e": "playwright test",
+    "pins:check": "node scripts/check-pins.ts"
   },
   "devDependencies": {
     "@biomejs/biome": "catalog:",

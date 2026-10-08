@@ -26,13 +26,7 @@ jobs:
           node-version: 22
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      # `if`, not `! cmd`: bash's errexit ignores a failing `! cmd`.
-      - name: Pins are exact
-        run: |
-          if grep -nE ':\s*[~^]' pnpm-workspace.yaml || find . -name package.json -not -path '*/node_modules/*' -exec grep -nHE '"[~^][0-9]' {} + ; then
-            echo "::error::Ranged version found; pin exact versions in the pnpm catalog"
-            exit 1
-          fi
+      - run: pnpm pins:check
       - run: pnpm lint
       - run: pnpm typecheck
       - run: pnpm test

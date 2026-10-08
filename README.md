@@ -12,6 +12,7 @@ Node 22 and pnpm 10 (`corepack enable`), then `pnpm install`.
 |---|---|
 | `pnpm dev` | Vite dev server with the Worker running in workerd |
 | `pnpm lint` / `pnpm format` | Biome check / fix |
+| `pnpm pins:check` | Fails unless every catalog version is exact and packages use `catalog:` or `workspace:*` |
 | `pnpm typecheck` | `tsc` for the root and every package |
 | `pnpm test` | Vitest: Workers tests in workerd, plus script tests |
 | `pnpm build` | Client and Worker build into `apps/web/dist` |
