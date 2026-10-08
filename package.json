@@ -26,7 +26,7 @@
     "vitest": "catalog:"
   },
   "engines": {
-    "node": ">=22.18.0 <23"
+    "node": ">=24.21.0 <25"
   },
   "packageManager": "pnpm@10.32.1"
 }
