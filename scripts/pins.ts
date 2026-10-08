@@ -4,7 +4,20 @@ const BLOCK_HEADING = /^(?:"([^"]*)"|'([^']*)'|([^\s"'?{[][^:]*?))\s*:$/
 const WORKSPACE_SPECS = new Set(["catalog:", "workspace:*"])
 const DEPENDENCY_FIELDS = ["dependencies", "devDependencies", "optionalDependencies", "peerDependencies"] as const
 
+export type PackageManifest = Partial<Record<(typeof DEPENDENCY_FIELDS)[number], Readonly<Record<string, string>>>>
+
 const unquote = (text: string) => text.replace(/^(["'])(.*)\1$/, "$2")
+
+const headingKey = (heading: string) => {
+  const key = BLOCK_HEADING.exec(heading)
+  return key === null ? null : (key[1] ?? key[2] ?? key[3])
+}
+
+const entryViolation = (line: string) => {
+  const [, name = line.trim(), value = ""] = CATALOG_ENTRY.exec(line) ?? []
+  const version = unquote(value)
+  return EXACT_VERSION.test(version) ? null : `catalog ${unquote(name)}: ${version || "(no version)"}`
+}
 
 export const catalogViolations = (workspaceYaml: string): string[] => {
   const violations: string[] = []
@@ -13,22 +26,20 @@ export const catalogViolations = (workspaceYaml: string): string[] => {
     if (line.trim() === "" || line.trim().startsWith("#")) continue
     if (/^\S/.test(line)) {
       const heading = line.replace(/\s+#.*$/, "").trimEnd()
-      const key = BLOCK_HEADING.exec(heading)
-      inCatalog = key !== null && (key[1] ?? key[2] ?? key[3]) === "catalog"
+      inCatalog = headingKey(heading) === "catalog"
       if (!inCatalog && /\bcatalogs?\b/.test(heading)) violations.push(`unreadable catalog syntax: ${heading}`)
       continue
     }
     if (!inCatalog) continue
-    const [, name = line.trim(), value = ""] = CATALOG_ENTRY.exec(line) ?? []
-    const version = unquote(value)
-    if (!EXACT_VERSION.test(version)) violations.push(`catalog ${unquote(name)}: ${version || "(no version)"}`)
+    const violation = entryViolation(line)
+    if (violation !== null) violations.push(violation)
   }
   return violations
 }
 
-export const manifestViolations = (file: string, manifest: Record<string, unknown>): string[] =>
+export const manifestViolations = (file: string, manifest: PackageManifest): string[] =>
   DEPENDENCY_FIELDS.flatMap((field) =>
-    Object.entries((manifest[field] ?? {}) as Record<string, string>)
+    Object.entries<string>(manifest[field] ?? {})
       .filter(([, spec]) => !WORKSPACE_SPECS.has(spec))
       .map(([name, spec]) => `${file} ${field}.${name}: ${spec}`),
   )

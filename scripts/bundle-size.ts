@@ -20,10 +20,10 @@ export const exceedsBudget = (size: UploadSize, budgetGzipKiB: number): boolean 
 
 const DEPLOY_REDIRECT = join(".wrangler", "deploy", "config.json")
 
-// Before a build there is no Worker config, and `wrangler deploy` would auto-configure the Vite app, rewriting vite.config.ts.
 export const builtWorkerConfig = (webDir: string): string => {
   const redirect = join(webDir, DEPLOY_REDIRECT)
   if (!existsSync(redirect)) throw new Error(`No ${DEPLOY_REDIRECT} in ${webDir}; run \`pnpm build\` first`)
+  // SAFETY: vite build writes configPath here; a missing or non-string one makes resolve() throw.
   const { configPath } = JSON.parse(readFileSync(redirect, "utf8")) as { configPath: string }
   return resolve(dirname(redirect), configPath)
 }

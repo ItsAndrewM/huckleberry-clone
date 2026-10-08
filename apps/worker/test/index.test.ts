@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest"
 import worker from "../src/index.ts"
 
 const call = (path: string) =>
-  worker.fetch(new Request(`https://bt.example.test${path}`) as Request<unknown, IncomingRequestCfProperties>)
+  worker.fetch(new Request<unknown, IncomingRequestCfProperties>(`https://bt.example.test${path}`))
 
 describe("worker entry until M1.4 adds Access", () => {
   it("runs inside workerd, not Node", () => {

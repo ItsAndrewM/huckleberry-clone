@@ -1,12 +1,12 @@
 import { spawnSync } from "node:child_process"
-import { copyFileSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs"
+import { copyFileSync, mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { fileURLToPath } from "node:url"
 import { beforeAll, describe, expect, it } from "vitest"
 
 const ROOT = fileURLToPath(new URL("..", import.meta.url))
-const BIOME = join(ROOT, "node_modules", ".bin", "biome")
+const OXLINT = join(ROOT, "node_modules", ".bin", "oxlint")
 
 const CASES = [
   { dir: "apps/web/src", specifier: "@bt/worker", rejected: true },
@@ -32,30 +32,27 @@ const CASES = [
   { dir: "packages/contracts/src", specifier: "@bt/domain", rejected: false },
 ].map((probe, i) => ({ ...probe, path: `${probe.dir}/probe-${i}.ts` }))
 
-interface BiomeReport {
-  readonly diagnostics: ReadonlyArray<{ readonly category: string; readonly location: { readonly path: string } }>
+interface OxlintReport {
+  readonly diagnostics: ReadonlyArray<{ readonly code: string; readonly filename: string }>
 }
 
-// Lints every probe in one Biome run, in a scratch copy of the repo layout so biome.json's per-folder overrides apply.
 const filesWithRestrictedImports = (): ReadonlySet<string> => {
   const dir = mkdtempSync(join(tmpdir(), "bt-boundaries-"))
   try {
-    copyFileSync(join(ROOT, "biome.json"), join(dir, "biome.json"))
+    copyFileSync(join(ROOT, "oxlint.config.ts"), join(dir, "oxlint.config.ts"))
+    for (const linked of ["node_modules", "tools"]) symlinkSync(join(ROOT, linked), join(dir, linked))
     for (const probe of CASES) {
       mkdirSync(join(dir, probe.dir), { recursive: true })
       writeFileSync(join(dir, probe.path), `import "${probe.specifier}"\n`)
     }
-    const run = spawnSync(BIOME, ["lint", "--reporter=json", "--vcs-enabled=false", "--colors=off", "."], {
+    const run = spawnSync(OXLINT, ["--format=json", ...CASES.map((probe) => probe.path)], {
       cwd: dir,
       encoding: "utf8",
     })
-    const output = `${run.stdout}\n${run.stderr}`
-    const json = output.split("\n").find((line) => line.startsWith("{"))
-    if (json === undefined) throw new Error(`Biome printed no JSON report:\n${output}`)
-    const report = JSON.parse(json) as BiomeReport
-    return new Set(
-      report.diagnostics.filter((d) => d.category === "lint/style/noRestrictedImports").map((d) => d.location.path),
-    )
+    if (!run.stdout.startsWith("{")) throw new Error(`oxlint printed no JSON report:\n${run.stdout}${run.stderr}`)
+    // SAFETY: matches --format=json's layout; a different one throws or flags nothing, so every rejected probe fails.
+    const report = JSON.parse(run.stdout) as OxlintReport
+    return new Set(report.diagnostics.filter((d) => d.code === "eslint(no-restricted-imports)").map((d) => d.filename))
   } finally {
     rmSync(dir, { recursive: true, force: true })
   }

@@ -16,7 +16,6 @@ test("routes /api/* fetches to the Worker, which denies them until M1.4", async 
   expect(await res.json()).toEqual({ _tag: "Unauthorized" })
 })
 
-// Fetches reach the Worker even without run_worker_first; navigations (sign-in, export links) only reach it with it.
 test("routes /api/* navigations to the Worker, not the SPA shell (run_worker_first, D1)", async ({ page }) => {
   const res = await page.goto("/api/me")
   expect(res?.status()).toBe(401)
