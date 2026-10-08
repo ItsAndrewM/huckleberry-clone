@@ -9,11 +9,14 @@ export const catalogViolations = (workspaceYaml: string): string[] => {
   const violations: string[] = []
   let inCatalog = false
   for (const line of workspaceYaml.split("\n")) {
+    if (line.trim() === "" || line.trim().startsWith("#")) continue
     if (/^\S/.test(line)) {
-      inCatalog = line.trimEnd() === "catalog:"
+      const heading = line.replace(/\s+#.*$/, "").trimEnd()
+      inCatalog = heading === "catalog:"
+      if (!inCatalog && /^catalogs?:/.test(heading)) violations.push(`unreadable catalog syntax: ${heading}`)
       continue
     }
-    if (!inCatalog || line.trim() === "" || line.trim().startsWith("#")) continue
+    if (!inCatalog) continue
     const [, name = line.trim(), value = ""] = CATALOG_ENTRY.exec(line) ?? []
     const version = unquote(value)
     if (!EXACT_VERSION.test(version)) violations.push(`catalog ${unquote(name)}: ${version || "(no version)"}`)

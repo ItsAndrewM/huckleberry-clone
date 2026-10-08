@@ -15,6 +15,24 @@ describe("parseUploadSize", () => {
     expect(() => parseUploadSize("Total Upload: 1.10 MiB / gzip: 300.00 KiB")).toThrow(/Total Upload/)
     expect(() => parseUploadSize("")).toThrow(/Total Upload/)
   })
+
+  it.each(["Total Upload: . KiB / gzip: . KiB", "Total Upload: 1.2.3 KiB / gzip: 1.2.3 KiB"])(
+    "throws instead of returning NaN for %s",
+    (output) => {
+      expect(() => parseUploadSize(output)).toThrow(/Total Upload/)
+    },
+  )
+
+  it("reads sizes that wrangler printed in colour (FORCE_COLOR)", () => {
+    expect(parseUploadSize("Total Upload: \u001b[32m0.47 KiB / gzip: 0.31 KiB\u001b[39m\n")).toEqual({
+      rawKiB: 0.47,
+      gzipKiB: 0.31,
+    })
+  })
+
+  it("puts the unreadable output in the error, so a failing gate shows what wrangler printed", () => {
+    expect(() => parseUploadSize("✘ [ERROR] something unexpected")).toThrow(/something unexpected/)
+  })
 })
 
 describe("exceedsBudget", () => {

@@ -10,6 +10,7 @@ const run = spawnSync("pnpm", ["exec", "wrangler", "deploy", "--dry-run", "--con
   cwd: webDir,
   encoding: "utf8",
 })
+if (run.error !== undefined) throw run.error
 const output = `${run.stdout}${run.stderr}`
 if (run.status !== 0) {
   process.stderr.write(output)

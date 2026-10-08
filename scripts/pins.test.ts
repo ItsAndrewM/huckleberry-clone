@@ -16,6 +16,23 @@ describe("catalogViolations", () => {
     expect(catalogViolations(workspace(`  vite: ${value}`))).toHaveLength(1)
   })
 
+  it("still reads the catalog when its heading carries a comment", () => {
+    expect(catalogViolations("catalog: # pinned versions\n  vite: ^8.3.3\n")).toEqual(["catalog vite: ^8.3.3"])
+  })
+
+  it("keeps reading the catalog past a comment at column 0", () => {
+    expect(catalogViolations("catalog:\n  effect: 4.0.1\n# runtime\n  vite: ^8.3.3\n")).toEqual([
+      "catalog vite: ^8.3.3",
+    ])
+  })
+
+  it.each(["catalog: { vite: ^8.3.3 }", "catalogs:\n  react19:\n    react: ^19.0.0"])(
+    "fails closed on catalog syntax it cannot read: %s",
+    (yaml) => {
+      expect(catalogViolations(`${yaml}\n`)).toHaveLength(1)
+    },
+  )
+
   it("reads only the catalog block", () => {
     expect(catalogViolations("packages:\n  - apps/*\nonlyBuiltDependencies:\n  - esbuild\n")).toEqual([])
   })

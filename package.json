@@ -4,7 +4,7 @@
   "type": "module",
   "packageManager": "pnpm@10.32.1",
   "engines": {
-    "node": "22.x"
+    "node": ">=22.18.0 <23"
   },
   "scripts": {
     "dev": "pnpm --filter @bt/web dev",

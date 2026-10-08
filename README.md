@@ -4,7 +4,7 @@ A two-caregiver baby tracker on Cloudflare Workers. The plan is `docs/implementa
 
 ## Setup
 
-Node 22 and pnpm 10 (`corepack enable`), then `pnpm install`.
+Node 22.18 or later in the 22 line (it runs the `.ts` scripts directly) and pnpm 10 (`corepack enable`), then `pnpm install`.
 
 ## Commands
 
