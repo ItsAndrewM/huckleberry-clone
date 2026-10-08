@@ -2,16 +2,20 @@
 
 Gate for M1 (see `implementation-plan.md` §2). M1 starts only when every row below has a recorded result and the S1/S2 fallback decision is made.
 
+**Gate cleared on 7 Oct 2026.** Every check has a result and both fallback decisions are recorded at the end. One sub-check was **waived, not run**: Emily's S1 one-hour reopen, by Andrew's decision on 7 Oct. The same check passed on Andrew's iPhone (session kept for about three hours), and the per-release device checklist (plan §6) re-runs S1 on both iPhones. The remaining Step 0 housekeeping is tearing down the spike.
+
+Device coverage, decided by Andrew on 7 Oct 2026: S1 checks how iOS keeps the Access session in an installed app, which can differ per phone (iOS version, Safari settings), so it runs on both iPhones. S2–S4 test WebKit and app behaviour that both phones share, so one phone each is enough: S2 on Emily's, S3 and S4 on Andrew's.
+
 The spike code lives in `spike/`. It is throwaway and will be deleted once this page is complete. Run it with `cd spike && pnpm install && pnpm test`.
 
 ## Status
 
 | # | Check | Where it runs | Status |
 |---|---|---|---|
-| S1 | Installed PWA sign-in survives kill/reopen and forced expiry | Deployed + both iPhones | **Pending** (needs Zero Trust org and devices) |
-| S2 | WebSocket upgrade from installed PWA authenticates; identity present on upgrade | Deployed + iPhone | **Desktop Chrome passes** (Access JWT verified on the upgrade). iPhone PWA pending |
-| S3 | `opaqueredirect` on expiry vs `TypeError` offline | Deployed + iPhone | **Partly answered.** Signed out, `/api/me` returns 302 to the team login page (cross-origin), so a `redirect: 'manual'` fetch should see `opaqueredirect`. Confirm in the browser |
-| S4 | Does Access gate Static Assets? Does the SW-cached shell open offline / signed out? | Deployed + iPhone | **Partly answered.** Access gates everything on the hostname, including `/`, SPA routes and `/sw.js` (302 to login when signed out). Device test still needed for the offline shell |
+| S1 | Installed PWA sign-in survives kill/reopen and forced expiry | Deployed + both iPhones | **Pass** with Google. Andrew: install and sign-in, forced expiry with re-login inside the installed app, and a reopen more than an hour later still signed in. Emily: install and sign-in, and forced expiry with re-login inside the installed app. Emily's one-hour reopen was **waived** by Andrew (not run) |
+| S2 | WebSocket upgrade from installed PWA authenticates; identity present on upgrade | Deployed + iPhone | **Pass** (one iPhone, by decision): desktop Chrome, and the installed PWA on Emily's iPhone (Access JWT verified on the upgrade, socket tagged `cg-emily`). No ticket fallback needed |
+| S3 | `opaqueredirect` on expiry vs `TypeError` offline | Deployed + iPhone | **Pass** (one iPhone, by decision; reported by Andrew on his; no screenshot). Signed out, `/api/me` returns 302 to the team login page (cross-origin), which a `redirect: 'manual'` fetch sees as `opaqueredirect` |
+| S4 | Does Access gate Static Assets? Does the SW-cached shell open offline / signed out? | Deployed + iPhone | **Pass** (one iPhone, by decision; offline reopen reported by Andrew on his; no screenshot). Access gates everything on the hostname, including `/`, SPA routes and `/sw.js` (302 to login when signed out). Offline, the installed app opens the cached shell |
 | S5 | `access.dev` stub works; removing it → 401. Service token identity distinguishable | Local + deployed | **Pass** |
 | S6 | Effect 4 `http-api` + `@effect/sql-sqlite-do` in a DO with a `transactionSync` core; bundle size | Local | **Pass** |
 | S7 | Hibernation keeps tags; `getWebSockets(tag)` closes by caregiver | Local + deployed | **Pass** (deployed: real hibernation, then close-on-disable from the woken instance) |
@@ -49,7 +53,8 @@ Access configuration (all created through the API):
 | Team domain | `https://misty-wildflower-0505.cloudflareaccess.com` |
 | Access app | "BT spike", self-hosted, destination `bt-spike.dinocode.workers.dev` (hostname-based, not worker-level) |
 | AUD tag | `c4145355825538d1636f12261872cbdecec07626bb121a3c30309f5a83e07151` |
-| Login methods | One-time PIN (only one allowed so far, instant redirect). Google pending |
+| Login methods | The "BT spike" app allows Google and One-time PIN, with a choice screen (instant redirect off). S1 uses Google; the PIN stays available as a fallback so S2–S4 can run even if Google fails inside the installed PWA |
+| Google login method | Added 7 Oct 2026 with PKCE on. Cloudflare's connection test passed and returned the expected name and email. Google side: project "BT Access" (`bt-access-510920`) in Andrew's personal Google account, OAuth consent screen "Baby tracker" (External, **Testing**, both caregivers listed as test users), Web client "Cloudflare Access" with the team domain as JavaScript origin and `<team domain>/cdn-cgi/access/callback` as redirect URI |
 | Policies | "BT caregivers" (allow): armcmillan22@gmail.com, foster.d.emily@gmail.com. "BT admin service token" (service auth): `bt-spike-admin` |
 | Sessions | Global 730 h, app 730 h (the one-month maximum) |
 | Service token | `bt-spike-admin`, Client ID `92e7b7c0380bafbb8b65a2e3ef4e91b4.access`, expires 2027-10-07. Secret in `spike/.admin-token.env` (gitignored, mode 600) |
@@ -105,9 +110,30 @@ Run with `wrangler dev`, results from `curl`:
 - The service token cannot use caregiver routes (`/api/me` → 401: no email). `/api/admin/*` accepts only this Client ID.
 - Signed out, every path (assets and API) → 302 to `misty-wildflower-0505.cloudflareaccess.com/cdn-cgi/access/login/bt-spike.dinocode.workers.dev`.
 
-### S2 — WebSocket through Access (desktop passes; iPhone pending)
+### S2 — WebSocket through Access (pass: desktop and installed iPhone PWA)
+
+**Installed PWA (Emily's iPhone, 20:49 UTC):** `ws: open`, then an echo of "hello" with attachment `{"caregiverId":"cg-emily", …}` about 30 ms later. The upgrade request from the standalone app authenticated through the hostname Access app and the Worker's JWT check. The `ws-ticket` fallback is not needed.
+
+**Desktop:**
 
 A signed-in browser `fetch('/api/spike/identity')` returned `via: "jwt"`, `hasCtxAccess: false`. User-token claims: `email`, `sub` (a stable user UUID), `policy_id` (the "BT caregivers" policy), `country`, `identity_nonce`, `type: "app"`, and `aud` as an **array**. The service token's `aud` was a string. `exp - iat` = 730 h. The WebSocket results are under S7.
+
+### S1 — installed iPhone PWA sign-in (Andrew's iPhone: forced expiry passes)
+
+1. Andrew signed in with Google in Safari (Access log 20:12:20 UTC, `connection: google`), then added the app to the Home Screen.
+2. Claude revoked his Access sessions through the API (`POST /access/organizations/revoke_user`, 20:13:54 UTC).
+3. Force-quitting and reopening the installed app showed Cloudflare's login page. iOS displays that out-of-scope domain in a minimal in-app browser bar inside the standalone app, not in Safari.
+4. He signed in with Google there (Access log 20:16:28 UTC, `connection: google`, allowed). He landed back on the app page reading "(standalone, SW-controlled)", and `/api/me` returned 200 as `cg-andrew`.
+5. Inside the standalone app, `/api/spike/identity` returned `via: "jwt"`, `hasCtxAccess: false`, and a token issued at the re-login (`exp - iat` = 730 h).
+6. While signed in, "Sign in (/api/login)" just reloads the page: the Worker 302s straight back to the return path.
+
+**Emily's iPhone:** installed the app and signed in with Google (Access log 20:48:21 UTC, `connection: google`, allowed; her token's `iat` matches). The installed app reads "(standalone, SW-controlled)", `/api/me` returns 200 as `cg-emily`, and identity arrives `via: "jwt"` under the "BT caregivers" policy.
+
+**Emily's forced expiry (pass):** Claude revoked her Access sessions at 23:44:34 UTC. She reopened the installed app, signed in with Google (Access log 23:49:53 UTC, `connection: google`, allowed) and landed back inside it: "(standalone, SW-controlled)", `/api/me` 200 as `cg-emily`, identity `via: "jwt"` with `iat` matching the login and `exp - iat` = 730 h.
+
+**Emily's one-hour reopen: waived.** Andrew decided on 7 Oct to pass the gate without running it. The same check passed on his iPhone, and the per-release device checklist (plan §6) re-runs S1 on both phones.
+
+**One-hour reopen (Andrew's iPhone):** reopened more than an hour after the 20:16:28 UTC sign-in and was still signed in. The Access log shows no further login by Andrew between 20:16:28 and 23:21 UTC, so the installed app kept and reused the Access session cookie across that time.
 
 ### S6 — Effect http-api + sql-sqlite-do + `transactionSync` (pass)
 
@@ -148,8 +174,8 @@ Note for the runbook: `onNextSessionRestoreBookmark()` takes effect only after t
 ## Remaining checks — how to run them
 
 1. ~~Zero Trust and the Access app~~ (done; see "Deployed environment").
-2. **Google login method (Andrew, Google Cloud + Zero Trust dashboard):** follow [Cloudflare's Google IdP steps](https://developers.cloudflare.com/cloudflare-one/integrations/identity-providers/google/). JavaScript origin `https://misty-wildflower-0505.cloudflareaccess.com`, redirect URI `https://misty-wildflower-0505.cloudflareaccess.com/cdn-cgi/access/callback`. The client secret goes into the Zero Trust dashboard only. Claude then allows Google on the "BT spike" app.
-3. **S1–S4 on each iPhone:** open the URL in Safari → Share → Add to Home Screen. Open the installed app and use the spike page buttons (results appear in the on-page log; screenshot them):
+2. ~~Google login method~~ (done; see "Deployed environment"). Cloudflare's [Google IdP steps](https://developers.cloudflare.com/cloudflare-one/integrations/identity-providers/google/) leave out one thing: a new External consent screen starts in **Testing**, where only listed test users can sign in. Any future caregiver must be added as a test user, or the app published. Google is now allowed on the "BT spike" app next to the PIN.
+3. **S1–S4 on the iPhones** (see Results). S1 runs on both phones; S2–S4 ran on one phone each, by Andrew's decision. Done, except Emily's S1 one-hour reopen, which Andrew waived. The steps: open the URL in Safari → Share → Add to Home Screen. Open the installed app and use the spike page buttons (results appear in the on-page log; screenshot them):
    - S1: sign in; kill the app; reopen after 1 h; revoke the session in Zero Trust → reopen → tap "Sign in". Record whether it ends signed in inside the standalone window.
    - S2: tap "open WebSocket" → expect `open` and an echo containing your caregiver id.
    - S3: after revoking the session, tap "fetch /api/me" → expect `type: "opaqueredirect"`. In airplane mode → expect `TypeError`.
@@ -159,5 +185,5 @@ Note for the runbook: `onNextSessionRestoreBookmark()` takes effect only after t
 
 ## Decisions to record before M1
 
-- S1 fallback (Google vs one-time PIN): _pending S1_
-- S2 fallback (direct Access on upgrade vs `ws-ticket`): _pending S2_
+- **S1 fallback: Google.** Google sign-in works inside the installed app on both iPhones and recovered from a forced logout on both; on Andrew's it also survived a one-hour reopen (Emily's was waived). The one-time-PIN fallback is not needed. The spike's Access app still offers the PIN; M1.16 decides whether production keeps it as a backup.
+- **S2 fallback: direct Access on the upgrade request.** The installed PWA's WebSocket upgrade authenticates through the hostname Access app and the Worker's JWT check. No `ws-ticket` endpoint.
