@@ -21,7 +21,7 @@ These either fill gaps in the spec or pick between options it leaves open. Each 
 | D9 | **No two non-deleted nursing segments may overlap, across all feeds** (one child, one breast-at-a-time). Overlap with sleep, diapers, and so on is allowed. | §3 says to "reject overlapping segments" without saying in what scope. |
 | D10 | **Restore re-runs every invariant.** A restore that would break an invariant, such as a second active sleep or an overlap, returns 409 with the conflicting record. Partial-unique-index violations are mapped to the same 409 as a backstop. | Soft-deleted rows are excluded from the checks, so bringing one back can create a conflict. |
 | D11 | **Ambiguous local times (DST fall-back) in manual entry show a two-choice "1:30 (first) / 1:30 (second)" picker. Nonexistent times (spring-forward) are rejected with a message.** No other DST UI. | §5 requires explicit offset selection for repeated times but defers the grid labels. This is the smallest form-level version. |
-| D12 | **Tooling:** pnpm workspaces, TypeScript strict, Biome (lint + format), Vitest, `@cloudflare/vitest-plugin` for Worker/DO tests, Playwright (WebKit + Chromium, iPhone viewport) for E2E. Time zones via `@date-fns/tz` and `date-fns`, inside `packages/domain` only. | These are conventional, fast, and run in CI without devices. |
+| D12 | **Tooling:** pnpm workspaces, TypeScript strict, oxlint (lint, with the anti-slop and `@gamesheet-inc/oxlint-plugin` rules) and oxfmt (format), Vitest, `@cloudflare/vitest-plugin` for Worker/DO tests, Playwright (WebKit + Chromium, iPhone viewport) for E2E. Time zones via `@date-fns/tz` and `date-fns`, inside `packages/domain` only. | These are conventional, fast, and run in CI without devices. |
 | D13 | **Prefill values come from the server** in `GET /api/today`: last bottle amounts and milk mix, last nursing side, last supplement. | Prefill then follows whichever parent logged last, and the client needs no local storage. |
 
 ---
@@ -122,7 +122,7 @@ Target 100 % branch coverage on this package. It is small, and most correctness 
 ### 3.5 Shared timer engine (web + server)
 
 - **Server:** timer state is rows (D2/D3). Shared core helpers are `openInterval`, `closeInterval(at)`, and `correctInterval`. Feed and sleep adapters add their own validation.
-- **Client:** `useTimer(startInstant | segments, kind)` returns elapsed seconds from server timestamps and `Date.now()`. A `requestAnimationFrame` or 1 s interval only redraws. On `visibilitychange → visible` it calls `refetch` and **never** sends a mutation. A lint rule (Biome `noRestrictedImports`, or a grep check in CI) blocks `pagehide`/`beforeunload`/`visibilitychange` handlers in mutation modules.
+- **Client:** `useTimer(startInstant | segments, kind)` returns elapsed seconds from server timestamps and `Date.now()`. A `requestAnimationFrame` or 1 s interval only redraws. On `visibilitychange → visible` it calls `refetch` and **never** sends a mutation. A lint rule (oxlint `no-restricted-imports`, or a grep check in CI) blocks `pagehide`/`beforeunload`/`visibilitychange` handlers in mutation modules.
 - Shared UI: `TimerDisplay`, `TimerControls`, `StopTimeCorrection` (edit the stop time before confirming), `ActiveTimerCard`.
 - The shared lifecycle test suite (§6, AC 20) is parameterized over `['nursing', 'sleep']`.
 
@@ -138,7 +138,7 @@ Goal: both parents use it daily. Covers AC 1–5, 10, 11, 13, 14, 20 (nursing ha
 
 | Task | Size | Notes |
 |---|---|---|
-| M1.1 Monorepo scaffold, Biome, Vitest, CI (typecheck, lint, unit, workers tests, Playwright on Chromium + WebKit) | S | GitHub Actions; `wrangler deploy --dry-run` with a bundle-size check against the S6 baseline |
+| M1.1 Monorepo scaffold, Biome (since replaced by oxlint and oxfmt, D12), Vitest, CI (typecheck, lint, unit, workers tests, Playwright on Chromium + WebKit) | S | GitHub Actions; `wrangler deploy --dry-run` with a bundle-size check against the S6 baseline |
 | M1.2 `domain`: time/interval/timer/feed/validate/units/invalidation + tests | M | Fixtures for midnight split (AC 4) and DST (AC 21) days in `America/*` and `Europe/*` zones |
 | M1.3 `contracts`: schemas, errors, query keys | S | |
 | M1.4 Worker entry: Access JWT verification (D5) → 401, header hygiene, forward to DO; `access.dev` in `wrangler.jsonc` | S | Port `spike/src/access.ts` (removed in M1.1; `git show ac49adb:spike/src/access.ts`). Test: no `ctx.access` and no valid JWT → 401; unsigned, tampered, expired, wrong-issuer and wrong-audience JWTs → 401; spoofed `x-bt-email` is stripped; `/api/login?return=` redirects only to same-origin paths; `/api/admin/*` rejects caregiver identities and every service token except the admin Client ID. The test pool ignores `access.dev`, so tests call the Worker's `fetch` with a hand-built `ctx` |

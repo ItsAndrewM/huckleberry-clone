@@ -2,7 +2,6 @@ import { spawnSync } from "node:child_process"
 import { fileURLToPath } from "node:url"
 import { builtWorkerConfig, exceedsBudget, parseUploadSize } from "./bundle-size.ts"
 
-// Spike S6 measured 228 KiB gzip with Effect http-api + sql included; M1 fails above 400 (spike-results.md).
 const BUDGET_GZIP_KIB = 400
 
 const webDir = fileURLToPath(new URL("../apps/web/", import.meta.url))

@@ -66,6 +66,6 @@ describe("manifestViolations", () => {
   })
 
   it("ignores manifests with no dependencies", () => {
-    expect(manifestViolations("packages/domain/package.json", { name: "@bt/domain" })).toEqual([])
+    expect(manifestViolations("packages/domain/package.json", {})).toEqual([])
   })
 })

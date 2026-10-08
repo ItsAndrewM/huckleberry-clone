@@ -53,7 +53,7 @@ describe("builtWorkerConfig", () => {
     expect(builtWorkerConfig(web)).toBe(join(web, "dist", "baby_tracker", "wrangler.json"))
   })
 
-  it("refuses to run before a build, so wrangler never auto-configures the Vite app", () => {
+  it("refuses to run before a build, so wrangler never auto-configures the Vite app and rewrites vite.config.ts", () => {
     const web = mkdtempSync(join(tmpdir(), "bt-web-"))
     expect(() => builtWorkerConfig(web)).toThrow(/pnpm build/)
   })

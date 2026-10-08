@@ -3,11 +3,12 @@ packages:
   - packages/*
 
 catalog:
-  "@biomejs/biome": 2.5.15
   "@cloudflare/vite-plugin": 1.63.0
   "@cloudflare/vitest-plugin": 1.3.7
   "@cloudflare/workers-types": 5.20261006.1
   "@effect/sql-sqlite-do": 4.0.1
+  "@gamesheet-inc/oxlint-plugin": 0.2.0
+  "@oxlint/plugins": 1.87.0
   "@playwright/test": 1.64.0
   "@types/node": 22.20.5
   "@types/react": 19.3.0
@@ -15,6 +16,8 @@ catalog:
   "@vitejs/plugin-react": 6.1.2
   effect: 4.0.1
   jose: 6.2.12
+  oxfmt: 0.72.0
+  oxlint: 1.87.0
   react: 19.3.0
   react-dom: 19.3.0
   typescript: 5.9.3
