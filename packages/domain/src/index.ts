@@ -12,9 +12,12 @@ export { affectedPeriods, type PeriodKey } from "./invalidation/affected-periods
 export {
   addDaysToDate,
   datesBetween,
+  isIsoWeek,
+  isLocalDate,
   type IsoWeek,
   isoWeekMonday,
   isoWeekOfDate,
+  isYearMonth,
   type LocalDate,
   monthOfDate,
   nextMonth,
@@ -49,4 +52,5 @@ export {
   validateNotInFuture,
   validateOunces,
   validateVolumeMl,
+  VALIDATION_ISSUES,
 } from "./validate/validate.ts"

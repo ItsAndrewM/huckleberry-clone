@@ -1,6 +1,16 @@
 import fc from "fast-check"
 import { describe, expect, it } from "vitest"
-import { addDaysToDate, datesBetween, isoWeekMonday, isoWeekOfDate, monthOfDate, nextMonth } from "../../src/index.ts"
+import {
+  addDaysToDate,
+  datesBetween,
+  isIsoWeek,
+  isLocalDate,
+  isoWeekMonday,
+  isoWeekOfDate,
+  isYearMonth,
+  monthOfDate,
+  nextMonth,
+} from "../../src/index.ts"
 
 const dates = fc
   .integer({ min: Date.UTC(2020, 0, 1), max: Date.UTC(2035, 0, 1) })
@@ -101,6 +111,54 @@ describe("ISO weeks", () => {
         expect(new Date(`${monday}T00:00:00Z`).getUTCDay()).toBe(1)
         expect(datesBetween(monday, date).length).toBeGreaterThanOrEqual(1)
         expect(datesBetween(monday, date).length).toBeLessThanOrEqual(7)
+      }),
+    )
+  })
+})
+
+const digits = (max: number, width: number) => fc.integer({ min: 0, max }).map((n) => String(n).padStart(width, "0"))
+
+const wellFormed = fc.oneof(
+  fc.tuple(digits(9999, 4), digits(99, 2), digits(99, 2)).map(([year, month, day]) => `${year}-${month}-${day}`),
+  fc.tuple(digits(9999, 4), digits(99, 2)).map(([year, week]) => `${year}-W${week}`),
+  fc.tuple(digits(9999, 4), digits(99, 2)).map(([year, month]) => `${year}-${month}`),
+)
+
+describe("isLocalDate, isIsoWeek and isYearMonth", () => {
+  it.each(["2026-10-06", "2028-02-29", "0001-01-01", "9999-12-31"])("%j is a date", (value) => {
+    expect(isLocalDate(value)).toBe(true)
+  })
+
+  it.each(["2026-02-30", "2026-13-01", "2026-10-6", "", "+010000-01", "-000001-01", "2026-10-06x", "2026-10-06T00:00"])(
+    "%j is not a date",
+    (value) => {
+      expect(isLocalDate(value)).toBe(false)
+    },
+  )
+
+  it.each(["2026-W41", "2026-W53", "2025-W01"])("%j is an ISO week", (value) => {
+    expect(isIsoWeek(value)).toBe(true)
+  })
+
+  it.each(["2026-W54", "2025-W53", "2026-W00", "2026-W5", "2026-41", "9999-W60", " 2026-W41"])(
+    "%j is not an ISO week",
+    (value) => {
+      expect(isIsoWeek(value)).toBe(false)
+    },
+  )
+
+  it.each(["2026-10", "2026-01", "0001-12"])("%j is a month", (value) => {
+    expect(isYearMonth(value)).toBe(true)
+  })
+
+  it.each(["2026-13", "2026-00", "2026-1", "2026-10-06", ""])("%j is not a month", (value) => {
+    expect(isYearMonth(value)).toBe(false)
+  })
+
+  it("never throws, whatever the string", () => {
+    fc.assert(
+      fc.property(fc.oneof(fc.string(), wellFormed), (value) => {
+        expect(() => [isLocalDate(value), isIsoWeek(value), isYearMonth(value)]).not.toThrow()
       }),
     )
   })

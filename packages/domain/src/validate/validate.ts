@@ -3,14 +3,17 @@ import { type Instant, MINUTE_MS } from "../time/instant.ts"
 import { startOfDate } from "../time/wall-clock.ts"
 import type { TimeZone } from "../time/zone.ts"
 
-export type ValidationIssue =
-  | "not_finite"
-  | "not_positive"
-  | "too_many_decimals"
-  | "end_not_after_start"
-  | "before_birth"
-  | "in_future"
-  | "out_of_range"
+export const VALIDATION_ISSUES = [
+  "not_finite",
+  "not_positive",
+  "too_many_decimals",
+  "end_not_after_start",
+  "before_birth",
+  "in_future",
+  "out_of_range",
+] as const
+
+export type ValidationIssue = (typeof VALIDATION_ISSUES)[number]
 
 export const FUTURE_TOLERANCE_MS = 5 * MINUTE_MS
 
