@@ -13,10 +13,12 @@
     "format": "biome check --write .",
     "typecheck": "tsc -p tsconfig.json && pnpm -r typecheck",
     "test": "vitest run",
-    "bundle:check": "node scripts/check-bundle-size.ts"
+    "bundle:check": "node scripts/check-bundle-size.ts",
+    "e2e": "playwright test"
   },
   "devDependencies": {
     "@biomejs/biome": "catalog:",
+    "@playwright/test": "catalog:",
     "@types/node": "catalog:",
     "typescript": "catalog:",
     "vitest": "catalog:"
