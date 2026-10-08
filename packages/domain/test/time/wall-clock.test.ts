@@ -17,8 +17,8 @@ describe("resolveLocal (D11)", () => {
   })
 
   it.each([
-    [VANCOUVER, "2026-11-01T01:30", "2026-11-01T08:30:00Z", "2026-11-01T09:30:00Z"],
-    [VANCOUVER, "2026-11-01T01:00", "2026-11-01T08:00:00Z", "2026-11-01T09:00:00Z"],
+    [VANCOUVER, "2025-11-02T01:30", "2025-11-02T08:30:00Z", "2025-11-02T09:30:00Z"],
+    [VANCOUVER, "2025-11-02T01:00", "2025-11-02T08:00:00Z", "2025-11-02T09:00:00Z"],
     [LONDON, "2026-10-25T01:30", "2026-10-25T00:30:00Z", "2026-10-25T01:30:00Z"],
     ["Australia/Lord_Howe", "2026-04-05T01:45", "2026-04-04T14:45:00Z", "2026-04-04T15:15:00Z"],
   ])("%s %s happens twice when clocks go back, so it offers both", (zone, local, earlier, later) => {
@@ -37,8 +37,8 @@ describe("resolveLocal (D11)", () => {
   it.each([
     [VANCOUVER, "2026-03-08T01:59", "2026-03-08T09:59:00Z"],
     [VANCOUVER, "2026-03-08T03:00", "2026-03-08T10:00:00Z"],
-    [VANCOUVER, "2026-11-01T00:59", "2026-11-01T07:59:00Z"],
-    [VANCOUVER, "2026-11-01T02:00", "2026-11-01T10:00:00Z"],
+    [VANCOUVER, "2025-11-02T00:59", "2025-11-02T07:59:00Z"],
+    [VANCOUVER, "2025-11-02T02:00", "2025-11-02T10:00:00Z"],
   ])("%s %s, just outside a change, is ordinary", (zone, local, instant) => {
     expect(resolveLocal(local, zone)).toEqual({ kind: "ok", instant: at(instant) })
   })

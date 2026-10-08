@@ -56,15 +56,15 @@ describe("isoWeekBounds", () => {
   })
 
   it("is an hour longer in the week clocks go back", () => {
-    expect(hoursIn(isoWeekBounds("2026-W44", VANCOUVER))).toBe(7 * 24 + 1)
+    expect(hoursIn(isoWeekBounds("2025-W44", VANCOUVER))).toBe(7 * 24 + 1)
   })
 })
 
 describe("monthBounds", () => {
   it("runs from the 1st at midnight to the next 1st at midnight", () => {
-    expect(monthBounds("2026-11", VANCOUVER)).toEqual({
-      start: at("2026-11-01T07:00:00Z"),
-      end: at("2026-12-01T08:00:00Z"),
+    expect(monthBounds("2025-11", VANCOUVER)).toEqual({
+      start: at("2025-11-01T07:00:00Z"),
+      end: at("2025-12-01T08:00:00Z"),
     })
   })
 

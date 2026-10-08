@@ -8,7 +8,7 @@ const at = (iso: string) => Date.parse(iso)
 
 export const AC23_DAY_LENGTHS = [
   { zone: "America/Vancouver", date: "2026-03-08", hours: 23 },
-  { zone: "America/Vancouver", date: "2026-11-01", hours: 25 },
+  { zone: "America/Vancouver", date: "2025-11-02", hours: 25 },
   { zone: "Europe/London", date: "2026-03-29", hours: 23 },
   { zone: "Europe/London", date: "2026-10-25", hours: 25 },
 ]
@@ -42,8 +42,8 @@ export const AC4_MIDNIGHT_FEED = {
 export const AC21_DST_SEGMENTS = [
   {
     label: "Vancouver, clocks go back: 01:50 PDT to 01:10 PST",
-    startedAt: at("2026-11-01T08:50:00Z"),
-    endedAt: at("2026-11-01T09:10:00Z"),
+    startedAt: at("2025-11-02T08:50:00Z"),
+    endedAt: at("2025-11-02T09:10:00Z"),
   },
   {
     label: "Vancouver, clocks go forward: 01:50 PST to 03:10 PDT",

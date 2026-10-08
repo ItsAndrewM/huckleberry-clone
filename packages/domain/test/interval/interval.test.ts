@@ -63,7 +63,7 @@ describe("splitByDays", () => {
   })
 
   it.each([
-    [VANCOUVER, "2026-11-01T06:30:00Z", "2026-11-01T09:30:00Z", "2026-10-31", "2026-11-01", 30, 150],
+    [VANCOUVER, "2025-11-02T06:30:00Z", "2025-11-02T09:30:00Z", "2025-11-01", "2025-11-02", 30, 150],
     [LONDON, "2026-03-28T23:30:00Z", "2026-03-29T02:00:00Z", "2026-03-28", "2026-03-29", 30, 120],
   ])("splits by local days on a DST day in %s", (zone, start, end, firstDate, secondDate, first, second) => {
     expect(minutesByDate(splitByDays({ start: at(start), end: at(end) }, zone))).toEqual([
