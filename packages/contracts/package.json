@@ -13,6 +13,7 @@
     "effect": "catalog:"
   },
   "devDependencies": {
+    "fast-check": "catalog:",
     "typescript": "catalog:",
     "vitest": "catalog:"
   }
