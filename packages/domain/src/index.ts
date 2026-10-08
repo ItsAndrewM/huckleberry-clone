@@ -24,3 +24,28 @@ export { type LocalDateTime, type LocalResolution, resolveLocal, startOfDate } f
 export { canonicalTimeZone, type TimeZone } from "./time/zone.ts"
 export { isoWeekBounds, localDateOf, monthBounds, zonedDayBounds } from "./time/zoned.ts"
 export { formatElapsed, nursingElapsed, sleepElapsed, type Span } from "./timer/timer.ts"
+export {
+  CM_PER_INCH,
+  cmFromInches,
+  flOzFromMl,
+  GRAMS_PER_OUNCE,
+  GRAMS_PER_POUND,
+  gramsFromPoundsOunces,
+  inchesFromCm,
+  ML_PER_FL_OZ,
+  mlFromFlOz,
+  OUNCES_PER_POUND,
+  type PoundsOunces,
+  poundsOuncesFromGrams,
+  roundTo,
+} from "./units/units.ts"
+export {
+  FUTURE_TOLERANCE_MS,
+  validateDurationSeconds,
+  validateEndAfterStart,
+  type ValidationIssue,
+  validateNotBeforeBirth,
+  validateNotInFuture,
+  validateOunces,
+  validateVolumeMl,
+} from "./validate/validate.ts"
