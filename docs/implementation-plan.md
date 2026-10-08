@@ -50,7 +50,7 @@ e2e/                   Playwright specs
 docs/                  spec, this plan, runbooks (restore drill, Access setup)
 ```
 
-`packages/domain` imports nothing else from the workspace. `packages/contracts` may import `domain` types. `apps/web` and `apps/worker` import both.
+`packages/domain` imports nothing else from the workspace. `packages/contracts` may import `domain`, whose predicates its schemas call. `apps/web` and `apps/worker` import both.
 
 ---
 
@@ -81,7 +81,7 @@ Deliverables: `docs/spike-results.md`, pinned versions in the root `package.json
 
 Pure functions. Each takes `now` and `tz` as arguments; nothing reads the clock or the device timezone.
 
-- `time/` — `Instant` (epoch ms, UTC), `LocalDate`, `zonedDayBounds(date, tz)`, `localDateOf(instant, tz)`, `isoWeekBounds`, `monthBounds`, `resolveLocal(dateTime, tz) → {kind: 'ok'|'ambiguous'|'nonexistent', ...}` (D11), `startOfDate(date, tz)` (the first instant of a local date, which isn't always 00:00), `canonicalTimeZone(name)` (seed script, Settings). Functions that take a date, week, month or zone string throw `RangeError` when it isn't real; `canonicalTimeZone` returns `null` instead, so callers can test a name without catching.
+- `time/` — `Instant` (epoch ms, UTC), `LocalDate`, `zonedDayBounds(date, tz)`, `localDateOf(instant, tz)`, `isoWeekBounds`, `monthBounds`, `resolveLocal(dateTime, tz) → {kind: 'ok'|'ambiguous'|'nonexistent', ...}` (D11), `startOfDate(date, tz)` (the first instant of a local date, which isn't always 00:00), `canonicalTimeZone(name)` (seed script, Settings). Functions that take a date, week, month or zone string throw `RangeError` when it isn't real; `canonicalTimeZone` returns `null` instead, and `isLocalDate`, `isIsoWeek` and `isYearMonth` return a boolean, so callers can test a string without catching.
 - `interval/` — half-open `[start, end)` intervals: `overlaps`, `splitByDays(interval, tz)`, `clipTo(period)`.
 - `timer/` — `nursingElapsed(segments, now)` (sum of closed + open), `sleepElapsed(session, now)`, `formatElapsed`.
 - `feed/` — `feedSummary(feed, now)` → left/right/total seconds, breast-milk/formula/total mL. `sessionBounds(components)`.
@@ -95,10 +95,10 @@ Pure functions. Each takes `now` and `tz` as arguments; nothing reads the clock 
 
 ### 3.2 `packages/contracts`
 
-- Effect Schemas for every request/response, plus `ApiError = Unauthorized | InvalidInput{fieldErrors} | NotFound | Conflict{code, current} | RateLimited | ServiceUnavailable`.
+- Effect Schemas for every request/response, plus `ApiError = Unauthorized | InvalidInput{fieldErrors} | NotFound | Conflict{code, current} | RateLimited | ServiceUnavailable`. M1.3 builds the shared pieces: `Instant` (integer epoch ms in 2000–2099), `LocalDate`, `IsoWeek` and `YearMonth` (years 1999–2100), `TimeZone`, the errors and the query keys. Each endpoint's schemas come with the task that builds it. A conflict is declared per record type, with `Conflict<Self>()(codes, current)`. `fieldErrors` is a list of `{path, issue}`, where `issue` is a domain `ValidationIssue` or `invalid`.
 - Stable conflict codes: `FEED_ALREADY_ACTIVE`, `SLEEP_ALREADY_ACTIVE`, `SLEEP_OVERLAP`, `SEGMENT_OVERLAP`, `STALE_VERSION`, `SUPPLEMENT_DUPLICATE_DAY`, `FEED_EMPTY`, `ACTION_REPLAY_MISMATCH`.
 - Query-key builders, shared by the server's `changed` list and the client's invalidation: `['me']`, `['today']`, `['last24h']`, `['day', '2026-10-06']`, `['week', '2026-W41']`, `['month', '2026-10']`, `['growth']`, `['deleted']`. The day, week and month keys are `@bt/domain`'s `PeriodKey`.
-- `OpenAPI` generated from the http-api definition and checked into `docs/api.json` as a review aid.
+- `OpenAPI` generated from the http-api definition and checked into `docs/api.json` as a review aid. The http-api definition starts in M1.5, with `GET /api/me`.
 
 ### 3.3 Durable Object core
 
@@ -140,9 +140,9 @@ Goal: both parents use it daily. Covers AC 1–5, 10, 11, 13, 14, 20 (nursing ha
 |---|---|---|
 | M1.1 Monorepo scaffold, Biome (since replaced by oxlint and oxfmt, D12), Vitest, CI (typecheck, lint, unit, workers tests, Playwright on Chromium + WebKit) | S | GitHub Actions; `wrangler deploy --dry-run` with a bundle-size check against the S6 baseline |
 | M1.2 `domain`: time/interval/timer/feed/validate/units/invalidation + tests | M | Fixtures for midnight split (AC 4) and DST (AC 21) days in `America/*` and `Europe/*` zones |
-| M1.3 `contracts`: schemas, errors, query keys | S | |
+| M1.3 `contracts`: schemas, errors, query keys | S | Shared pieces only (§3.2). Endpoint schemas come with their endpoints |
 | M1.4 Worker entry: Access JWT verification (D5) → 401, header hygiene, forward to DO; `access.dev` in `wrangler.jsonc` | S | Port `spike/src/access.ts` (removed in M1.1; `git show ac49adb:spike/src/access.ts`). Test: no `ctx.access` and no valid JWT → 401; unsigned, tampered, expired, wrong-issuer and wrong-audience JWTs → 401; spoofed `x-bt-email` is stripped; `/api/login?return=` redirects only to same-origin paths; `/api/admin/*` rejects caregiver identities and every service token except the admin Client ID. The test pool ignores `access.dev`, so tests call the Worker's `fetch` with a hand-built `ctx` |
-| M1.5 DO skeleton: migrations, seed script, identity resolution, receipts, alarm pruning, `GET /api/me` | M | |
+| M1.5 DO skeleton: migrations, seed script, identity resolution, receipts, alarm pruning, `GET /api/me` | M | Starts the http-api definition in `contracts` and `docs/api.json`. Maps decode failures, which Effect answers with an empty 400, to `InvalidInput` |
 | M1.6 Diapers: POST/PATCH/DELETE/restore + core | S | Validation: wet or dirty required |
 | M1.7 Feeds core: manual completed feed, start, switch, pause, resume, bottle, finish; segment/portion PATCH/DELETE; feed PATCH/DELETE/restore; session bounds recompute; D3, D9 | L | Finish with an empty feed → `FEED_EMPTY` with an offer to delete in the same request (`deleteIfEmpty: true`). Delete the last component of a completed feed → same offer |
 | M1.8 `GET /api/today` and `GET /api/last24h`: summaries, active feed/sleep, last feed, prefill values (D13), recent entries with caregiver | M | "Feeds started today" label from the server |
