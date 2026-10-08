@@ -6,6 +6,8 @@ A two-caregiver baby tracker on Cloudflare Workers. The plan is `docs/implementa
 
 Node 24, at the exact version in `.nvmrc` (`nvm install && nvm use`; CI reads the same file), and pnpm 10 (`corepack enable`), then `pnpm install`. Node runs the `.ts` scripts directly.
 
+Locally, `pnpm dev` and `pnpm e2e` are signed in as the `access.dev` identity in `apps/worker/wrangler.jsonc`, so `/api/*` requests get past the Access check (D5).
+
 ## Commands
 
 | Command | Does |
