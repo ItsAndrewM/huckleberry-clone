@@ -4,6 +4,11 @@ export default defineConfig({
   test: {
     projects: [
       "packages/*/vitest.config.ts",
+      {
+        extends: "./packages/domain/vitest.config.ts",
+        root: "./packages/domain",
+        test: { name: "domain-west", env: { TZ: "America/Adak" }, provide: { hostZone: "America/Adak" } },
+      },
       "apps/worker/vitest.config.ts",
       { test: { name: "scripts", include: ["scripts/**/*.test.ts"], environment: "node" } },
     ],

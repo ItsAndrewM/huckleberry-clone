@@ -37,6 +37,17 @@ describe("datesBetween", () => {
   it("returns nothing when last is before first", () => {
     expect(datesBetween("2026-10-07", "2026-10-06")).toEqual([])
   })
+
+  it.each([
+    ["garbage", "2026-10-06"],
+    ["2026-10-06", "zzz"],
+    ["2026-02-30", "2026-03-02"],
+    ["2026-10-06", "2026-10-06x"],
+    ["2026-02-30", "2026-02-01"],
+    ["2026-02-01", "2026-02-30"],
+  ])("throws on %j to %j, because one end is not a real date", (first, last) => {
+    expect(() => datesBetween(first, last)).toThrow(RangeError)
+  })
 })
 
 describe("months", () => {

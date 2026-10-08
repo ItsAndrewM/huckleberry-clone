@@ -21,7 +21,8 @@ export const addDaysToDate = (date: LocalDate, days: number): LocalDate =>
 
 export const datesBetween = (first: LocalDate, last: LocalDate): LocalDate[] => {
   const dates: LocalDate[] = []
-  for (let date = first; date <= last; date = addDaysToDate(date, 1)) dates.push(date)
+  const end = utcMidnightOf(last)
+  for (let ms = utcMidnightOf(first); ms <= end; ms += DAY_MS) dates.push(utcDateOf(ms))
   return dates
 }
 

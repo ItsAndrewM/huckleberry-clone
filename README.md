@@ -14,7 +14,7 @@ Node 22.18 or later in the 22 line (it runs the `.ts` scripts directly) and pnpm
 | `pnpm lint` / `pnpm format` | oxlint, then an oxfmt check / oxfmt write. Only the root configs apply, to every package: nested configs are ignored, so per-folder rules go in `overrides`. Lint findings are never auto-fixed |
 | `pnpm pins:check` | Fails unless every catalog version is exact and packages use `catalog:` or `workspace:*` |
 | `pnpm typecheck` | `tsc` for the root and every package |
-| `pnpm test` | Vitest: domain tests, Workers tests in workerd, and script tests |
+| `pnpm test` | Vitest: domain tests under two host time zones (east and west of UTC), Workers tests in workerd, and script tests |
 | `pnpm coverage` | Domain tests with the 100 % coverage gate on statements, branches, functions and lines |
 | `pnpm build` | Client and Worker build into `apps/web/dist` |
 | `pnpm bundle:check` | Fails if the Worker is over 400 KiB gzip (run `pnpm build` first) |
