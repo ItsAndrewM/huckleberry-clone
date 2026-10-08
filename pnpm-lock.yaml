@@ -144,6 +144,9 @@ importers:
 
   apps/worker:
     dependencies:
+      '@bt/contracts':
+        specifier: workspace:*
+        version: link:../../packages/contracts
       effect:
         specifier: 'catalog:'
         version: 4.0.1

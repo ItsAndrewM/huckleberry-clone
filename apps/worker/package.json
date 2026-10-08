@@ -6,6 +6,7 @@
     "typecheck": "tsc -p tsconfig.json"
   },
   "dependencies": {
+    "@bt/contracts": "workspace:*",
     "effect": "catalog:",
     "jose": "catalog:"
   },
