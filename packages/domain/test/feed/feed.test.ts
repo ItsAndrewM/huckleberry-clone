@@ -79,6 +79,17 @@ describe("feedSummary", () => {
     expect(feedSummary(feed, T0)).toMatchObject({ breastMilkMl: 0.3, formulaMl: 60, bottleMl: 60.3 })
   })
 
+  it("rounds the summed volume to 0.1 mL, not each portion before summing", () => {
+    const feed = {
+      segments: [],
+      portions: [
+        { occurredAt: T0, breastMilkMl: 40.15, formulaMl: 0 },
+        { occurredAt: T0, breastMilkMl: 40.15, formulaMl: 0 },
+      ],
+    }
+    expect(feedSummary(feed, T0)).toMatchObject({ breastMilkMl: 80.3, formulaMl: 0, bottleMl: 80.3 })
+  })
+
   it("is all zeros for an empty feed", () => {
     expect(feedSummary({ segments: [], portions: [] }, T0)).toEqual({
       leftSeconds: 0,

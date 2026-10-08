@@ -48,6 +48,9 @@ describe("validateEndAfterStart", () => {
     [10, 11, null],
     [10, 10, "end_not_after_start"],
     [11, 10, "end_not_after_start"],
+    [0, Number.POSITIVE_INFINITY, "not_finite"],
+    [Number.NEGATIVE_INFINITY, 10, "not_finite"],
+    [Number.NaN, 10, "not_finite"],
   ])("start %s, end %s gives %s", (start, end, issue) => {
     expect(validateEndAfterStart(start, end)).toBe(issue)
   })
@@ -63,6 +66,10 @@ describe("validateNotBeforeBirth", () => {
 
   it("rejects the evening before, in the household's time zone", () => {
     expect(validateNotBeforeBirth(birthDayStart - 1, birthDate, VANCOUVER)).toBe("before_birth")
+  })
+
+  it.each([Number.POSITIVE_INFINITY, Number.NEGATIVE_INFINITY, Number.NaN])("rejects %s as not_finite", (instant) => {
+    expect(validateNotBeforeBirth(instant, birthDate, VANCOUVER)).toBe("not_finite")
   })
 })
 
@@ -81,6 +88,15 @@ describe("validateNotInFuture", () => {
 
   it("takes a different tolerance", () => {
     expect(validateNotInFuture(now + 1, now, 0)).toBe("in_future")
+  })
+
+  it.each([
+    [Number.NEGATIVE_INFINITY, now],
+    [Number.NaN, now],
+    [now, Number.POSITIVE_INFINITY],
+    [now, Number.NaN],
+  ])("rejects instant %s against server time %s as not_finite", (instant, serverNow) => {
+    expect(validateNotInFuture(instant, serverNow)).toBe("not_finite")
   })
 })
 

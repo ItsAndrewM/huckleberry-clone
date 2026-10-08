@@ -30,7 +30,7 @@ export interface FeedSummary {
 const tenths = (ml: number) => Math.round(ml * 10)
 
 const sumMl = (portions: ReadonlyArray<BottlePortion>, pick: (portion: BottlePortion) => number) =>
-  portions.reduce((total, portion) => total + tenths(pick(portion)), 0) / 10
+  tenths(portions.reduce((total, portion) => total + pick(portion), 0)) / 10
 
 const sideSeconds = (feed: FeedComponents, side: Side, now: Instant) =>
   nursingElapsed(

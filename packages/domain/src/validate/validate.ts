@@ -28,20 +28,28 @@ export const validateVolumeMl = (ml: number): ValidationIssue | null => {
 
 export const validateDurationSeconds = (seconds: number): ValidationIssue | null => positiveIssue(seconds)
 
-export const validateEndAfterStart = (start: Instant, end: Instant): ValidationIssue | null =>
-  end > start ? null : "end_not_after_start"
+export const validateEndAfterStart = (start: Instant, end: Instant): ValidationIssue | null => {
+  if (!Number.isFinite(start) || !Number.isFinite(end)) return "not_finite"
+  return end > start ? null : "end_not_after_start"
+}
 
 export const validateNotBeforeBirth = (
   instant: Instant,
   birthDate: LocalDate,
   zone: TimeZone,
-): ValidationIssue | null => (instant >= startOfDate(birthDate, zone) ? null : "before_birth")
+): ValidationIssue | null => {
+  if (!Number.isFinite(instant)) return "not_finite"
+  return instant >= startOfDate(birthDate, zone) ? null : "before_birth"
+}
 
 export const validateNotInFuture = (
   instant: Instant,
   serverNow: Instant,
   toleranceMs: number = FUTURE_TOLERANCE_MS,
-): ValidationIssue | null => (instant <= serverNow + toleranceMs ? null : "in_future")
+): ValidationIssue | null => {
+  if (!Number.isFinite(instant) || !Number.isFinite(serverNow)) return "not_finite"
+  return instant <= serverNow + toleranceMs ? null : "in_future"
+}
 
 export const validateOunces = (ounces: number): ValidationIssue | null => {
   if (!Number.isFinite(ounces)) return "not_finite"
