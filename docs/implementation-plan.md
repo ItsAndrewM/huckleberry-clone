@@ -81,23 +81,23 @@ Deliverables: `docs/spike-results.md`, pinned versions in the root `package.json
 
 Pure functions. Each takes `now` and `tz` as arguments; nothing reads the clock or the device timezone.
 
-- `time/` — `Instant` (epoch ms, UTC), `LocalDate`, `zonedDayBounds(date, tz)`, `localDateOf(instant, tz)`, `isoWeekBounds`, `monthBounds`, `resolveLocal(dateTime, tz) → {kind: 'ok'|'ambiguous'|'nonexistent', ...}` (D11).
+- `time/` — `Instant` (epoch ms, UTC), `LocalDate`, `zonedDayBounds(date, tz)`, `localDateOf(instant, tz)`, `isoWeekBounds`, `monthBounds`, `resolveLocal(dateTime, tz) → {kind: 'ok'|'ambiguous'|'nonexistent', ...}` (D11), `startOfDate(date, tz)` (the first instant of a local date, which isn't always 00:00), `canonicalTimeZone(name)` (seed script, Settings). Strings that aren't real dates, weeks, months or zones throw `RangeError`.
 - `interval/` — half-open `[start, end)` intervals: `overlaps`, `splitByDays(interval, tz)`, `clipTo(period)`.
 - `timer/` — `nursingElapsed(segments, now)` (sum of closed + open), `sleepElapsed(session, now)`, `formatElapsed`.
-- `feed/` — `feedSummary(feed)` → left/right/total seconds, breast-milk/formula/total mL. `sessionBounds(components)`.
+- `feed/` — `feedSummary(feed, now)` → left/right/total seconds, breast-milk/formula/total mL. `sessionBounds(components)`.
 - `aggregate/` — `daySummary`, `weekSummary`, `monthSummary`, `cumulativeSeries`, `longestSleepStretch`, `supplementStatus`. Nursing and sleep are allocated by interval overlap with local days. Bottles are allocated by portion time. Feeds are counted on their start date.
 - `validate/` — positive volume (≤ 1 decimal, finite), positive duration, end > start, not before birth, `notInFuture(instant, serverNow, toleranceMs = 5 min)`, ounces ∈ [0, 16).
-- `units/` — g ↔ lb+oz, cm ↔ in using the exact constants. Values are stored at full precision and rounded for display only.
+- `units/` — g ↔ lb+oz, cm ↔ in using the exact constants. Values are stored at full precision and rounded for display only. Bottle volumes convert between mL and US fl oz and are stored to 0.1 mL.
 - `growth/` — `ageInDays(measuredOn, birthDate)`, `zScoreLMS(x, L, M, S)` with WHO's restricted-application adjustment beyond ±3 SD, `percentile(z)` (normal CDF), `percentileFor(metric, sex, ageDays, value) → number | 'unavailable'`.
-- `invalidation/` — `affectedPeriods(old?: Interval, new?: Interval, tz) → QueryKey[]` (D7).
+- `invalidation/` — `affectedPeriods(old: Interval | null, new: Interval | null, tz) → PeriodKey[]` (D7): the day, week and month keys. A point event is `{start: t, end: t}`.
 
-Target 100 % branch coverage on this package. It is small, and most correctness lives here.
+`pnpm coverage` (in CI) holds this package at 100 % statement, branch, function and line coverage. It is small, and most correctness lives here.
 
 ### 3.2 `packages/contracts`
 
 - Effect Schemas for every request/response, plus `ApiError = Unauthorized | InvalidInput{fieldErrors} | NotFound | Conflict{code, current} | RateLimited | ServiceUnavailable`.
 - Stable conflict codes: `FEED_ALREADY_ACTIVE`, `SLEEP_ALREADY_ACTIVE`, `SLEEP_OVERLAP`, `SEGMENT_OVERLAP`, `STALE_VERSION`, `SUPPLEMENT_DUPLICATE_DAY`, `FEED_EMPTY`, `ACTION_REPLAY_MISMATCH`.
-- Query-key builders, shared by the server's `changed` list and the client's invalidation: `['me']`, `['today']`, `['last24h']`, `['day', '2026-10-06']`, `['week', '2026-W41']`, `['month', '2026-10']`, `['growth']`, `['deleted']`.
+- Query-key builders, shared by the server's `changed` list and the client's invalidation: `['me']`, `['today']`, `['last24h']`, `['day', '2026-10-06']`, `['week', '2026-W41']`, `['month', '2026-10']`, `['growth']`, `['deleted']`. The day, week and month keys are `@bt/domain`'s `PeriodKey`.
 - `OpenAPI` generated from the http-api definition and checked into `docs/api.json` as a review aid.
 
 ### 3.3 Durable Object core
