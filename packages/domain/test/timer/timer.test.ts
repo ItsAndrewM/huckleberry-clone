@@ -29,6 +29,14 @@ describe("nursingElapsed", () => {
     expect(nursingElapsed([{ startedAt: T0, endedAt: null }], T0 - 3 * SECOND)).toBe(0)
   })
 
+  it("counts each segment as at least 0, not just the total", () => {
+    const segments = [
+      { startedAt: T0, endedAt: T0 + 10 * MINUTE },
+      { startedAt: T0 + 10 * MINUTE + 3 * SECOND, endedAt: null },
+    ]
+    expect(nursingElapsed(segments, T0 + 10 * MINUTE)).toBe(600)
+  })
+
   it("sums milliseconds before rounding down to whole seconds", () => {
     const halves = [
       { startedAt: T0, endedAt: T0 + 1500 },

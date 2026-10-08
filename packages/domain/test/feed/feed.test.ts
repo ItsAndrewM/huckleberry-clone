@@ -41,6 +41,22 @@ describe("feedSummary", () => {
     })
   })
 
+  it("adds up several segments on the same side", () => {
+    const feed = {
+      segments: [
+        { side: "left", startedAt: T0, endedAt: T0 + 5 * MINUTE },
+        { side: "right", startedAt: T0 + 5 * MINUTE, endedAt: T0 + 10 * MINUTE },
+        { side: "left", startedAt: T0 + 10 * MINUTE, endedAt: T0 + 13 * MINUTE },
+      ],
+      portions: [],
+    } as const
+    expect(feedSummary(feed, T0 + 13 * MINUTE)).toMatchObject({
+      leftSeconds: 480,
+      rightSeconds: 300,
+      nursingSeconds: 780,
+    })
+  })
+
   it("makes left + right add up to the total it shows", () => {
     const feed = {
       segments: [
@@ -86,6 +102,17 @@ describe("sessionBounds", () => {
   it("has no end while a segment is running", () => {
     const feed = { segments: [{ side: "left", startedAt: T0, endedAt: null }], portions: [] } as const
     expect(sessionBounds(feed)).toEqual({ startedAt: T0, endedAt: null })
+  })
+
+  it("has no end while a segment runs, even beside closed segments and an earlier bottle", () => {
+    const feed = {
+      segments: [
+        { side: "left", startedAt: T0, endedAt: T0 + 10 * MINUTE },
+        { side: "right", startedAt: T0 + 10 * MINUTE, endedAt: null },
+      ],
+      portions: [{ occurredAt: T0 - 5 * MINUTE, breastMilkMl: 30, formulaMl: 0 }],
+    } as const
+    expect(sessionBounds(feed)).toEqual({ startedAt: T0 - 5 * MINUTE, endedAt: null })
   })
 
   it("starts and ends at the bottle for a bottle-only feed", () => {
