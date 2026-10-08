@@ -1,0 +1,9 @@
+node_modules
+dist
+.wrangler
+.dev.vars*
+.admin-token.env
+coverage
+playwright-report
+test-results
+.claude/settings.local.json

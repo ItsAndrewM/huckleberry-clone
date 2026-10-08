@@ -24,7 +24,7 @@ The spike code was removed in M1.1. Read it at commit `ac49adb`, for example `gi
 
 ## Pinned versions
 
-The spike uses these exact versions. M1.1 copies them into the root `package.json` when the monorepo is scaffolded.
+The spike uses these exact versions. M1.1 copies them into the pnpm catalog in `pnpm-workspace.yaml`.
 
 | Package | Version | Note |
 |---|---|---|
