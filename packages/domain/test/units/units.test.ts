@@ -1,4 +1,3 @@
-import fc from "fast-check"
 import { describe, expect, it } from "vitest"
 import {
   CM_PER_INCH,
@@ -50,23 +49,26 @@ describe("pounds and ounces", () => {
   })
 
   it("round-trips any entry to a tenth of an ounce (AC 8)", () => {
-    fc.assert(
-      fc.property(fc.integer({ min: 0, max: 40 }), fc.integer({ min: 0, max: 159 }), (pounds, tenths) => {
+    const mismatches: Array<{ pounds: number; ounces: number }> = []
+    for (let pounds = 0; pounds <= 40; pounds++) {
+      for (let tenths = 0; tenths <= 159; tenths++) {
         const ounces = tenths / 10
-        expect(poundsOuncesFromGrams(gramsFromPoundsOunces(pounds, ounces), 1)).toEqual({ pounds, ounces })
-      }),
-    )
+        const back = poundsOuncesFromGrams(gramsFromPoundsOunces(pounds, ounces), 1)
+        if (back.pounds !== pounds || back.ounces !== ounces) mismatches.push({ pounds, ounces })
+      }
+    }
+    expect(mismatches).toEqual([])
   })
 })
 
 describe("centimetres and inches", () => {
   it("round-trips any entry to a tenth of an inch (AC 8)", () => {
-    fc.assert(
-      fc.property(fc.integer({ min: 1, max: 600 }), (tenths) => {
-        const inches = tenths / 10
-        expect(roundTo(inchesFromCm(cmFromInches(inches)), 1)).toBe(inches)
-      }),
-    )
+    const mismatches: number[] = []
+    for (let tenths = 1; tenths <= 600; tenths++) {
+      const inches = tenths / 10
+      if (roundTo(inchesFromCm(cmFromInches(inches)), 1) !== inches) mismatches.push(inches)
+    }
+    expect(mismatches).toEqual([])
   })
 })
 
@@ -77,13 +79,12 @@ describe("bottle volumes in ounces", () => {
   })
 
   it("shows any amount entered to a tenth of an ounce unchanged after a switch to mL and back", () => {
-    fc.assert(
-      fc.property(fc.integer({ min: 1, max: 160 }), (tenths) => {
-        const flOz = tenths / 10
-        const ml = mlFromFlOz(flOz)
-        expect(validateVolumeMl(ml)).toBeNull()
-        expect(roundTo(flOzFromMl(ml), 1)).toBe(flOz)
-      }),
-    )
+    const mismatches: number[] = []
+    for (let tenths = 1; tenths <= 160; tenths++) {
+      const flOz = tenths / 10
+      const ml = mlFromFlOz(flOz)
+      if (validateVolumeMl(ml) !== null || roundTo(flOzFromMl(ml), 1) !== flOz) mismatches.push(flOz)
+    }
+    expect(mismatches).toEqual([])
   })
 })

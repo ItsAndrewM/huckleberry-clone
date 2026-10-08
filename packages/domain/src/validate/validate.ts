@@ -22,7 +22,8 @@ const positiveIssue = (value: number): ValidationIssue | null => {
 export const validateVolumeMl = (ml: number): ValidationIssue | null => {
   const issue = positiveIssue(ml)
   if (issue !== null) return issue
-  return Math.abs(ml * 10 - Math.round(ml * 10)) < 1e-9 ? null : "too_many_decimals"
+  const tenths = Math.round(ml * 10)
+  return tenths >= 1 && Math.abs(ml * 10 - tenths) < 1e-9 ? null : "too_many_decimals"
 }
 
 export const validateDurationSeconds = (seconds: number): ValidationIssue | null => positiveIssue(seconds)

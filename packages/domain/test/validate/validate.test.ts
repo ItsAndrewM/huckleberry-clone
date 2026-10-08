@@ -13,7 +13,7 @@ import { VANCOUVER } from "../fixtures/zones.ts"
 const at = (iso: string) => Date.parse(iso)
 
 describe("validateVolumeMl", () => {
-  it.each([60, 0.1, 40.1, 1000])("accepts %s mL", (ml) => {
+  it.each([60, 0.1, 0.1 + 0.2, 40.1, 1000])("accepts %s mL", (ml) => {
     expect(validateVolumeMl(ml)).toBeNull()
   })
 
@@ -24,6 +24,9 @@ describe("validateVolumeMl", () => {
     [Number.POSITIVE_INFINITY, "not_finite"],
     [40.15, "too_many_decimals"],
     [0.01, "too_many_decimals"],
+    [1e-12, "too_many_decimals"],
+    [Number.MIN_VALUE, "too_many_decimals"],
+    [40.100001, "too_many_decimals"],
   ])("rejects %s mL as %s", (ml, issue) => {
     expect(validateVolumeMl(ml)).toBe(issue)
   })
