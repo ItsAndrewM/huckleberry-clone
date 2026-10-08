@@ -2,11 +2,11 @@
 
 Gate for M1 (see `implementation-plan.md` §2). M1 starts only when every row below has a recorded result and the S1/S2 fallback decision is made.
 
-**Gate cleared on 7 Oct 2026.** Every check has a result and both fallback decisions are recorded at the end. One sub-check was **waived, not run**: Emily's S1 one-hour reopen, by Andrew's decision on 7 Oct. The same check passed on Andrew's iPhone (session kept for about three hours), and the per-release device checklist (plan §6) re-runs S1 on both iPhones. The remaining Step 0 housekeeping is tearing down the spike.
+**Gate cleared on 7 Oct 2026.** Every check has a result and both fallback decisions are recorded at the end. One sub-check was **waived, not run**: Emily's S1 one-hour reopen, by Andrew's decision on 7 Oct. The same check passed on Andrew's iPhone (session kept for about three hours), and the per-release device checklist (plan §6) re-runs S1 on both iPhones. The spike was torn down on 7 Oct 2026.
 
 Device coverage, decided by Andrew on 7 Oct 2026: S1 checks how iOS keeps the Access session in an installed app, which can differ per phone (iOS version, Safari settings), so it runs on both iPhones. S2–S4 test WebKit and app behaviour that both phones share, so one phone each is enough: S2 on Emily's, S3 and S4 on Andrew's.
 
-The spike code lives in `spike/`. It is throwaway and will be deleted once this page is complete. Run it with `cd spike && pnpm install && pnpm test`.
+The spike code was removed in M1.1. Read it at commit `ac49adb`, for example `git show ac49adb:spike/src/access.ts`.
 
 ## Status
 
@@ -41,6 +41,8 @@ The spike uses these exact versions. M1.1 copies them into the root `package.jso
 
 ## Deployed environment
 
+**Torn down on 7 Oct 2026:** the Worker, the "BT spike" Access app, the "BT admin service token" policy and the `bt-spike-admin` service token were deleted. The Zero Trust organization, the Google and one-time PIN login methods, and the reusable "BT caregivers" policy remain for M1.16. The record below describes the spike as it ran.
+
 - Worker `bt-spike` at https://bt-spike.dinocode.workers.dev in the personal Cloudflare account (`account_id` pinned in `wrangler.jsonc` so it cannot deploy into another account wrangler is logged into).
 - `preview_urls: false`, so the `workers.dev` hostname is the only entry point and is exactly what the Access app covers.
 - Startup time 31 ms. Bundle 1,164 KiB raw / 238 KiB gzip.
@@ -57,7 +59,7 @@ Access configuration (all created through the API):
 | Google login method | Added 7 Oct 2026 with PKCE on. Cloudflare's connection test passed and returned the expected name and email. Google side: project "BT Access" (`bt-access-510920`) in Andrew's personal Google account, OAuth consent screen "Baby tracker" (External, **Testing**, both caregivers listed as test users), Web client "Cloudflare Access" with the team domain as JavaScript origin and `<team domain>/cdn-cgi/access/callback` as redirect URI |
 | Policies | "BT caregivers" (allow): armcmillan22@gmail.com, foster.d.emily@gmail.com. "BT admin service token" (service auth): `bt-spike-admin` |
 | Sessions | Global 730 h, app 730 h (the one-month maximum) |
-| Service token | `bt-spike-admin`, Client ID `92e7b7c0380bafbb8b65a2e3ef4e91b4.access`, expires 2027-10-07. Secret in `spike/.admin-token.env` (gitignored, mode 600) |
+| Service token | `bt-spike-admin`, Client ID `92e7b7c0380bafbb8b65a2e3ef4e91b4.access`, expires 2027-10-07. Deleted on 7 Oct 2026 |
 | Caregivers seeded | `cg-andrew` → armcmillan22@gmail.com, `cg-emily` → foster.d.emily@gmail.com |
 
 ## Access on Workers — two documented constraints
@@ -95,7 +97,7 @@ Run with `wrangler dev`, results from `curl`:
 | `GET /api/admin/...` as a caregiver | 403 | 401 |
 | `GET /api/login?return=//evil.test` | 302 → `/` | 401 |
 
-**Finding:** `@cloudflare/vitest-pool-workers` 0.22.0 does **not** apply `access.dev` from `wrangler.jsonc`; `ctx.access` is `undefined` inside the pool. Worker-entry tests therefore call the default export's `fetch(request, env, ctx)` with a hand-built `ctx.access` (see `spike/test/spike.test.ts`, `withAccess`). Production M1.4 tests should do the same. It is more deterministic anyway and covers the "no `ctx.access`" path. No `DEV_IDENTITY` fallback is needed.
+**Finding:** `@cloudflare/vitest-pool-workers` 0.22.0 does **not** apply `access.dev` from `wrangler.jsonc`; `ctx.access` is `undefined` inside the pool. Worker-entry tests therefore call the default export's `fetch(request, env, ctx)` with a hand-built `ctx.access` (see `spike/test/spike.test.ts` at `ac49adb`, `withAccess`). Production M1.4 tests should do the same. It is more deterministic anyway and covers the "no `ctx.access`" path. No `DEV_IDENTITY` fallback is needed.
 
 **Deployed (pass):** with `CF-Access-Client-Id`/`CF-Access-Client-Secret`, `/api/spike/identity` returned:
 
