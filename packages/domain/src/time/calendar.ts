@@ -10,9 +10,12 @@ const utc = tz("UTC")
 
 export const utcDateOf = (ms: number): LocalDate => new Date(ms).toISOString().slice(0, 10)
 
+const LOCAL_DATE_FORMAT = /^\d{4}-\d{2}-\d{2}$/
+
 export const utcMidnightOf = (date: LocalDate): number => {
   const ms = Date.parse(`${date}T00:00:00Z`)
-  if (utcDateOf(ms) !== date) throw new RangeError(`Expected a date like 2026-10-06, got "${date}"`)
+  if (!LOCAL_DATE_FORMAT.test(date) || utcDateOf(ms) !== date)
+    throw new RangeError(`Expected a date like 2026-10-06, got "${date}"`)
   return ms
 }
 

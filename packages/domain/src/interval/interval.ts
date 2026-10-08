@@ -19,6 +19,8 @@ export const clipTo = (interval: Interval, period: Interval): Interval | null =>
 }
 
 export const splitByDays = (interval: Interval, zone: TimeZone): DayPiece[] => {
+  if (!Number.isFinite(interval.end))
+    throw new RangeError(`Expected a finite end; close a running session at now first, got ${interval.end}`)
   const pieces: DayPiece[] = []
   let date = localDateOf(interval.start, zone)
   let cursor: Instant = interval.start

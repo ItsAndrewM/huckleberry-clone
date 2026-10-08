@@ -18,11 +18,14 @@ describe("addDaysToDate", () => {
     expect(addDaysToDate(date, days)).toBe(expected)
   })
 
-  it.each(["2026-02-30", "2026-13-01", "2026-10-6", ""])("throws on %j instead of guessing a date", (date) => {
-    expect(() => addDaysToDate(date, 1)).toThrow(RangeError)
-    expect(() => monthOfDate(date)).toThrow(RangeError)
-    expect(() => isoWeekOfDate(date)).toThrow(RangeError)
-  })
+  it.each(["2026-02-30", "2026-13-01", "2026-10-6", "", "+010000-01", "-000001-01"])(
+    "throws on %j instead of guessing a date",
+    (date) => {
+      expect(() => addDaysToDate(date, 1)).toThrow(RangeError)
+      expect(() => monthOfDate(date)).toThrow(RangeError)
+      expect(() => isoWeekOfDate(date)).toThrow(RangeError)
+    },
+  )
 })
 
 describe("datesBetween", () => {
@@ -45,6 +48,7 @@ describe("datesBetween", () => {
     ["2026-10-06", "2026-10-06x"],
     ["2026-02-30", "2026-02-01"],
     ["2026-02-01", "2026-02-30"],
+    ["2026-10-06", "+010000-01"],
   ])("throws on %j to %j, because one end is not a real date", (first, last) => {
     expect(() => datesBetween(first, last)).toThrow(RangeError)
   })

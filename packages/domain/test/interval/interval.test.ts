@@ -86,6 +86,10 @@ describe("splitByDays", () => {
     expect(splitByDays({ start: 1000, end: 1000 }, VANCOUVER)).toEqual([])
   })
 
+  it.each([Number.POSITIVE_INFINITY, Number.NaN])("throws on an end of %s instead of running away", (end) => {
+    expect(() => splitByDays({ start: 1000, end }, VANCOUVER)).toThrow(RangeError)
+  })
+
   it("covers the interval exactly, one consecutive local day per piece", () => {
     fc.assert(
       fc.property(zonedInstants, fc.integer({ min: 1, max: 4 * 24 * 60 }), ([start, zone], minutes) => {
