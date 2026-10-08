@@ -31,6 +31,20 @@ export default defineConfig({
   rules: {
     complexity: ["error", { max: 10, variant: "classic" }],
     "no-restricted-imports": ["error", { patterns: [datesThroughDomain] }],
+    "no-restricted-properties": [
+      "error",
+      {
+        object: "Schema",
+        property: "Number",
+        message:
+          'Schema.Number accepts NaN and ±Infinity, and decodes the JSON strings "NaN" and "Infinity" into them. Use Schema.Finite or Schema.Int.',
+      },
+      {
+        object: "Schema",
+        property: "NumberFromString",
+        message: 'Schema.NumberFromString decodes "NaN" and "Infinity". Use Schema.FiniteFromString.',
+      },
+    ],
     "gamesheet/no-comments": "error",
     "anti-slop/no-chained-type-assertions": "error",
     "anti-slop/no-conditional-empty-object-spread": "error",
