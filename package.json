@@ -9,6 +9,7 @@
     "format": "oxfmt --disable-nested-config .",
     "typecheck": "tsc -p tsconfig.json && pnpm -r typecheck",
     "test": "vitest run",
+    "coverage": "vitest run --project domain --coverage",
     "bundle:check": "node scripts/check-bundle-size.ts",
     "e2e": "playwright test",
     "pins:check": "node scripts/check-pins.ts"
@@ -18,6 +19,7 @@
     "@oxlint/plugins": "catalog:",
     "@playwright/test": "catalog:",
     "@types/node": "catalog:",
+    "@vitest/coverage-v8": "catalog:",
     "oxfmt": "catalog:",
     "oxlint": "catalog:",
     "typescript": "catalog:",
