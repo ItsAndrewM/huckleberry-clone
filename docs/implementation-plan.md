@@ -138,7 +138,7 @@ Goal: both parents use it daily. Covers AC 1–5, 10, 11, 13, 14, 20 (nursing ha
 
 | Task | Size | Notes |
 |---|---|---|
-| M1.1 Monorepo scaffold, Biome, Vitest, CI (typecheck, lint, unit, workers tests, Playwright on Chromium + WebKit) | S | GitHub Actions; `wrangler deploy --dry-run` with a bundle-size check against the S6 baseline |
+| M1.1 Monorepo scaffold, Biome (since replaced by oxlint and oxfmt, D12), Vitest, CI (typecheck, lint, unit, workers tests, Playwright on Chromium + WebKit) | S | GitHub Actions; `wrangler deploy --dry-run` with a bundle-size check against the S6 baseline |
 | M1.2 `domain`: time/interval/timer/feed/validate/units/invalidation + tests | M | Fixtures for midnight split (AC 4) and DST (AC 21) days in `America/*` and `Europe/*` zones |
 | M1.3 `contracts`: schemas, errors, query keys | S | |
 | M1.4 Worker entry: Access JWT verification (D5) → 401, header hygiene, forward to DO; `access.dev` in `wrangler.jsonc` | S | Port `spike/src/access.ts` (removed in M1.1; `git show ac49adb:spike/src/access.ts`). Test: no `ctx.access` and no valid JWT → 401; unsigned, tampered, expired, wrong-issuer and wrong-audience JWTs → 401; spoofed `x-bt-email` is stripped; `/api/login?return=` redirects only to same-origin paths; `/api/admin/*` rejects caregiver identities and every service token except the admin Client ID. The test pool ignores `access.dev`, so tests call the Worker's `fetch` with a hand-built `ctx` |
