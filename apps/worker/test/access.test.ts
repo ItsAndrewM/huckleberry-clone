@@ -137,6 +137,14 @@ describe("Access settings that can't verify a token", () => {
     expect(await viaJwt(anotherApp, settings)).toEqual({ kind: "unauthenticated" })
     expect(await viaJwt(await sign({ email: "andrew@example.test" }), settings)).toEqual({ kind: "unauthenticated" })
   })
+
+  it("refuse a token issued under a plain-HTTP team domain, whose key set anyone on the path could swap", async () => {
+    const plainHttpTeam = "http://bt-test.cloudflareaccess.com"
+    const forged = await sign({ email: "andrew@example.test" }, { issuer: plainHttpTeam })
+    expect(await viaJwt(forged, { ACCESS_TEAM_DOMAIN: plainHttpTeam, ACCESS_AUD: AUD })).toEqual({
+      kind: "unauthenticated",
+    })
+  })
 })
 
 describe("Cloudflare's signing keys out of reach", () => {

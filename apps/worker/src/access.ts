@@ -17,13 +17,17 @@ export type AccessKeysFor = (teamDomain: string) => JWTVerifyGetKey
 const UNAUTHENTICATED: Caller = { kind: "unauthenticated" }
 const KEYS_UNAVAILABLE: Caller = { kind: "keys-unavailable" }
 
-const Origin = Schema.String.check(
-  Schema.makeFilter((value: string) => URL.parse(value)?.origin === value, {
-    expected: "an origin like https://team.cloudflareaccess.com",
-  }),
+const HttpsOrigin = Schema.String.check(
+  Schema.makeFilter(
+    (value: string) => {
+      const parsed = URL.parse(value)
+      return parsed?.protocol === "https:" && parsed.origin === value
+    },
+    { expected: "an https origin like https://team.cloudflareaccess.com" },
+  ),
 )
 
-const JwtSettings = Schema.Struct({ ACCESS_TEAM_DOMAIN: Origin, ACCESS_AUD: Schema.NonEmptyString })
+const JwtSettings = Schema.Struct({ ACCESS_TEAM_DOMAIN: HttpsOrigin, ACCESS_AUD: Schema.NonEmptyString })
 const jwtSettingsOf = Schema.decodeUnknownOption(JwtSettings)
 
 const Claims = Schema.Struct({ email: Schema.optional(Schema.String), common_name: Schema.optional(Schema.String) })
