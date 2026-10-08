@@ -50,6 +50,35 @@ describe("affectedPeriods (D7)", () => {
     ])
   })
 
+  it("gives a point event at exactly local midnight its own day", () => {
+    expect(affectedPeriods(null, pointAt("2026-10-07T07:00:00Z"), VANCOUVER)).toEqual([
+      ["day", "2026-10-07"],
+      ["week", "2026-W41"],
+      ["month", "2026-10"],
+    ])
+  })
+
+  it("lists each period once when an edit stays within the same day", () => {
+    const edited = affectedPeriods(pointAt("2026-10-06T19:00:00Z"), pointAt("2026-10-06T20:00:00Z"), VANCOUVER)
+    expect(edited).toEqual([
+      ["day", "2026-10-06"],
+      ["week", "2026-W41"],
+      ["month", "2026-10"],
+    ])
+  })
+
+  it("lists periods oldest first when an edit moves a record earlier", () => {
+    const moved = affectedPeriods(pointAt("2026-11-02T19:00:00Z"), pointAt("2026-10-31T19:00:00Z"), VANCOUVER)
+    expect(moved).toEqual([
+      ["day", "2026-10-31"],
+      ["day", "2026-11-02"],
+      ["week", "2026-W44"],
+      ["week", "2026-W45"],
+      ["month", "2026-10"],
+      ["month", "2026-11"],
+    ])
+  })
+
   it("decides the day in the household's time zone", () => {
     const bottle = pointAt("2026-10-07T03:00:00Z")
     expect(affectedPeriods(null, bottle, VANCOUVER)[0]).toEqual(["day", "2026-10-06"])
