@@ -26,12 +26,22 @@ describe("catalogViolations", () => {
     ])
   })
 
-  it.each(["catalog: { vite: ^8.3.3 }", "catalogs:\n  react19:\n    react: ^19.0.0"])(
-    "fails closed on catalog syntax it cannot read: %s",
-    (yaml) => {
-      expect(catalogViolations(`${yaml}\n`)).toHaveLength(1)
-    },
-  )
+  it.each(["catalog :", '"catalog":', "'catalog' :"])("reads the catalog under the heading %s", (heading) => {
+    expect(catalogViolations(`${heading}\n  vite: ^8.3.3\n`)).toEqual(["catalog vite: ^8.3.3"])
+  })
+
+  it.each([
+    "catalog: { vite: ^8.3.3 }",
+    "catalogs:\n  react19:\n    react: ^19.0.0",
+    "? catalog\n:\n  vite: ^8.3.3",
+    '{"catalog": {"vite": "^8.3.3"}}',
+  ])("fails closed on catalog syntax it cannot read: %s", (yaml) => {
+    expect(catalogViolations(`${yaml}\n`)).toHaveLength(1)
+  })
+
+  it("leaves other top-level keys that start with catalog alone", () => {
+    expect(catalogViolations("catalogMode: strict\ncatalog:\n  vite: 8.3.3\n")).toEqual([])
+  })
 
   it("reads only the catalog block", () => {
     expect(catalogViolations("packages:\n  - apps/*\nonlyBuiltDependencies:\n  - esbuild\n")).toEqual([])

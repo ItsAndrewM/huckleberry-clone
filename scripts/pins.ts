@@ -1,5 +1,6 @@
 const EXACT_VERSION = /^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$/
 const CATALOG_ENTRY = /^\s+("[^"]*"|'[^']*'|[^\s:]+):\s*(.*?)\s*(?:#.*)?$/
+const BLOCK_HEADING = /^(?:"([^"]*)"|'([^']*)'|([^\s"'?{[][^:]*?))\s*:$/
 const WORKSPACE_SPECS = new Set(["catalog:", "workspace:*"])
 const DEPENDENCY_FIELDS = ["dependencies", "devDependencies", "optionalDependencies", "peerDependencies"] as const
 
@@ -12,8 +13,9 @@ export const catalogViolations = (workspaceYaml: string): string[] => {
     if (line.trim() === "" || line.trim().startsWith("#")) continue
     if (/^\S/.test(line)) {
       const heading = line.replace(/\s+#.*$/, "").trimEnd()
-      inCatalog = heading === "catalog:"
-      if (!inCatalog && /^catalogs?:/.test(heading)) violations.push(`unreadable catalog syntax: ${heading}`)
+      const key = BLOCK_HEADING.exec(heading)
+      inCatalog = key !== null && (key[1] ?? key[2] ?? key[3]) === "catalog"
+      if (!inCatalog && /\bcatalogs?\b/.test(heading)) violations.push(`unreadable catalog syntax: ${heading}`)
       continue
     }
     if (!inCatalog) continue
