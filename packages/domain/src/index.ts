@@ -8,6 +8,7 @@ export {
   type Side,
 } from "./feed/feed.ts"
 export { clipTo, type DayPiece, durationMs, overlaps, splitByDays } from "./interval/interval.ts"
+export { affectedPeriods, type PeriodKey } from "./invalidation/affected-periods.ts"
 export {
   addDaysToDate,
   datesBetween,
