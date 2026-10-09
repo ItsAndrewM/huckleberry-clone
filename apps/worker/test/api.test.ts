@@ -1,3 +1,4 @@
+import { HEARTBEAT } from "@bt/contracts"
 import { env } from "cloudflare:test"
 import { afterEach, describe, expect, it, vi } from "vitest"
 import type { Caller } from "../src/access.ts"
@@ -213,6 +214,24 @@ describe("seeding the household (POST /api/admin/household)", () => {
     const { response, seeded } = await route("/api/admin/household", andrew, seedRequest(JSON.stringify(SEED)))
     expect(response.status).toBe(401)
     expect(seeded).toEqual([])
+  })
+})
+
+describe("a WebSocket upgrade", () => {
+  it("reaches the household with its upgrade intact, and comes back as a live socket", async () => {
+    const household = env.HOUSEHOLD.getByName(crypto.randomUUID())
+    await household.seedHousehold(SEED)
+    const request = new Request(`${ORIGIN}/api/ws`, { headers: { upgrade: "websocket" } })
+    const response = await routeApi(request, andrew, household, ADMIN_CLIENT_ID)
+    expect(response.status).toBe(101)
+    const socket = response.webSocket
+    if (socket === null) throw new Error("the household answered 101 without a socket")
+    socket.accept()
+    const pong = new Promise<string>((resolve) => {
+      socket.addEventListener("message", (event) => resolve(String(event.data)), { once: true })
+    })
+    socket.send(HEARTBEAT.ping)
+    expect(await pong).toBe(HEARTBEAT.pong)
   })
 })
 

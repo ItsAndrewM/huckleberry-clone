@@ -1,3 +1,4 @@
+import { SOCKET_PATH } from "@bt/contracts"
 import { DurableObject } from "cloudflare:workers"
 import { Schema } from "effect"
 import { seedHousehold } from "./core/household.ts"
@@ -6,6 +7,7 @@ import { migrate } from "./db/migrate.ts"
 import { MIGRATIONS } from "./db/migrations.ts"
 import { householdApi } from "./http.ts"
 import { HouseholdSeed, type SeedResult } from "./seed.ts"
+import { acceptSocket, heartbeat } from "./sockets.ts"
 
 interface HouseholdEnv {
   readonly LOCAL_HOUSEHOLD?: Schema.Json
@@ -27,10 +29,12 @@ export class HouseholdDO extends DurableObject<HouseholdEnv> {
   constructor(ctx: DurableObjectState, env: HouseholdEnv) {
     super(ctx, env)
     void ctx.blockConcurrencyWhile(() => startHousehold(ctx.storage, env.LOCAL_HOUSEHOLD, Date.now()))
+    ctx.setWebSocketAutoResponse(heartbeat())
     this.api = householdApi(ctx.storage)
   }
 
   override async fetch(request: Request): Promise<Response> {
+    if (new URL(request.url).pathname === SOCKET_PATH) return acceptSocket(this.ctx, request)
     const response = await this.api.handler(request)
     response.headers.set("cache-control", "no-store")
     return response
