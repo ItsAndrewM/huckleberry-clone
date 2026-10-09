@@ -13,4 +13,23 @@
     "not_found_handling": "single-page-application",
     "run_worker_first": ["/api/*"],
   },
+  "durable_objects": {
+    "bindings": [{ "name": "HOUSEHOLD", "class_name": "HouseholdDO" }],
+  },
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["HouseholdDO"] }],
+  "vars": {
+    // The Access JWT's issuer, compared exactly: an https origin with no trailing slash.
+    "ACCESS_TEAM_DOMAIN": "https://misty-wildflower-0505.cloudflareaccess.com",
+    // M1.16 fills these in from the production Access app and the admin service token.
+    // Until then every JWT is refused and /api/admin/* admits nobody.
+    "ACCESS_AUD": "",
+    "ADMIN_SERVICE_TOKEN_CN": "",
+  },
+  // `vite dev` and `vite preview` sign every request in as this identity; deploys ignore it.
+  "access": {
+    "dev": {
+      "aud": "bt-local",
+      "identity": { "email": "andrew@example.test", "name": "Andrew (local)" },
+    },
+  },
 }

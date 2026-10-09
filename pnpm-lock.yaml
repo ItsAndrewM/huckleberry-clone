@@ -51,6 +51,9 @@ catalogs:
     fast-check:
       specifier: 4.10.2
       version: 4.10.2
+    jose:
+      specifier: 6.2.12
+      version: 6.2.12
     oxfmt:
       specifier: 0.72.0
       version: 0.72.0
@@ -140,6 +143,16 @@ importers:
         version: 4.148.0(@cloudflare/workers-types@5.20261006.1)(@types/node@24.19.1)
 
   apps/worker:
+    dependencies:
+      '@bt/contracts':
+        specifier: workspace:*
+        version: link:../../packages/contracts
+      effect:
+        specifier: 'catalog:'
+        version: 4.0.1
+      jose:
+        specifier: 'catalog:'
+        version: 6.2.12
     devDependencies:
       '@cloudflare/vitest-plugin':
         specifier: 'catalog:'
@@ -1165,6 +1178,9 @@ packages:
     resolution: {integrity: sha512-HGYWWS/ehqTV3xN10i23tkPkpH46MLCIMFNCaaKNavAXTF1RkqxawEPtnjnGZ6XKSInBKkiOA5BKS+aZiY3AvA==}
     engines: {node: '>=8'}
 
+  jose@6.2.12:
+    resolution: {integrity: sha512-9NiFmJEex0sy2Dk58j2UGBSHgUs2ypF9eZSu4L6vjOX3Dp96Sw1F3uL+H+D1sx02jZZdzUT0HgvCy59CuvXcWw==}
+
   js-tokens@10.0.0:
     resolution: {integrity: sha512-lM/UBzQmfJRo9ABXbPWemivdCW8V2G8FHaHdypQaIy523snUjog0W71ayWXTjiR+ixeMyVHN2XcpnTd/liPg/Q==}
 
@@ -2184,6 +2200,8 @@ snapshots:
     dependencies:
       html-escaper: 2.0.2
       istanbul-lib-report: 3.0.1
+
+  jose@6.2.12: {}
 
   js-tokens@10.0.0: {}
 
