@@ -3,7 +3,7 @@ import { type QueryClient, queryOptions } from "@tanstack/react-query"
 import type { HouseholdApi } from "./client.ts"
 
 const forgetOtherCaregiver = (queryClient: QueryClient) =>
-  queryClient.removeQueries({ predicate: (query) => query.queryKey[0] !== queryKeys.me[0] })
+  void queryClient.resetQueries({ predicate: (query) => query.queryKey[0] !== queryKeys.me[0] })
 
 export const meQuery = (api: HouseholdApi, queryClient: QueryClient) =>
   queryOptions({
