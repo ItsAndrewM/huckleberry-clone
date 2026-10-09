@@ -97,6 +97,17 @@ describe("moving a feed", () => {
     })
   })
 
+  it("throws, as a defect, for a feed with no segment or bottle left, rather than refusing the move as a bad request", async () => {
+    await inHousehold((sql) => {
+      const feed = logged(sql)
+      sql.exec("UPDATE nursing_segments SET deleted_at = ?", NOW)
+      sql.exec("UPDATE bottle_portions SET deleted_at = ?", NOW)
+      expect(() => moveFeed(stampOf(sql), feed.id, move(feed, minutesAgo(90)))(sql)).toThrow(
+        `Feed ${feed.id} has no nursing segment or bottle`,
+      )
+    })
+  })
+
   it("moves a feed onto part of where it was, since a feed can't overlap itself", async () => {
     const result = await inHousehold((sql) => {
       const feed = logged(sql, 60)

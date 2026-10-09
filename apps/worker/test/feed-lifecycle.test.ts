@@ -20,6 +20,7 @@ import { ANDREW, EMILY } from "./fixtures.ts"
 
 const OCT_6_AT_23_50 = Date.UTC(2026, 9, 7, 6, 50)
 const ac4 = (minutes: number) => OCT_6_AT_23_50 + minutes * MINUTE_MS
+const OCT_8_AT_23_58 = Date.UTC(2026, 9, 9, 6, 58)
 
 const at = (feed: Feed, occurredAt: number) => ({ actionId: ACTION_ID, version: feed.version, occurredAt })
 
@@ -423,5 +424,32 @@ describe("a tap exactly 5 minutes ahead of the server's clock (AC 21)", () => {
   ])("saves %s", async (_label, tap) => {
     const result = await inHousehold((sql) => tap(sql, started(sql)))
     expect(result.ok).toBe(true)
+  })
+})
+
+describe("the keys a running feed changes when a part lands just past midnight, up to 5 minutes ahead", () => {
+  const late = (sql: SqlStorage) => stampOf(sql, ANDREW.email, OCT_8_AT_23_58)
+  const pastMidnight = OCT_8_AT_23_58 + 4 * MINUTE_MS
+
+  it.each([
+    [
+      "a bottle added",
+      (sql: SqlStorage, feed: Feed) =>
+        addBottle(late(sql), feed.id, { ...at(feed, pastMidnight), breastMilkMl: 30, formulaMl: 0 })(sql),
+    ],
+    ["a switch tapped", (sql: SqlStorage, feed: Feed) => switchSide(late(sql), feed.id, at(feed, pastMidnight))(sql)],
+  ])("include the next day, for %s 4 minutes ahead of the server's clock", async (_label, tap) => {
+    const result = await inHousehold((sql) => {
+      const start = { actionId: ACTION_ID, side: "left", startedAt: OCT_8_AT_23_58 - 20 * MINUTE_MS } as const
+      return tap(sql, saved(startFeed(late(sql), start)(sql)))
+    })
+    expect(result.ok && result.changed).toEqual([
+      ["today"],
+      ["last24h"],
+      ["day", "2026-10-08"],
+      ["day", "2026-10-09"],
+      ["week", "2026-W41"],
+      ["month", "2026-10"],
+    ])
   })
 })

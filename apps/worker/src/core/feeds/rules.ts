@@ -118,7 +118,19 @@ export const overlappedFeed = (
 
 export const overlapConflict = (feed: Feed) => new FeedConflict({ code: "SEGMENT_OVERLAP", current: feed })
 
-const spanOf = (feed: Feed, now: Instant): Interval => ({ start: feed.startedAt, end: feed.endedAt ?? now })
+export const latestOf = (feed: Feed): Instant => {
+  const times = [
+    ...feed.segments.map((segment) => segment.endedAt ?? segment.startedAt),
+    ...feed.portions.map((portion) => portion.occurredAt),
+  ]
+  if (times.length === 0) throw new Error(`Feed ${feed.id} has no nursing segment or bottle`)
+  return Math.max(...times)
+}
+
+const spanOf = (feed: Feed, now: Instant): Interval => ({
+  start: feed.startedAt,
+  end: feed.endedAt ?? Math.max(now, latestOf(feed)),
+})
 
 export const feedChanges = (calendar: Calendar, before: Feed | null, after: Feed | null, now: Instant): Changed =>
   changedKeys(calendar, before === null ? null : spanOf(before, now), after === null ? null : spanOf(after, now))

@@ -7,7 +7,7 @@ import {
   queryKeys,
   type VersionedAction,
 } from "@bt/contracts"
-import { type Instant, validateNotInFuture } from "@bt/domain"
+import { validateNotInFuture } from "@bt/domain"
 import { calendarOf, timeIssue } from "../calendar.ts"
 import type { CoreResult, Stamp } from "../receipts.ts"
 import {
@@ -17,18 +17,13 @@ import {
   feedChanges,
   feedFor,
   invalidUnless,
+  latestOf,
   NO_EXCLUSION,
   overlapConflict,
   overlappedFeed,
   savedFeed,
 } from "./rules.ts"
 import { saveFeed, shiftFeed } from "./store.ts"
-
-const latestOf = (feed: Feed): Instant =>
-  Math.max(
-    ...feed.segments.map((segment) => segment.endedAt ?? segment.startedAt),
-    ...feed.portions.map((portion) => portion.occurredAt),
-  )
 
 const shiftedSegments = (feed: Feed, offset: number) =>
   feed.segments.map((segment) => ({
