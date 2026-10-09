@@ -119,6 +119,12 @@ importers:
 
   apps/web:
     dependencies:
+      '@bt/contracts':
+        specifier: workspace:*
+        version: link:../../packages/contracts
+      effect:
+        specifier: 'catalog:'
+        version: 4.0.1
       react:
         specifier: 'catalog:'
         version: 19.3.0

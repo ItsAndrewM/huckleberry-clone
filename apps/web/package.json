@@ -9,6 +9,8 @@
     "typecheck": "tsc -p tsconfig.json"
   },
   "dependencies": {
+    "@bt/contracts": "workspace:*",
+    "effect": "catalog:",
     "react": "catalog:",
     "react-dom": "catalog:"
   },
