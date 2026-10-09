@@ -27,7 +27,7 @@ export class HouseholdDO extends DurableObject<HouseholdEnv> {
   constructor(ctx: DurableObjectState, env: HouseholdEnv) {
     super(ctx, env)
     void ctx.blockConcurrencyWhile(() => startHousehold(ctx.storage, env.LOCAL_HOUSEHOLD, Date.now()))
-    this.api = householdApi(ctx.storage.sql)
+    this.api = householdApi(ctx.storage)
   }
 
   override async fetch(request: Request): Promise<Response> {

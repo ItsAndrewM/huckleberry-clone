@@ -1,5 +1,6 @@
 import { Context } from "effect"
 import { HttpApi, HttpApiMiddleware, OpenApi } from "effect/http-api"
+import { DiapersGroup } from "./diapers.ts"
 import { InvalidInput, Unauthorized } from "./errors.ts"
 import { type Caregiver, MeGroup } from "./me.ts"
 
@@ -16,6 +17,7 @@ export class InvalidInputs extends HttpApiMiddleware.Service<InvalidInputs>()("b
 
 export class Api extends HttpApi.make("baby-tracker")
   .add(MeGroup)
+  .add(DiapersGroup)
   .prefix("/api")
   .middleware(InvalidInputs)
   .middleware(Authorization)
