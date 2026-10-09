@@ -1,5 +1,4 @@
 import {
-  type Changed,
   type Diaper,
   DiaperConflict,
   type DiaperEdit,
@@ -9,7 +8,8 @@ import {
   queryKeys,
   type VersionedAction,
 } from "@bt/contracts"
-import { affectedPeriods, type Instant, validateNotBeforeBirth, validateNotInFuture } from "@bt/domain"
+import type { Instant } from "@bt/domain"
+import { type Calendar, calendarOf, changedKeys, timeIssue } from "./calendar.ts"
 import type { CoreResult, Stamp } from "./receipts.ts"
 
 type DiaperRow = {
@@ -44,19 +44,10 @@ const diaperOf = (row: DiaperRow): Diaper => ({
   deletedAt: row.deleted_at,
 })
 
-const zoneOf = (sql: SqlStorage) => sql.exec<{ time_zone: string }>("SELECT time_zone FROM household").one().time_zone
-
 const moment = (at: Instant | null) => (at === null ? null : { start: at, end: at })
 
-const changedKeys = (sql: SqlStorage, before: Instant | null, after: Instant | null): Changed => [
-  queryKeys.today,
-  queryKeys.last24h,
-  ...affectedPeriods(moment(before), moment(after), zoneOf(sql)),
-]
-
-const invalidTime = (sql: SqlStorage, occurredAt: Instant, now: Instant): InvalidInput | null => {
-  const { birth_date } = sql.exec<{ birth_date: string }>("SELECT birth_date FROM child").one()
-  const issue = validateNotInFuture(occurredAt, now) ?? validateNotBeforeBirth(occurredAt, birth_date, zoneOf(sql))
+const invalidTime = (calendar: Calendar, occurredAt: Instant, now: Instant): InvalidInput | null => {
+  const issue = timeIssue(calendar, occurredAt, now)
   return issue === null ? null : new InvalidInput({ fieldErrors: [{ path: "occurredAt", issue }] })
 }
 
@@ -73,7 +64,8 @@ const diaperFor = (sql: SqlStorage, id: string, version: number, state: "live" |
 export const logDiaper =
   (stamp: Stamp, diaper: NewDiaper) =>
   (sql: SqlStorage): CoreResult<Diaper, InvalidInput> => {
-    const invalid = invalidTime(sql, diaper.occurredAt, stamp.now)
+    const calendar = calendarOf(sql)
+    const invalid = invalidTime(calendar, diaper.occurredAt, stamp.now)
     if (invalid !== null) return { ok: false, error: invalid }
     const row = sql
       .exec<DiaperRow>(
@@ -89,7 +81,7 @@ export const logDiaper =
         stamp.now,
       )
       .one()
-    return { ok: true, response: diaperOf(row), changed: changedKeys(sql, null, row.occurred_at) }
+    return { ok: true, response: diaperOf(row), changed: changedKeys(calendar, null, moment(row.occurred_at)) }
   }
 
 export const editDiaper =
@@ -97,7 +89,8 @@ export const editDiaper =
   (sql: SqlStorage): CoreResult<Diaper, NotFound | InvalidInput | DiaperConflict> => {
     const found = diaperFor(sql, id, edit.version, "live")
     if (!found.ok) return found
-    const invalid = invalidTime(sql, edit.occurredAt, stamp.now)
+    const calendar = calendarOf(sql)
+    const invalid = invalidTime(calendar, edit.occurredAt, stamp.now)
     if (invalid !== null) return { ok: false, error: invalid }
     const row = sql
       .exec<DiaperRow>(
@@ -111,7 +104,8 @@ export const editDiaper =
         id,
       )
       .one()
-    return { ok: true, response: diaperOf(row), changed: changedKeys(sql, found.row.occurred_at, row.occurred_at) }
+    const changed = changedKeys(calendar, moment(found.row.occurred_at), moment(row.occurred_at))
+    return { ok: true, response: diaperOf(row), changed }
   }
 
 const setDeletedAt =
@@ -132,7 +126,7 @@ const setDeletedAt =
     return {
       ok: true,
       response: diaperOf(row),
-      changed: [...changedKeys(sql, row.occurred_at, null), queryKeys.deleted],
+      changed: [...changedKeys(calendarOf(sql), moment(row.occurred_at), null), queryKeys.deleted],
     }
   }
 
