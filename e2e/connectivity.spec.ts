@@ -39,14 +39,22 @@ test("treats the household refusing the caregiver as signed out too", async ({ p
 
 test("doesn't ask to sign in when the household is briefly unavailable, and tries again", async ({ page }) => {
   let answered = 0
-  await page.route("**/api/me", (route) => {
+  let releaseRetry: () => void = () => undefined
+  const retryHeld = new Promise<void>((resolve) => {
+    releaseRetry = resolve
+  })
+  await page.route("**/api/me", async (route) => {
     answered += 1
-    return answered === 1
-      ? route.fulfill({ status: 503, contentType: "application/json", body: '{"_tag":"ServiceUnavailable"}' })
-      : route.continue()
+    if (answered === 1) {
+      return route.fulfill({ status: 503, contentType: "application/json", body: '{"_tag":"ServiceUnavailable"}' })
+    }
+    await retryHeld
+    return route.continue()
   })
   await page.goto("/")
-  await expect(page.getByText("Robin")).toBeVisible()
+  await expect.poll(() => answered).toBe(2)
   await expect(page.getByRole("alert")).toHaveCount(0)
+  releaseRetry()
+  await expect(page.getByText("Robin")).toBeVisible()
   expect(answered).toBe(2)
 })
