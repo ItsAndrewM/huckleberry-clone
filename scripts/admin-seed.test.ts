@@ -67,6 +67,12 @@ describe("pnpm admin household:seed", () => {
     expect(await request.json()).toEqual(SEED)
   })
 
+  it("refuses a BT_URL that isn't https, so the service token never travels in the clear", () => {
+    expect(() => adminRequest({ ...ENV, BT_URL: "http://bt.example.test" }, "/api/admin/household", SEED)).toThrow(
+      "BT_URL must start with https://",
+    )
+  })
+
   it.each(["BT_URL", "CF_ACCESS_CLIENT_ID", "CF_ACCESS_CLIENT_SECRET"] as const)(
     "stops when %s is missing from .admin-token.env",
     (name) => {

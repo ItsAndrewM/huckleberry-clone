@@ -61,8 +61,15 @@ const fromEnv = (env: AdminEnv, name: keyof AdminEnv) => {
   return value
 }
 
+const adminUrl = (env: AdminEnv, path: string) => {
+  const url = new URL(path, fromEnv(env, "BT_URL"))
+  if (url.protocol !== "https:")
+    throw new Error("BT_URL must start with https://, so the service token is never sent in the clear")
+  return url
+}
+
 export const adminRequest = (env: AdminEnv, path: `/api/admin/${string}`, body: SeedJson): Request =>
-  new Request(new URL(path, fromEnv(env, "BT_URL")), {
+  new Request(adminUrl(env, path), {
     method: "POST",
     redirect: "manual",
     headers: {
