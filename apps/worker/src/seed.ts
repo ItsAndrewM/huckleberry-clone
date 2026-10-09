@@ -3,7 +3,7 @@ import { Schema } from "effect"
 
 const Name = Schema.String.check(Schema.isTrimmed(), Schema.isBetweenLength(1, 60))
 
-const Email = Schema.String.check(Schema.isLowercased(), Schema.isPattern(/^[^\s@]+@[^\s@]+$/))
+export const Email = Schema.String.check(Schema.isLowercased(), Schema.isPattern(/^[^\s@]+@[^\s@]+$/))
 
 const CaregiverSeed = Schema.Struct({ email: Email, displayName: Name })
 

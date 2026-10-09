@@ -20,12 +20,14 @@ import { deleteFeed, moveFeed, restoreFeed } from "./core/feeds/feed-edits.ts"
 import { addBottle, finishFeed, pauseFeed, resumeFeed, startFeed, switchSide } from "./core/feeds/lifecycle.ts"
 import { logFeed } from "./core/feeds/log.ts"
 import { mutations, type Saved } from "./mutations.ts"
+import type { Broadcast } from "./sockets.ts"
 
 const asSavedFeed = Effect.map(({ record, changed }: Saved<Feed>) => ({ feed: record, changed }))
 
-export const feedHandlers = (storage: DurableObjectStorage) => {
+export const feedHandlers = (storage: DurableObjectStorage, broadcast: Broadcast) => {
   const mutate = mutations(
     storage,
+    broadcast,
     Feed,
     (saved) => new FeedConflict({ code: "ACTION_REPLAY_MISMATCH", current: saved }),
   )

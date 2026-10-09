@@ -21,6 +21,7 @@ import { meOf } from "./core/household.ts"
 import { errorResponse } from "./error-response.ts"
 import { feedHandlers } from "./feed-handlers.ts"
 import { mutations, type Saved } from "./mutations.ts"
+import type { Broadcast } from "./sockets.ts"
 
 export const invalidInputs = HttpApiMiddleware.layerSchemaErrorTransform(InvalidInputs, (error) =>
   error.kind === "Body" || error.kind === "ResponseHeaders"
@@ -50,9 +51,10 @@ const logDefects = ErrorReporter.layer([
 
 const asSavedDiaper = Effect.map(({ record, changed }: Saved<Diaper>) => ({ diaper: record, changed }))
 
-const diaperHandlers = (storage: DurableObjectStorage) => {
+const diaperHandlers = (storage: DurableObjectStorage, broadcast: Broadcast) => {
   const mutate = mutations(
     storage,
+    broadcast,
     Diaper,
     (saved) => new DiaperConflict({ code: "ACTION_REPLAY_MISMATCH", current: saved }),
   )
@@ -77,13 +79,13 @@ const diaperHandlers = (storage: DurableObjectStorage) => {
   )
 }
 
-export const householdApi = (storage: DurableObjectStorage) => {
+export const householdApi = (storage: DurableObjectStorage, broadcast: Broadcast) => {
   const me = HttpApiBuilder.group(Api, "me", (handlers) =>
     handlers.handle("me", () =>
       Effect.map(Effect.service(CurrentCaregiver), (caregiver) => meOf(storage.sql, caregiver)),
     ),
   )
-  const groups = Layer.mergeAll(me, diaperHandlers(storage), feedHandlers(storage))
+  const groups = Layer.mergeAll(me, diaperHandlers(storage, broadcast), feedHandlers(storage, broadcast))
   return HttpRouter.toWebHandler(
     Layer.mergeAll(
       HttpApiBuilder.layer(Api).pipe(

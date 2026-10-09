@@ -9,3 +9,20 @@ export const activeCaregiver = (sql: SqlStorage, email: string | undefined): Car
     .toArray()
   return row === undefined ? undefined : { id: row.id, email: row.email, displayName: row.display_name }
 }
+
+export const setCaregiverActive = (
+  sql: SqlStorage,
+  email: string,
+  active: boolean,
+  now: number,
+): string | undefined => {
+  const [row] = sql
+    .exec<{ id: string }>(
+      "UPDATE caregivers SET active = ?, updated_at = ? WHERE email = ? RETURNING id",
+      active ? 1 : 0,
+      now,
+      email,
+    )
+    .toArray()
+  return row?.id
+}

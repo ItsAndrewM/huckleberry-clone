@@ -2,6 +2,7 @@ import { type ActionId, type Changed, CurrentCaregiver, InvalidInput } from "@bt
 import { Effect, type Schema } from "effect"
 import type { HttpServerRequest } from "effect/http"
 import { type CoreResult, type Outcome, requestHash, type Stamp, withReceipt } from "./core/receipts.ts"
+import type { Broadcast } from "./sockets.ts"
 
 export interface Saved<A> {
   readonly record: A
@@ -23,7 +24,12 @@ const settle = <A, E, C>(outcome: Outcome<A, E>, replayMismatch: (saved: A) => C
 }
 
 export const mutations =
-  <A, C>(storage: DurableObjectStorage, record: Schema.Codec<A, Schema.Json>, replayMismatch: (saved: A) => C) =>
+  <A, C>(
+    storage: DurableObjectStorage,
+    broadcast: Broadcast,
+    record: Schema.Codec<A, Schema.Json>,
+    replayMismatch: (saved: A) => C,
+  ) =>
   <P extends { readonly actionId: ActionId }, E>(
     request: HttpServerRequest.HttpServerRequest,
     payload: Schema.Codec<P, Schema.Json>,
@@ -40,5 +46,7 @@ export const mutations =
       if (outcome.kind === "other-route") {
         console.warn(`actionId ${value.actionId} came back on ${route}, but its receipt is for ${outcome.storedRoute}`)
       }
-      return yield* settle(outcome, replayMismatch)
+      const saved = yield* settle(outcome, replayMismatch)
+      broadcast(saved.changed)
+      return saved
     })

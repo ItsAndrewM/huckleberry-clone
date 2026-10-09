@@ -1,4 +1,4 @@
-import { runDurableObjectAlarm, runInDurableObject } from "cloudflare:test"
+import { evictDurableObject, runDurableObjectAlarm, runInDurableObject } from "cloudflare:test"
 import { Schema } from "effect"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import {
@@ -195,6 +195,19 @@ describe("pruning receipts", () => {
 
     it("is due 6 h after a household first starts", async () => {
       const household = await seededHousehold()
+      expect(await runInDurableObject(household, (_instance, state) => state.storage.getAlarm())).toBe(
+        NOW + PRUNE_EVERY_MS,
+      )
+    })
+
+    it("stays put when an evicted household wakes, though waking runs the constructor again", async () => {
+      const household = await seededHousehold()
+      vi.setSystemTime(NOW + PRUNE_EVERY_MS / 2)
+      await evictDurableObject(household)
+      const woken = await household.fetch("https://bt.example.test/api/me", {
+        headers: { "x-bt-email": ANDREW.email },
+      })
+      expect(woken.status).toBe(200)
       expect(await runInDurableObject(household, (_instance, state) => state.storage.getAlarm())).toBe(
         NOW + PRUNE_EVERY_MS,
       )
