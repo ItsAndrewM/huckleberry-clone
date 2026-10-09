@@ -27,6 +27,7 @@ const inSeededHousehold = async <R>(run: (storage: DurableObjectStorage) => R) =
   })
 
 const mutationIn = (sql: SqlStorage, requestHash = "hash-of-the-first-request"): Mutation => ({
+  route: "POST /api/diapers",
   actionId: "8b2f9c3e-1d4a-4f6b-9e7c-5a3b2c1d0e9f",
   requestHash,
   caregiverId: caregiverId(sql),
@@ -47,12 +48,13 @@ describe("a mutation with a receipt", () => {
   it("applies once, and stores its response and changed keys in the same transaction", async () => {
     const stored = await inSeededHousehold((storage) => {
       const outcome = withReceipt(storage, mutationIn(storage.sql), Diaper, logDiaper({ id: "d1", wet: true }))
-      const receipt = storage.sql.exec("SELECT request_hash, response, changed, created_at FROM receipts").one()
+      const receipt = storage.sql.exec("SELECT route, request_hash, response, changed, created_at FROM receipts").one()
       return { outcome, receipt, diapers: count(storage.sql, "probe_diapers") }
     })
     expect(stored).toEqual({
       outcome: { kind: "applied", response: { id: "d1", wet: true }, changed: [["today"], ["day", "2026-10-08"]] },
       receipt: {
+        route: "POST /api/diapers",
         request_hash: "hash-of-the-first-request",
         response: '{"id":"d1","wet":true}',
         changed: '[["today"],["day","2026-10-08"]]',
@@ -87,6 +89,25 @@ describe("a mutation with a receipt", () => {
     expect(replay).toEqual({ outcome: { kind: "replay-mismatch", saved: { id: "d1", wet: true } }, calls: ["d1"] })
   })
 
+  it("answers an actionId already used on another route with other-route, decoding and applying nothing", async () => {
+    const Feed = Schema.Struct({ id: Schema.String, side: Schema.Literals(["left", "right"]) })
+    const reused = await inSeededHousehold((storage) => {
+      const calls: string[] = []
+      withReceipt(storage, mutationIn(storage.sql), Diaper, logDiaper({ id: "d1", wet: true }, calls))
+      const elsewhere = { ...mutationIn(storage.sql, "hash-of-a-feed-request"), route: "POST /api/feeds" }
+      const outcome = withReceipt(storage, elsewhere, Feed, (): CoreResult<typeof Feed.Type, never> => {
+        calls.push("f1")
+        return { ok: true, response: { id: "f1", side: "left" }, changed: [["today"]] }
+      })
+      return { outcome, calls, receipts: count(storage.sql, "receipts") }
+    })
+    expect(reused).toEqual({
+      outcome: { kind: "other-route", storedRoute: "POST /api/diapers" },
+      calls: ["d1"],
+      receipts: 1,
+    })
+  })
+
   it("keeps nothing the core wrote when it rejects, and stores no receipt", async () => {
     const after = await inSeededHousehold((storage) => {
       const outcome = withReceipt(storage, mutationIn(storage.sql), Diaper, (sql): CoreResult<Diaper, string> => {
@@ -119,6 +140,12 @@ describe("requestHash", () => {
     expect(hash).toMatch(/^[0-9a-f]{64}$/)
     expect(await requestHash("POST /api/diapers", NewDiaper, { dirty: false, wet: true, actionId: ACTION_ID })).toBe(
       hash,
+    )
+  })
+
+  it("is the SHA-256 of the route, a newline and the payload's JSON, which receipts stored before a deploy rely on", async () => {
+    expect(await requestHash("POST /api/diapers", NewDiaper, { actionId: ACTION_ID, wet: true, dirty: false })).toBe(
+      "39a01e24054ffb06f5c9e49803f03ad1a9c88d343ba439b42b31fd24a8d997b6",
     )
   })
 

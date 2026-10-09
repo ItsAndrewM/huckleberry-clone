@@ -5,11 +5,15 @@ const HOUR_MS = 60 * 60 * 1000
 export const RECEIPT_TTL_MS = 24 * HOUR_MS
 export const PRUNE_EVERY_MS = 6 * HOUR_MS
 
-export interface Mutation {
-  readonly actionId: ActionId
-  readonly requestHash: string
+export interface Stamp {
   readonly caregiverId: string
   readonly now: number
+}
+
+export interface Mutation extends Stamp {
+  readonly route: string
+  readonly actionId: ActionId
+  readonly requestHash: string
 }
 
 export type CoreResult<A, E> =
@@ -19,9 +23,10 @@ export type CoreResult<A, E> =
 export type Outcome<A, E> =
   | { readonly kind: "applied" | "replayed"; readonly response: A; readonly changed: Changed }
   | { readonly kind: "replay-mismatch"; readonly saved: A }
+  | { readonly kind: "other-route"; readonly storedRoute: string }
   | { readonly kind: "rejected"; readonly error: E }
 
-type ReceiptRow = { request_hash: string; response: string; changed: string }
+type ReceiptRow = { route: string; request_hash: string; response: string; changed: string }
 
 const changedJson = Schema.fromJsonString(Changed)
 
@@ -39,9 +44,13 @@ export const withReceipt = <A, E>(
     return storage.transactionSync((): Outcome<A, E> => {
       const { sql } = storage
       const [receipt] = sql
-        .exec<ReceiptRow>("SELECT request_hash, response, changed FROM receipts WHERE action_id = ?", mutation.actionId)
+        .exec<ReceiptRow>(
+          "SELECT route, request_hash, response, changed FROM receipts WHERE action_id = ?",
+          mutation.actionId,
+        )
         .toArray()
       if (receipt !== undefined) {
+        if (receipt.route !== mutation.route) return { kind: "other-route", storedRoute: receipt.route }
         const saved = Schema.decodeSync(responseJson)(receipt.response)
         if (receipt.request_hash !== mutation.requestHash) return { kind: "replay-mismatch", saved }
         return { kind: "replayed", response: saved, changed: Schema.decodeSync(changedJson)(receipt.changed) }
@@ -52,8 +61,9 @@ export const withReceipt = <A, E>(
         throw new Rollback()
       }
       sql.exec(
-        "INSERT INTO receipts (action_id, caregiver_id, request_hash, response, changed, created_at) VALUES (?, ?, ?, ?, ?, ?)",
+        "INSERT INTO receipts (action_id, route, caregiver_id, request_hash, response, changed, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
         mutation.actionId,
+        mutation.route,
         mutation.caregiverId,
         mutation.requestHash,
         Schema.encodeSync(responseJson)(result.response),
