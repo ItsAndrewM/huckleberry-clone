@@ -171,3 +171,38 @@ export const removeSegment = (sql: SqlStorage, stamp: Stamp, segmentId: string):
     segmentId,
   )
 }
+
+export const updateSegment = (sql: SqlStorage, stamp: Stamp, segmentId: string, segment: SegmentTimes): void => {
+  sql.exec(
+    "UPDATE nursing_segments SET side = ?, started_at = ?, ended_at = ?, updated_by = ?, updated_at = ? WHERE id = ?",
+    segment.side,
+    segment.startedAt,
+    segment.endedAt,
+    stamp.caregiverId,
+    stamp.now,
+    segmentId,
+  )
+}
+
+export const updatePortion = (sql: SqlStorage, stamp: Stamp, portionId: string, portion: PortionEntry): void => {
+  sql.exec(
+    `UPDATE bottle_portions SET occurred_at = ?, breast_milk_ml = ?, formula_ml = ?, updated_by = ?, updated_at = ?
+     WHERE id = ?`,
+    portion.occurredAt,
+    portion.breastMilkMl,
+    portion.formulaMl,
+    stamp.caregiverId,
+    stamp.now,
+    portionId,
+  )
+}
+
+export const removePortion = (sql: SqlStorage, stamp: Stamp, portionId: string): void => {
+  sql.exec(
+    "UPDATE bottle_portions SET deleted_at = ?, updated_by = ?, updated_at = ? WHERE id = ?",
+    stamp.now,
+    stamp.caregiverId,
+    stamp.now,
+    portionId,
+  )
+}
