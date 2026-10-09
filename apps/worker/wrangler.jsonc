@@ -32,4 +32,27 @@
       "identity": { "email": "andrew@example.test", "name": "Andrew (local)" },
     },
   },
+  // `pnpm dev` and `pnpm e2e` run this environment (CLOUDFLARE_ENV=local). Its household is made up, and it is
+  // seeded on start for the access.dev identity. Deploys use the top level, which has no LOCAL_HOUSEHOLD.
+  "env": {
+    "local": {
+      "vars": {
+        "ACCESS_TEAM_DOMAIN": "https://misty-wildflower-0505.cloudflareaccess.com",
+        "ACCESS_AUD": "",
+        "ADMIN_SERVICE_TOKEN_CN": "",
+        "LOCAL_HOUSEHOLD": {
+          "name": "Local household",
+          "timeZone": "America/Vancouver",
+          "caregivers": [
+            { "email": "andrew@example.test", "displayName": "Andrew (local)" },
+            { "email": "emily@example.test", "displayName": "Emily (local)" },
+          ],
+          "child": { "name": "Robin", "birthDate": "2026-09-01", "sex": "female", "gestationalAgeDays": 281 },
+        },
+      },
+      "durable_objects": {
+        "bindings": [{ "name": "HOUSEHOLD", "class_name": "HouseholdDO" }],
+      },
+    },
+  },
 }

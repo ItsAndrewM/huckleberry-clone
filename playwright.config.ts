@@ -14,7 +14,7 @@ export default defineConfig({
     { name: "chromium", use: { ...devices["iPhone 15"], browserName: "chromium" } },
   ],
   webServer: {
-    command: `pnpm --filter @bt/web build && pnpm --filter @bt/web preview --port ${PORT} --strictPort`,
+    command: `CLOUDFLARE_ENV=local pnpm --filter @bt/web build && pnpm --filter @bt/web preview --port ${PORT} --strictPort`,
     url: `http://localhost:${PORT}`,
     reuseExistingServer: !CI,
     timeout: 120_000,
