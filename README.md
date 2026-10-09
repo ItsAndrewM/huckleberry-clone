@@ -6,7 +6,7 @@ A two-caregiver baby tracker on Cloudflare Workers. The plan is `docs/implementa
 
 Node 24, at the exact version in `.nvmrc` (`nvm install && nvm use`; CI reads the same file), and pnpm 10 (`corepack enable`), then `pnpm install`. Node runs the `.ts` scripts directly.
 
-Locally, `pnpm dev` and `pnpm e2e` are signed in as the `access.dev` identity in `apps/worker/wrangler.jsonc`, so `/api/*` requests get past the Access check (D5).
+Locally, `pnpm dev` and `pnpm e2e` run the `local` environment in `apps/worker/wrangler.jsonc` (`CLOUDFLARE_ENV=local`). It signs every request in as the `access.dev` identity, so `/api/*` requests get past the Access check (D5), and the household seeds a made-up household for that identity when it starts.
 
 ## Commands
 
@@ -21,3 +21,5 @@ Locally, `pnpm dev` and `pnpm e2e` are signed in as the `access.dev` identity in
 | `pnpm build` | Client and Worker build into `apps/web/dist` |
 | `pnpm bundle:check` | Fails if the Worker is over 400 KiB gzip (run `pnpm build` first) |
 | `pnpm e2e` | Playwright, WebKit and Chromium at iPhone size (`pnpm exec playwright install chromium webkit` once) |
+| `pnpm api:docs` | Rewrites `docs/api.json` from the API in `packages/contracts`. A test fails while it's stale |
+| `pnpm admin household:seed …` | Seeds the deployed household, once, through `/api/admin/household`. Reads `BT_URL`, `CF_ACCESS_CLIENT_ID` and `CF_ACCESS_CLIENT_SECRET` (the admin service token) from `.admin-token.env`, which git ignores. `pnpm admin` prints the flags |
