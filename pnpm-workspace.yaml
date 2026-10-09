@@ -11,6 +11,7 @@ catalog:
   "@gamesheet-inc/oxlint-plugin": 0.2.0
   "@oxlint/plugins": 1.87.0
   "@playwright/test": 1.64.0
+  "@tailwindcss/vite": 4.3.3
   "@types/node": 24.19.1
   "@types/react": 19.3.0
   "@types/react-dom": 19.3.0
@@ -24,6 +25,7 @@ catalog:
   oxlint: 1.87.0
   react: 19.3.0
   react-dom: 19.3.0
+  tailwindcss: 4.3.3
   typescript: 5.9.3
   vite: 8.3.3
   vitest: 4.1.11

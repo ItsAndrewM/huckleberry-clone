@@ -10,6 +10,7 @@ export default defineConfig({
         test: { name: "domain-west", env: { TZ: "America/Adak" }, provide: { hostZone: "America/Adak" } },
       },
       "apps/worker/vitest.config.ts",
+      "apps/web/vitest.config.ts",
       { test: { name: "scripts", include: ["scripts/**/*.test.ts"], environment: "node" } },
     ],
     coverage: {
