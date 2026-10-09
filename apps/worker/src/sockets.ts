@@ -33,6 +33,15 @@ export const broadcastTo =
     for (const socket of openSockets(ctx)) socket.send(message)
   }
 
+const NO_CODE_RECEIVED = 1005
+const CLOSED_WITHOUT_FRAME = 1006
+
+export const answerClose = (socket: WebSocket, code: number, reason: string): void => {
+  if (socket.readyState !== WebSocket.CLOSING) return
+  if (code === NO_CODE_RECEIVED || code === CLOSED_WITHOUT_FRAME) socket.close()
+  else socket.close(code, reason)
+}
+
 export const closeSockets = (ctx: DurableObjectState, caregiverId: string): number => {
   const sockets = openSockets(ctx, caregiverTag(caregiverId))
   for (const socket of sockets) socket.close(CAREGIVER_DISABLED.code, CAREGIVER_DISABLED.reason)

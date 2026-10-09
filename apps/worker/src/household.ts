@@ -9,7 +9,7 @@ import { migrate } from "./db/migrate.ts"
 import { MIGRATIONS } from "./db/migrations.ts"
 import { householdApi } from "./http.ts"
 import { HouseholdSeed, type SeedResult } from "./seed.ts"
-import { acceptSocket, broadcastTo, closeSockets, heartbeat } from "./sockets.ts"
+import { acceptSocket, answerClose, broadcastTo, closeSockets, heartbeat } from "./sockets.ts"
 
 interface HouseholdEnv {
   readonly LOCAL_HOUSEHOLD?: Schema.Json
@@ -40,6 +40,10 @@ export class HouseholdDO extends DurableObject<HouseholdEnv> {
     const response = await this.api.handler(request)
     response.headers.set("cache-control", "no-store")
     return response
+  }
+
+  override webSocketClose(socket: WebSocket, code: number, reason: string): void {
+    answerClose(socket, code, reason)
   }
 
   override async alarm(): Promise<void> {

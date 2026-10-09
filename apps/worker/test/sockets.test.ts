@@ -192,8 +192,8 @@ describe("broadcasting what a change changed", () => {
     ]
     expect(refusals.map(({ status }) => status)).toEqual([400, 409, 400])
     expect(consoleWarn).toHaveBeenCalledOnce()
-    const later = await logDiaper(household, wetAt(NOW - 2 * HOUR_MS))
-    expect(decodeMessage(await next)).toEqual({ changed: later.changed })
+    const dayBefore = await logDiaper(household, wetAt(NOW - 24 * HOUR_MS))
+    expect(decodeMessage(await next)).toEqual({ changed: dayBefore.changed })
   })
 
   it("keeps saving, and keeps telling the others, after a socket has gone", async () => {
@@ -215,6 +215,21 @@ describe("broadcasting what a change changed", () => {
     const message = nextMessage(socket)
     const { changed } = await logDiaper(household)
     expect(decodeMessage(await message)).toEqual({ changed })
+  })
+})
+
+describe("a client closing its socket", () => {
+  it.each([
+    ["with its code and reason", (socket: WebSocket) => socket.close(1000, "app closed"), 1000, "app closed"],
+    ["with an app's own code", (socket: WebSocket) => socket.close(4000, "stale"), 4000, "stale"],
+    ["with no code", (socket: WebSocket) => socket.close(), 1005, ""],
+  ])("completes the close handshake %s, and the household lets the socket go", async (_label, close, code, reason) => {
+    const household = await seededHousehold()
+    const socket = await connect(household, ANDREW.email)
+    const socketClosed = closed(socket)
+    close(socket)
+    expect(await socketClosed).toEqual({ code, reason })
+    expect(await runInDurableObject(household, (_instance, state) => state.getWebSockets().length)).toBe(0)
   })
 })
 
