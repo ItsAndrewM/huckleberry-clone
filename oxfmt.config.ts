@@ -18,6 +18,7 @@ export default defineConfig({
     ".roo/**",
     ".superpowers/**",
     ".windsurf/**",
+    "docs/api.json",
     "pnpm-lock.yaml",
     "tools/oxlint/anti-slop/**",
   ],

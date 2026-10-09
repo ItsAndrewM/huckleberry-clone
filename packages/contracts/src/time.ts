@@ -11,23 +11,28 @@ const inCalendarYears = (value: string) => {
   return year >= FIRST_CALENDAR_YEAR && year <= LAST_CALENDAR_YEAR
 }
 
-const calendarString = (isReal: (value: string) => boolean, example: string) =>
+const calendarString = (
+  isReal: (value: string) => boolean,
+  example: string,
+  jsonSchema: { readonly format: string } | { readonly pattern: string },
+) =>
   Schema.String.check(
     Schema.makeFilter((value: string) => isReal(value) && inCalendarYears(value), {
       expected: `${example} from ${FIRST_CALENDAR_YEAR} to ${LAST_CALENDAR_YEAR}`,
+      toJsonSchema: () => jsonSchema,
     }),
   )
 
 export const Instant = Schema.Int.check(Schema.isGreaterThanOrEqualTo(FIRST_INSTANT), Schema.isLessThan(INSTANT_LIMIT))
 export type Instant = typeof Instant.Type
 
-export const LocalDate = calendarString(isLocalDate, "a date like 2026-10-06")
+export const LocalDate = calendarString(isLocalDate, "a date like 2026-10-06", { format: "date" })
 export type LocalDate = typeof LocalDate.Type
 
-export const IsoWeek = calendarString(isIsoWeek, "an ISO week like 2026-W41")
+export const IsoWeek = calendarString(isIsoWeek, "an ISO week like 2026-W41", { pattern: "^\\d{4}-W\\d{2}$" })
 export type IsoWeek = typeof IsoWeek.Type
 
-export const YearMonth = calendarString(isYearMonth, "a month like 2026-10")
+export const YearMonth = calendarString(isYearMonth, "a month like 2026-10", { pattern: "^\\d{4}-\\d{2}$" })
 export type YearMonth = typeof YearMonth.Type
 
 export const TimeZone = Schema.String.check(

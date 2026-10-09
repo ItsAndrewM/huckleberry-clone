@@ -15,11 +15,6 @@ export default {
   async fetch(request, env, ctx) {
     if (!new URL(request.url).pathname.startsWith("/api/")) return new Response("Not found", { status: 404 })
     const caller = await callerOf(request, ctx.access, env, remoteAccessKeys)
-    return routeApi(
-      request,
-      caller,
-      (forwarded) => householdOf(env.HOUSEHOLD).fetch(forwarded),
-      env.ADMIN_SERVICE_TOKEN_CN,
-    )
+    return routeApi(request, caller, householdOf(env.HOUSEHOLD), env.ADMIN_SERVICE_TOKEN_CN)
   },
 } satisfies ExportedHandler<Env>

@@ -73,3 +73,13 @@ describe("TimeZone", () => {
     expect(fromJson(TimeZone)(name)).toBe(false)
   })
 })
+
+describe("the JSON Schema that docs/api.json shows for calendar strings", () => {
+  it.each([
+    ["LocalDate", LocalDate, { type: "string", format: "date" }],
+    ["IsoWeek", IsoWeek, { type: "string", pattern: "^\\d{4}-W\\d{2}$" }],
+    ["YearMonth", YearMonth, { type: "string", pattern: "^\\d{4}-\\d{2}$" }],
+  ])("describes %s's format", (_name, schema, jsonSchema) => {
+    expect(Schema.toJsonSchemaDocument(schema).schema).toEqual(jsonSchema)
+  })
+})

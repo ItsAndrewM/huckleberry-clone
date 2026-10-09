@@ -1,4 +1,4 @@
-import { Effect, Exit, Layer, Schema } from "effect"
+import { Effect, Exit, Layer, Result, Schema } from "effect"
 import { HttpRouter, HttpServer } from "effect/http"
 import { HttpApi, HttpApiBuilder, HttpApiEndpoint, HttpApiGroup } from "effect/http-api"
 import { afterAll, describe, expect, it } from "vitest"
@@ -6,6 +6,7 @@ import {
   Conflict,
   ConflictCode,
   InvalidInput,
+  invalidInputFrom,
   NotFound,
   RateLimited,
   ServiceUnavailable,
@@ -148,5 +149,36 @@ describe("InvalidInput", () => {
   it("rejects an issue nobody defined", () => {
     const exit = decode({ _tag: "InvalidInput", fieldErrors: [{ path: "amount", issue: "too_big" }] })
     expect(Exit.isFailure(exit)).toBe(true)
+  })
+})
+
+describe("invalidInputFrom", () => {
+  const Portion = Schema.Struct({ formulaMl: Schema.Int.check(Schema.isGreaterThan(0)) })
+  const Note = Schema.String.check(Schema.isMinLength(3), Schema.isPattern(/^[A-Z]/))
+  const Bottle = Schema.Struct({ note: Note, portions: Schema.Array(Portion) })
+
+  const issueOf = (input: Schema.Json) => {
+    const decoded = Schema.decodeUnknownResult(Bottle, { errors: "all" })(input)
+    if (Result.isSuccess(decoded)) throw new Error("expected the input to fail decoding")
+    return decoded.failure.issue
+  }
+
+  it("names each field that failed by its dotted path, with list items by index", () => {
+    expect(invalidInputFrom(issueOf({ note: 4, portions: [{ formulaMl: 40 }, { formulaMl: 0 }] })).fieldErrors).toEqual(
+      [
+        { path: "note", issue: "invalid" },
+        { path: "portions.1.formulaMl", issue: "invalid" },
+      ],
+    )
+  })
+
+  it("names the whole input with an empty path when it isn't an object at all", () => {
+    expect(invalidInputFrom(issueOf("a bottle")).fieldErrors).toEqual([{ path: "", issue: "invalid" }])
+  })
+
+  it("names a field once, however many of its checks failed", () => {
+    expect(invalidInputFrom(issueOf({ note: "a", portions: [] })).fieldErrors).toEqual([
+      { path: "note", issue: "invalid" },
+    ])
   })
 })

@@ -1,5 +1,5 @@
 import { VALIDATION_ISSUES } from "@bt/domain"
-import { Schema } from "effect"
+import { Predicate, Schema, SchemaIssue, type StandardSchema } from "effect"
 
 export const FieldIssue = Schema.Literals([...VALIDATION_ISSUES, "invalid"])
 export type FieldIssue = typeof FieldIssue.Type
@@ -14,6 +14,16 @@ export class InvalidInput extends Schema.TaggedError<InvalidInput>()(
   { fieldErrors: Schema.Array(FieldError) },
   { httpApiStatus: 400 },
 ) {}
+
+const leafIssues = SchemaIssue.makeFormatterStandardSchemaV1()
+
+const keyOf = (segment: PropertyKey | StandardSchema.StandardSchemaV1.PathSegment) =>
+  String(Predicate.isObject(segment) ? segment.key : segment)
+
+export const invalidInputFrom = (issue: SchemaIssue.Issue): InvalidInput => {
+  const paths = new Set(leafIssues(issue).issues.map(({ path = [] }) => path.map(keyOf).join(".")))
+  return new InvalidInput({ fieldErrors: [...paths].map((path) => ({ path, issue: "invalid" })) })
+}
 
 export class NotFound extends Schema.TaggedError<NotFound>()("NotFound", {}, { httpApiStatus: 404 }) {}
 

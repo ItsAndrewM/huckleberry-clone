@@ -1,8 +1,11 @@
-import { NotFound, ServiceUnavailable, Unauthorized } from "@bt/contracts"
+import { ServiceUnavailable, Unauthorized } from "@bt/contracts"
 import type { Caller } from "./access.ts"
+import { type AdminHousehold, routeAdmin } from "./admin.ts"
 import { errorResponse } from "./error-response.ts"
 
-export type Household = (request: Request) => Promise<Response>
+export interface Household extends AdminHousehold {
+  fetch(request: Request): Promise<Response>
+}
 
 const INTERNAL_HEADER_PREFIX = "x-bt-"
 
@@ -21,6 +24,11 @@ const sameOriginTarget = (url: URL): string => {
 const loginRedirect = (url: URL): Response =>
   new Response(null, { status: 302, headers: { location: sameOriginTarget(url), "cache-control": "no-store" } })
 
+const unavailable = (error: Error) => {
+  console.error(error)
+  return errorResponse(new ServiceUnavailable())
+}
+
 const isAdmin = (caller: Caller, adminClientId: string | undefined): boolean =>
   caller.kind === "service" && adminClientId !== undefined && adminClientId !== "" && caller.clientId === adminClientId
 
@@ -35,8 +43,10 @@ export const routeApi = (
   const url = new URL(request.url)
   if (url.pathname === "/api/login") return loginRedirect(url)
   if (url.pathname.startsWith("/api/admin/")) {
-    return errorResponse(isAdmin(caller, adminClientId) ? new NotFound() : new Unauthorized())
+    return isAdmin(caller, adminClientId)
+      ? routeAdmin(request, household).catch(unavailable)
+      : errorResponse(new Unauthorized())
   }
   if (caller.kind === "service") return errorResponse(new Unauthorized())
-  return household(forHousehold(request, caller.email))
+  return household.fetch(forHousehold(request, caller.email)).catch(unavailable)
 }
