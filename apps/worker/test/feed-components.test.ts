@@ -290,6 +290,26 @@ describe("deleting a bottle", () => {
   })
 })
 
+describe("a segment the other parent deleted", () => {
+  it.each([
+    [
+      "an edit",
+      (stamp: Stamp, id: string, feed: Feed) =>
+        editSegment(stamp, id, segmentEdit(feed, minutesAgo(70), minutesAgo(50))),
+    ],
+    ["a delete", (stamp: Stamp, id: string, feed: Feed) => deleteSegment(stamp, id, removal(feed))],
+  ])("answers %s from before they deleted it with STALE_VERSION, not NotFound", async (_label, core) => {
+    const { before, current, result } = await inHousehold((sql) => {
+      const before = twoSides(sql)
+      const first = firstSegment(before)
+      const current = saved(deleteSegment(stampOf(sql, EMILY.email), first, removal(before))(sql))
+      return { before, current, result: core(stampOf(sql), first, before)(sql) }
+    })
+    expect(current).toMatchObject({ version: 2, segments: before.segments.slice(1) })
+    expect(result).toEqual({ ok: false, error: expect.objectContaining({ code: "STALE_VERSION", current }) })
+  })
+})
+
 describe("a segment or bottle that never existed", () => {
   const unknown = "no-such-part"
   const version = { actionId: ACTION_ID, version: 1 }

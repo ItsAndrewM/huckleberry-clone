@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest"
 import { deleteFeed, moveFeed, restoreFeed } from "../src/core/feeds/feed-edits.ts"
 import { finishFeed, startFeed } from "../src/core/feeds/lifecycle.ts"
 import { logFeed } from "../src/core/feeds/log.ts"
+import { loadFeed } from "../src/core/feeds/store.ts"
 import type { Stamp } from "../src/core/receipts.ts"
 import {
   ACTION_ID,
@@ -115,11 +116,22 @@ describe("moving a feed", () => {
     expect(result).toMatchObject({ ok: false, error: { fieldErrors: [{ path: "startedAt", issue }] } })
   })
 
-  it("refuses a move onto another feed's segment, with SEGMENT_OVERLAP and that feed (D9)", async () => {
-    const { other, result } = await inHousehold((sql) => {
+  it("refuses a move onto another feed's segment, with SEGMENT_OVERLAP and that feed, changing nothing (D9)", async () => {
+    const { feed, other, result, after } = await inHousehold((sql) => {
       const other = saved(logFeed(stampOf(sql), newFeed([segment("left", minutesAgo(200), minutesAgo(180))]))(sql))
       const feed = logged(sql, 60)
-      return { other, result: moveFeed(stampOf(sql), feed.id, move(feed, minutesAgo(190)))(sql) }
+      const result = moveFeed(stampOf(sql), feed.id, move(feed, minutesAgo(190)))(sql)
+      return { feed, other, result, after: loadFeed(sql, feed.id) }
+    })
+    expect(result).toEqual({ ok: false, error: expect.objectContaining({ code: "SEGMENT_OVERLAP", current: other }) })
+    expect(after).toEqual(feed)
+  })
+
+  it("refuses a move of a running feed back over another feed's segment, with SEGMENT_OVERLAP and that feed (D9)", async () => {
+    const { other, result } = await inHousehold((sql) => {
+      const other = saved(logFeed(stampOf(sql), newFeed([segment("left", minutesAgo(60), minutesAgo(45))]))(sql))
+      const feed = running(sql, minutesAgo(20))
+      return { other, result: moveFeed(stampOf(sql), feed.id, move(feed, minutesAgo(50)))(sql) }
     })
     expect(result).toEqual({ ok: false, error: expect.objectContaining({ code: "SEGMENT_OVERLAP", current: other }) })
   })
@@ -191,6 +203,16 @@ describe("deleting and restoring a feed", () => {
       const feed = logged(sql, 60)
       const deleted = saved(deleteFeed(stampOf(sql), feed.id, versioned(feed))(sql))
       const other = saved(logFeed(stampOf(sql), newFeed([segment("left", minutesAgo(50), minutesAgo(40))]))(sql))
+      return { other, result: restoreFeed(stampOf(sql), feed.id, versioned(deleted))(sql) }
+    })
+    expect(result).toEqual({ ok: false, error: expect.objectContaining({ code: "SEGMENT_OVERLAP", current: other }) })
+  })
+
+  it("refuses to restore a running feed over a segment saved inside its running side, with SEGMENT_OVERLAP and that feed (D10)", async () => {
+    const { other, result } = await inHousehold((sql) => {
+      const feed = running(sql, minutesAgo(30))
+      const deleted = saved(deleteFeed(stampOf(sql), feed.id, versioned(feed))(sql))
+      const other = saved(logFeed(stampOf(sql), newFeed([segment("right", minutesAgo(20), minutesAgo(10))]))(sql))
       return { other, result: restoreFeed(stampOf(sql), feed.id, versioned(deleted))(sql) }
     })
     expect(result).toEqual({ ok: false, error: expect.objectContaining({ code: "SEGMENT_OVERLAP", current: other }) })

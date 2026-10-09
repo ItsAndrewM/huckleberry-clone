@@ -2,7 +2,7 @@ import type { Feed, Side } from "@bt/contracts"
 import { feedSummary } from "@bt/domain"
 import { describe, expect, it } from "vitest"
 import { addBottle, finishFeed, pauseFeed, resumeFeed, startFeed, switchSide } from "../src/core/feeds/lifecycle.ts"
-import { createFeed } from "../src/core/feeds/store.ts"
+import { createFeed, loadFeed } from "../src/core/feeds/store.ts"
 import {
   ACTION_ID,
   CHANGED_TODAY,
@@ -193,17 +193,19 @@ describe("switching sides", () => {
     expect(result).toMatchObject({ ok: false, error: { fieldErrors: [{ path: "occurredAt", issue }] } })
   })
 
-  it("refuses a switch whose new side would run into a saved segment, with SEGMENT_OVERLAP (D9)", async () => {
-    const { blocking, result } = await inHousehold((sql) => {
+  it("refuses a switch whose new side would run into a saved segment, with SEGMENT_OVERLAP, changing nothing (D9)", async () => {
+    const { feed, blocking, result, after } = await inHousehold((sql) => {
       const feed = started(sql, "left", minutesAgo(30))
       const ahead = segment("left", NOW + MINUTE_MS, NOW + 3 * MINUTE_MS)
       const blocking = createFeed(sql, stampOf(sql), "completed", [ahead], [])
-      return { blocking, result: switchSide(stampOf(sql), feed.id, at(feed, NOW))(sql) }
+      const result = switchSide(stampOf(sql), feed.id, at(feed, NOW))(sql)
+      return { feed, blocking, result, after: loadFeed(sql, feed.id) }
     })
     expect(result).toEqual({
       ok: false,
       error: expect.objectContaining({ code: "SEGMENT_OVERLAP", current: blocking }),
     })
+    expect(after).toEqual(feed)
   })
 })
 
@@ -264,6 +266,14 @@ describe("resuming", () => {
       return resumeFeed(stampOf(sql), feed.id, { ...at(feed, minutesAgo(10)), side: "right" })(sql)
     })
     expect(result).toMatchObject({ ok: false, error: { _tag: "NotFound" } })
+  })
+
+  it("refuses a resume more than 5 minutes ahead of the server's clock, naming occurredAt", async () => {
+    const result = await inHousehold((sql) => {
+      const feed = paused(sql)
+      return resumeFeed(stampOf(sql), feed.id, { ...at(feed, NOW + 6 * MINUTE_MS), side: "right" })(sql)
+    })
+    expect(result).toMatchObject({ ok: false, error: { fieldErrors: [{ path: "occurredAt", issue: "in_future" }] } })
   })
 
   it("refuses to resume before the pause, with SEGMENT_OVERLAP and the feed itself (D9)", async () => {
@@ -371,6 +381,14 @@ describe("finishing", () => {
     })
   })
 
+  it("refuses a finish more than 5 minutes ahead of the server's clock, naming occurredAt", async () => {
+    const result = await inHousehold((sql) => {
+      const feed = started(sql, "left", minutesAgo(30))
+      return finishFeed(stampOf(sql), feed.id, { ...at(feed, NOW + 6 * MINUTE_MS), deleteIfEmpty: false })(sql)
+    })
+    expect(result).toMatchObject({ ok: false, error: { fieldErrors: [{ path: "occurredAt", issue: "in_future" }] } })
+  })
+
   it("refuses a finish before the running side's start", async () => {
     const result = await inHousehold((sql) => {
       const feed = started(sql, "left", minutesAgo(30))
@@ -388,5 +406,22 @@ describe("finishing", () => {
       return finishFeed(stampOf(sql), feed.id, { ...at(feed, minutesAgo(5)), deleteIfEmpty: false })(sql)
     })
     expect(result).toMatchObject({ ok: false, error: { _tag: "NotFound" } })
+  })
+})
+
+describe("a tap exactly 5 minutes ahead of the server's clock (AC 21)", () => {
+  const EDGE = NOW + 5 * MINUTE_MS
+
+  it.each([
+    ["a switch", (sql: SqlStorage, feed: Feed) => switchSide(stampOf(sql), feed.id, at(feed, EDGE))(sql)],
+    ["a pause", (sql: SqlStorage, feed: Feed) => pauseFeed(stampOf(sql), feed.id, at(feed, EDGE))(sql)],
+    [
+      "a finish",
+      (sql: SqlStorage, feed: Feed) =>
+        finishFeed(stampOf(sql), feed.id, { ...at(feed, EDGE), deleteIfEmpty: false })(sql),
+    ],
+  ])("saves %s", async (_label, tap) => {
+    const result = await inHousehold((sql) => tap(sql, started(sql)))
+    expect(result.ok).toBe(true)
   })
 })
