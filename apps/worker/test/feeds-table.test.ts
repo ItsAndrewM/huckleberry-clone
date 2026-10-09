@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest"
 import { createFeed, saveFeed } from "../src/core/feeds/store.ts"
-import { bottle, caregiverId, inHousehold, minutesAgo, NOW, segment, stampOf } from "./feed-fixtures.ts"
-import { ANDREW, EMILY } from "./fixtures.ts"
+import { bottle, segment } from "./feed-fixtures.ts"
+import { ANDREW, caregiverId, EMILY, inHousehold, minutesAgo, NOW, stampOf } from "./fixtures.ts"
 
 const BEFORE_INSTANTS = Date.UTC(2000, 0, 1) - 1
 const AFTER_INSTANTS = Date.UTC(2100, 0, 1)

@@ -4,21 +4,19 @@ import { deletePortion, deleteSegment, editPortion, editSegment } from "../src/c
 import { addBottle, startFeed } from "../src/core/feeds/lifecycle.ts"
 import { logFeed } from "../src/core/feeds/log.ts"
 import type { Stamp } from "../src/core/receipts.ts"
+import { bottle, newFeed, segment } from "./feed-fixtures.ts"
 import {
   ACTION_ID,
-  bottle,
   CHANGED_TODAY,
   caregiverId,
+  EMILY,
   inHousehold,
   MINUTE_MS,
   minutesAgo,
   NOW,
-  newFeed,
   saved,
-  segment,
   stampOf,
-} from "./feed-fixtures.ts"
-import { EMILY } from "./fixtures.ts"
+} from "./fixtures.ts"
 
 const OCT_6_AT_23_40 = Date.UTC(2026, 9, 7, 6, 40)
 

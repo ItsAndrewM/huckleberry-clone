@@ -1,10 +1,7 @@
 import { runInDurableObject } from "cloudflare:test"
 import { afterEach, describe, expect, it, vi } from "vitest"
-import type { HouseholdDO } from "../src/household.ts"
 import { newHousehold, SEED, seededHousehold } from "./fixtures.ts"
-
-const get = (household: DurableObjectStub<HouseholdDO>, path: string, email?: string) =>
-  household.fetch(`https://bt.example.test${path}`, email === undefined ? {} : { headers: { "x-bt-email": email } })
+import { get } from "./requests.ts"
 
 describe("GET /api/me", () => {
   it("tells an active caregiver who they are, and their household and child", async () => {

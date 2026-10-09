@@ -1,45 +1,15 @@
 import { Changed, Feed, SavedFeed } from "@bt/contracts"
-import { runInDurableObject } from "cloudflare:test"
 import { Schema } from "effect"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
-import type { HouseholdDO } from "../src/household.ts"
-import { ANDREW, EMILY, seededHousehold } from "./fixtures.ts"
-
-const NOW = Date.UTC(2026, 9, 8, 19)
-const MINUTE_MS = 60_000
-const CHANGED_TODAY = [["today"], ["last24h"], ["day", "2026-10-08"], ["week", "2026-W41"], ["month", "2026-10"]]
-
-type Household = DurableObjectStub<HouseholdDO>
+import { ANDREW, CHANGED_TODAY, EMILY, MINUTE_MS, minutesAgo, NOW, seededHousehold } from "./fixtures.ts"
+import { type Household, inStorage, send, sendJson, sha256 } from "./requests.ts"
 
 const decodeSaved = Schema.decodeUnknownSync(Schema.toCodecJson(SavedFeed))
-
-const minutesAgo = (minutes: number) => NOW - minutes * MINUTE_MS
-
-const send = (household: Household, method: string, path: string, body: string, email = ANDREW.email) =>
-  household.fetch(`https://bt.example.test${path}`, {
-    method,
-    headers: { "content-type": "application/json", "x-bt-email": email },
-    body,
-  })
-
-const sendJson = async (
-  household: Household,
-  method: string,
-  path: string,
-  body: Schema.Json,
-  email = ANDREW.email,
-) => {
-  const response = await send(household, method, path, JSON.stringify(body), email)
-  return { status: response.status, body: await response.json() }
-}
 
 const savedFeed = async (household: Household, method: string, path: string, body: Schema.Json) =>
   decodeSaved((await sendJson(household, method, path, body)).body).feed
 
 const start = (startedAt = minutesAgo(30)) => ({ actionId: crypto.randomUUID(), side: "left", startedAt })
-
-const inStorage = <R>(household: Household, read: (sql: SqlStorage) => R) =>
-  runInDurableObject(household, (_instance, state) => read(state.storage.sql))
 
 beforeEach(() => {
   vi.useFakeTimers({ toFake: ["Date"] })
@@ -205,11 +175,6 @@ describe("the running feed's endpoints", () => {
 })
 
 describe("the receipts the feed endpoints keep", () => {
-  const sha256 = async (text: string) => {
-    const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(text))
-    return [...new Uint8Array(digest)].map((byte) => byte.toString(16).padStart(2, "0")).join("")
-  }
-
   const firstId = (records: ReadonlyArray<{ readonly id: string }>) => records[0]?.id ?? "missing"
 
   it("hold each request's route and the hash of its canonical body, which a retry sent before a deploy must still match", async () => {
