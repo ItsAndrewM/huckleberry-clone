@@ -1,3 +1,4 @@
+import type { Caregiver, Me } from "@bt/contracts"
 import { canonicalTimeZone } from "@bt/domain"
 import type { HouseholdSeed, SeedResult } from "../seed.ts"
 
@@ -66,3 +67,13 @@ export const seedHousehold = (storage: DurableObjectStorage, seed: HouseholdSeed
     insertHousehold(storage.sql, household, now)
     return { created: true, household }
   })
+
+export const meOf = (sql: SqlStorage, caregiver: Caregiver): Me => {
+  const household = sql.exec<HouseholdRow>("SELECT name, time_zone FROM household").one()
+  const child = sql.exec<{ name: string; birth_date: string }>("SELECT name, birth_date FROM child").one()
+  return {
+    caregiver,
+    household: { name: household.name, timeZone: household.time_zone },
+    child: { name: child.name, birthDate: child.birth_date },
+  }
+}

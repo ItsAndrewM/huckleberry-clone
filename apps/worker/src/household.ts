@@ -1,10 +1,9 @@
-import { NotFound } from "@bt/contracts"
 import { DurableObject } from "cloudflare:workers"
 import { Schema } from "effect"
 import { seedHousehold } from "./core/household.ts"
 import { migrate } from "./db/migrate.ts"
 import { MIGRATIONS } from "./db/migrations.ts"
-import { errorResponse } from "./error-response.ts"
+import { householdApi } from "./http.ts"
 import { HouseholdSeed, type SeedResult } from "./seed.ts"
 
 interface HouseholdEnv {
@@ -21,13 +20,18 @@ export const startHousehold = async (
 }
 
 export class HouseholdDO extends DurableObject<HouseholdEnv> {
+  private readonly api: ReturnType<typeof householdApi>
+
   constructor(ctx: DurableObjectState, env: HouseholdEnv) {
     super(ctx, env)
     void ctx.blockConcurrencyWhile(() => startHousehold(ctx.storage, env.LOCAL_HOUSEHOLD, Date.now()))
+    this.api = householdApi(ctx.storage.sql)
   }
 
-  override fetch(): Response {
-    return errorResponse(new NotFound())
+  override async fetch(request: Request): Promise<Response> {
+    const response = await this.api.handler(request)
+    response.headers.set("cache-control", "no-store")
+    return response
   }
 
   seedHousehold(seed: HouseholdSeed): SeedResult {
