@@ -1,8 +1,13 @@
-import { HEARTBEAT, Unauthorized } from "@bt/contracts"
+import { type Changed, ChangedMessage, HEARTBEAT, Unauthorized } from "@bt/contracts"
+import { Schema } from "effect"
 import { activeCaregiver } from "./core/caregivers.ts"
 import { errorResponse } from "./error-response.ts"
 
+export type Broadcast = (changed: Changed) => void
+
 const caregiverTag = (caregiverId: string) => `caregiver:${caregiverId}`
+
+const messageJson = Schema.encodeSync(Schema.fromJsonString(ChangedMessage))
 
 export const heartbeat = () => new WebSocketRequestResponsePair(HEARTBEAT.ping, HEARTBEAT.pong)
 
@@ -17,3 +22,10 @@ export const acceptSocket = (ctx: DurableObjectState, request: Request): Respons
   ctx.acceptWebSocket(server, [caregiverTag(caregiver.id)])
   return new Response(null, { status: 101, webSocket: client, headers: { "cache-control": "no-store" } })
 }
+
+export const broadcastTo =
+  (ctx: DurableObjectState): Broadcast =>
+  (changed) => {
+    const message = messageJson({ changed })
+    for (const socket of ctx.getWebSockets()) socket.send(message)
+  }

@@ -7,7 +7,7 @@ import { migrate } from "./db/migrate.ts"
 import { MIGRATIONS } from "./db/migrations.ts"
 import { householdApi } from "./http.ts"
 import { HouseholdSeed, type SeedResult } from "./seed.ts"
-import { acceptSocket, heartbeat } from "./sockets.ts"
+import { acceptSocket, broadcastTo, heartbeat } from "./sockets.ts"
 
 interface HouseholdEnv {
   readonly LOCAL_HOUSEHOLD?: Schema.Json
@@ -30,7 +30,7 @@ export class HouseholdDO extends DurableObject<HouseholdEnv> {
     super(ctx, env)
     void ctx.blockConcurrencyWhile(() => startHousehold(ctx.storage, env.LOCAL_HOUSEHOLD, Date.now()))
     ctx.setWebSocketAutoResponse(heartbeat())
-    this.api = householdApi(ctx.storage)
+    this.api = householdApi(ctx.storage, broadcastTo(ctx))
   }
 
   override async fetch(request: Request): Promise<Response> {
