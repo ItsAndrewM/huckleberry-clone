@@ -4,6 +4,8 @@ import { StrictMode } from "react"
 import { createRoot } from "react-dom/client"
 import { connectApi } from "./api/client.ts"
 import { createConnectivity, followBrowser } from "./api/connectivity.ts"
+import { startLive } from "./api/live-connection.ts"
+import { socketUrl } from "./api/live.ts"
 import { createQueryClient } from "./api/query-client.ts"
 import { AppContext } from "./app-context.ts"
 import { router } from "./shell/router.tsx"
@@ -16,6 +18,15 @@ const connectivity = createConnectivity(navigator.onLine)
 followBrowser(connectivity, window)
 const api = connectApi({ report: connectivity.report })
 const queryClient = createQueryClient()
+const live = startLive({
+  open: () => new WebSocket(socketUrl(window.location)),
+  onChanged: (keys) => {
+    for (const queryKey of keys) void queryClient.invalidateQueries({ queryKey })
+  },
+  onStale: () => void queryClient.invalidateQueries(),
+  report: connectivity.report,
+})
+window.addEventListener("online", live.wake)
 
 createRoot(root).render(
   <StrictMode>
