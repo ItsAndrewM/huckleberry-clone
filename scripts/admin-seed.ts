@@ -1,5 +1,6 @@
 import { parseArgs } from "node:util"
 import type { HouseholdSeed } from "../apps/worker/src/seed.ts"
+import type { CaregiverJson } from "./admin-caregiver.ts"
 
 type SeedJson = (typeof HouseholdSeed)["Encoded"]
 
@@ -68,7 +69,7 @@ const adminUrl = (env: AdminEnv, path: string) => {
   return url
 }
 
-export const adminRequest = (env: AdminEnv, path: `/api/admin/${string}`, body: SeedJson): Request =>
+export const adminRequest = (env: AdminEnv, path: `/api/admin/${string}`, body: SeedJson | CaregiverJson): Request =>
   new Request(adminUrl(env, path), {
     method: "POST",
     redirect: "manual",

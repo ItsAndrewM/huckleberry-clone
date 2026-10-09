@@ -16,14 +16,22 @@ const otherToken: Caller = { kind: "service", clientId: "bt-other.access" }
 interface Recorded {
   readonly forwarded: Request[]
   readonly seeded: HouseholdSeed[]
+  readonly toggled: string[]
 }
 
 const recordingHousehold = (alreadySeeded = false): Household & Recorded => {
   const forwarded: Request[] = []
   const seeded: HouseholdSeed[] = []
+  const toggled: string[] = []
+  const toggle = async (email: string, active: boolean) => {
+    toggled.push(`${active ? "enable" : "disable"} ${email}`)
+    const known = SEED.caregivers.some((caregiver) => caregiver.email === email)
+    return known ? { email, active, closedSockets: active ? 0 : 2 } : undefined
+  }
   return {
     forwarded,
     seeded,
+    toggled,
     fetch: async (request) => {
       forwarded.push(request)
       return new Response("from the household")
@@ -32,12 +40,16 @@ const recordingHousehold = (alreadySeeded = false): Household & Recorded => {
       seeded.push(seed)
       return { created: !alreadySeeded, household: seed }
     },
+    disableCaregiver: (email) => toggle(email, false),
+    enableCaregiver: (email) => toggle(email, true),
   }
 }
 
 const unreachableHousehold: Household = {
   fetch: () => Promise.reject(new Error("Durable Object reset because its code was updated.")),
   seedHousehold: () => Promise.reject(new Error("Network connection lost.")),
+  disableCaregiver: () => Promise.reject(new Error("Network connection lost.")),
+  enableCaregiver: () => Promise.reject(new Error("Network connection lost.")),
 }
 
 const routeWith =
@@ -45,7 +57,7 @@ const routeWith =
   async (path: string, caller: Caller, init: RequestInit = {}) => {
     const household = recordingHousehold(alreadySeeded)
     const response = await routeApi(new Request(`${ORIGIN}${path}`, init), caller, household, adminClientId)
-    return { response, forwarded: household.forwarded, seeded: household.seeded }
+    return { response, forwarded: household.forwarded, seeded: household.seeded, toggled: household.toggled }
   }
 
 const route = routeWith(ADMIN_CLIENT_ID)
@@ -131,7 +143,7 @@ describe("a service token", () => {
   })
 
   it("gets past the admin gate as the admin, to a 404 on paths with no admin route", async () => {
-    const { response, forwarded } = await route("/api/admin/caregiver/disable", adminToken, { method: "POST" })
+    const { response, forwarded } = await route("/api/admin/nothing-here", adminToken, { method: "POST" })
     expect(response.status).toBe(404)
     expect(await response.json()).toEqual({ _tag: "NotFound" })
     expect(forwarded).toEqual([])
@@ -217,6 +229,73 @@ describe("seeding the household (POST /api/admin/household)", () => {
   })
 })
 
+describe("disabling and enabling a caregiver (POST /api/admin/caregiver/disable and /enable)", () => {
+  const caregiverRequest = (body: string): RequestInit => ({
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body,
+  })
+
+  it.each([
+    ["disable", { email: "andrew@example.test", active: false, closedSockets: 2 }],
+    ["enable", { email: "andrew@example.test", active: true, closedSockets: 0 }],
+  ])("%ss one as the admin, and answers 200 no-store with what it did", async (verb, status) => {
+    const { response, toggled, forwarded } = await route(
+      `/api/admin/caregiver/${verb}`,
+      adminToken,
+      caregiverRequest(JSON.stringify({ email: "andrew@example.test" })),
+    )
+    expect(response.status).toBe(200)
+    expect(response.headers.get("cache-control")).toBe("no-store")
+    expect(await response.json()).toEqual(status)
+    expect(toggled).toEqual([`${verb} andrew@example.test`])
+    expect(forwarded).toEqual([])
+  })
+
+  it("answers 404 for an email that isn't a caregiver", async () => {
+    const { response } = await route(
+      "/api/admin/caregiver/disable",
+      adminToken,
+      caregiverRequest(JSON.stringify({ email: "stranger@example.test" })),
+    )
+    expect(response.status).toBe(404)
+    expect(await response.json()).toEqual({ _tag: "NotFound" })
+  })
+
+  it.each([
+    ["an email in capitals, which no caregiver is stored under", JSON.stringify({ email: "Andrew@Example.test" })],
+    ["something that isn't an email", JSON.stringify({ email: "andrew" })],
+    ["no email", JSON.stringify({})],
+  ])("refuses %s with 400 on email, and changes no one", async (_label, body) => {
+    const { response, toggled } = await route("/api/admin/caregiver/disable", adminToken, caregiverRequest(body))
+    expect(response.status).toBe(400)
+    expect(await response.json()).toEqual({ _tag: "InvalidInput", fieldErrors: [{ path: "email", issue: "invalid" }] })
+    expect(toggled).toEqual([])
+  })
+
+  it("refuses a body that isn't JSON with 400", async () => {
+    const { response, toggled } = await route("/api/admin/caregiver/enable", adminToken, caregiverRequest("{"))
+    expect(response.status).toBe(400)
+    expect(toggled).toEqual([])
+  })
+
+  it("answers 404 to any other method", async () => {
+    const { response, toggled } = await route("/api/admin/caregiver/disable", adminToken)
+    expect(response.status).toBe(404)
+    expect(toggled).toEqual([])
+  })
+
+  it("is refused to a caregiver, before the body is read", async () => {
+    const { response, toggled } = await route(
+      "/api/admin/caregiver/enable",
+      andrew,
+      caregiverRequest(JSON.stringify({ email: "andrew@example.test" })),
+    )
+    expect(response.status).toBe(401)
+    expect(toggled).toEqual([])
+  })
+})
+
 describe("a WebSocket upgrade", () => {
   it("reaches the household with its upgrade intact, and comes back as a live socket", async () => {
     const household = env.HOUSEHOLD.getByName(crypto.randomUUID())
@@ -250,6 +329,13 @@ describe("a household that can't be reached", () => {
       "/api/admin/household",
       adminToken,
       { method: "POST", body: JSON.stringify(SEED) },
+      "Network connection lost.",
+    ],
+    [
+      "the admin's disable",
+      "/api/admin/caregiver/disable",
+      adminToken,
+      { method: "POST", body: JSON.stringify({ email: "andrew@example.test" }) },
       "Network connection lost.",
     ],
   ])(
