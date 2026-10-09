@@ -1,6 +1,6 @@
-import type { PortionEntry, SegmentEntry, Side } from "@bt/contracts"
+import type { Feed, NewFeed, PortionEntry, SegmentEntry, Side } from "@bt/contracts"
 import { runInDurableObject } from "cloudflare:test"
-import type { Stamp } from "../src/core/receipts.ts"
+import type { CoreResult, Stamp } from "../src/core/receipts.ts"
 import { ANDREW, seededHousehold } from "./fixtures.ts"
 
 export const NOW = Date.UTC(2026, 9, 8, 19)
@@ -26,3 +26,21 @@ export const bottle = (occurredAt: number, breastMilkMl = 60, formulaMl = 0): Po
   breastMilkMl,
   formulaMl,
 })
+
+export const ACTION_ID = "8b2f9c3e-1d4a-4f6b-9e7c-5a3b2c1d0e9f"
+export const BIRTH_DATE_BEGINS = Date.UTC(2026, 8, 1, 7)
+export const CHANGED_TODAY = [["today"], ["last24h"], ["day", "2026-10-08"], ["week", "2026-W41"], ["month", "2026-10"]]
+
+export const newFeed = (segments: SegmentEntry[], portions: PortionEntry[] = []): NewFeed => ({
+  actionId: ACTION_ID,
+  segments,
+  portions,
+})
+
+export const saved = <E>(result: CoreResult<Feed, E>): Feed => {
+  if (!result.ok) throw new Error(`expected the core to save, but it answered ${JSON.stringify(result.error)}`)
+  return result.response
+}
+
+export const rowCount = (sql: SqlStorage, table: string) =>
+  sql.exec<{ n: number }>(`SELECT count(*) AS n FROM ${table}`).one().n
