@@ -5,7 +5,7 @@ import { ANDREW } from "./fixtures.ts"
 
 export type Household = DurableObjectStub<HouseholdDO>
 
-const ORIGIN = "https://bt.example.test"
+export const ORIGIN = "https://bt.example.test"
 
 export const get = (household: Household, path: string, email?: string) =>
   household.fetch(`${ORIGIN}${path}`, email === undefined ? {} : { headers: { "x-bt-email": email } })
