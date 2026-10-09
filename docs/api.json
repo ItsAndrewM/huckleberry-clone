@@ -128,6 +128,863 @@
         }
       }
     },
+    "/api/today": {
+      "get": {
+        "tags": [
+          "today"
+        ],
+        "operationId": "today.today",
+        "parameters": [],
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "date": {
+                      "type": "string",
+                      "format": "date"
+                    },
+                    "totals": {
+                      "type": "object",
+                      "properties": {
+                        "feedsStarted": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "leftSeconds": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "rightSeconds": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "nursingSeconds": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "breastMilkMl": {
+                          "type": "number",
+                          "minimum": 0
+                        },
+                        "formulaMl": {
+                          "type": "number",
+                          "minimum": 0
+                        },
+                        "bottleMl": {
+                          "type": "number",
+                          "minimum": 0
+                        },
+                        "diapers": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "wetDiapers": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "dirtyDiapers": {
+                          "type": "integer",
+                          "minimum": 0
+                        }
+                      },
+                      "required": [
+                        "feedsStarted",
+                        "leftSeconds",
+                        "rightSeconds",
+                        "nursingSeconds",
+                        "breastMilkMl",
+                        "formulaMl",
+                        "bottleMl",
+                        "diapers",
+                        "wetDiapers",
+                        "dirtyDiapers"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "activeFeed": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string"
+                            },
+                            "status": {
+                              "type": "string",
+                              "enum": [
+                                "active",
+                                "completed"
+                              ]
+                            },
+                            "startedAt": {
+                              "type": "integer",
+                              "minimum": 946684800000,
+                              "exclusiveMaximum": 4102444800000
+                            },
+                            "endedAt": {
+                              "anyOf": [
+                                {
+                                  "type": "integer",
+                                  "minimum": 946684800000,
+                                  "exclusiveMaximum": 4102444800000
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            },
+                            "segments": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "id": {
+                                    "type": "string"
+                                  },
+                                  "side": {
+                                    "type": "string",
+                                    "enum": [
+                                      "left",
+                                      "right"
+                                    ]
+                                  },
+                                  "startedAt": {
+                                    "type": "integer",
+                                    "minimum": 946684800000,
+                                    "exclusiveMaximum": 4102444800000
+                                  },
+                                  "endedAt": {
+                                    "anyOf": [
+                                      {
+                                        "type": "integer",
+                                        "minimum": 946684800000,
+                                        "exclusiveMaximum": 4102444800000
+                                      },
+                                      {
+                                        "type": "null"
+                                      }
+                                    ]
+                                  }
+                                },
+                                "required": [
+                                  "id",
+                                  "side",
+                                  "startedAt",
+                                  "endedAt"
+                                ],
+                                "additionalProperties": false
+                              }
+                            },
+                            "portions": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "id": {
+                                    "type": "string"
+                                  },
+                                  "occurredAt": {
+                                    "type": "integer",
+                                    "minimum": 946684800000,
+                                    "exclusiveMaximum": 4102444800000
+                                  },
+                                  "breastMilkMl": {
+                                    "type": "number",
+                                    "minimum": 0,
+                                    "maximum": 500
+                                  },
+                                  "formulaMl": {
+                                    "type": "number",
+                                    "minimum": 0,
+                                    "maximum": 500
+                                  }
+                                },
+                                "required": [
+                                  "id",
+                                  "occurredAt",
+                                  "breastMilkMl",
+                                  "formulaMl"
+                                ],
+                                "additionalProperties": false
+                              }
+                            },
+                            "version": {
+                              "type": "integer",
+                              "minimum": 1
+                            },
+                            "createdBy": {
+                              "type": "string"
+                            },
+                            "createdAt": {
+                              "type": "integer",
+                              "minimum": 946684800000,
+                              "exclusiveMaximum": 4102444800000
+                            },
+                            "updatedBy": {
+                              "type": "string"
+                            },
+                            "updatedAt": {
+                              "type": "integer",
+                              "minimum": 946684800000,
+                              "exclusiveMaximum": 4102444800000
+                            },
+                            "deletedAt": {
+                              "anyOf": [
+                                {
+                                  "type": "integer",
+                                  "minimum": 946684800000,
+                                  "exclusiveMaximum": 4102444800000
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            }
+                          },
+                          "required": [
+                            "id",
+                            "status",
+                            "startedAt",
+                            "endedAt",
+                            "segments",
+                            "portions",
+                            "version",
+                            "createdBy",
+                            "createdAt",
+                            "updatedBy",
+                            "updatedAt",
+                            "deletedAt"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "lastFeed": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string"
+                            },
+                            "status": {
+                              "type": "string",
+                              "enum": [
+                                "active",
+                                "completed"
+                              ]
+                            },
+                            "startedAt": {
+                              "type": "integer",
+                              "minimum": 946684800000,
+                              "exclusiveMaximum": 4102444800000
+                            },
+                            "endedAt": {
+                              "anyOf": [
+                                {
+                                  "type": "integer",
+                                  "minimum": 946684800000,
+                                  "exclusiveMaximum": 4102444800000
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            },
+                            "segments": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "id": {
+                                    "type": "string"
+                                  },
+                                  "side": {
+                                    "type": "string",
+                                    "enum": [
+                                      "left",
+                                      "right"
+                                    ]
+                                  },
+                                  "startedAt": {
+                                    "type": "integer",
+                                    "minimum": 946684800000,
+                                    "exclusiveMaximum": 4102444800000
+                                  },
+                                  "endedAt": {
+                                    "anyOf": [
+                                      {
+                                        "type": "integer",
+                                        "minimum": 946684800000,
+                                        "exclusiveMaximum": 4102444800000
+                                      },
+                                      {
+                                        "type": "null"
+                                      }
+                                    ]
+                                  }
+                                },
+                                "required": [
+                                  "id",
+                                  "side",
+                                  "startedAt",
+                                  "endedAt"
+                                ],
+                                "additionalProperties": false
+                              }
+                            },
+                            "portions": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "id": {
+                                    "type": "string"
+                                  },
+                                  "occurredAt": {
+                                    "type": "integer",
+                                    "minimum": 946684800000,
+                                    "exclusiveMaximum": 4102444800000
+                                  },
+                                  "breastMilkMl": {
+                                    "type": "number",
+                                    "minimum": 0,
+                                    "maximum": 500
+                                  },
+                                  "formulaMl": {
+                                    "type": "number",
+                                    "minimum": 0,
+                                    "maximum": 500
+                                  }
+                                },
+                                "required": [
+                                  "id",
+                                  "occurredAt",
+                                  "breastMilkMl",
+                                  "formulaMl"
+                                ],
+                                "additionalProperties": false
+                              }
+                            },
+                            "version": {
+                              "type": "integer",
+                              "minimum": 1
+                            },
+                            "createdBy": {
+                              "type": "string"
+                            },
+                            "createdAt": {
+                              "type": "integer",
+                              "minimum": 946684800000,
+                              "exclusiveMaximum": 4102444800000
+                            },
+                            "updatedBy": {
+                              "type": "string"
+                            },
+                            "updatedAt": {
+                              "type": "integer",
+                              "minimum": 946684800000,
+                              "exclusiveMaximum": 4102444800000
+                            },
+                            "deletedAt": {
+                              "anyOf": [
+                                {
+                                  "type": "integer",
+                                  "minimum": 946684800000,
+                                  "exclusiveMaximum": 4102444800000
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            }
+                          },
+                          "required": [
+                            "id",
+                            "status",
+                            "startedAt",
+                            "endedAt",
+                            "segments",
+                            "portions",
+                            "version",
+                            "createdBy",
+                            "createdAt",
+                            "updatedBy",
+                            "updatedAt",
+                            "deletedAt"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "prefill": {
+                      "type": "object",
+                      "properties": {
+                        "lastBottle": {
+                          "anyOf": [
+                            {
+                              "type": "object",
+                              "properties": {
+                                "breastMilkMl": {
+                                  "type": "number",
+                                  "minimum": 0,
+                                  "maximum": 500
+                                },
+                                "formulaMl": {
+                                  "type": "number",
+                                  "minimum": 0,
+                                  "maximum": 500
+                                }
+                              },
+                              "required": [
+                                "breastMilkMl",
+                                "formulaMl"
+                              ],
+                              "additionalProperties": false
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "lastSide": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "enum": [
+                                "left",
+                                "right"
+                              ]
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        }
+                      },
+                      "required": [
+                        "lastBottle",
+                        "lastSide"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "recent": {
+                      "type": "array",
+                      "items": {
+                        "anyOf": [
+                          {
+                            "type": "object",
+                            "properties": {
+                              "kind": {
+                                "type": "string",
+                                "enum": [
+                                  "feed"
+                                ]
+                              },
+                              "feed": {
+                                "type": "object",
+                                "properties": {
+                                  "id": {
+                                    "type": "string"
+                                  },
+                                  "status": {
+                                    "type": "string",
+                                    "enum": [
+                                      "active",
+                                      "completed"
+                                    ]
+                                  },
+                                  "startedAt": {
+                                    "type": "integer",
+                                    "minimum": 946684800000,
+                                    "exclusiveMaximum": 4102444800000
+                                  },
+                                  "endedAt": {
+                                    "anyOf": [
+                                      {
+                                        "type": "integer",
+                                        "minimum": 946684800000,
+                                        "exclusiveMaximum": 4102444800000
+                                      },
+                                      {
+                                        "type": "null"
+                                      }
+                                    ]
+                                  },
+                                  "segments": {
+                                    "type": "array",
+                                    "items": {
+                                      "type": "object",
+                                      "properties": {
+                                        "id": {
+                                          "type": "string"
+                                        },
+                                        "side": {
+                                          "type": "string",
+                                          "enum": [
+                                            "left",
+                                            "right"
+                                          ]
+                                        },
+                                        "startedAt": {
+                                          "type": "integer",
+                                          "minimum": 946684800000,
+                                          "exclusiveMaximum": 4102444800000
+                                        },
+                                        "endedAt": {
+                                          "anyOf": [
+                                            {
+                                              "type": "integer",
+                                              "minimum": 946684800000,
+                                              "exclusiveMaximum": 4102444800000
+                                            },
+                                            {
+                                              "type": "null"
+                                            }
+                                          ]
+                                        }
+                                      },
+                                      "required": [
+                                        "id",
+                                        "side",
+                                        "startedAt",
+                                        "endedAt"
+                                      ],
+                                      "additionalProperties": false
+                                    }
+                                  },
+                                  "portions": {
+                                    "type": "array",
+                                    "items": {
+                                      "type": "object",
+                                      "properties": {
+                                        "id": {
+                                          "type": "string"
+                                        },
+                                        "occurredAt": {
+                                          "type": "integer",
+                                          "minimum": 946684800000,
+                                          "exclusiveMaximum": 4102444800000
+                                        },
+                                        "breastMilkMl": {
+                                          "type": "number",
+                                          "minimum": 0,
+                                          "maximum": 500
+                                        },
+                                        "formulaMl": {
+                                          "type": "number",
+                                          "minimum": 0,
+                                          "maximum": 500
+                                        }
+                                      },
+                                      "required": [
+                                        "id",
+                                        "occurredAt",
+                                        "breastMilkMl",
+                                        "formulaMl"
+                                      ],
+                                      "additionalProperties": false
+                                    }
+                                  },
+                                  "version": {
+                                    "type": "integer",
+                                    "minimum": 1
+                                  },
+                                  "createdBy": {
+                                    "type": "string"
+                                  },
+                                  "createdAt": {
+                                    "type": "integer",
+                                    "minimum": 946684800000,
+                                    "exclusiveMaximum": 4102444800000
+                                  },
+                                  "updatedBy": {
+                                    "type": "string"
+                                  },
+                                  "updatedAt": {
+                                    "type": "integer",
+                                    "minimum": 946684800000,
+                                    "exclusiveMaximum": 4102444800000
+                                  },
+                                  "deletedAt": {
+                                    "anyOf": [
+                                      {
+                                        "type": "integer",
+                                        "minimum": 946684800000,
+                                        "exclusiveMaximum": 4102444800000
+                                      },
+                                      {
+                                        "type": "null"
+                                      }
+                                    ]
+                                  }
+                                },
+                                "required": [
+                                  "id",
+                                  "status",
+                                  "startedAt",
+                                  "endedAt",
+                                  "segments",
+                                  "portions",
+                                  "version",
+                                  "createdBy",
+                                  "createdAt",
+                                  "updatedBy",
+                                  "updatedAt",
+                                  "deletedAt"
+                                ],
+                                "additionalProperties": false
+                              }
+                            },
+                            "required": [
+                              "kind",
+                              "feed"
+                            ],
+                            "additionalProperties": false
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "kind": {
+                                "type": "string",
+                                "enum": [
+                                  "diaper"
+                                ]
+                              },
+                              "diaper": {
+                                "type": "object",
+                                "properties": {
+                                  "id": {
+                                    "type": "string"
+                                  },
+                                  "occurredAt": {
+                                    "type": "integer",
+                                    "minimum": 946684800000,
+                                    "exclusiveMaximum": 4102444800000
+                                  },
+                                  "wet": {
+                                    "type": "boolean"
+                                  },
+                                  "dirty": {
+                                    "type": "boolean"
+                                  },
+                                  "version": {
+                                    "type": "integer",
+                                    "minimum": 1
+                                  },
+                                  "createdBy": {
+                                    "type": "string"
+                                  },
+                                  "createdAt": {
+                                    "type": "integer",
+                                    "minimum": 946684800000,
+                                    "exclusiveMaximum": 4102444800000
+                                  },
+                                  "updatedBy": {
+                                    "type": "string"
+                                  },
+                                  "updatedAt": {
+                                    "type": "integer",
+                                    "minimum": 946684800000,
+                                    "exclusiveMaximum": 4102444800000
+                                  },
+                                  "deletedAt": {
+                                    "anyOf": [
+                                      {
+                                        "type": "integer",
+                                        "minimum": 946684800000,
+                                        "exclusiveMaximum": 4102444800000
+                                      },
+                                      {
+                                        "type": "null"
+                                      }
+                                    ]
+                                  }
+                                },
+                                "required": [
+                                  "id",
+                                  "occurredAt",
+                                  "wet",
+                                  "dirty",
+                                  "version",
+                                  "createdBy",
+                                  "createdAt",
+                                  "updatedBy",
+                                  "updatedAt",
+                                  "deletedAt"
+                                ],
+                                "additionalProperties": false
+                              }
+                            },
+                            "required": [
+                              "kind",
+                              "diaper"
+                            ],
+                            "additionalProperties": false
+                          }
+                        ]
+                      }
+                    }
+                  },
+                  "required": [
+                    "date",
+                    "totals",
+                    "activeFeed",
+                    "lastFeed",
+                    "prefill",
+                    "recent"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "InvalidInput",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvalidInputEncoded"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnauthorizedEncoded"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/last24h": {
+      "get": {
+        "tags": [
+          "today"
+        ],
+        "operationId": "today.last24h",
+        "parameters": [],
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "from": {
+                      "type": "integer",
+                      "minimum": 946684800000,
+                      "exclusiveMaximum": 4102444800000
+                    },
+                    "totals": {
+                      "type": "object",
+                      "properties": {
+                        "feedsStarted": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "leftSeconds": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "rightSeconds": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "nursingSeconds": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "breastMilkMl": {
+                          "type": "number",
+                          "minimum": 0
+                        },
+                        "formulaMl": {
+                          "type": "number",
+                          "minimum": 0
+                        },
+                        "bottleMl": {
+                          "type": "number",
+                          "minimum": 0
+                        },
+                        "diapers": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "wetDiapers": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "dirtyDiapers": {
+                          "type": "integer",
+                          "minimum": 0
+                        }
+                      },
+                      "required": [
+                        "feedsStarted",
+                        "leftSeconds",
+                        "rightSeconds",
+                        "nursingSeconds",
+                        "breastMilkMl",
+                        "formulaMl",
+                        "bottleMl",
+                        "diapers",
+                        "wetDiapers",
+                        "dirtyDiapers"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "from",
+                    "totals"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "InvalidInput",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvalidInputEncoded"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnauthorizedEncoded"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/diapers": {
       "post": {
         "tags": [
@@ -7119,6 +7976,9 @@
   "tags": [
     {
       "name": "me"
+    },
+    {
+      "name": "today"
     },
     {
       "name": "diapers"

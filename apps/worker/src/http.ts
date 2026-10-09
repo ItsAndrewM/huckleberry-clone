@@ -18,6 +18,7 @@ import { HttpApiBuilder, HttpApiMiddleware } from "effect/http-api"
 import { activeCaregiver } from "./core/caregivers.ts"
 import { deleteDiaper, editDiaper, logDiaper, restoreDiaper } from "./core/diapers.ts"
 import { meOf } from "./core/household.ts"
+import { last24hOf, todayOf } from "./core/today.ts"
 import { errorResponse } from "./error-response.ts"
 import { feedHandlers } from "./feed-handlers.ts"
 import { mutations, type Saved } from "./mutations.ts"
@@ -79,13 +80,25 @@ const diaperHandlers = (storage: DurableObjectStorage, broadcast: Broadcast) => 
   )
 }
 
+const todayHandlers = (sql: SqlStorage) =>
+  HttpApiBuilder.group(Api, "today", (handlers) =>
+    handlers
+      .handle("today", () => Effect.sync(() => todayOf(sql, Date.now())))
+      .handle("last24h", () => Effect.sync(() => last24hOf(sql, Date.now()))),
+  )
+
 export const householdApi = (storage: DurableObjectStorage, broadcast: Broadcast) => {
   const me = HttpApiBuilder.group(Api, "me", (handlers) =>
     handlers.handle("me", () =>
       Effect.map(Effect.service(CurrentCaregiver), (caregiver) => meOf(storage.sql, caregiver)),
     ),
   )
-  const groups = Layer.mergeAll(me, diaperHandlers(storage, broadcast), feedHandlers(storage, broadcast))
+  const groups = Layer.mergeAll(
+    me,
+    todayHandlers(storage.sql),
+    diaperHandlers(storage, broadcast),
+    feedHandlers(storage, broadcast),
+  )
   return HttpRouter.toWebHandler(
     Layer.mergeAll(
       HttpApiBuilder.layer(Api).pipe(
