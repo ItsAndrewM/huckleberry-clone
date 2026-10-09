@@ -9,9 +9,9 @@ const TOTALS: Totals = {
   leftSeconds: 600,
   rightSeconds: 300,
   nursingSeconds: 900,
-  breastMilkMl: 40.5,
+  breastMilkMl: 540.5,
   formulaMl: 20,
-  bottleMl: 60.5,
+  bottleMl: 560.5,
   diapers: 3,
   wetDiapers: 2,
   dirtyDiapers: 2,
@@ -34,7 +34,7 @@ const decodes = <A, I extends Schema.Json>(schema: Schema.Codec<A, I>, input: Sc
   Exit.isSuccess(Schema.decodeUnknownExit(Schema.toCodecJson(schema))(input))
 
 describe("Totals", () => {
-  it("counts in whole numbers and measures bottles in mL", () => {
+  it("counts in whole numbers and totals bottles in mL, past the 500 mL one bottle can hold", () => {
     expect(decodes(Totals, TOTALS)).toBe(true)
   })
 

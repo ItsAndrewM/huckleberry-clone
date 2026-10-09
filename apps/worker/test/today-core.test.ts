@@ -3,14 +3,32 @@ import { describe, expect, it } from "vitest"
 import { deleteDiaper, logDiaper } from "../src/core/diapers.ts"
 import { deletePortion, deleteSegment } from "../src/core/feeds/components.ts"
 import { deleteFeed } from "../src/core/feeds/feed-edits.ts"
-import { startFeed } from "../src/core/feeds/lifecycle.ts"
+import { pauseFeed, startFeed } from "../src/core/feeds/lifecycle.ts"
 import { logFeed } from "../src/core/feeds/log.ts"
 import { last24hOf, todayOf } from "../src/core/today.ts"
 import { bottle, newFeed, segment } from "./feed-fixtures.ts"
-import { ACTION_ID, HOUR_MS, inHousehold, MINUTE_MS, minutesAgo, NO_TOTALS, NOW, saved, stampOf } from "./fixtures.ts"
+import {
+  ACTION_ID,
+  ANDREW,
+  HOUR_MS,
+  inHousehold,
+  MINUTE_MS,
+  minutesAgo,
+  NO_TOTALS,
+  NOW,
+  SEED,
+  saved,
+  seededHousehold,
+  stampOf,
+} from "./fixtures.ts"
+import { inStorage } from "./requests.ts"
 
 const OCT_7_AT_23_50 = Date.UTC(2026, 9, 8, 6, 50)
 const ac4 = (minutes: number) => OCT_7_AT_23_50 + minutes * MINUTE_MS
+
+const OCT_25_AT_00_15_BST = Date.UTC(2026, 9, 24, 23, 15)
+const OCT_25_AT_23_20_GMT = Date.UTC(2026, 9, 25, 23, 20)
+const OCT_25_AT_23_30_GMT = Date.UTC(2026, 9, 25, 23, 30)
 
 const fed = (sql: SqlStorage, segments: SegmentEntry[], portions: PortionEntry[] = []) =>
   saved(logFeed(stampOf(sql), newFeed(segments, portions))(sql))
@@ -73,6 +91,18 @@ describe("todayOf", () => {
     expect(later.totals.leftSeconds).toBe(1800)
   })
 
+  it("answers a feed paused over a day ago as the active feed, by its status, though it isn't recent", async () => {
+    const { paused, today } = await inHousehold((sql) => {
+      const starting = { actionId: ACTION_ID, side: "left" as const, startedAt: minutesAgo(26 * 60) }
+      const started = saved(startFeed(stampOf(sql), starting)(sql))
+      const pausing = { actionId: ACTION_ID, version: started.version, occurredAt: minutesAgo(25 * 60) }
+      const paused = saved(pauseFeed(stampOf(sql), started.id, pausing)(sql))
+      return { paused, today: todayOf(sql, NOW) }
+    })
+    expect(today.activeFeed).toEqual(paused)
+    expect(today.recent).toEqual([])
+  })
+
   it("takes the last feed by when it started, not when it was logged", async () => {
     const { newest, today } = await inHousehold((sql) => {
       const newest = fed(sql, [], [bottle(minutesAgo(30))])
@@ -103,6 +133,15 @@ describe("todayOf", () => {
       diapers: 1,
       wetDiapers: 1,
     })
+  })
+
+  it("lists a feed by its start, so one begun over 24 hours ago isn't recent, though it ended since", async () => {
+    const { feed, today } = await inHousehold((sql) => {
+      const feed = fed(sql, [segment("left", minutesAgo(24 * 60 + 10), minutesAgo(24 * 60 - 5))])
+      return { feed, today: todayOf(sql, NOW) }
+    })
+    expect(today.lastFeed).toEqual(feed)
+    expect(today.recent).toEqual([])
   })
 
   it("leaves a deleted feed out of everything: the totals, the recent list, the last feed and the prefill", async () => {
@@ -169,6 +208,15 @@ describe("todayOf", () => {
     expect(prefill).toEqual({ lastBottle: { breastMilkMl: 0, formulaMl: 90 }, lastSide: "right" })
   })
 
+  it("prefills the latest bottle and side by their time, not the order they were logged", async () => {
+    const prefill = await inHousehold((sql) => {
+      fed(sql, [segment("right", minutesAgo(60), minutesAgo(45))], [bottle(minutesAgo(40), 0, 90)])
+      fed(sql, [segment("left", minutesAgo(180), minutesAgo(165))], [bottle(minutesAgo(160), 40, 20)])
+      return todayOf(sql, NOW).prefill
+    })
+    expect(prefill).toEqual({ lastBottle: { breastMilkMl: 0, formulaMl: 90 }, lastSide: "right" })
+  })
+
   it("counts and lists a diaper a phone logged ahead of the clock at once (AC 21)", async () => {
     const { diaper, today } = await inHousehold((sql) => {
       const diaper = diaperAt(sql, NOW + 5 * MINUTE_MS)
@@ -180,6 +228,19 @@ describe("todayOf", () => {
 
   it("keeps Vancouver on UTC−7 after 1 November 2026, as tz 2026b does, so 00:30 on the 2nd is already the 2nd", async () => {
     expect((await inHousehold((sql) => todayOf(sql, Date.UTC(2026, 10, 2, 7, 30)))).date).toBe("2026-11-02")
+  })
+
+  it("totals all 25 hours of a day the clocks go back, from its first hour to its last (AC 23)", async () => {
+    const london = await seededHousehold({ ...SEED, timeZone: "Europe/London" })
+    const today = await inStorage(london, (sql) => {
+      for (const occurredAt of [OCT_25_AT_00_15_BST, OCT_25_AT_23_20_GMT]) {
+        const wet = { actionId: ACTION_ID, occurredAt, wet: true, dirty: false }
+        saved(logDiaper(stampOf(sql, ANDREW.email, OCT_25_AT_23_30_GMT), wet)(sql))
+      }
+      return todayOf(sql, OCT_25_AT_23_30_GMT)
+    })
+    expect(today.date).toBe("2026-10-25")
+    expect(today.totals).toEqual({ ...NO_TOTALS, diapers: 2, wetDiapers: 2 })
   })
 })
 

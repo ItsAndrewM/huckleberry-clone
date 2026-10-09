@@ -9,8 +9,14 @@ const decodeLast24h = Schema.decodeUnknownSync(Schema.toCodecJson(Last24h))
 const decodeSavedDiaper = Schema.decodeUnknownSync(Schema.toCodecJson(SavedDiaper))
 const decodeSavedFeed = Schema.decodeUnknownSync(Schema.toCodecJson(SavedFeed))
 
-const today = async (household: Household) =>
-  decodeToday(await (await get(household, "/api/today", ANDREW.email)).json())
+const okBody = async (household: Household, path: string) => {
+  const response = await get(household, path, ANDREW.email)
+  expect(response.status).toBe(200)
+  return response.json()
+}
+
+const today = async (household: Household) => decodeToday(await okBody(household, "/api/today"))
+const last24h = async (household: Household) => decodeLast24h(await okBody(household, "/api/last24h"))
 
 beforeEach(() => {
   vi.useFakeTimers({ toFake: ["Date"] })
@@ -74,6 +80,13 @@ describe("GET /api/last24h", () => {
       from: NOW - 24 * HOUR_MS,
       totals: { ...NO_TOTALS, feedsStarted: 1, breastMilkMl: 40, formulaMl: 20, bottleMl: 60 },
     })
+  })
+
+  it("reads the household's clock for each request, so the 24 hours move with it", async () => {
+    const household = await seededHousehold()
+    expect((await last24h(household)).from).toBe(NOW - 24 * HOUR_MS)
+    vi.setSystemTime(NOW + HOUR_MS)
+    expect((await last24h(household)).from).toBe(NOW + HOUR_MS - 24 * HOUR_MS)
   })
 })
 

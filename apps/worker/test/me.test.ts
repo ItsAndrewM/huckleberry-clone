@@ -23,10 +23,11 @@ describe("GET /api/me", () => {
 
   it("names every caregiver by the id records carry, including one who's been disabled", async () => {
     const household = await seededHousehold()
-    const ids = await inStorage(household, (sql) => {
-      sql.exec("UPDATE caregivers SET active = 0 WHERE email = ?", ANDREW.email)
-      return { andrew: caregiverId(sql, ANDREW.email), emily: caregiverId(sql, EMILY.email) }
-    })
+    expect(await household.disableCaregiver(ANDREW.email)).toMatchObject({ active: false })
+    const ids = await inStorage(household, (sql) => ({
+      andrew: caregiverId(sql, ANDREW.email),
+      emily: caregiverId(sql, EMILY.email),
+    }))
     expect(await (await get(household, "/api/me", EMILY.email)).json()).toMatchObject({
       household: {
         caregivers: [
