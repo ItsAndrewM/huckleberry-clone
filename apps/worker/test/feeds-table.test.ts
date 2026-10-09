@@ -231,6 +231,8 @@ describe("the feeds tables", () => {
     ["formula with two decimals", minutesAgo(10), 0, 40.15],
     ["infinite breast milk", minutesAgo(10), Infinity, 0],
     ["infinite formula", minutesAgo(10), 0, Infinity],
+    ["breast milk too little to round to a tenth of a mL", minutesAgo(10), 1e-12, 0],
+    ["formula too little to round to a tenth of a mL", minutesAgo(10), 0, 1e-12],
     ["a bottle after the years an Instant allows", AFTER_INSTANTS, 60, 0],
   ])("refuse %s", async (_label, occurredAt, breastMilkMl, formulaMl) => {
     await inHousehold((sql) => {

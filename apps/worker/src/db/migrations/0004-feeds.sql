@@ -49,10 +49,14 @@ CREATE TABLE bottle_portions (
   id TEXT PRIMARY KEY,
   feed_id TEXT NOT NULL REFERENCES feeds (id),
   occurred_at INTEGER NOT NULL CHECK (occurred_at >= 946684800000 AND occurred_at < 4102444800000),
-  breast_milk_ml REAL NOT NULL
-    CHECK (breast_milk_ml BETWEEN 0 AND 500 AND abs(breast_milk_ml * 10 - round(breast_milk_ml * 10)) < 1e-9),
-  formula_ml REAL NOT NULL
-    CHECK (formula_ml BETWEEN 0 AND 500 AND abs(formula_ml * 10 - round(formula_ml * 10)) < 1e-9),
+  breast_milk_ml REAL NOT NULL CHECK (
+    (breast_milk_ml = 0 OR breast_milk_ml BETWEEN 0.05 AND 500)
+    AND abs(breast_milk_ml * 10 - round(breast_milk_ml * 10)) < 1e-9
+  ),
+  formula_ml REAL NOT NULL CHECK (
+    (formula_ml = 0 OR formula_ml BETWEEN 0.05 AND 500)
+    AND abs(formula_ml * 10 - round(formula_ml * 10)) < 1e-9
+  ),
   source TEXT NOT NULL CHECK (source IN ('app', 'import')),
   source_ref TEXT,
   created_by TEXT NOT NULL REFERENCES caregivers (id),
