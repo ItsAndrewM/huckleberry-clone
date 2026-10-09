@@ -13,7 +13,8 @@
     "bundle:check": "node scripts/check-bundle-size.ts",
     "e2e": "playwright test",
     "pins:check": "node scripts/check-pins.ts",
-    "api:docs": "node scripts/api-docs.ts"
+    "api:docs": "node scripts/api-docs.ts",
+    "admin": "node --env-file-if-exists=.admin-token.env scripts/admin.ts"
   },
   "devDependencies": {
     "@gamesheet-inc/oxlint-plugin": "catalog:",

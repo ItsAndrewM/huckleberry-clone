@@ -29,7 +29,7 @@ test("routes /api/* navigations to the Worker, not the SPA shell (run_worker_fir
 })
 
 test("refuses the access.dev caregiver on admin routes", async ({ request }) => {
-  const res = await request.post("/api/admin/caregiver/disable")
+  const res = await request.post("/api/admin/household", { data: {} })
   expect(res.status()).toBe(401)
   expect(await res.json()).toEqual({ _tag: "Unauthorized" })
 })
