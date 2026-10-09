@@ -24,7 +24,10 @@ const sameOriginTarget = (url: URL): string => {
 const loginRedirect = (url: URL): Response =>
   new Response(null, { status: 302, headers: { location: sameOriginTarget(url), "cache-control": "no-store" } })
 
-const unavailable = () => errorResponse(new ServiceUnavailable())
+const unavailable = (error: Error) => {
+  console.error(error)
+  return errorResponse(new ServiceUnavailable())
+}
 
 const isAdmin = (caller: Caller, adminClientId: string | undefined): boolean =>
   caller.kind === "service" && adminClientId !== undefined && adminClientId !== "" && caller.clientId === adminClientId

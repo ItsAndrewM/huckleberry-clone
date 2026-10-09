@@ -1,5 +1,5 @@
 import { env } from "cloudflare:test"
-import { describe, expect, it } from "vitest"
+import { afterEach, describe, expect, it, vi } from "vitest"
 import type { Caller } from "../src/access.ts"
 import { type Household, routeApi } from "../src/api.ts"
 import type { HouseholdSeed } from "../src/seed.ts"
@@ -220,15 +220,31 @@ describe("a household that can't be reached", () => {
   const routeToNowhere = (path: string, caller: Caller, init: RequestInit = {}) =>
     routeApi(new Request(`${ORIGIN}${path}`, init), caller, unreachableHousehold, ADMIN_CLIENT_ID)
 
-  it.each([
-    ["a caregiver's request", "/api/me", andrew, {}],
-    ["the admin's seed", "/api/admin/household", adminToken, { method: "POST", body: JSON.stringify(SEED) }],
-  ])("turns %s into 503 ServiceUnavailable, which the app retries", async (_label, path, caller, init) => {
-    const response = await routeToNowhere(path, caller, init)
-    expect(response.status).toBe(503)
-    expect(response.headers.get("cache-control")).toBe("no-store")
-    expect(await response.json()).toEqual({ _tag: "ServiceUnavailable" })
+  afterEach(() => {
+    vi.restoreAllMocks()
   })
+
+  it.each([
+    ["a caregiver's request", "/api/me", andrew, {}, "Durable Object reset because its code was updated."],
+    [
+      "the admin's seed",
+      "/api/admin/household",
+      adminToken,
+      { method: "POST", body: JSON.stringify(SEED) },
+      "Network connection lost.",
+    ],
+  ])(
+    "logs why %s failed, and answers 503 ServiceUnavailable, which the app retries",
+    async (_label, path, caller, init, cause) => {
+      const consoleError = vi.spyOn(console, "error").mockImplementation(() => undefined)
+      const response = await routeToNowhere(path, caller, init)
+      expect(consoleError).toHaveBeenCalledOnce()
+      expect(consoleError).toHaveBeenCalledWith(new Error(cause))
+      expect(response.status).toBe(503)
+      expect(response.headers.get("cache-control")).toBe("no-store")
+      expect(await response.json()).toEqual({ _tag: "ServiceUnavailable" })
+    },
+  )
 })
 
 describe("/api/login", () => {
