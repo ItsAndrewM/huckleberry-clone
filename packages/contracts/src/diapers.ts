@@ -43,7 +43,11 @@ export type DiaperEdit = typeof DiaperEdit.Type
 export const SavedDiaper = Schema.Struct({ diaper: Diaper, changed: Changed })
 export type SavedDiaper = typeof SavedDiaper.Type
 
-export class DiaperConflict extends Conflict<DiaperConflict>()(["STALE_VERSION", "ACTION_REPLAY_MISMATCH"], Diaper) {}
+export class DiaperConflict extends Conflict<DiaperConflict>()(
+  "DiaperConflict",
+  ["STALE_VERSION", "ACTION_REPLAY_MISMATCH"],
+  Diaper,
+) {}
 
 const byId = { id: Schema.String }
 

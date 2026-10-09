@@ -2,6 +2,33 @@ export { ActionId } from "./action-id.ts"
 export { Api, Authorization, CurrentCaregiver, InvalidInputs } from "./api.ts"
 export { Diaper, DiaperConflict, DiaperEdit, DiapersGroup, NewDiaper, SavedDiaper } from "./diapers.ts"
 export {
+  BottlePortion,
+  ComponentDelete,
+  Feed,
+  FeedConflict,
+  FeedFinish,
+  FeedMove,
+  FeedResume,
+  FeedsGroup,
+  FeedStart,
+  FeedStatus,
+  MAX_BOTTLE_ML,
+  MAX_FEED_COMPONENTS,
+  MAX_SEGMENT_MS,
+  Millilitres,
+  NewFeed,
+  NursingSegment,
+  PortionEntry,
+  PortionsGroup,
+  SavedFeed,
+  SegmentEdit,
+  SegmentEntry,
+  SegmentsGroup,
+  Side,
+  TimedAction,
+  VersionedPortion,
+} from "./feeds.ts"
+export {
   Conflict,
   ConflictCode,
   FieldError,
