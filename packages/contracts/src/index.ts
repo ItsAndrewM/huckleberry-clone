@@ -40,7 +40,7 @@ export {
   ServiceUnavailable,
   Unauthorized,
 } from "./errors.ts"
-export { Caregiver, Me } from "./me.ts"
+export { Caregiver, CaregiverName, Me } from "./me.ts"
 export { Changed, QueryKey, queryKeys } from "./query-keys.ts"
 export { CAREGIVER_DISABLED, ChangedMessage, HEARTBEAT, SOCKET_PATH } from "./socket.ts"
 export { Instant, IsoWeek, LocalDate, TimeZone, YearMonth } from "./time.ts"

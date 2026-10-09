@@ -49,11 +49,31 @@
                         },
                         "timeZone": {
                           "type": "string"
+                        },
+                        "caregivers": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "string"
+                              },
+                              "displayName": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "displayName"
+                            ],
+                            "additionalProperties": false
+                          }
                         }
                       },
                       "required": [
                         "name",
-                        "timeZone"
+                        "timeZone",
+                        "caregivers"
                       ],
                       "additionalProperties": false
                     },
