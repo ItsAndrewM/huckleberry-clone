@@ -3,6 +3,12 @@ import { Result, Schema } from "effect"
 import { errorResponse } from "./error-response.ts"
 import { type HouseholdSeed, HouseholdSeed as Seed, type SeedResult } from "./seed.ts"
 
+export interface CaregiverStatus {
+  readonly email: string
+  readonly active: boolean
+  readonly closedSockets: number
+}
+
 export interface AdminHousehold {
   seedHousehold(seed: HouseholdSeed): Promise<SeedResult>
 }

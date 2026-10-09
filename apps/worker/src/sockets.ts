@@ -1,4 +1,4 @@
-import { type Changed, ChangedMessage, HEARTBEAT, Unauthorized } from "@bt/contracts"
+import { CAREGIVER_DISABLED, type Changed, ChangedMessage, HEARTBEAT, Unauthorized } from "@bt/contracts"
 import { Schema } from "effect"
 import { activeCaregiver } from "./core/caregivers.ts"
 import { errorResponse } from "./error-response.ts"
@@ -23,9 +23,18 @@ export const acceptSocket = (ctx: DurableObjectState, request: Request): Respons
   return new Response(null, { status: 101, webSocket: client, headers: { "cache-control": "no-store" } })
 }
 
+const openSockets = (ctx: DurableObjectState, tag?: string) =>
+  ctx.getWebSockets(tag).filter((socket) => socket.readyState === WebSocket.OPEN)
+
 export const broadcastTo =
   (ctx: DurableObjectState): Broadcast =>
   (changed) => {
     const message = messageJson({ changed })
-    for (const socket of ctx.getWebSockets()) socket.send(message)
+    for (const socket of openSockets(ctx)) socket.send(message)
   }
+
+export const closeSockets = (ctx: DurableObjectState, caregiverId: string): number => {
+  const sockets = openSockets(ctx, caregiverTag(caregiverId))
+  for (const socket of sockets) socket.close(CAREGIVER_DISABLED.code, CAREGIVER_DISABLED.reason)
+  return sockets.length
+}

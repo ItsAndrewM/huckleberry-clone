@@ -1,4 +1,4 @@
-import { ChangedMessage, HEARTBEAT, SavedDiaper, SavedFeed } from "@bt/contracts"
+import { CAREGIVER_DISABLED, ChangedMessage, HEARTBEAT, SavedDiaper, SavedFeed } from "@bt/contracts"
 import { evictDurableObject, runInDurableObject } from "cloudflare:test"
 import { Schema } from "effect"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
@@ -184,12 +184,14 @@ describe("broadcasting what a change changed", () => {
     const { changed } = await logDiaper(household, save)
     expect(decodeMessage(await message)).toEqual({ changed })
     const next = nextMessage(socket)
+    const consoleWarn = vi.spyOn(console, "warn").mockImplementation(() => undefined)
     const refusals = [
       await post(household, "/api/diapers", wetAt(NOW + HOUR_MS)),
       await post(household, "/api/diapers", { ...save, dirty: true }),
       await post(household, "/api/feeds/start", { actionId: save.actionId, side: "left", startedAt: NOW }),
     ]
     expect(refusals.map(({ status }) => status)).toEqual([400, 409, 400])
+    expect(consoleWarn).toHaveBeenCalledOnce()
     const later = await logDiaper(household, wetAt(NOW - 2 * HOUR_MS))
     expect(decodeMessage(await next)).toEqual({ changed: later.changed })
   })
@@ -213,5 +215,85 @@ describe("broadcasting what a change changed", () => {
     const message = nextMessage(socket)
     const { changed } = await logDiaper(household)
     expect(decodeMessage(await message)).toEqual({ changed })
+  })
+})
+
+describe("disabling and enabling a caregiver (D6)", () => {
+  it("closes every socket of a disabled caregiver with 4401, and only theirs (AC 10)", async () => {
+    const household = await seededHousehold()
+    const andrews = [await connect(household, ANDREW.email), await connect(household, ANDREW.email)]
+    const emily = await connect(household, EMILY.email)
+    const andrewsClosed = Promise.all(andrews.map(closed))
+    expect(await household.disableCaregiver(ANDREW.email)).toEqual({
+      email: ANDREW.email,
+      active: false,
+      closedSockets: 2,
+    })
+    expect(await andrewsClosed).toEqual([CAREGIVER_DISABLED, CAREGIVER_DISABLED])
+    const message = nextMessage(emily)
+    const { changed } = await logDiaper(household, wetAt(NOW - HOUR_MS), EMILY.email)
+    expect(decodeMessage(await message)).toEqual({ changed })
+  })
+
+  it("refuses a disabled caregiver's requests and upgrades, until they're enabled again", async () => {
+    const household = await seededHousehold()
+    await household.disableCaregiver(ANDREW.email)
+    const me = () => household.fetch(`${ORIGIN}/api/me`, { headers: { "x-bt-email": ANDREW.email } })
+    expect((await me()).status).toBe(401)
+    expect((await upgrade(household, { upgrade: "websocket", "x-bt-email": ANDREW.email })).status).toBe(401)
+    expect(await household.enableCaregiver(ANDREW.email)).toEqual({
+      email: ANDREW.email,
+      active: true,
+      closedSockets: 0,
+    })
+    expect((await me()).status).toBe(200)
+    await connect(household, ANDREW.email)
+  })
+
+  it("stamps the caregiver's updated_at", async () => {
+    const household = await seededHousehold()
+    vi.setSystemTime(NOW + HOUR_MS)
+    await household.disableCaregiver(EMILY.email)
+    const stored = await runInDurableObject(household, (_instance, state) =>
+      state.storage.sql.exec("SELECT email, active, updated_at FROM caregivers ORDER BY email").toArray(),
+    )
+    expect(stored).toEqual([
+      { email: ANDREW.email, active: 1, updated_at: NOW },
+      { email: EMILY.email, active: 0, updated_at: NOW + HOUR_MS },
+    ])
+  })
+
+  it("answers undefined for an email that isn't a caregiver, and changes nothing", async () => {
+    const household = await seededHousehold()
+    expect(await household.disableCaregiver("stranger@example.test")).toBeUndefined()
+    expect(await household.enableCaregiver("stranger@example.test")).toBeUndefined()
+  })
+
+  it("lets the other parent save right after a disable, while the disabled phone hasn't answered the close", async () => {
+    const household = await seededHousehold()
+    const neverAnswers = await upgrade(household, { upgrade: "websocket", "x-bt-email": ANDREW.email })
+    expect(neverAnswers.status).toBe(101)
+    const emily = await connect(household, EMILY.email)
+    expect(await household.disableCaregiver(ANDREW.email)).toMatchObject({ closedSockets: 1 })
+    const message = nextMessage(emily)
+    const { changed } = await logDiaper(household, wetAt(NOW - HOUR_MS), EMILY.email)
+    expect(decodeMessage(await message)).toEqual({ changed })
+  })
+
+  it("counts only the sockets it closes, so disabling again closes nothing more", async () => {
+    const household = await seededHousehold()
+    const neverAnswers = await upgrade(household, { upgrade: "websocket", "x-bt-email": ANDREW.email })
+    expect(neverAnswers.status).toBe(101)
+    expect(await household.disableCaregiver(ANDREW.email)).toMatchObject({ closedSockets: 1 })
+    expect(await household.disableCaregiver(ANDREW.email)).toMatchObject({ closedSockets: 0 })
+  })
+
+  it("closes a caregiver's sockets from an instance woken after eviction", async () => {
+    const household = await seededHousehold()
+    const andrew = await connect(household, ANDREW.email)
+    await evictDurableObject(household)
+    const andrewClosed = closed(andrew)
+    expect(await household.disableCaregiver(ANDREW.email)).toMatchObject({ closedSockets: 1 })
+    expect(await andrewClosed).toEqual(CAREGIVER_DISABLED)
   })
 })
