@@ -50,7 +50,12 @@ export type ConflictCode = typeof ConflictCode.Type
 export const Conflict =
   <Self>() =>
   <const Codes extends readonly [ConflictCode, ...ConflictCode[]], Current extends Schema.Top>(
+    identifier: string,
     codes: Codes,
     current: Current,
   ) =>
-    Schema.TaggedError<Self>()("Conflict", { code: Schema.Literals(codes), current }, { httpApiStatus: 409 })
+    Schema.TaggedError<Self>()(
+      "Conflict",
+      { code: Schema.Literals(codes), current },
+      { httpApiStatus: 409, identifier },
+    )

@@ -15,7 +15,7 @@ import {
 
 const Feed = Schema.Struct({ id: Schema.String, version: Schema.Int })
 
-class FeedConflict extends Conflict<FeedConflict>()(["FEED_ALREADY_ACTIVE", "STALE_VERSION"], Feed) {}
+class FeedConflict extends Conflict<FeedConflict>()("FeedConflict", ["FEED_ALREADY_ACTIVE", "STALE_VERSION"], Feed) {}
 
 const failures = {
   unauthorized: new Unauthorized(),

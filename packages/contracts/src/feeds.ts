@@ -138,6 +138,7 @@ export const SavedFeed = Schema.Struct({ feed: Feed, changed: Changed })
 export type SavedFeed = typeof SavedFeed.Type
 
 export class FeedConflict extends Conflict<FeedConflict>()(
+  "FeedConflict",
   ["FEED_ALREADY_ACTIVE", "SEGMENT_OVERLAP", "FEED_EMPTY", "STALE_VERSION", "ACTION_REPLAY_MISMATCH"],
   Feed,
 ) {}

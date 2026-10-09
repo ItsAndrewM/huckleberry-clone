@@ -19,6 +19,7 @@ import { activeCaregiver } from "./core/caregivers.ts"
 import { deleteDiaper, editDiaper, logDiaper, restoreDiaper } from "./core/diapers.ts"
 import { meOf } from "./core/household.ts"
 import { errorResponse } from "./error-response.ts"
+import { feedHandlers } from "./feed-handlers.ts"
 import { mutations, type Saved } from "./mutations.ts"
 
 export const invalidInputs = HttpApiMiddleware.layerSchemaErrorTransform(InvalidInputs, (error) =>
@@ -82,7 +83,7 @@ export const householdApi = (storage: DurableObjectStorage) => {
       Effect.map(Effect.service(CurrentCaregiver), (caregiver) => meOf(storage.sql, caregiver)),
     ),
   )
-  const groups = Layer.mergeAll(me, diaperHandlers(storage))
+  const groups = Layer.mergeAll(me, diaperHandlers(storage), feedHandlers(storage))
   return HttpRouter.toWebHandler(
     Layer.mergeAll(
       HttpApiBuilder.layer(Api).pipe(

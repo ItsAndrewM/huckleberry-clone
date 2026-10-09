@@ -1,5 +1,5 @@
 import { Context } from "effect"
-import { HttpApi } from "effect/http-api"
+import { HttpApi, OpenApi } from "effect/http-api"
 import { describe, expect, it } from "vitest"
 import { Api, Authorization, InvalidInputs } from "../src/index.ts"
 
@@ -13,6 +13,20 @@ describe("the API the household serves", () => {
       "PATCH /api/diapers/:id",
       "DELETE /api/diapers/:id",
       "POST /api/diapers/:id/restore",
+      "POST /api/feeds",
+      "POST /api/feeds/start",
+      "POST /api/feeds/:id/switch",
+      "POST /api/feeds/:id/pause",
+      "POST /api/feeds/:id/resume",
+      "POST /api/feeds/:id/bottle",
+      "POST /api/feeds/:id/finish",
+      "PATCH /api/feeds/:id",
+      "DELETE /api/feeds/:id",
+      "POST /api/feeds/:id/restore",
+      "PATCH /api/segments/:id",
+      "DELETE /api/segments/:id",
+      "PATCH /api/portions/:id",
+      "DELETE /api/portions/:id",
     ])
   })
 
@@ -23,6 +37,16 @@ describe("the API the household serves", () => {
 
   it("checks the caller and then the input on every endpoint, since the last middleware added runs first", () => {
     for (const endpoint of endpoints) expect([...endpoint.middlewares]).toEqual([InvalidInputs, Authorization])
+  })
+
+  it("names each record's 409 after its conflict class in docs/api.json, though each says Conflict on the wire", () => {
+    expect(Object.keys(OpenApi.fromApi(Api).components.schemas).toSorted()).toEqual([
+      "DiaperConflictEncoded",
+      "FeedConflictEncoded",
+      "InvalidInputEncoded",
+      "NotFoundEncoded",
+      "UnauthorizedEncoded",
+    ])
   })
 
   it("lists every bad field in a request, not just the first", () => {
