@@ -1,0 +1,23 @@
+import { Context } from "effect"
+import { HttpApi, HttpApiMiddleware, OpenApi } from "effect/http-api"
+import { InvalidInput, Unauthorized } from "./errors.ts"
+import { type Caregiver, MeGroup } from "./me.ts"
+
+export class CurrentCaregiver extends Context.Service<CurrentCaregiver, Caregiver>()("bt/CurrentCaregiver") {}
+
+export class Authorization extends HttpApiMiddleware.Service<Authorization, { provides: CurrentCaregiver }>()(
+  "bt/Authorization",
+  { error: Unauthorized },
+) {}
+
+export class InvalidInputs extends HttpApiMiddleware.Service<InvalidInputs>()("bt/InvalidInputs", {
+  error: InvalidInput,
+}) {}
+
+export class Api extends HttpApi.make("baby-tracker")
+  .add(MeGroup)
+  .prefix("/api")
+  .middleware(InvalidInputs)
+  .middleware(Authorization)
+  .annotate(HttpApi.ParseOptions, { errors: "all" })
+  .annotate(OpenApi.Title, "Baby tracker") {}
