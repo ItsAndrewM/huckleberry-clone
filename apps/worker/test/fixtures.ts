@@ -24,6 +24,19 @@ export const SEP_30_AT_23_30 = Date.UTC(2026, 9, 1, 6, 30)
 export const OCT_1_AT_00_30 = Date.UTC(2026, 9, 1, 7, 30)
 export const CHANGED_TODAY = [["today"], ["last24h"], ["day", "2026-10-08"], ["week", "2026-W41"], ["month", "2026-10"]]
 
+export const NO_TOTALS = {
+  feedsStarted: 0,
+  leftSeconds: 0,
+  rightSeconds: 0,
+  nursingSeconds: 0,
+  breastMilkMl: 0,
+  formulaMl: 0,
+  bottleMl: 0,
+  diapers: 0,
+  wetDiapers: 0,
+  dirtyDiapers: 0,
+}
+
 export const newHousehold = () => env.HOUSEHOLD.getByName(crypto.randomUUID())
 
 export const seededHousehold = async (seed: HouseholdSeed = SEED) => {
