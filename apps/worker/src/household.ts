@@ -1,6 +1,7 @@
 import { DurableObject } from "cloudflare:workers"
 import { Schema } from "effect"
 import { seedHousehold } from "./core/household.ts"
+import { PRUNE_EVERY_MS, pruneReceipts } from "./core/receipts.ts"
 import { migrate } from "./db/migrate.ts"
 import { MIGRATIONS } from "./db/migrations.ts"
 import { householdApi } from "./http.ts"
@@ -17,6 +18,7 @@ export const startHousehold = async (
 ): Promise<void> => {
   migrate(storage, MIGRATIONS, now)
   if (localHousehold !== undefined) seedHousehold(storage, Schema.decodeUnknownSync(HouseholdSeed)(localHousehold), now)
+  if ((await storage.getAlarm()) === null) await storage.setAlarm(now + PRUNE_EVERY_MS)
 }
 
 export class HouseholdDO extends DurableObject<HouseholdEnv> {
@@ -32,6 +34,12 @@ export class HouseholdDO extends DurableObject<HouseholdEnv> {
     const response = await this.api.handler(request)
     response.headers.set("cache-control", "no-store")
     return response
+  }
+
+  override async alarm(): Promise<void> {
+    const now = Date.now()
+    pruneReceipts(this.ctx.storage.sql, now)
+    await this.ctx.storage.setAlarm(now + PRUNE_EVERY_MS)
   }
 
   seedHousehold(seed: HouseholdSeed): SeedResult {
