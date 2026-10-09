@@ -7,10 +7,10 @@ CREATE TABLE feeds (
   source TEXT NOT NULL CHECK (source IN ('app', 'import')),
   source_ref TEXT,
   created_by TEXT NOT NULL REFERENCES caregivers (id),
-  created_at INTEGER NOT NULL,
+  created_at INTEGER NOT NULL CHECK (created_at >= 946684800000 AND created_at < 4102444800000),
   updated_by TEXT NOT NULL REFERENCES caregivers (id),
-  updated_at INTEGER NOT NULL,
-  deleted_at INTEGER,
+  updated_at INTEGER NOT NULL CHECK (updated_at >= 946684800000 AND updated_at < 4102444800000),
+  deleted_at INTEGER CHECK (deleted_at >= 946684800000 AND deleted_at < 4102444800000),
   CHECK (ended_at >= started_at),
   CHECK (status = 'active' OR ended_at IS NOT NULL),
   CHECK ((source = 'import') = (source_ref IS NOT NULL))
@@ -49,8 +49,10 @@ CREATE TABLE bottle_portions (
   id TEXT PRIMARY KEY,
   feed_id TEXT NOT NULL REFERENCES feeds (id),
   occurred_at INTEGER NOT NULL CHECK (occurred_at >= 946684800000 AND occurred_at < 4102444800000),
-  breast_milk_ml REAL NOT NULL CHECK (breast_milk_ml >= 0),
-  formula_ml REAL NOT NULL CHECK (formula_ml >= 0),
+  breast_milk_ml REAL NOT NULL
+    CHECK (breast_milk_ml BETWEEN 0 AND 500 AND abs(breast_milk_ml * 10 - round(breast_milk_ml * 10)) < 1e-9),
+  formula_ml REAL NOT NULL
+    CHECK (formula_ml BETWEEN 0 AND 500 AND abs(formula_ml * 10 - round(formula_ml * 10)) < 1e-9),
   source TEXT NOT NULL CHECK (source IN ('app', 'import')),
   source_ref TEXT,
   created_by TEXT NOT NULL REFERENCES caregivers (id),

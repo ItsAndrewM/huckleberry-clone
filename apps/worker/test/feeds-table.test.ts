@@ -5,6 +5,7 @@ import { ANDREW, EMILY } from "./fixtures.ts"
 
 const BEFORE_INSTANTS = Date.UTC(2000, 0, 1) - 1
 const AFTER_INSTANTS = Date.UTC(2100, 0, 1)
+const NOW_IN_SECONDS = NOW / 1000
 
 const insertFeed = (
   sql: SqlStorage,
@@ -12,6 +13,8 @@ const insertFeed = (
   startedAt: number,
   endedAt: number | null,
   deletedAt: number | null = null,
+  createdAt = NOW,
+  updatedAt = NOW,
 ) => {
   const andrew = caregiverId(sql, ANDREW.email)
   const id = crypto.randomUUID()
@@ -23,9 +26,9 @@ const insertFeed = (
     startedAt,
     endedAt,
     andrew,
-    NOW,
+    createdAt,
     andrew,
-    NOW,
+    updatedAt,
     deletedAt,
   )
   return id
@@ -198,6 +201,17 @@ describe("the feeds tables", () => {
   })
 
   it.each([
+    ["a feed created in seconds, not milliseconds", NOW_IN_SECONDS, NOW, null],
+    ["a feed last updated in seconds, not milliseconds", NOW, NOW_IN_SECONDS, null],
+    ["a feed deleted in seconds, not milliseconds", NOW, NOW, NOW_IN_SECONDS],
+  ])("refuse %s", async (_label, createdAt, updatedAt, deletedAt) => {
+    await inHousehold((sql) => {
+      const insert = () => insertFeed(sql, "completed", minutesAgo(30), minutesAgo(15), deletedAt, createdAt, updatedAt)
+      expect(insert).toThrow("CHECK constraint failed")
+    })
+  })
+
+  it.each([
     ["a segment that doesn't end after it starts", "left", minutesAgo(30), minutesAgo(30)],
     ["a side that isn't left or right", "both", minutesAgo(30), null],
     ["a segment that starts before the years an Instant allows", "left", BEFORE_INSTANTS, null],
@@ -211,6 +225,12 @@ describe("the feeds tables", () => {
   it.each([
     ["a bottle with no milk in it", minutesAgo(10), 0, 0],
     ["a negative amount", minutesAgo(10), -10, 70],
+    ["breast milk over 500 mL", minutesAgo(10), 500.1, 0],
+    ["formula over 500 mL", minutesAgo(10), 0, 500.1],
+    ["breast milk with two decimals", minutesAgo(10), 40.15, 0],
+    ["formula with two decimals", minutesAgo(10), 0, 40.15],
+    ["infinite breast milk", minutesAgo(10), Infinity, 0],
+    ["infinite formula", minutesAgo(10), 0, Infinity],
     ["a bottle after the years an Instant allows", AFTER_INSTANTS, 60, 0],
   ])("refuse %s", async (_label, occurredAt, breastMilkMl, formulaMl) => {
     await inHousehold((sql) => {
