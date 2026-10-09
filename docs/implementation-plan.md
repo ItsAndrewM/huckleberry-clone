@@ -19,7 +19,7 @@ These either fill gaps in the spec or pick between options it leaves open. Each 
 | D7 | **`today` and `last24h` are invalidated by every mutation.** For other periods the server works out the affected keys with `affectedPeriods(oldInterval, newInterval, tz)` from `packages/domain`. | This is always correct and cheap at this data volume. Working out exactly when Today is affected is error-prone and saves nothing. |
 | D8 | **`supplement_logs.local_date` is recomputed for every row in the same transaction as a household timezone change.** Editing `occurred_at` also recomputes it. | `local_date` is stored, so a timezone correction would otherwise leave the duplicate check and daily status using stale dates. |
 | D9 | **No two non-deleted nursing segments may overlap, across all feeds** (one child, one breast-at-a-time). Overlap with sleep, diapers, and so on is allowed. | §3 says to "reject overlapping segments" without saying in what scope. |
-| D10 | **Restore re-runs every invariant.** A restore that would break an invariant, such as a second active sleep or an overlap, returns 409 with the conflicting record. A partial unique index stands behind each check. The check always runs first, so a violation is a defect, answered with a logged 500 and nothing written (decided in M1.7). | Soft-deleted rows are excluded from the checks, so bringing one back can create a conflict. |
+| D10 | **Restore re-runs every invariant.** A restore that would break an invariant, such as a second active sleep or an overlap, returns 409 with the conflicting record. Where a partial unique index stands behind a check, as `feeds_one_active` does for the active feed, the check runs first, so a violation is a defect, answered with a logged 500 and nothing written (decided in M1.7). | Soft-deleted rows are excluded from the checks, so bringing one back can create a conflict. |
 | D11 | **Ambiguous local times (DST fall-back) in manual entry show a two-choice "1:30 (first) / 1:30 (second)" picker. Nonexistent times (spring-forward) are rejected with a message.** No other DST UI. | §5 requires explicit offset selection for repeated times but defers the grid labels. This is the smallest form-level version. |
 | D12 | **Tooling:** pnpm workspaces, TypeScript strict, oxlint (lint, with the anti-slop and `@gamesheet-inc/oxlint-plugin` rules) and oxfmt (format), Vitest, `@cloudflare/vitest-plugin` for Worker/DO tests, Playwright (WebKit + Chromium, iPhone viewport) for E2E. Time zones via `@date-fns/tz` and `date-fns`, inside `packages/domain` only. | These are conventional, fast, and run in CI without devices. |
 | D13 | **Prefill values come from the server** in `GET /api/today`: last bottle amounts and milk mix, last nursing side, last supplement. | Prefill then follows whichever parent logged last, and the client needs no local storage. |
@@ -217,7 +217,7 @@ Covers AC 15 (restore drill), plus the accessibility pass.
 **Switch side** — `POST /api/feeds/:id/switch {actionId, version, occurredAt}`, where `occurredAt` is the tap time
 
 1. Look up the receipt; if present, return the stored response.
-2. In the transaction: load the feed (not deleted, `status='active'`). If `version` ≠ the current version → 409 `STALE_VERSION` with the current feed and components.
+2. In the transaction: load the feed. If `version` ≠ the current version → 409 `STALE_VERSION` with the feed as it is now, deleted or not. A deleted or completed feed with the current version → 404.
 3. Find the open segment (none if paused → 404, since the version was current: M1.6's order of refusals). Check `occurredAt` > segment start and ≤ now + 5 min.
 4. Run the D9 overlap check on the new segment, which counts as reaching 5 minutes past now. Close the open segment at `occurredAt` and insert one for the other side there. Recompute session bounds. Increment `version`.
 5. Store the receipt. Respond with the feed and `changed`. Broadcast.
@@ -226,7 +226,7 @@ Two simultaneous switches: the DO runs them one after the other. The second carr
 
 **Start sleep while one is active** → 409 `SLEEP_ALREADY_ACTIVE` with the session → the UI offers "Wake at …" (with stop-time correction) or Cancel.
 
-**Edit segment time across midnight** → validate ordering and overlap, recompute feed bounds, then `changed = affectedPeriods(oldSegInterval, newSegInterval, tz)` ∪ today/last24h. AC 7 and 18 check both days.
+**Edit segment time across midnight** → validate ordering and overlap, recompute feed bounds, then `changed` = today, last24h and `affectedPeriods` of the feed's session before and after the edit, which covers both segment intervals. AC 7 and 18 check both days.
 
 ---
 
