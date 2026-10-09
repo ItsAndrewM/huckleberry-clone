@@ -193,4 +193,49 @@ describe("startLive", () => {
     vi.advanceTimersByTime(10 * 30_000)
     expect(sockets).toHaveLength(1)
   })
+
+  it("replaces a dead socket with one that stays up, and refreshes everything once it's back", () => {
+    const { latest, sockets, stale } = live()
+    const first = latest()
+    first.opens()
+    vi.advanceTimersByTime(2 * HEARTBEAT_MS)
+    vi.advanceTimersByTime(FIRST_RETRY_AT_MOST)
+    const second = latest()
+    second.opens()
+    expect(stale()).toBe(1)
+    for (let beat = 0; beat < 4; beat += 1) {
+      vi.advanceTimersByTime(HEARTBEAT_MS)
+      second.hears(HEARTBEAT.pong)
+    }
+    expect(second.closed).toBe(false)
+    expect(sockets).toHaveLength(2)
+  })
+
+  it("never reconnects after the household disables this caregiver, even when woken", () => {
+    const { connection, latest, sockets } = live()
+    latest().opens()
+    latest().closes(CAREGIVER_DISABLED.code)
+    connection.wake()
+    vi.advanceTimersByTime(60_000)
+    expect(sockets).toHaveLength(1)
+  })
+
+  it("opens nothing when stopped while waiting to retry", () => {
+    const { connection, latest, sockets } = live()
+    latest().opens()
+    latest().closes()
+    connection.stop()
+    vi.advanceTimersByTime(60_000)
+    expect(sockets).toHaveLength(1)
+  })
+
+  it("refreshes everything when the first socket to open follows a failed attempt", () => {
+    const { latest, sockets, stale, signals } = live()
+    latest().closes()
+    vi.advanceTimersByTime(FIRST_RETRY_AT_MOST)
+    expect(sockets).toHaveLength(2)
+    latest().opens()
+    expect(signals).toEqual(["online"])
+    expect(stale()).toBe(1)
+  })
 })

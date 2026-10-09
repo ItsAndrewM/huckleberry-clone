@@ -12,7 +12,7 @@ const closedForGood = (event: Event) => event instanceof CloseEvent && event.cod
 export const startLive = ({ open, onChanged, onStale, report, random = Math.random }: LiveOptions): Live => {
   let socket: LiveSocket | null = null
   let attempt = 0
-  let opened = false
+  let lost = false
   let stopped = false
   let awaitingPong = false
   let retry: ReturnType<typeof setTimeout> | undefined
@@ -21,6 +21,7 @@ export const startLive = ({ open, onChanged, onStale, report, random = Math.rand
   const drop = () => {
     clearInterval(heartbeat)
     socket = null
+    lost = true
   }
 
   const reconnectLater = () => {
@@ -44,8 +45,7 @@ export const startLive = ({ open, onChanged, onStale, report, random = Math.rand
     attempt = 0
     awaitingPong = false
     report("online")
-    if (opened) onStale()
-    opened = true
+    if (lost) onStale()
     heartbeat = setInterval(() => beat(current), HEARTBEAT_MS)
   }
 
