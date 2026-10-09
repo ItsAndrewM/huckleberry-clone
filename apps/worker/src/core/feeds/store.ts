@@ -151,3 +151,23 @@ export const saveFeed = (sql: SqlStorage, stamp: Stamp, header: FeedHeader): Fee
     .one()
   return feedFrom(row, segments, portions)
 }
+
+export const closeSegment = (sql: SqlStorage, stamp: Stamp, segmentId: string, endedAt: number): void => {
+  sql.exec(
+    "UPDATE nursing_segments SET ended_at = ?, updated_by = ?, updated_at = ? WHERE id = ?",
+    endedAt,
+    stamp.caregiverId,
+    stamp.now,
+    segmentId,
+  )
+}
+
+export const removeSegment = (sql: SqlStorage, stamp: Stamp, segmentId: string): void => {
+  sql.exec(
+    "UPDATE nursing_segments SET deleted_at = ?, updated_by = ?, updated_at = ? WHERE id = ?",
+    stamp.now,
+    stamp.caregiverId,
+    stamp.now,
+    segmentId,
+  )
+}
