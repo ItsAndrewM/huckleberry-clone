@@ -34,7 +34,7 @@ describe("migrations", () => {
 
   it("give a new household every table, each migration applied once", async () => {
     const { names, applied } = await inHousehold((storage) => ({ names: tables(storage), applied: ledger(storage) }))
-    expect(names).toEqual(["_migrations", "caregivers", "child", "household", "receipts"])
+    expect(names).toEqual(["_migrations", "caregivers", "child", "diapers", "household", "receipts"])
     expect(applied).toEqual(APPLIED)
   })
 

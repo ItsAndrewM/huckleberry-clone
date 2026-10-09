@@ -5,12 +5,15 @@ const HOUR_MS = 60 * 60 * 1000
 export const RECEIPT_TTL_MS = 24 * HOUR_MS
 export const PRUNE_EVERY_MS = 6 * HOUR_MS
 
-export interface Mutation {
+export interface Stamp {
+  readonly caregiverId: string
+  readonly now: number
+}
+
+export interface Mutation extends Stamp {
   readonly route: string
   readonly actionId: ActionId
   readonly requestHash: string
-  readonly caregiverId: string
-  readonly now: number
 }
 
 export type CoreResult<A, E> =
