@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@bt/contracts": "workspace:*",
+    "@tanstack/react-query": "catalog:",
     "effect": "catalog:",
     "react": "catalog:",
     "react-dom": "catalog:"
