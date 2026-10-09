@@ -206,3 +206,23 @@ export const removePortion = (sql: SqlStorage, stamp: Stamp, portionId: string):
     portionId,
   )
 }
+
+export const shiftFeed = (sql: SqlStorage, stamp: Stamp, feedId: string, offsetMs: number): void => {
+  sql.exec(
+    `UPDATE nursing_segments SET started_at = started_at + ?, ended_at = ended_at + ?, updated_by = ?, updated_at = ?
+     WHERE feed_id = ? AND deleted_at IS NULL`,
+    offsetMs,
+    offsetMs,
+    stamp.caregiverId,
+    stamp.now,
+    feedId,
+  )
+  sql.exec(
+    `UPDATE bottle_portions SET occurred_at = occurred_at + ?, updated_by = ?, updated_at = ?
+     WHERE feed_id = ? AND deleted_at IS NULL`,
+    offsetMs,
+    stamp.caregiverId,
+    stamp.now,
+    feedId,
+  )
+}
