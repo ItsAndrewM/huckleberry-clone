@@ -17,7 +17,14 @@ test("sends signed-in /api/* fetches through to the household, which knows the a
   expect(res.status()).toBe(200)
   expect(await res.json()).toEqual({
     caregiver: { id: expect.any(String), email: "andrew@example.test", displayName: "Andrew (local)" },
-    household: { name: "Local household", timeZone: "America/Vancouver" },
+    household: {
+      name: "Local household",
+      timeZone: "America/Vancouver",
+      caregivers: [
+        { id: expect.any(String), displayName: "Andrew (local)" },
+        { id: expect.any(String), displayName: "Emily (local)" },
+      ],
+    },
     child: { name: "Robin", birthDate: "2026-09-01" },
   })
 })

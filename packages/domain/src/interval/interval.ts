@@ -12,6 +12,8 @@ export const durationMs = (interval: Interval): number => interval.end - interva
 
 export const overlaps = (a: Interval, b: Interval): boolean => Math.max(a.start, b.start) < Math.min(a.end, b.end)
 
+export const contains = (interval: Interval, at: Instant): boolean => interval.start <= at && at < interval.end
+
 export const clipTo = (interval: Interval, period: Interval): Interval | null => {
   const start = Math.max(interval.start, period.start)
   const end = Math.min(interval.end, period.end)

@@ -1,22 +1,19 @@
 import { describe, expect, it } from "vitest"
 import { logFeed } from "../src/core/feeds/log.ts"
 import { createFeed } from "../src/core/feeds/store.ts"
+import { bottle, newFeed, rowCount, segment } from "./feed-fixtures.ts"
 import {
+  ANDREW,
   BIRTH_DATE_BEGINS,
-  bottle,
   CHANGED_TODAY,
   caregiverId,
   inHousehold,
   MINUTE_MS,
   minutesAgo,
   NOW,
-  newFeed,
-  rowCount,
   saved,
-  segment,
   stampOf,
-} from "./feed-fixtures.ts"
-import { ANDREW } from "./fixtures.ts"
+} from "./fixtures.ts"
 
 const OCT_6_AT_23_50 = Date.UTC(2026, 9, 7, 6, 50)
 const ac4 = (minutes: number) => OCT_6_AT_23_50 + minutes * MINUTE_MS

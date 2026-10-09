@@ -9,6 +9,8 @@ describe("the API the household serves", () => {
   it("has exactly these endpoints, so the checks below can't pass on an empty list", () => {
     expect(endpoints.map(({ method, path }) => `${method} ${path}`)).toEqual([
       "GET /api/me",
+      "GET /api/today",
+      "GET /api/last24h",
       "POST /api/diapers",
       "PATCH /api/diapers/:id",
       "DELETE /api/diapers/:id",

@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest"
 import { NO_EXCLUSION, overlappedFeed } from "../src/core/feeds/rules.ts"
 import { createFeed } from "../src/core/feeds/store.ts"
-import { inHousehold, MINUTE_MS, minutesAgo, NOW, segment, stampOf } from "./feed-fixtures.ts"
+import { segment } from "./feed-fixtures.ts"
+import { inHousehold, MINUTE_MS, minutesAgo, NOW, stampOf } from "./fixtures.ts"
 
 const completed = (sql: SqlStorage, from: number, to: number) =>
   createFeed(sql, stampOf(sql), "completed", [segment("left", minutesAgo(from), minutesAgo(to))], [])

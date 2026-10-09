@@ -5,22 +5,20 @@ import { finishFeed, startFeed } from "../src/core/feeds/lifecycle.ts"
 import { logFeed } from "../src/core/feeds/log.ts"
 import { loadFeed } from "../src/core/feeds/store.ts"
 import type { Stamp } from "../src/core/receipts.ts"
+import { bottle, newFeed, segment } from "./feed-fixtures.ts"
 import {
   ACTION_ID,
   BIRTH_DATE_BEGINS,
-  bottle,
   CHANGED_TODAY,
   caregiverId,
+  EMILY,
   inHousehold,
   MINUTE_MS,
   minutesAgo,
   NOW,
-  newFeed,
   saved,
-  segment,
   stampOf,
-} from "./feed-fixtures.ts"
-import { EMILY } from "./fixtures.ts"
+} from "./fixtures.ts"
 
 const SEP_30_AT_23_00 = Date.UTC(2026, 9, 1, 6)
 const OCT_1_AT_01_00 = Date.UTC(2026, 9, 1, 8)

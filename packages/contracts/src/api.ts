@@ -4,6 +4,7 @@ import { DiapersGroup } from "./diapers.ts"
 import { InvalidInput, Unauthorized } from "./errors.ts"
 import { FeedsGroup, PortionsGroup, SegmentsGroup } from "./feeds.ts"
 import { type Caregiver, MeGroup } from "./me.ts"
+import { TodayGroup } from "./today.ts"
 
 export class CurrentCaregiver extends Context.Service<CurrentCaregiver, Caregiver>()("bt/CurrentCaregiver") {}
 
@@ -18,6 +19,7 @@ export class InvalidInputs extends HttpApiMiddleware.Service<InvalidInputs>()("b
 
 export class Api extends HttpApi.make("baby-tracker")
   .add(MeGroup)
+  .add(TodayGroup)
   .add(DiapersGroup)
   .add(FeedsGroup)
   .add(SegmentsGroup)

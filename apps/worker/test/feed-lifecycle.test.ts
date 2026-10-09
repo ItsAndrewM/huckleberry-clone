@@ -3,20 +3,20 @@ import { feedSummary } from "@bt/domain"
 import { describe, expect, it } from "vitest"
 import { addBottle, finishFeed, pauseFeed, resumeFeed, startFeed, switchSide } from "../src/core/feeds/lifecycle.ts"
 import { createFeed, loadFeed } from "../src/core/feeds/store.ts"
+import { rowCount, segment } from "./feed-fixtures.ts"
 import {
   ACTION_ID,
+  ANDREW,
   CHANGED_TODAY,
   caregiverId,
+  EMILY,
   inHousehold,
   MINUTE_MS,
   minutesAgo,
   NOW,
-  rowCount,
   saved,
-  segment,
   stampOf,
-} from "./feed-fixtures.ts"
-import { ANDREW, EMILY } from "./fixtures.ts"
+} from "./fixtures.ts"
 
 const OCT_6_AT_23_50 = Date.UTC(2026, 9, 7, 6, 50)
 const ac4 = (minutes: number) => OCT_6_AT_23_50 + minutes * MINUTE_MS

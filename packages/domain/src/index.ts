@@ -1,3 +1,4 @@
+export { type DiaperChange, last24hPeriod, type StartedFeed, type Totals, totalsIn } from "./aggregate/totals.ts"
 export {
   type BottlePortion,
   type FeedComponents,
@@ -7,7 +8,7 @@ export {
   sessionBounds,
   type Side,
 } from "./feed/feed.ts"
-export { clipTo, type DayPiece, durationMs, overlaps, splitByDays } from "./interval/interval.ts"
+export { clipTo, contains, type DayPiece, durationMs, overlaps, splitByDays } from "./interval/interval.ts"
 export { affectedPeriods, type PeriodKey } from "./invalidation/affected-periods.ts"
 export {
   addDaysToDate,

@@ -1,14 +1,9 @@
 import { runInDurableObject } from "cloudflare:test"
 import { describe, expect, it } from "vitest"
 import { calendarOf, changedKeys, timeIssue } from "../src/core/calendar.ts"
-import { seededHousehold } from "./fixtures.ts"
+import { BIRTH_DATE_BEGINS, MINUTE_MS, NOW, OCT_1_AT_00_30, SEP_30_AT_23_30, seededHousehold } from "./fixtures.ts"
 
-const NOW = Date.UTC(2026, 9, 8, 19)
-const MINUTE_MS = 60_000
 const CALENDAR = { zone: "America/Vancouver", birthDate: "2026-09-01" }
-const BIRTH_DATE_BEGINS = Date.UTC(2026, 8, 1, 7)
-const SEP_30_AT_23_30 = Date.UTC(2026, 9, 1, 6, 30)
-const OCT_1_AT_00_30 = Date.UTC(2026, 9, 1, 7, 30)
 
 describe("the household's calendar", () => {
   it("is the household's time zone and the child's birth date, read in one query", async () => {

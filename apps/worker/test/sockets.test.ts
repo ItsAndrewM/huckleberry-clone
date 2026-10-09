@@ -2,14 +2,8 @@ import { CAREGIVER_DISABLED, ChangedMessage, HEARTBEAT, SavedDiaper, SavedFeed }
 import { evictDurableObject, runInDurableObject } from "cloudflare:test"
 import { Schema } from "effect"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
-import type { HouseholdDO } from "../src/household.ts"
-import { ANDREW, EMILY, seededHousehold } from "./fixtures.ts"
-
-const ORIGIN = "https://bt.example.test"
-const NOW = Date.UTC(2026, 9, 8, 19)
-const HOUR_MS = 3_600_000
-
-type Household = DurableObjectStub<HouseholdDO>
+import { ANDREW, caregiverId, EMILY, HOUR_MS, NOW, seededHousehold } from "./fixtures.ts"
+import { get, type Household, inStorage, ORIGIN, sendJson } from "./requests.ts"
 
 const decodeMessage = Schema.decodeUnknownSync(Schema.fromJsonString(ChangedMessage))
 const decodeSaved = Schema.decodeUnknownSync(Schema.toCodecJson(SavedDiaper))
@@ -44,27 +38,11 @@ const wetAt = (occurredAt: number, actionId: string = crypto.randomUUID()) => ({
   dirty: false,
 })
 
-const post = async (household: Household, path: string, body: Schema.Json, email = ANDREW.email) => {
-  const response = await household.fetch(`${ORIGIN}${path}`, {
-    method: "POST",
-    headers: { "content-type": "application/json", "x-bt-email": email },
-    body: JSON.stringify(body),
-  })
-  return { status: response.status, body: await response.json() }
-}
-
 const logDiaper = async (household: Household, body = wetAt(NOW - HOUR_MS), email = ANDREW.email) => {
-  const { status, body: saved } = await post(household, "/api/diapers", body, email)
+  const { status, body: saved } = await sendJson(household, "POST", "/api/diapers", body, email)
   expect(status).toBe(201)
   return decodeSaved(saved)
 }
-
-const caregiverId = (household: Household, email: string) =>
-  runInDurableObject(
-    household,
-    (_instance, state) =>
-      state.storage.sql.exec<{ id: string }>("SELECT id FROM caregivers WHERE email = ?", email).one().id,
-  )
 
 beforeEach(() => {
   vi.useFakeTimers({ toFake: ["Date"] })
@@ -83,7 +61,7 @@ describe("GET /api/ws", () => {
     expect(response.status).toBe(101)
     expect(response.headers.get("cache-control")).toBe("no-store")
     response.webSocket?.accept()
-    const andrew = await caregiverId(household, ANDREW.email)
+    const andrew = await inStorage(household, (sql) => caregiverId(sql, ANDREW.email))
     const tagged = await runInDurableObject(household, (_instance, state) => ({
       andrew: state.getWebSockets(`caregiver:${andrew}`).length,
       all: state.getWebSockets().length,
@@ -159,7 +137,7 @@ describe("broadcasting what a change changed", () => {
     const { changed } = await logDiaper(household, save)
     expect(decodeMessage(await first)).toEqual({ changed })
     const again = nextMessage(socket)
-    expect((await post(household, "/api/diapers", save)).status).toBe(201)
+    expect((await sendJson(household, "POST", "/api/diapers", save)).status).toBe(201)
     expect(decodeMessage(await again)).toEqual({ changed })
   })
 
@@ -167,7 +145,7 @@ describe("broadcasting what a change changed", () => {
     const household = await seededHousehold()
     const socket = await connect(household, EMILY.email)
     const message = nextMessage(socket)
-    const started = await post(household, "/api/feeds/start", {
+    const started = await sendJson(household, "POST", "/api/feeds/start", {
       actionId: crypto.randomUUID(),
       side: "left",
       startedAt: NOW,
@@ -186,9 +164,9 @@ describe("broadcasting what a change changed", () => {
     const next = nextMessage(socket)
     const consoleWarn = vi.spyOn(console, "warn").mockImplementation(() => undefined)
     const refusals = [
-      await post(household, "/api/diapers", wetAt(NOW + HOUR_MS)),
-      await post(household, "/api/diapers", { ...save, dirty: true }),
-      await post(household, "/api/feeds/start", { actionId: save.actionId, side: "left", startedAt: NOW }),
+      await sendJson(household, "POST", "/api/diapers", wetAt(NOW + HOUR_MS)),
+      await sendJson(household, "POST", "/api/diapers", { ...save, dirty: true }),
+      await sendJson(household, "POST", "/api/feeds/start", { actionId: save.actionId, side: "left", startedAt: NOW }),
     ]
     expect(refusals.map(({ status }) => status)).toEqual([400, 409, 400])
     expect(consoleWarn).toHaveBeenCalledOnce()
@@ -253,7 +231,7 @@ describe("disabling and enabling a caregiver (D6)", () => {
   it("refuses a disabled caregiver's requests and upgrades, until they're enabled again", async () => {
     const household = await seededHousehold()
     await household.disableCaregiver(ANDREW.email)
-    const me = () => household.fetch(`${ORIGIN}/api/me`, { headers: { "x-bt-email": ANDREW.email } })
+    const me = () => get(household, "/api/me", ANDREW.email)
     expect((await me()).status).toBe(401)
     expect((await upgrade(household, { upgrade: "websocket", "x-bt-email": ANDREW.email })).status).toBe(401)
     expect(await household.enableCaregiver(ANDREW.email)).toEqual({

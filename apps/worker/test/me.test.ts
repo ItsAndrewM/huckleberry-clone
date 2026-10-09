@@ -1,10 +1,7 @@
 import { runInDurableObject } from "cloudflare:test"
 import { afterEach, describe, expect, it, vi } from "vitest"
-import type { HouseholdDO } from "../src/household.ts"
-import { newHousehold, SEED, seededHousehold } from "./fixtures.ts"
-
-const get = (household: DurableObjectStub<HouseholdDO>, path: string, email?: string) =>
-  household.fetch(`https://bt.example.test${path}`, email === undefined ? {} : { headers: { "x-bt-email": email } })
+import { ANDREW, caregiverId, EMILY, newHousehold, SEED, seededHousehold } from "./fixtures.ts"
+import { get, inStorage } from "./requests.ts"
 
 describe("GET /api/me", () => {
   it("tells an active caregiver who they are, and their household and child", async () => {
@@ -12,8 +9,32 @@ describe("GET /api/me", () => {
     expect(response.status).toBe(200)
     expect(await response.json()).toEqual({
       caregiver: { id: expect.any(String), email: "emily@example.test", displayName: "Emily" },
-      household: { name: "Test household", timeZone: "America/Vancouver" },
+      household: {
+        name: "Test household",
+        timeZone: "America/Vancouver",
+        caregivers: [
+          { id: expect.any(String), displayName: "Andrew" },
+          { id: expect.any(String), displayName: "Emily" },
+        ],
+      },
       child: { name: "Robin", birthDate: "2026-09-01" },
+    })
+  })
+
+  it("names every caregiver by the id records carry, including one who's been disabled", async () => {
+    const household = await seededHousehold()
+    expect(await household.disableCaregiver(ANDREW.email)).toMatchObject({ active: false })
+    const ids = await inStorage(household, (sql) => ({
+      andrew: caregiverId(sql, ANDREW.email),
+      emily: caregiverId(sql, EMILY.email),
+    }))
+    expect(await (await get(household, "/api/me", EMILY.email)).json()).toMatchObject({
+      household: {
+        caregivers: [
+          { id: ids.andrew, displayName: "Andrew" },
+          { id: ids.emily, displayName: "Emily" },
+        ],
+      },
     })
   })
 

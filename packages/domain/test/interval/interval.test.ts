@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest"
 import {
   addDaysToDate,
   clipTo,
+  contains,
   type DayPiece,
   durationMs,
   overlaps,
@@ -26,6 +27,17 @@ describe("overlaps (half-open)", () => {
     [{ start: 5, end: 5 }, { start: 0, end: 10 }, false],
   ])("%o and %o overlap: %s", (a, b, expected) => {
     expect(overlaps(a, b)).toBe(expected)
+  })
+})
+
+describe("contains (half-open)", () => {
+  it.each([
+    [{ start: 100, end: 200 }, 100, true],
+    [{ start: 100, end: 200 }, 199, true],
+    [{ start: 100, end: 200 }, 200, false],
+    [{ start: 100, end: 200 }, 99, false],
+  ])("%o contains %d: %s", (interval, at, expected) => {
+    expect(contains(interval, at)).toBe(expected)
   })
 })
 
