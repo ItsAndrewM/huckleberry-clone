@@ -1,4 +1,4 @@
-import { SavedFeed } from "@bt/contracts"
+import { Changed, Feed, SavedFeed } from "@bt/contracts"
 import { runInDurableObject } from "cloudflare:test"
 import { Schema } from "effect"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
@@ -331,5 +331,35 @@ describe("the receipts the feed endpoints keep", () => {
         "POST /api/feeds/:id/restore",
       ]),
     )
+  })
+
+  it("decode the response and changed keys stored before a deploy, which a retry within a day of it replays", () => {
+    const storedResponse =
+      '{"id":"fe547ab2-e53a-463a-8baa-23087553d8ea","status":"active","startedAt":1791484200000,"endedAt":null,' +
+      '"segments":[{"id":"2afe8568-09a4-4fda-b392-9def5e3dd8dd","side":"left","startedAt":1791484200000,"endedAt":null}],' +
+      '"portions":[{"id":"7fa00624-087b-48dc-903e-2627b9a35dc9","occurredAt":1791485400000,"breastMilkMl":30.5,"formulaMl":20}],' +
+      '"version":2,"createdBy":"51201807-bf60-4bce-bf3d-1c3dbddd5fc4","createdAt":1791486000000,' +
+      '"updatedBy":"51201807-bf60-4bce-bf3d-1c3dbddd5fc4","updatedAt":1791486000000,"deletedAt":null}'
+    const storedChanged =
+      '[["today"],["last24h"],["day","2026-10-08"],["week","2026-W41"],["month","2026-10"],["deleted"]]'
+    expect(Schema.decodeSync(Schema.fromJsonString(Feed))(storedResponse)).toEqual({
+      id: "fe547ab2-e53a-463a-8baa-23087553d8ea",
+      status: "active",
+      startedAt: minutesAgo(30),
+      endedAt: null,
+      segments: [
+        { id: "2afe8568-09a4-4fda-b392-9def5e3dd8dd", side: "left", startedAt: minutesAgo(30), endedAt: null },
+      ],
+      portions: [
+        { id: "7fa00624-087b-48dc-903e-2627b9a35dc9", occurredAt: minutesAgo(10), breastMilkMl: 30.5, formulaMl: 20 },
+      ],
+      version: 2,
+      createdBy: "51201807-bf60-4bce-bf3d-1c3dbddd5fc4",
+      createdAt: NOW,
+      updatedBy: "51201807-bf60-4bce-bf3d-1c3dbddd5fc4",
+      updatedAt: NOW,
+      deletedAt: null,
+    })
+    expect(Schema.decodeSync(Schema.fromJsonString(Changed))(storedChanged)).toEqual([...CHANGED_TODAY, ["deleted"]])
   })
 })
