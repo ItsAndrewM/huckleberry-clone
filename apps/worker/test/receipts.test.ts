@@ -101,7 +101,11 @@ describe("a mutation with a receipt", () => {
       })
       return { outcome, calls, receipts: count(storage.sql, "receipts") }
     })
-    expect(reused).toEqual({ outcome: { kind: "other-route" }, calls: ["d1"], receipts: 1 })
+    expect(reused).toEqual({
+      outcome: { kind: "other-route", storedRoute: "POST /api/diapers" },
+      calls: ["d1"],
+      receipts: 1,
+    })
   })
 
   it("keeps nothing the core wrote when it rejects, and stores no receipt", async () => {

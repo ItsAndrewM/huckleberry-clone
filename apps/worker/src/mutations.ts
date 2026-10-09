@@ -36,5 +36,9 @@ export const mutations =
       const hash = yield* Effect.promise(() => requestHash(route, payload, value))
       const stamp = { caregiverId: caregiver.id, now: Date.now() }
       const mutation = { ...stamp, route, actionId: value.actionId, requestHash: hash }
-      return yield* settle(withReceipt(storage, mutation, record, core(stamp)), replayMismatch)
+      const outcome = withReceipt(storage, mutation, record, core(stamp))
+      if (outcome.kind === "other-route") {
+        console.warn(`actionId ${value.actionId} came back on ${route}, but its receipt is for ${outcome.storedRoute}`)
+      }
+      return yield* settle(outcome, replayMismatch)
     })

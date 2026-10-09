@@ -23,7 +23,7 @@ export type CoreResult<A, E> =
 export type Outcome<A, E> =
   | { readonly kind: "applied" | "replayed"; readonly response: A; readonly changed: Changed }
   | { readonly kind: "replay-mismatch"; readonly saved: A }
-  | { readonly kind: "other-route" }
+  | { readonly kind: "other-route"; readonly storedRoute: string }
   | { readonly kind: "rejected"; readonly error: E }
 
 type ReceiptRow = { route: string; request_hash: string; response: string; changed: string }
@@ -50,7 +50,7 @@ export const withReceipt = <A, E>(
         )
         .toArray()
       if (receipt !== undefined) {
-        if (receipt.route !== mutation.route) return { kind: "other-route" }
+        if (receipt.route !== mutation.route) return { kind: "other-route", storedRoute: receipt.route }
         const saved = Schema.decodeSync(responseJson)(receipt.response)
         if (receipt.request_hash !== mutation.requestHash) return { kind: "replay-mismatch", saved }
         return { kind: "replayed", response: saved, changed: Schema.decodeSync(changedJson)(receipt.changed) }

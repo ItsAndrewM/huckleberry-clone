@@ -49,6 +49,7 @@ beforeEach(() => {
 
 afterEach(() => {
   vi.useRealTimers()
+  vi.restoreAllMocks()
 })
 
 describe("POST /api/diapers", () => {
@@ -189,6 +190,69 @@ describe("PATCH, DELETE and POST …/restore", () => {
     })
     expect(await inStorage(household, (sql) => sql.exec("SELECT deleted_at FROM diapers").toArray())).toEqual([
       { deleted_at: null },
+    ])
+  })
+})
+
+describe("the receipts the endpoints keep", () => {
+  it("log an actionId reused on another route, naming both routes, since only a client bug or a changed format sends one", async () => {
+    const household = await seededHousehold()
+    const logging = wetAt(NOW - HOUR_MS)
+    const { diaper } = decodeSaved((await sendJson(household, "POST", "/api/diapers", logging)).body)
+    const consoleWarn = vi.spyOn(console, "warn").mockImplementation(() => undefined)
+    await sendJson(household, "DELETE", `/api/diapers/${diaper.id}`, { actionId: logging.actionId, version: 1 })
+    expect(consoleWarn).toHaveBeenCalledOnce()
+    expect(consoleWarn).toHaveBeenCalledWith(
+      `actionId ${logging.actionId} came back on DELETE /api/diapers/${diaper.id}, but its receipt is for POST /api/diapers`,
+    )
+  })
+
+  const sha256 = async (text: string) => {
+    const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(text))
+    return [...new Uint8Array(digest)].map((byte) => byte.toString(16).padStart(2, "0")).join("")
+  }
+
+  it("hold each request's route and the hash of its canonical body, which a retry sent before a deploy must still match", async () => {
+    const household = await seededHousehold()
+    const logging = crypto.randomUUID()
+    const editing = crypto.randomUUID()
+    const deleting = crypto.randomUUID()
+    const restoring = crypto.randomUUID()
+    const at = NOW - HOUR_MS
+    const posted = { dirty: false, wet: true, occurredAt: at, actionId: logging }
+    const { diaper } = decodeSaved((await sendJson(household, "POST", "/api/diapers", posted)).body)
+    const path = `/api/diapers/${diaper.id}`
+    await sendJson(household, "PATCH", path, { dirty: true, wet: true, occurredAt: at, version: 1, actionId: editing })
+    await sendJson(household, "DELETE", path, { version: 2, actionId: deleting })
+    await sendJson(household, "POST", `${path}/restore`, { version: 3, actionId: restoring })
+    const receipts = await inStorage(household, (sql) =>
+      sql.exec("SELECT action_id, route, request_hash FROM receipts ORDER BY rowid").toArray(),
+    )
+    expect(receipts).toEqual([
+      {
+        action_id: logging,
+        route: "POST /api/diapers",
+        request_hash: await sha256(
+          `POST /api/diapers\n{"actionId":"${logging}","occurredAt":${at},"wet":true,"dirty":false}`,
+        ),
+      },
+      {
+        action_id: editing,
+        route: `PATCH ${path}`,
+        request_hash: await sha256(
+          `PATCH ${path}\n{"actionId":"${editing}","version":1,"occurredAt":${at},"wet":true,"dirty":true}`,
+        ),
+      },
+      {
+        action_id: deleting,
+        route: `DELETE ${path}`,
+        request_hash: await sha256(`DELETE ${path}\n{"actionId":"${deleting}","version":2}`),
+      },
+      {
+        action_id: restoring,
+        route: `POST ${path}/restore`,
+        request_hash: await sha256(`POST ${path}/restore\n{"actionId":"${restoring}","version":3}`),
+      },
     ])
   })
 })
