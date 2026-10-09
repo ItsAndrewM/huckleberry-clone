@@ -15,7 +15,9 @@ import { meOf } from "./core/household.ts"
 import { errorResponse } from "./error-response.ts"
 
 export const invalidInputs = HttpApiMiddleware.layerSchemaErrorTransform(InvalidInputs, (error) =>
-  Effect.fail(invalidInputFrom(error.cause.issue)),
+  error.kind === "Body" || error.kind === "ResponseHeaders"
+    ? Effect.die(error.cause)
+    : Effect.fail(invalidInputFrom(error.cause.issue)),
 )
 
 export const authorization = (sql: SqlStorage) =>

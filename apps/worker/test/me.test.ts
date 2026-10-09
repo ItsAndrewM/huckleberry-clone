@@ -35,6 +35,7 @@ describe("GET /api/me", () => {
 
   it("refuses a caregiver from the next request after they're disabled, and only them", async () => {
     const household = await seededHousehold()
+    expect((await get(household, "/api/me", "andrew@example.test")).status).toBe(200)
     await runInDurableObject(household, (_instance, state) => {
       state.storage.sql.exec("UPDATE caregivers SET active = 0 WHERE email = 'andrew@example.test'")
     })
@@ -61,9 +62,22 @@ describe("the household's HTTP routes", () => {
   it.each([
     ["a caregiver's answer", "andrew@example.test"],
     ["a refusal", "stranger@example.test"],
-  ])("mark %s no-store", async (_label, email) => {
+  ])("mark %s no-store, and log nothing", async (_label, email) => {
+    const consoleError = vi.spyOn(console, "error").mockImplementation(() => undefined)
     const response = await get(await seededHousehold(), "/api/me", email)
     expect(response.headers.get("cache-control")).toBe("no-store")
+    expect(consoleError).not.toHaveBeenCalled()
+  })
+
+  it("logs a response it can't encode as a defect, instead of blaming the caller's input", async () => {
+    const household = await seededHousehold()
+    await runInDurableObject(household, (_instance, state) => {
+      state.storage.sql.exec("UPDATE child SET birth_date = 'soon'")
+    })
+    const consoleError = vi.spyOn(console, "error").mockImplementation(() => undefined)
+    const response = await get(household, "/api/me", "andrew@example.test")
+    expect(response.status).toBe(500)
+    expect(consoleError).toHaveBeenCalledOnce()
   })
 
   it("logs a defect it can't handle, and still answers 500 no-store", async () => {
