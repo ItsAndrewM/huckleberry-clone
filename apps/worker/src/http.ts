@@ -7,7 +7,7 @@ import {
   NotFound,
   Unauthorized,
 } from "@bt/contracts"
-import { Effect, Layer } from "effect"
+import { Cause, Effect, ErrorReporter, Layer } from "effect"
 import { HttpRouter, HttpServer, HttpServerRequest, HttpServerResponse } from "effect/http"
 import { HttpApiBuilder, HttpApiMiddleware } from "effect/http-api"
 import { activeCaregiver } from "./core/caregivers.ts"
@@ -32,6 +32,12 @@ const unknownRoute = HttpRouter.add("*", "/*", () =>
   Effect.sync(() => HttpServerResponse.fromWeb(errorResponse(new NotFound()))),
 )
 
+const logDefects = ErrorReporter.layer([
+  ErrorReporter.make(({ cause, error }) => {
+    if (Cause.hasDies(cause)) console.error(error)
+  }),
+])
+
 export const householdApi = (sql: SqlStorage) => {
   const me = HttpApiBuilder.group(Api, "me", (handlers) =>
     handlers.handle("me", () => Effect.map(Effect.service(CurrentCaregiver), (caregiver) => meOf(sql, caregiver))),
@@ -40,6 +46,7 @@ export const householdApi = (sql: SqlStorage) => {
     Layer.mergeAll(
       HttpApiBuilder.layer(Api).pipe(Layer.provide(me.pipe(Layer.provide([authorization(sql), invalidInputs])))),
       unknownRoute,
+      logDefects,
     ).pipe(Layer.provide(HttpServer.layerServices)),
     { disableLogger: true },
   )

@@ -1,5 +1,5 @@
 import { runInDurableObject } from "cloudflare:test"
-import { describe, expect, it } from "vitest"
+import { afterEach, describe, expect, it, vi } from "vitest"
 import type { HouseholdDO } from "../src/household.ts"
 import { newHousehold, SEED, seededHousehold } from "./fixtures.ts"
 
@@ -48,6 +48,10 @@ describe("GET /api/me", () => {
 })
 
 describe("the household's HTTP routes", () => {
+  afterEach(() => {
+    vi.restoreAllMocks()
+  })
+
   it("answer an unknown /api path with the contract's 404", async () => {
     const response = await get(await seededHousehold(), "/api/nothing-here", "andrew@example.test")
     expect(response.status).toBe(404)
@@ -60,5 +64,18 @@ describe("the household's HTTP routes", () => {
   ])("mark %s no-store", async (_label, email) => {
     const response = await get(await seededHousehold(), "/api/me", email)
     expect(response.headers.get("cache-control")).toBe("no-store")
+  })
+
+  it("logs a defect it can't handle, and still answers 500 no-store", async () => {
+    const household = await seededHousehold()
+    await runInDurableObject(household, (_instance, state) => {
+      state.storage.sql.exec("DELETE FROM child")
+    })
+    const consoleError = vi.spyOn(console, "error").mockImplementation(() => undefined)
+    const response = await get(household, "/api/me", "andrew@example.test")
+    expect(response.status).toBe(500)
+    expect(response.headers.get("cache-control")).toBe("no-store")
+    expect(consoleError).toHaveBeenCalledOnce()
+    expect(consoleError).toHaveBeenCalledWith(expect.any(Error))
   })
 })
