@@ -1,6 +1,6 @@
 import type { Refusal } from "./access.ts"
 
-export type Refused = Refusal | "not-admin" | "service-token" | "not-a-caregiver"
+export type Refused = Refusal | "not-admin" | "service-token" | "not-a-caregiver" | "not-json"
 
 export interface DefectContext {
   readonly route: string

@@ -38,12 +38,22 @@ const unavailable = (route: string) => (error: Error) => {
 const isAdmin = (caller: Caller, adminClientId: string | undefined): boolean =>
   caller.kind === "service" && adminClientId !== undefined && adminClientId !== "" && caller.clientId === adminClientId
 
+const mediaTypeOf = (request: Request): string =>
+  (request.headers.get("content-type") ?? "").split(";")[0]?.trim().toLowerCase() ?? ""
+
+const isJsonOrRead = (request: Request): boolean =>
+  request.method === "GET" || request.method === "HEAD" || mediaTypeOf(request) === "application/json"
+
 const toHousehold = (request: Request, route: string, email: string, household: Household) => {
   const url = new URL(request.url)
   const origin = request.headers.get("origin")
   if (url.pathname === SOCKET_PATH && origin !== url.origin) {
     logForeignOrigin(route, origin)
     return new Response(null, { status: 403, headers: { "cache-control": "no-store" } })
+  }
+  if (!isJsonOrRead(request)) {
+    logRefusal(route, "not-json")
+    return new Response(null, { status: 415, headers: { "cache-control": "no-store" } })
   }
   return household.fetch(forHousehold(request, email)).catch(unavailable(route))
 }

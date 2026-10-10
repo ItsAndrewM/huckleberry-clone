@@ -11,7 +11,7 @@ How the baby tracker runs in production, how it gets there, and what to do when 
 | Zero Trust team | `https://misty-wildflower-0505.cloudflareaccess.com`, the Worker's `ACCESS_TEAM_DOMAIN`. Global session 730 h |
 | Access app | "Baby tracker", self-hosted on `baby.andamonium.dev` (the hostname, not a Worker-level policy, which refuses WebSockets). App id `c3b64064-49a5-45b8-bf25-d7e3cee20f9d`. Its AUD tag is the Worker's `ACCESS_AUD` |
 | Sign-in | Google only, with instant redirect: no choice screen. Session 730 h, the most Access allows |
-| Cookie | `SameSite=Lax` and `HttpOnly`, with no binding cookie. Lax stops other sites from using the session. The Worker's Origin check on `/api/ws` also stops the other `andamonium.dev` apps, which count as the same site |
+| Cookie | `SameSite=Lax` and `HttpOnly`, with no binding cookie. Lax stops other sites from using the session. The other `andamonium.dev` apps count as the same site, so the Worker stops them itself: a `/api/ws` upgrade must come from the app's exact origin, and every write must be `application/json`, which no page can send to another origin without a CORS preflight the Worker never answers |
 | Policies | "BT caregivers" (Allow): the two parents' Google emails. "BT admin service token" (Service Auth): the `baby-tracker-admin` token |
 | Admin token | Service token `baby-tracker-admin`. Its Client ID is the Worker's `ADMIN_SERVICE_TOKEN_CN`. The secret lives only in `.admin-token.env` on Andrew's Mac |
 | Google side | Project "BT Access" (`bt-access-510920`) in Andrew's Google account. OAuth consent screen "Baby tracker" is External and in **Testing**, with both parents listed as test users. The web client "Cloudflare Access" has the team domain as its JavaScript origin and `<team domain>/cdn-cgi/access/callback` as its redirect URI |
@@ -116,6 +116,7 @@ Workers Logs lives in the dashboard: Workers & Pages, then `baby-tracker`, then 
 |---|---|---|
 | `refused` | `reason`, `route` | The Worker or the household answered 401 |
 | `refused` with `reason: "foreign-origin"` | `route`, `origin` | A `/api/ws` upgrade came from another origin, and got 403 |
+| `refused` with `reason: "not-json"` | `route` | A write wasn't `application/json`, and got 415. The app always sends JSON, so this is another page trying to write |
 | `keys-unavailable` | `route`, `cause` | Cloudflare's Access signing keys were out of reach. The app got 503 and retries |
 | `household-unavailable` | `route`, `cause` | The household couldn't be reached, or a restore didn't restart it. The app got 503 |
 | `defect` | `route`, `caregiverId`, `actionId` | The household answered 500. The error and its stack are on the line next to it |

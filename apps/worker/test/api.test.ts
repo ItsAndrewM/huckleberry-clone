@@ -171,6 +171,36 @@ describe("a signed-in user", () => {
     expect(await request?.json()).toEqual({ actionId: "a1", wet: true })
   })
 
+  it.each([
+    ["no Content-Type, as an untyped Blob or ArrayBuffer body is sent", undefined],
+    ["text/plain, as a no-cors fetch can send", "text/plain;charset=UTF-8"],
+    ["a form's encoding", "application/x-www-form-urlencoded"],
+  ])("can't write with %s, so a same-site page can't forge an entry", async (_label, contentType) => {
+    const consoleWarn = quietly("warn")
+    const { response, forwarded } = await route("/api/diapers", andrew, {
+      method: "POST",
+      headers: contentType === undefined ? {} : { "content-type": contentType },
+      body: new TextEncoder().encode(JSON.stringify({ actionId: "a1", wet: true })),
+    })
+    expect(response.status).toBe(415)
+    expect(response.headers.get("cache-control")).toBe("no-store")
+    expect(forwarded).toEqual([])
+    expect(consoleWarn).toHaveBeenCalledExactlyOnceWith({
+      event: "refused",
+      reason: "not-json",
+      route: "POST /api/diapers",
+    })
+  })
+
+  it("writes JSON whatever its charset, as the app sends it", async () => {
+    const { forwarded } = await route("/api/diapers", andrew, {
+      method: "POST",
+      headers: { "content-type": "Application/JSON; charset=utf-8" },
+      body: JSON.stringify({ actionId: "a1", wet: true }),
+    })
+    expect(forwarded).toHaveLength(1)
+  })
+
   it("is refused on /api/admin/*, and the log says so without naming them", async () => {
     const consoleWarn = quietly("warn")
     const { response, forwarded } = await route("/api/admin/caregiver/disable", andrew, { method: "POST" })
@@ -656,7 +686,11 @@ describe("/api/admin spelled so the gate's prefix check misses it", () => {
     "reaches the household as the caregiver, which has no admin routes, so %s seeds nothing",
     async (path) => {
       const household = env.HOUSEHOLD.getByName(crypto.randomUUID())
-      const request = new Request(`${ORIGIN}${path}`, { method: "POST", body: JSON.stringify(SEED) })
+      const request = new Request(`${ORIGIN}${path}`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(SEED),
+      })
       const response = await routeApi(request, andrew, household, ADMIN_CLIENT_ID)
       expect(response.status).toBe(404)
       expect(await response.json()).toEqual({ _tag: "NotFound" })
