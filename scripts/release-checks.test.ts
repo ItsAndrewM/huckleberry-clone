@@ -96,15 +96,34 @@ describe("the checkout a release deploys from", () => {
 })
 
 describe("CI on the commit a release deploys", () => {
+  const EARLIER = "2026-10-10T18:00:00Z"
+  const LATER = "2026-10-10T19:00:00Z"
+  const run = (conclusion: string, createdAt: string) => ({ status: "completed", conclusion, createdAt })
+
   it("passes once a run has finished green", () => {
-    expect(ciProblems([{ status: "completed", conclusion: "success" }])).toEqual([])
+    expect(ciProblems([run("success", EARLIER)])).toEqual([])
+  })
+
+  it("passes when a later run went green after a red one, however the runs are listed", () => {
+    expect(ciProblems([run("failure", EARLIER), run("success", LATER)])).toEqual([])
+    expect(ciProblems([run("success", LATER), run("failure", EARLIER)])).toEqual([])
   })
 
   it.each([
     ["no run yet", [], ["CI has run on this commit"]],
-    ["a run still going", [{ status: "in_progress", conclusion: "" }], ["CI has finished on this commit"]],
-    ["a red run", [{ status: "completed", conclusion: "failure" }], ["CI passed on this commit"]],
-    ["a cancelled run", [{ status: "completed", conclusion: "cancelled" }], ["CI passed on this commit"]],
+    [
+      "a run still going",
+      [{ status: "in_progress", conclusion: "", createdAt: EARLIER }],
+      ["CI has finished on this commit"],
+    ],
+    ["a red run", [run("failure", EARLIER)], ["CI passed on this commit"]],
+    ["a cancelled run", [run("cancelled", EARLIER)], ["CI passed on this commit"]],
+    ["a red run after a green one", [run("success", EARLIER), run("failure", LATER)], ["CI passed on this commit"]],
+    [
+      "a red run after a green one, listed newest first",
+      [run("failure", LATER), run("success", EARLIER)],
+      ["CI passed on this commit"],
+    ],
   ])("refuses %s", (_label, runs, problems) => {
     expect(ciProblems(runs)).toEqual(problems)
   })

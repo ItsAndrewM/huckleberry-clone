@@ -531,10 +531,12 @@ describe("restoring the household (POST /api/admin/pitr/restore)", () => {
   it.each([
     ["the restart doesn't happen", () => Promise.resolve()],
     ["the restart fails some other way", () => Promise.reject(new Error("Network connection lost."))],
-  ])("answers 503 and logs it when %s, since the restore then waits for the next restart", async (_label, restart) => {
+  ])("answers 503 with what it scheduled and the undo bookmark when %s, and logs it", async (_label, restart) => {
     const consoleError = quietly("error")
     const { response, restores } = await restore({ bookmark: BOOKMARK }, restart)
     expect(response.status).toBe(503)
+    expect(response.headers.get("cache-control")).toBe("no-store")
+    expect(await response.json()).toEqual({ scheduled: BOOKMARK, undo: UNDO })
     expect(restores).toHaveLength(1)
     expect(consoleError).toHaveBeenCalledExactlyOnceWith({
       event: "household-unavailable",
@@ -573,16 +575,13 @@ describe("a WebSocket upgrade", () => {
   })
 
   it.each([
-    [
-      "a sibling site on the same domain",
-      { origin: "https://jude-bedtime.bt.example.test" },
-      "https://jude-bedtime.bt.example.test",
-    ],
-    ["another site", { origin: "https://evil.test" }, "https://evil.test"],
-    ["the app over plain HTTP", { origin: "http://bt.example.test" }, "http://bt.example.test"],
-    ["a sandboxed page", { origin: "null" }, "null"],
-    ["no Origin at all", {}, null],
-  ])("is refused with 403 from %s, which never reaches the household", async (_label, headers, origin) => {
+    ["a sibling site on the same domain", { origin: "https://jude-bedtime.bt.example.test" }],
+    ["another site", { origin: "https://evil.test" }],
+    ["the app over plain HTTP", { origin: "http://bt.example.test" }],
+    ["a sandboxed page", { origin: "null" }],
+    ["an Origin a caller wrote by hand", { origin: "https://andrew@example.test/token" }],
+    ["no Origin at all", {}],
+  ])("is refused with 403 from %s, which never reaches the household or the log", async (_label, headers) => {
     const consoleWarn = quietly("warn")
     const { response, forwarded } = await route("/api/ws", andrew, { headers: { upgrade: "websocket", ...headers } })
     expect(response.status).toBe(403)
@@ -593,7 +592,6 @@ describe("a WebSocket upgrade", () => {
       event: "refused",
       reason: "foreign-origin",
       route: "GET /api/ws",
-      origin,
     })
   })
 

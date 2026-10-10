@@ -1,4 +1,4 @@
-import { Instant, InvalidInput, invalidInputFrom, NotFound, ServiceUnavailable } from "@bt/contracts"
+import { Instant, InvalidInput, invalidInputFrom, NotFound } from "@bt/contracts"
 import { Result, Schema } from "effect"
 import { errorResponse } from "./error-response.ts"
 import { logOutage } from "./logs.ts"
@@ -109,7 +109,7 @@ const restore: AdminRoute = async (request, household) => {
   const scheduled = await household.pitrScheduleRestore(target)
   if (!(await restarted(household))) {
     logOutage("household-unavailable", "POST /api/admin/pitr/restore", "the restore is scheduled, but no restart came")
-    return errorResponse(new ServiceUnavailable())
+    return Response.json({ scheduled: scheduled.bookmark, undo: scheduled.undo }, { status: 503, headers: noStore })
   }
   return Response.json({ restoredTo: scheduled.bookmark, undo: scheduled.undo }, { headers: noStore })
 }

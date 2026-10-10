@@ -1,6 +1,6 @@
 import type { Refusal } from "./access.ts"
 
-export type Refused = Refusal | "not-admin" | "service-token" | "not-a-caregiver" | "not-json"
+export type Refused = Refusal | "not-admin" | "service-token" | "not-a-caregiver" | "not-json" | "foreign-origin"
 
 export interface DefectContext {
   readonly route: string
@@ -12,10 +12,6 @@ export const routeOf = (method: string, url: string): string => `${method} ${new
 
 export const logRefusal = (route: string, reason: Refused): void => {
   console.warn({ event: "refused", reason, route })
-}
-
-export const logForeignOrigin = (route: string, origin: string | null): void => {
-  console.warn({ event: "refused", reason: "foreign-origin", route, origin })
 }
 
 export const logOutage = (event: "keys-unavailable" | "household-unavailable", route: string, cause: string): void => {

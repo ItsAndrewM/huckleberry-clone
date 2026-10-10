@@ -2,7 +2,7 @@ import { SOCKET_PATH, ServiceUnavailable, Unauthorized } from "@bt/contracts"
 import type { Caller } from "./access.ts"
 import { type AdminHousehold, routeAdmin } from "./admin.ts"
 import { errorResponse } from "./error-response.ts"
-import { logForeignOrigin, logOutage, logRefusal, type Refused, routeOf } from "./logs.ts"
+import { logOutage, logRefusal, type Refused, routeOf } from "./logs.ts"
 
 export interface Household extends AdminHousehold {
   fetch(request: Request): Promise<Response>
@@ -46,9 +46,8 @@ const isJsonOrRead = (request: Request): boolean =>
 
 const toHousehold = (request: Request, route: string, email: string, household: Household) => {
   const url = new URL(request.url)
-  const origin = request.headers.get("origin")
-  if (url.pathname === SOCKET_PATH && origin !== url.origin) {
-    logForeignOrigin(route, origin)
+  if (url.pathname === SOCKET_PATH && request.headers.get("origin") !== url.origin) {
+    logRefusal(route, "foreign-origin")
     return new Response(null, { status: 403, headers: { "cache-control": "no-store" } })
   }
   if (!isJsonOrRead(request)) {

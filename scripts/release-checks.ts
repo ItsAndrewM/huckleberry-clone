@@ -26,6 +26,7 @@ export interface Checkout {
 export interface CiRun {
   readonly status: string
   readonly conclusion: string
+  readonly createdAt: string
 }
 
 type Check<A> = readonly [expectation: string, holds: (value: A) => boolean]
@@ -62,10 +63,13 @@ export const deployProblems = (config: DeployConfig): string[] => problemsOf(DEP
 
 export const checkoutProblems = (checkout: Checkout): string[] => problemsOf(CHECKOUT_CHECKS, checkout)
 
+const newestFirst = (a: CiRun, b: CiRun): number => b.createdAt.localeCompare(a.createdAt)
+
 export const ciProblems = (runs: ReadonlyArray<CiRun>): string[] => {
-  if (runs.length === 0) return ["CI has run on this commit"]
+  const [latest] = [...runs].sort(newestFirst)
+  if (latest === undefined) return ["CI has run on this commit"]
   if (runs.some((run) => run.status !== "completed")) return ["CI has finished on this commit"]
-  return runs.some((run) => run.conclusion === "success") ? [] : ["CI passed on this commit"]
+  return latest.conclusion === "success" ? [] : ["CI passed on this commit"]
 }
 
 export const withoutCloudflareEnv = (env: NodeJS.ProcessEnv): NodeJS.ProcessEnv =>

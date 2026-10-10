@@ -53,7 +53,9 @@ stopUnless(
 )
 stopUnless(
   ciProblems(
-    JSON.parse(output("gh", ["run", "list", "--commit", head, "--workflow", "CI", "--json", "status,conclusion"])),
+    JSON.parse(
+      output("gh", ["run", "list", "--commit", head, "--workflow", "CI", "--json", "status,conclusion,createdAt"]),
+    ),
   ),
 )
 
