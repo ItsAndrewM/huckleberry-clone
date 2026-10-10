@@ -8,10 +8,11 @@ import { totalsRows } from "./totals-rows.ts"
 interface TotalsCardProps {
   readonly today: Totals
   readonly last24h: Totals | undefined
+  readonly last24hFailed: boolean
   readonly volume: VolumeUnit
 }
 
-export const TotalsCard = ({ today, last24h, volume }: TotalsCardProps) => {
+export const TotalsCard = ({ today, last24h, last24hFailed, volume }: TotalsCardProps) => {
   const [period, setPeriod] = useState<Period>("today")
   const totals = period === "today" ? today : last24h
   return (
@@ -24,7 +25,9 @@ export const TotalsCard = ({ today, last24h, volume }: TotalsCardProps) => {
       </CardHeader>
       <CardContent>
         {totals === undefined ? (
-          <output className="text-muted-foreground">Loading…</output>
+          <output className="text-muted-foreground">
+            {last24hFailed ? "The last 24 hours couldn't be loaded." : "Loading…"}
+          </output>
         ) : (
           <dl className="flex flex-col divide-y">
             {totalsRows(totals, volume).map(({ label, value, detail }) => (

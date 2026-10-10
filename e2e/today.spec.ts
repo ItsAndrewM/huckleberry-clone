@@ -188,4 +188,12 @@ test.describe("Today, with the household's answers played by the test", () => {
     await openToday(page)
     await expect(total(page, "Bottles")).toContainText("6.1 fl oz")
   })
+
+  test("says so when the last 24 hours can't be loaded", async ({ page }) => {
+    await playToday(page, todayWith({ totals: TOTALS }))
+    await page.route("**/api/last24h", (route) => route.abort())
+    await openToday(page)
+    await page.getByRole("button", { name: "Last 24 h" }).click()
+    await expect(page.getByText("The last 24 hours couldn't be loaded.")).toBeVisible()
+  })
 })
