@@ -2,6 +2,7 @@ import { ServiceUnavailable, Unauthorized } from "@bt/contracts"
 import type { Caller } from "./access.ts"
 import { type AdminHousehold, routeAdmin } from "./admin.ts"
 import { errorResponse } from "./error-response.ts"
+import { logOutage, logRefusal, type Refused, routeOf } from "./logs.ts"
 
 export interface Household extends AdminHousehold {
   fetch(request: Request): Promise<Response>
@@ -24,8 +25,13 @@ const sameOriginTarget = (url: URL): string => {
 const loginRedirect = (url: URL): Response =>
   new Response(null, { status: 302, headers: { location: sameOriginTarget(url), "cache-control": "no-store" } })
 
-const unavailable = (error: Error) => {
-  console.error(error)
+const refuse = (route: string, reason: Refused): Response => {
+  logRefusal(route, reason)
+  return errorResponse(new Unauthorized())
+}
+
+const unavailable = (route: string) => (error: Error) => {
+  logOutage("household-unavailable", route, error.message)
   return errorResponse(new ServiceUnavailable())
 }
 
@@ -38,15 +44,19 @@ export const routeApi = (
   household: Household,
   adminClientId: string | undefined,
 ): Response | Promise<Response> => {
-  if (caller.kind === "keys-unavailable") return errorResponse(new ServiceUnavailable())
-  if (caller.kind === "unauthenticated") return errorResponse(new Unauthorized())
+  const route = routeOf(request.method, request.url)
+  if (caller.kind === "keys-unavailable") {
+    logOutage("keys-unavailable", route, caller.cause)
+    return errorResponse(new ServiceUnavailable())
+  }
+  if (caller.kind === "unauthenticated") return refuse(route, caller.reason)
   const url = new URL(request.url)
   if (url.pathname === "/api/login") return loginRedirect(url)
   if (url.pathname.startsWith("/api/admin/")) {
     return isAdmin(caller, adminClientId)
-      ? routeAdmin(request, household).catch(unavailable)
-      : errorResponse(new Unauthorized())
+      ? routeAdmin(request, household).catch(unavailable(route))
+      : refuse(route, "not-admin")
   }
-  if (caller.kind === "service") return errorResponse(new Unauthorized())
-  return household.fetch(forHousehold(request, caller.email)).catch(unavailable)
+  if (caller.kind === "service") return refuse(route, "service-token")
+  return household.fetch(forHousehold(request, caller.email)).catch(unavailable(route))
 }

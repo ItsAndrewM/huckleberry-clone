@@ -1,11 +1,24 @@
 import { Option, Schema } from "effect"
 import { createRemoteJWKSet, errors, jwtVerify, type JWTPayload, type JWTVerifyGetKey } from "jose"
 
+export type Refusal =
+  | "no-token"
+  | "access-unconfigured"
+  | "malformed"
+  | "wrong-algorithm"
+  | "unknown-key"
+  | "bad-signature"
+  | "expired"
+  | "wrong-issuer"
+  | "wrong-audience"
+  | "invalid-claims"
+  | "no-identity"
+
 export type Caller =
   | { readonly kind: "user"; readonly email: string }
   | { readonly kind: "service"; readonly clientId: string }
-  | { readonly kind: "unauthenticated" }
-  | { readonly kind: "keys-unavailable" }
+  | { readonly kind: "unauthenticated"; readonly reason: Refusal }
+  | { readonly kind: "keys-unavailable"; readonly cause: string }
 
 export interface AccessSettings {
   readonly ACCESS_TEAM_DOMAIN?: string
@@ -14,8 +27,7 @@ export interface AccessSettings {
 
 export type AccessKeysFor = (teamDomain: string) => JWTVerifyGetKey
 
-const UNAUTHENTICATED: Caller = { kind: "unauthenticated" }
-const KEYS_UNAVAILABLE: Caller = { kind: "keys-unavailable" }
+const refused = (reason: Refusal): Caller => ({ kind: "unauthenticated", reason })
 
 const HttpsOrigin = Schema.String.check(
   Schema.makeFilter(
@@ -36,11 +48,29 @@ const claimsOf = Schema.decodeUnknownOption(Claims)
 const callerFrom = ({ email, common_name }: typeof Claims.Type): Caller => {
   if (email !== undefined && email !== "") return { kind: "user", email: email.toLowerCase() }
   if (common_name !== undefined && common_name !== "") return { kind: "service", clientId: common_name }
-  return UNAUTHENTICATED
+  return refused("no-identity")
 }
 
 const callerFromClaims = (claims: JWTPayload | CloudflareAccessIdentity): Caller =>
-  Option.match(claimsOf(claims), { onNone: () => UNAUTHENTICATED, onSome: callerFrom })
+  Option.match(claimsOf(claims), { onNone: () => refused("no-identity"), onSome: callerFrom })
+
+const REFUSALS = new Map<string, Refusal>([
+  ["ERR_JOSE_ALG_NOT_ALLOWED", "wrong-algorithm"],
+  ["ERR_JWKS_NO_MATCHING_KEY", "unknown-key"],
+  ["ERR_JWKS_MULTIPLE_MATCHING_KEYS", "unknown-key"],
+  ["ERR_JWS_SIGNATURE_VERIFICATION_FAILED", "bad-signature"],
+  ["ERR_JWT_EXPIRED", "expired"],
+])
+
+const CLAIM_REFUSALS = new Map<string, Refusal>([
+  ["iss", "wrong-issuer"],
+  ["aud", "wrong-audience"],
+])
+
+const refusalOf = (error: errors.JOSEError): Refusal =>
+  error instanceof errors.JWTClaimValidationFailed
+    ? (CLAIM_REFUSALS.get(error.claim) ?? "invalid-claims")
+    : (REFUSALS.get(error.code) ?? "malformed")
 
 class AccessKeysUnavailable extends Error {}
 
@@ -51,7 +81,7 @@ const reportingOutages =
       return await keys(header, token)
     } catch (error) {
       if (error instanceof errors.JWKSNoMatchingKey || error instanceof errors.JWKSMultipleMatchingKeys) throw error
-      throw new AccessKeysUnavailable("Cloudflare Access signing keys are unavailable", { cause: error })
+      throw new AccessKeysUnavailable(error instanceof Error ? error.message : "the key set couldn't be read")
     }
   }
 
@@ -68,7 +98,8 @@ const verifiedCaller = async (
     })
     return callerFromClaims(payload)
   } catch (error) {
-    return error instanceof AccessKeysUnavailable ? KEYS_UNAVAILABLE : UNAUTHENTICATED
+    if (error instanceof AccessKeysUnavailable) return { kind: "keys-unavailable", cause: error.message }
+    return refused(error instanceof errors.JOSEError ? refusalOf(error) : "malformed")
   }
 }
 
@@ -81,8 +112,9 @@ export const callerOf = async (
   const identity = await access?.getIdentity()
   if (identity !== undefined) return callerFromClaims(identity)
   const token = request.headers.get("cf-access-jwt-assertion")
+  if (token === null) return refused("no-token")
   const jwt = jwtSettingsOf(settings)
-  if (token === null || Option.isNone(jwt)) return UNAUTHENTICATED
+  if (Option.isNone(jwt)) return refused("access-unconfigured")
   return verifiedCaller(token, jwt.value, keysFor(jwt.value.ACCESS_TEAM_DOMAIN))
 }
 

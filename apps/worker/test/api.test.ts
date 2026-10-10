@@ -64,11 +64,18 @@ const route = routeWith(ADMIN_CLIENT_ID)
 
 const loginPath = (returnTo: string) => `/api/login?${new URLSearchParams({ return: returnTo })}`
 
+afterEach(() => {
+  vi.restoreAllMocks()
+})
+
+const quietly = (level: "warn" | "error") => vi.spyOn(console, level).mockImplementation(() => undefined)
+
 describe("a request nobody vouched for", () => {
   it.each(["/api/me", "/api/ws", "/api/login?return=/history", "/api/admin/caregiver/disable"])(
     "gets 401 Unauthorized for %s, and never reaches the household",
     async (path) => {
-      const { response, forwarded } = await route(path, { kind: "unauthenticated" })
+      quietly("warn")
+      const { response, forwarded } = await route(path, { kind: "unauthenticated", reason: "expired" })
       expect(response.status).toBe(401)
       expect(response.headers.get("cache-control")).toBe("no-store")
       expect(await response.json()).toEqual({ _tag: "Unauthorized" })
@@ -76,13 +83,32 @@ describe("a request nobody vouched for", () => {
     },
   )
 
-  it.each(["/api/me", "/api/login?return=/history"])(
+  it("logs which check refused it and the route, but not the query", async () => {
+    const consoleWarn = quietly("warn")
+    await route("/api/login?return=/history", { kind: "unauthenticated", reason: "wrong-audience" })
+    expect(consoleWarn).toHaveBeenCalledExactlyOnceWith({
+      event: "refused",
+      reason: "wrong-audience",
+      route: "GET /api/login",
+    })
+  })
+
+  it.each([
+    ["/api/me", "GET /api/me"],
+    ["/api/login?return=/history", "GET /api/login"],
+  ])(
     "gets 503 ServiceUnavailable for %s while Cloudflare's keys are out of reach, so the app retries",
-    async (path) => {
-      const { response, forwarded } = await route(path, { kind: "keys-unavailable" })
+    async (path, logged) => {
+      const consoleError = quietly("error")
+      const { response, forwarded } = await route(path, { kind: "keys-unavailable", cause: "Network connection lost" })
       expect(response.status).toBe(503)
       expect(await response.json()).toEqual({ _tag: "ServiceUnavailable" })
       expect(forwarded).toEqual([])
+      expect(consoleError).toHaveBeenCalledExactlyOnceWith({
+        event: "keys-unavailable",
+        route: logged,
+        cause: "Network connection lost",
+      })
     },
   )
 })
@@ -114,30 +140,46 @@ describe("a signed-in user", () => {
     expect(await request?.json()).toEqual({ actionId: "a1", wet: true })
   })
 
-  it("is refused on /api/admin/*", async () => {
+  it("is refused on /api/admin/*, and the log says so without naming them", async () => {
+    const consoleWarn = quietly("warn")
     const { response, forwarded } = await route("/api/admin/caregiver/disable", andrew, { method: "POST" })
     expect(response.status).toBe(401)
     expect(await response.json()).toEqual({ _tag: "Unauthorized" })
     expect(forwarded).toEqual([])
+    expect(consoleWarn).toHaveBeenCalledExactlyOnceWith({
+      event: "refused",
+      reason: "not-admin",
+      route: "POST /api/admin/caregiver/disable",
+    })
+    expect(JSON.stringify(consoleWarn.mock.calls)).not.toContain("andrew@example.test")
   })
 })
 
 describe("a service token", () => {
   it("is refused on caregiver routes, even the admin's", async () => {
+    const consoleWarn = quietly("warn")
     const { response, forwarded } = await route("/api/me", adminToken)
     expect(response.status).toBe(401)
     expect(forwarded).toEqual([])
+    expect(consoleWarn).toHaveBeenCalledExactlyOnceWith({
+      event: "refused",
+      reason: "service-token",
+      route: "GET /api/me",
+    })
   })
 
   it("is refused on /api/admin/* unless it is the admin's", async () => {
+    const consoleWarn = quietly("warn")
     const { response } = await route("/api/admin/caregiver/disable", otherToken)
     expect(response.status).toBe(401)
+    expect(consoleWarn).toHaveBeenCalledWith(expect.objectContaining({ reason: "not-admin" }))
   })
 
   it.each([
     ["missing", undefined],
     ["empty", ""],
   ])("is refused on /api/admin/* while the admin Client ID is %s", async (_label, adminClientId) => {
+    quietly("warn")
     const { response } = await routeWith(adminClientId)("/api/admin/caregiver/disable", adminToken)
     expect(response.status).toBe(401)
   })
@@ -223,6 +265,7 @@ describe("seeding the household (POST /api/admin/household)", () => {
   })
 
   it("is refused to a caregiver, before the body is read", async () => {
+    quietly("warn")
     const { response, seeded } = await route("/api/admin/household", andrew, seedRequest(JSON.stringify(SEED)))
     expect(response.status).toBe(401)
     expect(seeded).toEqual([])
@@ -286,6 +329,7 @@ describe("disabling and enabling a caregiver (POST /api/admin/caregiver/disable 
   })
 
   it("is refused to a caregiver, before the body is read", async () => {
+    quietly("warn")
     const { response, toggled } = await route(
       "/api/admin/caregiver/enable",
       andrew,
@@ -318,17 +362,21 @@ describe("a household that can't be reached", () => {
   const routeToNowhere = (path: string, caller: Caller, init: RequestInit = {}) =>
     routeApi(new Request(`${ORIGIN}${path}`, init), caller, unreachableHousehold, ADMIN_CLIENT_ID)
 
-  afterEach(() => {
-    vi.restoreAllMocks()
-  })
-
   it.each([
-    ["a caregiver's request", "/api/me", andrew, {}, "Durable Object reset because its code was updated."],
+    [
+      "a caregiver's request",
+      "/api/me",
+      andrew,
+      {},
+      "GET /api/me",
+      "Durable Object reset because its code was updated.",
+    ],
     [
       "the admin's seed",
       "/api/admin/household",
       adminToken,
       { method: "POST", body: JSON.stringify(SEED) },
+      "POST /api/admin/household",
       "Network connection lost.",
     ],
     [
@@ -336,15 +384,15 @@ describe("a household that can't be reached", () => {
       "/api/admin/caregiver/disable",
       adminToken,
       { method: "POST", body: JSON.stringify({ email: "andrew@example.test" }) },
+      "POST /api/admin/caregiver/disable",
       "Network connection lost.",
     ],
   ])(
     "logs why %s failed, and answers 503 ServiceUnavailable, which the app retries",
-    async (_label, path, caller, init, cause) => {
-      const consoleError = vi.spyOn(console, "error").mockImplementation(() => undefined)
+    async (_label, path, caller, init, logged, cause) => {
+      const consoleError = quietly("error")
       const response = await routeToNowhere(path, caller, init)
-      expect(consoleError).toHaveBeenCalledOnce()
-      expect(consoleError).toHaveBeenCalledWith(new Error(cause))
+      expect(consoleError).toHaveBeenCalledExactlyOnceWith({ event: "household-unavailable", route: logged, cause })
       expect(response.status).toBe(503)
       expect(response.headers.get("cache-control")).toBe("no-store")
       expect(await response.json()).toEqual({ _tag: "ServiceUnavailable" })
