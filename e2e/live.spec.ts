@@ -30,7 +30,7 @@ test.describe("with the household's socket played by the test", () => {
     await page.routeWebSocket(/\/api\/ws$/, (socket) => {
       sockets.push(socket)
     })
-    const todayAnswered = Promise.all(["**/api/today"].map((url) => page.waitForResponse(url)))
+    const todayAnswered = Promise.all(["**/api/today", "**/api/last24h"].map((url) => page.waitForResponse(url)))
     await page.goto("/")
     await expect(page.getByText("Robin")).toBeVisible()
     await Promise.all((await todayAnswered).map((response) => response.finished()))
@@ -48,6 +48,18 @@ test.describe("with the household's socket played by the test", () => {
     const refetch = page.waitForRequest("**/api/me")
     socket(0).send(JSON.stringify({ changed: [["me"]] }))
     await refetch
+  })
+
+  test("refetches only the queries a changed message names, leaving Today's others alone", async ({ page }) => {
+    const asked: string[] = []
+    page.on("request", (request) => {
+      const { pathname } = new URL(request.url())
+      if (pathname.startsWith("/api/")) asked.push(pathname)
+    })
+    const refetched = page.waitForResponse("**/api/last24h")
+    socket(0).send(JSON.stringify({ changed: [["last24h"]] }))
+    await refetched
+    expect(asked).toEqual(["/api/last24h"])
   })
 
   test("reconnects after the socket drops, and refetches everything once it's back", async ({ page }) => {

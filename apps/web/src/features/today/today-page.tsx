@@ -1,29 +1,38 @@
-import type { Me, Today } from "@bt/contracts"
-import { useMe, useToday } from "../../api/hooks.ts"
+import type { Me, Today, Totals } from "@bt/contracts"
+import { useLast24h, useMe, useToday } from "../../api/hooks.ts"
 import { Page } from "../../shell/page.tsx"
 import { useNow } from "../../timer/use-now.ts"
 import { displayOf } from "./display.ts"
 import { FeedCard } from "./feed-card.tsx"
+import { TotalsCard } from "./totals-card.tsx"
 
 interface TodayCardsProps {
   readonly today: Today
+  readonly last24h: Totals | undefined
   readonly household: Me["household"]
 }
 
-const TodayCards = ({ today, household }: TodayCardsProps) => {
+const TodayCards = ({ today, last24h, household }: TodayCardsProps) => {
   const now = useNow()
-  return <FeedCard today={today} display={displayOf(household)} now={now} />
+  const display = displayOf(household)
+  return (
+    <>
+      <FeedCard today={today} display={display} now={now} />
+      <TotalsCard today={today.totals} last24h={last24h} volume={display.volume} />
+    </>
+  )
 }
 
 export const TodayPage = () => {
   const { data: me } = useMe()
   const { data: today, isError } = useToday()
+  const { data: last24h } = useLast24h()
   return (
     <Page title="Today" subtitle={me?.child.name}>
       {today === undefined || me === undefined ? (
         <output className="text-muted-foreground">{isError ? "Today couldn't be loaded." : "Loading…"}</output>
       ) : (
-        <TodayCards today={today} household={me.household} />
+        <TodayCards today={today} last24h={last24h?.totals} household={me.household} />
       )}
     </Page>
   )

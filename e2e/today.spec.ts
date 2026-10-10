@@ -24,6 +24,19 @@ const NO_TOTALS = {
 
 type Totals = typeof NO_TOTALS
 
+const TOTALS: Totals = {
+  feedsStarted: 6,
+  leftSeconds: 42 * 60,
+  rightSeconds: 38 * 60,
+  nursingSeconds: 80 * 60,
+  breastMilkMl: 120,
+  formulaMl: 60,
+  bottleMl: 180,
+  diapers: 5,
+  wetDiapers: 4,
+  dirtyDiapers: 2,
+}
+
 const audit = (at: number, by: string) => ({
   version: 1,
   createdBy: by,
@@ -104,6 +117,9 @@ const openToday = async (page: Page) => {
   await page.goto("/")
 }
 
+const total = (page: Page, label: string) =>
+  page.locator("dl > div").filter({ has: page.getByRole("term").filter({ hasText: label }) })
+
 const LAST_FEED_AT = NOW - 135 * MINUTE
 
 test.describe("Today, with the household's answers played by the test", () => {
@@ -144,5 +160,32 @@ test.describe("Today, with the household's answers played by the test", () => {
     await expect(page.getByText("12:00")).toBeVisible()
     await page.clock.setFixedTime(NOW + 5_000)
     await expect(page.getByText("12:00")).toBeVisible()
+  })
+
+  test("totals today, and the last 24 hours on the switch", async ({ page }) => {
+    await playToday(page, todayWith({ totals: TOTALS }), { ...TOTALS, feedsStarted: 9, diapers: 8 })
+    await openToday(page)
+    await expect(total(page, "Feeds started")).toContainText("6")
+    await expect(total(page, "Nursing")).toContainText("1 h 20 min")
+    await expect(total(page, "Nursing")).toContainText("Left 42 min · Right 38 min")
+    await expect(total(page, "Bottles")).toContainText("180 mL")
+    await expect(total(page, "Bottles")).toContainText("Breast milk 120 mL · Formula 60 mL")
+    await expect(total(page, "Diapers")).toContainText("5")
+    await expect(total(page, "Diapers")).toContainText("4 pee · 2 poo")
+    await page.getByRole("button", { name: "Last 24 h" }).click()
+    await expect(total(page, "Feeds started")).toContainText("9")
+    await expect(total(page, "Diapers")).toContainText("8")
+  })
+
+  test("shows bottles in fl oz when the household uses them", async ({ page }) => {
+    const me = await (await page.request.get("/api/me")).json()
+    await page.route("**/api/me", (route) =>
+      route.fulfill({
+        json: { ...me, household: { ...me.household, units: { ...me.household.units, volume: "fl_oz" } } },
+      }),
+    )
+    await playToday(page, todayWith({ totals: TOTALS }))
+    await openToday(page)
+    await expect(total(page, "Bottles")).toContainText("6.1 fl oz")
   })
 })
