@@ -168,4 +168,10 @@ If the "Baby tracker" app is ever deleted, recreate it before anything else, so 
 
 The token lasts a year. Before it expires, refresh it in Zero Trust (Access controls, Service credentials, Service tokens): Refresh keeps the same Client ID and secret.
 
-If the secret leaks, rotate the token in the same place. Rotate issues a new Client Secret and revokes the old one at once, and the Client ID stays the same. So `ADMIN_SERVICE_TOKEN_CN` and the "BT admin service token" policy need no change: put the new secret in `.admin-token.env`.
+If the secret leaks, replace the token; don't rotate it. Rotating keeps the Client ID, and the Worker admits any Access JWT that carries it, including ones already issued against the leaked secret, for up to 730 hours. Replace it in this order, so `pnpm release` can still take its bookmark:
+
+1. Create a new token.
+2. Add it to the "BT admin service token" policy, beside the old one.
+3. Put its Client ID in `ADMIN_SERVICE_TOKEN_CN`, merge, and run `pnpm release` while `.admin-token.env` still holds the old token. The deployed Worker still admits that one for the bookmark. From this release on, the Worker refuses every JWT that carries the old Client ID.
+4. Put the new token in `.admin-token.env`, and check that `pnpm admin pitr:bookmark` answers 200.
+5. Delete the old token, which also takes it out of the policy.
