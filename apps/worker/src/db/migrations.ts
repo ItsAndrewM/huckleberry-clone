@@ -4,6 +4,7 @@ import receiptRoutes from "./migrations/0002-receipt-routes.sql"
 import diapers from "./migrations/0003-diapers.sql"
 import feeds from "./migrations/0004-feeds.sql"
 import householdSettings from "./migrations/0005-household-settings.sql"
+import growth from "./migrations/0006-growth.sql"
 
 export const MIGRATIONS: ReadonlyArray<Migration> = [
   { name: "0001-household", sql: household },
@@ -11,4 +12,5 @@ export const MIGRATIONS: ReadonlyArray<Migration> = [
   { name: "0003-diapers", sql: diapers },
   { name: "0004-feeds", sql: feeds },
   { name: "0005-household-settings", sql: householdSettings },
+  { name: "0006-growth", sql: growth },
 ]

@@ -31,6 +31,11 @@ describe("the API the household serves", () => {
       "DELETE /api/segments/:id",
       "PATCH /api/portions/:id",
       "DELETE /api/portions/:id",
+      "GET /api/growth",
+      "POST /api/growth",
+      "PATCH /api/growth/:id",
+      "DELETE /api/growth/:id",
+      "POST /api/growth/:id/restore",
     ])
   })
 
@@ -50,6 +55,7 @@ describe("the API the household serves", () => {
       "FeedConflictEncoded",
       "HouseholdConflictEncoded",
       "InvalidInputEncoded",
+      "MeasurementConflictEncoded",
       "NotFoundEncoded",
       "UnauthorizedEncoded",
     ])

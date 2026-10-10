@@ -41,6 +41,7 @@ describe("migrations", () => {
       "child",
       "diapers",
       "feeds",
+      "growth_measurements",
       "household",
       "nursing_segments",
       "receipts",
