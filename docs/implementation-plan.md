@@ -46,7 +46,7 @@ apps/
 packages/
   domain/              pure TS, no framework imports: units, time/tz, intervals, timer math, aggregation,
                        validation, percentiles (LMS), affectedPeriods
-    data/who/          bundled WHO LMS tables + MANIFEST.json (source URL, dataset id, sha256)
+    data/who/          WHO's girls' expanded tables (days 0–730), lms-girls.json and MANIFEST.json (source URL, dataset id, sha256); pnpm who:tables rebuilds them (M4.1)
   contracts/           Effect Schema request/response/error types, query-key definitions
 e2e/                   Playwright specs
 scripts/               Node tooling and its tests, and pnpm admin (seed the household; disable and enable caregivers)
@@ -91,7 +91,7 @@ Pure functions. Each takes `now` and `tz` as arguments; nothing reads the clock 
 - `aggregate/` — `totalsIn(period, feeds, diapers, now)` totals any period: a local day (`zonedDayBounds`) or the last 24 hours (`last24hPeriod`, which has no end). Later: `weekSummary`, `monthSummary`, `cumulativeSeries`, `longestSleepStretch`, `supplementStatus`. Nursing and sleep are allocated by interval overlap with the period. Bottles are allocated by portion time. Feeds are counted by their start.
 - `validate/` — positive volume (≤ 1 decimal, finite), positive duration, end > start, not before birth, `notInFuture(instant, serverNow, toleranceMs = 5 min)`, ounces ∈ [0, 16).
 - `units/` — g ↔ lb+oz, cm ↔ in using the exact constants. Values are stored at full precision and rounded for display only. Bottle volumes convert between mL and US fl oz and are stored to 0.1 mL.
-- `growth/` — `ageInDays(measuredOn, birthDate)`, `zScoreLMS(x, L, M, S)` with WHO's restricted-application adjustment beyond ±3 SD, `percentile(z)` (normal CDF), `percentileFor(metric, sex, ageDays, value) → number | 'unavailable'`.
+- `growth/` — `girlsLms(metric, ageDays) → {L, M, S} | null` from the bundled WHO tables, days 0–730 (M4.1), `ageInDays(measuredOn, birthDate)`, `zScoreLMS(x, L, M, S)` with WHO's restricted-application adjustment beyond ±3 SD, `percentile(z)` (normal CDF), `percentileFor(metric, sex, ageDays, value) → number | 'unavailable'`.
 - `invalidation/` — `affectedPeriods(old: Interval | null, new: Interval | null, tz) → PeriodKey[]` (D7): the day, week and month keys. A point event is `{start: t, end: t}`.
 
 `pnpm coverage` (in CI) holds this package at 100 % statement, branch, function and line coverage. It is small, and most correctness lives here.
@@ -195,7 +195,7 @@ Covers AC 8, 9, 18 (growth part).
 
 | Task | Size | Notes |
 |---|---|---|
-| M4.1 **Percentile gate:** bundle the WHO girls' expanded daily LMS tables (weight-for-age, length-for-age, head-circumference-for-age, 0–730 days) with `MANIFEST.json` (URLs, dataset ids, sha256 checked in CI) | S | |
+| M4.1 **Percentile gate:** bundle the WHO girls' expanded daily LMS tables (weight-for-age, length-for-age, head-circumference-for-age, 0–730 days) with `MANIFEST.json` (URLs, dataset ids, sha256 checked in CI) | S | WHO's six workbooks for girls (z-scores and percentiles for each indicator) are bundled as JSON in `packages/domain/data/who`, one array per column, with `lms-girls.json`, the L, M and S per day that runtime code reads. `pnpm who:tables` rebuilds them from WHO. A scripts test checks every sha256 in `MANIFEST.json`, and that the runtime table matches the z-score tables (decided 10 Oct 2026) |
 | M4.2 LMS engine + validation: for every day 0–730 and each metric, the WHO published P3/P15/P50/P85/P97 values must map back to 3/15/50/85/97 within ±0.5 percentile points. Compare z-scores with WHO's expanded z-score tables, including the >3 SD restricted adjustment | M | Percentile display stays off until this suite passes. The tolerance goes into `docs/percentiles.md` |
 | M4.3 Growth core: POST/PATCH/DELETE/restore; at least one metric; clearing one metric keeps the others; clearing the last → confirm delete | S | |
 | M4.4 Growth UI: entry with lb+oz / kg / g and cm / in; measurement cards per the reference layout (date header, three columns, icon, value, whole-number percentile or "Percentile unavailable", chevron to edit); per-metric latest | M | |
