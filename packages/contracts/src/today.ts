@@ -1,4 +1,4 @@
-import { Schema } from "effect"
+import { Schema, SchemaTransformation } from "effect"
 import { HttpApiEndpoint, HttpApiGroup } from "effect/http-api"
 import { Diaper } from "./diapers.ts"
 import { Feed, Millilitres, Side } from "./feeds.ts"
@@ -33,13 +33,25 @@ export const RecentEntry = Schema.Union([
 ])
 export type RecentEntry = typeof RecentEntry.Type
 
+const isRecentEntry = Schema.is(Schema.toType(RecentEntry))
+
+export const RecentEntries = Schema.Array(Schema.Union([...RecentEntry.members, Schema.Json])).pipe(
+  Schema.decodeTo(
+    Schema.Array(Schema.toType(RecentEntry)),
+    SchemaTransformation.transform({
+      decode: (entries): ReadonlyArray<RecentEntry> => entries.filter(isRecentEntry),
+      encode: (entries) => entries,
+    }),
+  ),
+)
+
 export const Today = Schema.Struct({
   date: LocalDate,
   totals: Totals,
   activeFeed: Schema.NullOr(Feed),
   lastFeed: Schema.NullOr(Feed),
   prefill: Prefill,
-  recent: Schema.Array(RecentEntry),
+  recent: RecentEntries,
 })
 export type Today = typeof Today.Type
 

@@ -1,6 +1,6 @@
 import { Exit, Schema } from "effect"
 import { describe, expect, it } from "vitest"
-import { type Diaper, Last24h, Prefill, RecentEntry, Totals } from "../src/index.ts"
+import { type Diaper, Last24h, Prefill, RecentEntries, RecentEntry, Today, Totals } from "../src/index.ts"
 
 const AT = Date.UTC(2026, 9, 8, 14, 30)
 
@@ -66,5 +66,40 @@ describe("Last24h", () => {
   it("says when the 24 hours began", () => {
     expect(decodes(Last24h, { from: AT, totals: TOTALS })).toBe(true)
     expect(decodes(Last24h, { from: "yesterday", totals: TOTALS })).toBe(false)
+  })
+})
+
+describe("Today's recent entries", () => {
+  const decodeRecent = Schema.decodeUnknownSync(Schema.toCodecJson(RecentEntries))
+  const SECOND = { kind: "diaper", diaper: { ...DIAPER, id: "diaper-2" } }
+  const SLEEP = { kind: "sleep", sleep: { id: "sleep-1", startedAt: AT, endedAt: null } }
+
+  it("skips an entry of a kind this app doesn't know yet, such as M3's sleep, and keeps the rest in order", () => {
+    expect(decodeRecent([{ kind: "diaper", diaper: DIAPER }, SLEEP, SECOND])).toEqual([
+      { kind: "diaper", diaper: DIAPER },
+      SECOND,
+    ])
+  })
+
+  it("skips an entry it can't read, as the socket skips a key it can't read", () => {
+    expect(decodeRecent([{ kind: "diaper", diaper: { ...DIAPER, occurredAt: "noon" } }, SECOND])).toEqual([SECOND])
+  })
+
+  it("sends every entry as it is", () => {
+    expect(Schema.encodeSync(Schema.toCodecJson(RecentEntries))([{ kind: "diaper", diaper: DIAPER }])).toEqual([
+      { kind: "diaper", diaper: DIAPER },
+    ])
+  })
+
+  it("lets Today decode while its recent list holds a kind this app doesn't know", () => {
+    const today = {
+      date: "2026-10-08",
+      totals: TOTALS,
+      activeFeed: null,
+      lastFeed: null,
+      prefill: { lastBottle: null, lastSide: null },
+      recent: [SLEEP, { kind: "diaper", diaper: DIAPER }],
+    }
+    expect(decodes(Today, today)).toBe(true)
   })
 })
