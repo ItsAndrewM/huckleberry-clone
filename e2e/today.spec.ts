@@ -166,10 +166,11 @@ test.describe("Today, with the household's answers played by the test", () => {
     const startedAt = NOW - 30 * MINUTE
     const paused = feed(startedAt, andrew.id, { active: true, segments: [segment("s1", "right", startedAt, 12)] })
     await playToday(page, todayWith({ activeFeed: paused, lastFeed: paused }))
-    await openToday(page)
+    await page.clock.install({ time: NOW })
+    await page.goto("/")
     await expect(page.getByText("Feed paused")).toBeVisible()
     await expect(page.getByText("12:00")).toBeVisible()
-    await page.clock.setFixedTime(NOW + 5_000)
+    await page.clock.runFor(5_000)
     await expect(page.getByText("12:00")).toBeVisible()
   })
 
