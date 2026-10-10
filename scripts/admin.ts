@@ -1,4 +1,5 @@
 import { caregiverFromArgs, emailChangeFromArgs } from "./admin-caregiver.ts"
+import { restoreFromArgs } from "./admin-pitr.ts"
 import { adminRequest, seedFromArgs } from "./admin-seed.ts"
 
 const USAGE = `Usage: pnpm admin household:seed --name <name> --time-zone <IANA zone>
@@ -6,7 +7,10 @@ const USAGE = `Usage: pnpm admin household:seed --name <name> --time-zone <IANA 
   --child-name <name> --birth-date <YYYY-MM-DD> --sex <female|male> --gestational-age-days <days>
        pnpm admin caregiver:disable <email>
        pnpm admin caregiver:enable <email>
-       pnpm admin caregiver:set-email <current email> <new email>`
+       pnpm admin caregiver:set-email <current email> <new email>
+       pnpm admin pitr:bookmark
+       pnpm admin pitr:restore <bookmark>
+       pnpm admin pitr:restore --at <ISO time, like 2026-10-10T18:00:00Z>`
 
 const COMMANDS = new Map([
   ["household:seed", (args: string[]) => adminRequest(process.env, "/api/admin/household", seedFromArgs(args))],
@@ -22,6 +26,8 @@ const COMMANDS = new Map([
     "caregiver:set-email",
     (args: string[]) => adminRequest(process.env, "/api/admin/caregiver/set-email", emailChangeFromArgs(args)),
   ],
+  ["pitr:bookmark", () => adminRequest(process.env, "/api/admin/pitr/bookmark")],
+  ["pitr:restore", (args: string[]) => adminRequest(process.env, "/api/admin/pitr/restore", restoreFromArgs(args))],
 ])
 
 const [command = "", ...args] = process.argv.slice(2)

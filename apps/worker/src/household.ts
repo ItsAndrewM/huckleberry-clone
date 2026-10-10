@@ -1,7 +1,13 @@
 import { SOCKET_PATH } from "@bt/contracts"
 import { DurableObject } from "cloudflare:workers"
 import { Option, Schema } from "effect"
-import type { CaregiverStatus, EmailChangeResult } from "./admin.ts"
+import {
+  type CaregiverStatus,
+  type EmailChangeResult,
+  RESTART_REASON,
+  type RestoreTarget,
+  type ScheduledRestore,
+} from "./admin.ts"
 import { activeCaregiver, setCaregiverActive, setCaregiverEmail } from "./core/caregivers.ts"
 import { seedHousehold } from "./core/household.ts"
 import { PRUNE_EVERY_MS, pruneReceipts } from "./core/receipts.ts"
@@ -84,6 +90,19 @@ export class HouseholdDO extends DurableObject<HouseholdEnv> {
     return change.kind === "changed"
       ? { kind: "changed", email: newEmail, closedSockets: closeSockets(this.ctx, change.caregiverId) }
       : change
+  }
+
+  pitrBookmark(): Promise<string> {
+    return this.ctx.storage.getCurrentBookmark()
+  }
+
+  async pitrScheduleRestore(target: RestoreTarget): Promise<ScheduledRestore> {
+    const bookmark = target.kind === "bookmark" ? target.bookmark : await this.ctx.storage.getBookmarkForTime(target.at)
+    return { bookmark, undo: await this.ctx.storage.onNextSessionRestoreBookmark(bookmark) }
+  }
+
+  restart(): void {
+    this.ctx.abort(RESTART_REASON)
   }
 }
 

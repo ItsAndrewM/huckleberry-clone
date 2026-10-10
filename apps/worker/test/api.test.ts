@@ -2,12 +2,15 @@ import { HEARTBEAT } from "@bt/contracts"
 import { env } from "cloudflare:test"
 import { afterEach, describe, expect, it, vi } from "vitest"
 import type { Caller } from "../src/access.ts"
+import { RESTART_REASON, type RestoreTarget } from "../src/admin.ts"
 import { type Household, routeApi } from "../src/api.ts"
 import type { HouseholdSeed } from "../src/seed.ts"
 import { SEED } from "./fixtures.ts"
 
 const ORIGIN = "https://bt.example.test"
 const ADMIN_CLIENT_ID = "bt-admin.access"
+const BOOKMARK = "0000007b-0000b26e-00001538-0c3e87bb37b3db5cc52eedb93cd3b96b"
+const UNDO = "0000007b-0000b26f-00000000-00000000000000000000000000000000"
 
 const andrew: Caller = { kind: "user", email: "andrew@example.test" }
 const adminToken: Caller = { kind: "service", clientId: ADMIN_CLIENT_ID }
@@ -18,13 +21,19 @@ interface Recorded {
   readonly seeded: HouseholdSeed[]
   readonly toggled: string[]
   readonly emailChanges: string[]
+  readonly restores: RestoreTarget[]
 }
 
-const recordingHousehold = (alreadySeeded = false): Household & Recorded => {
+type Restart = () => Promise<void>
+
+const restartsAsAborted: Restart = () => Promise.reject(new Error(RESTART_REASON))
+
+const recordingHousehold = (alreadySeeded = false, restart = restartsAsAborted): Household & Recorded => {
   const forwarded: Request[] = []
   const seeded: HouseholdSeed[] = []
   const toggled: string[] = []
   const emailChanges: string[] = []
+  const restores: RestoreTarget[] = []
   const emails = SEED.caregivers.map((caregiver) => caregiver.email)
   const toggle = async (email: string, active: boolean) => {
     toggled.push(`${active ? "enable" : "disable"} ${email}`)
@@ -35,6 +44,7 @@ const recordingHousehold = (alreadySeeded = false): Household & Recorded => {
     seeded,
     toggled,
     emailChanges,
+    restores,
     fetch: async (request) => {
       forwarded.push(request)
       return new Response("from the household")
@@ -50,6 +60,12 @@ const recordingHousehold = (alreadySeeded = false): Household & Recorded => {
       if (emails.includes(newEmail)) return { kind: "taken" }
       return emails.includes(email) ? { kind: "changed", email: newEmail, closedSockets: 1 } : { kind: "unknown" }
     },
+    pitrBookmark: async () => BOOKMARK,
+    pitrScheduleRestore: async (target) => {
+      restores.push(target)
+      return { bookmark: target.kind === "bookmark" ? target.bookmark : BOOKMARK, undo: UNDO }
+    },
+    restart,
   }
 }
 
@@ -61,15 +77,18 @@ const unreachableHousehold: Household = {
   disableCaregiver: lost,
   enableCaregiver: lost,
   setCaregiverEmail: lost,
+  pitrBookmark: lost,
+  pitrScheduleRestore: lost,
+  restart: lost,
 }
 
 const routeWith =
-  (adminClientId: string | undefined, alreadySeeded = false) =>
+  (adminClientId: string | undefined, alreadySeeded = false, restart = restartsAsAborted) =>
   async (path: string, caller: Caller, init: RequestInit = {}) => {
-    const household = recordingHousehold(alreadySeeded)
+    const household = recordingHousehold(alreadySeeded, restart)
     const response = await routeApi(new Request(`${ORIGIN}${path}`, init), caller, household, adminClientId)
-    const { forwarded, seeded, toggled, emailChanges } = household
-    return { response, forwarded, seeded, toggled, emailChanges }
+    const { forwarded, seeded, toggled, emailChanges, restores } = household
+    return { response, forwarded, seeded, toggled, emailChanges, restores }
   }
 
 const route = routeWith(ADMIN_CLIENT_ID)
@@ -363,6 +382,11 @@ interface EmailChangeBody {
   readonly newEmail?: string
 }
 
+interface RestoreBody {
+  readonly bookmark?: string
+  readonly at?: number
+}
+
 describe("changing a caregiver's email (POST /api/admin/caregiver/set-email)", () => {
   const setEmail = (body: EmailChangeBody) =>
     route("/api/admin/caregiver/set-email", adminToken, jsonRequest(JSON.stringify(body)))
@@ -417,6 +441,87 @@ describe("changing a caregiver's email (POST /api/admin/caregiver/set-email)", (
     )
     expect(response.status).toBe(401)
     expect(emailChanges).toEqual([])
+  })
+})
+
+describe("taking a bookmark (POST /api/admin/pitr/bookmark)", () => {
+  it("answers 200 no-store with the household's current bookmark", async () => {
+    const { response } = await route("/api/admin/pitr/bookmark", adminToken, { method: "POST" })
+    expect(response.status).toBe(200)
+    expect(response.headers.get("cache-control")).toBe("no-store")
+    expect(await response.json()).toEqual({ bookmark: BOOKMARK })
+  })
+
+  it("is refused to a caregiver", async () => {
+    quietly("warn")
+    const { response } = await route("/api/admin/pitr/bookmark", andrew, { method: "POST" })
+    expect(response.status).toBe(401)
+  })
+})
+
+describe("restoring the household (POST /api/admin/pitr/restore)", () => {
+  const DAY_MS = 24 * 60 * 60 * 1000
+  const restore = (body: RestoreBody, restart = restartsAsAborted) =>
+    routeWith(ADMIN_CLIENT_ID, false, restart)("/api/admin/pitr/restore", adminToken, jsonRequest(JSON.stringify(body)))
+
+  it("restores to a bookmark, restarts the household, and answers with the bookmark that undoes it", async () => {
+    const { response, restores } = await restore({ bookmark: BOOKMARK })
+    expect(response.status).toBe(200)
+    expect(response.headers.get("cache-control")).toBe("no-store")
+    expect(await response.json()).toEqual({ restoredTo: BOOKMARK, undo: UNDO })
+    expect(restores).toEqual([{ kind: "bookmark", bookmark: BOOKMARK }])
+  })
+
+  it("restores to a time in the last 30 days", async () => {
+    const at = Date.now() - 2 * DAY_MS
+    const { response, restores } = await restore({ at })
+    expect(response.status).toBe(200)
+    expect(restores).toEqual([{ kind: "time", at }])
+  })
+
+  it.each([
+    ["a time in the future", () => ({ at: Date.now() + DAY_MS }), "at"],
+    ["a time more than 30 days ago", () => ({ at: Date.now() - 31 * DAY_MS }), "at"],
+  ])("refuses %s with 400, and schedules nothing", async (_label, body, path) => {
+    const { response, restores } = await restore(body())
+    expect(response.status).toBe(400)
+    expect(await response.json()).toEqual({ _tag: "InvalidInput", fieldErrors: [{ path, issue: "invalid" }] })
+    expect(restores).toEqual([])
+  })
+
+  it.each([
+    ["a bookmark that isn't one", { bookmark: "yesterday" }],
+    ["neither a bookmark nor a time", {}],
+  ])("refuses %s with 400, and schedules nothing", async (_label, body) => {
+    const { response, restores } = await restore(body)
+    expect(response.status).toBe(400)
+    expect(restores).toEqual([])
+  })
+
+  it.each([
+    ["the restart doesn't happen", () => Promise.resolve()],
+    ["the restart fails some other way", () => Promise.reject(new Error("Network connection lost."))],
+  ])("answers 503 and logs it when %s, since the restore then waits for the next restart", async (_label, restart) => {
+    const consoleError = quietly("error")
+    const { response, restores } = await restore({ bookmark: BOOKMARK }, restart)
+    expect(response.status).toBe(503)
+    expect(restores).toHaveLength(1)
+    expect(consoleError).toHaveBeenCalledExactlyOnceWith({
+      event: "household-unavailable",
+      route: "POST /api/admin/pitr/restore",
+      cause: "the restore is scheduled, but no restart came",
+    })
+  })
+
+  it("is refused to a caregiver, before the body is read", async () => {
+    quietly("warn")
+    const { response, restores } = await route(
+      "/api/admin/pitr/restore",
+      andrew,
+      jsonRequest(JSON.stringify({ bookmark: BOOKMARK })),
+    )
+    expect(response.status).toBe(401)
+    expect(restores).toEqual([])
   })
 })
 
