@@ -38,7 +38,7 @@ export const TotalsCard = ({ today, last24h, last24hFailed, volume }: TotalsCard
                 <dt className="text-muted-foreground">{label}</dt>
                 <dd className="text-base font-medium tabular-nums">{value}</dd>
                 {detail.length === 0 ? null : (
-                  <dd className="w-full text-right text-xs text-muted-foreground">
+                  <dd className="w-full text-right text-xs tabular-nums text-muted-foreground">
                     <Parts parts={detail} />
                   </dd>
                 )}

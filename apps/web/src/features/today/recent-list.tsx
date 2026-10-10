@@ -12,7 +12,7 @@ const RecentItem = ({ row }: { readonly row: RecentRow }) => {
       </span>
       <div className="flex min-w-0 flex-1 flex-col">
         <p className="font-medium">{row.title}</p>
-        <p className="text-sm text-muted-foreground">
+        <p className="text-sm tabular-nums text-muted-foreground">
           <Parts parts={row.detail} />
         </p>
       </div>
