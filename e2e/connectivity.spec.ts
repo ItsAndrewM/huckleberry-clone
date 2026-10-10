@@ -49,7 +49,7 @@ test("signs in back to the tab the parent moved to after the prompt appeared", a
 })
 
 test("treats the household refusing the caregiver as signed out too", async ({ page }) => {
-  await page.route("**/api/me", (route) =>
+  await page.route("**/api/**", (route) =>
     route.fulfill({ status: 401, contentType: "application/json", body: '{"_tag":"Unauthorized"}' }),
   )
   await page.goto("/")
