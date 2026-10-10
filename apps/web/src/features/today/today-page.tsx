@@ -4,6 +4,8 @@ import { Page } from "../../shell/page.tsx"
 import { useNow } from "../../timer/use-now.ts"
 import { displayOf } from "./display.ts"
 import { FeedCard } from "./feed-card.tsx"
+import { RecentList } from "./recent-list.tsx"
+import { recentRows } from "./recent-rows.ts"
 import { TotalsCard } from "./totals-card.tsx"
 
 interface TodayCardsProps {
@@ -20,6 +22,7 @@ const TodayCards = ({ today, last24h, last24hFailed, household }: TodayCardsProp
     <>
       <FeedCard today={today} display={display} now={now} />
       <TotalsCard today={today.totals} last24h={last24h} last24hFailed={last24hFailed} volume={display.volume} />
+      <RecentList rows={recentRows(today.recent, display, now)} />
     </>
   )
 }

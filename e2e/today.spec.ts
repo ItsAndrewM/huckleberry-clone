@@ -117,6 +117,9 @@ const openToday = async (page: Page) => {
   await page.goto("/")
 }
 
+const inOrder = (...parts: ReadonlyArray<string>) =>
+  new RegExp(parts.map((part) => part.replace(/[.*+?^${}()|[\]\\]/g, "\\$&").replace(/ /g, "\\s")).join(".*"))
+
 const total = (page: Page, label: string) =>
   page.locator("dl > div").filter({ has: page.getByRole("term").filter({ hasText: label }) })
 
@@ -196,4 +199,60 @@ test.describe("Today, with the household's answers played by the test", () => {
     await page.getByRole("button", { name: "Last 24 h" }).click()
     await expect(page.getByText("The last 24 hours couldn't be loaded.")).toBeVisible()
   })
+
+  test("lists the last 24 hours with who logged each, leaving out kinds this app doesn't know yet", async ({
+    page,
+  }) => {
+    const [andrew, emily] = await caregiversOf(page)
+    const bottleAt = NOW - 265 * MINUTE
+    const recent = [
+      {
+        kind: "diaper",
+        diaper: { id: "d1", occurredAt: NOW - 50 * MINUTE, wet: true, dirty: false, ...audit(NOW, emily.id) },
+      },
+      { kind: "sleep", sleep: { id: "sleep-1" } },
+      {
+        kind: "feed",
+        feed: feed(LAST_FEED_AT, andrew.id, {
+          segments: [segment("s1", "left", LAST_FEED_AT, 12)],
+          portions: [{ id: "p1", occurredAt: LAST_FEED_AT, breastMilkMl: 40, formulaMl: 20 }],
+        }),
+      },
+      {
+        kind: "feed",
+        feed: feed(bottleAt, emily.id, {
+          portions: [{ id: "p2", occurredAt: bottleAt, breastMilkMl: 0, formulaMl: 120 }],
+        }),
+      },
+    ]
+    await playToday(page, todayWith({ recent }))
+    await openToday(page)
+    await expect(page.getByRole("list", { name: "Last 24 hours" }).getByRole("listitem")).toHaveText([
+      inOrder("Diaper", "Pee", "8:40 AM", emily.displayName),
+      inOrder("Nursing and bottle", "Left 12 min · 60 mL", "7:15 AM", andrew.displayName),
+      inOrder("Bottle", "120 mL", "5:05 AM", emily.displayName),
+    ])
+  })
+
+  test("says so when nothing has been logged", async ({ page }) => {
+    await playToday(page, todayWith({}))
+    await openToday(page)
+    await expect(page.getByText("No feeds yet")).toBeVisible()
+    await expect(page.getByText("Nothing logged in the last 24 hours.")).toBeVisible()
+    await expect(total(page, "Feeds started")).toContainText("0")
+  })
+})
+
+test("shows a diaper the other phone just logged, without a reload", async ({ page }) => {
+  await page.goto("/")
+  await expect(page.getByText("Feeds started")).toBeVisible()
+  const occurredAt = Date.now() - 3 * MINUTE - Math.floor(Math.random() * MINUTE)
+  const logged = await page.request.post("/api/diapers", {
+    data: { actionId: crypto.randomUUID(), occurredAt, wet: false, dirty: true },
+  })
+  expect(logged.status()).toBe(201)
+  const entry = page
+    .getByRole("listitem")
+    .filter({ has: page.locator(`time[datetime="${new Date(occurredAt).toISOString()}"]`) })
+  await expect(entry).toContainText("Poo")
 })
