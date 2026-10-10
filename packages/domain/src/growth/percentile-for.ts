@@ -12,8 +12,9 @@ const RECORDED_PER_WHO_UNIT = {
 
 export const zScoreFor = (metric: GrowthMetric, sex: Sex, ageDays: number, value: number): number | "unavailable" => {
   const lms = sex === "female" ? girlsLms(metric, ageDays) : null
-  if (lms === null || !(Number.isFinite(value) && value > 0)) return "unavailable"
-  return zScoreLMS(value / RECORDED_PER_WHO_UNIT[metric], lms)
+  const whoValue = value / RECORDED_PER_WHO_UNIT[metric]
+  if (lms === null || !(Number.isFinite(whoValue) && whoValue > 0)) return "unavailable"
+  return zScoreLMS(whoValue, lms)
 }
 
 export const percentileFor = (

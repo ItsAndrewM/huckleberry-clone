@@ -24,6 +24,7 @@ describe("zScoreFor", () => {
     { reason: "a negative weight", sex: "female", ageDays: 0, value: -1 },
     { reason: "no number", sex: "female", ageDays: 0, value: Number.NaN },
     { reason: "an endless weight", sex: "female", ageDays: 0, value: Number.POSITIVE_INFINITY },
+    { reason: "a weight that rounds to nothing in kilograms", sex: "female", ageDays: 0, value: 1e-321 },
   ] as const)("is unavailable for $reason", ({ sex, ageDays, value }) => {
     expect(zScoreFor("weightForAge", sex, ageDays, value)).toBe("unavailable")
     expect(percentileFor("weightForAge", sex, ageDays, value)).toBe("unavailable")
