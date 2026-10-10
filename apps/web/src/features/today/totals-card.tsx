@@ -18,7 +18,7 @@ export const TotalsCard = ({ today, last24h, last24hFailed, volume }: TotalsCard
   return (
     <Card>
       <CardHeader className="items-center">
-        <CardTitle className="text-sm text-muted-foreground">Totals</CardTitle>
+        <CardTitle className="row-span-2 text-sm text-muted-foreground">Totals</CardTitle>
         <CardAction>
           <PeriodSwitch period={period} onChange={setPeriod} />
         </CardAction>
