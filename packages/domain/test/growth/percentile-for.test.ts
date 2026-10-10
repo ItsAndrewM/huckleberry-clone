@@ -39,4 +39,18 @@ describe("percentileFor", () => {
   it("gives the percentile of the measurement's z-score", () => {
     expect(percentileFor("lengthForAge", "female", 0, 49.1477 * 1.0379)).toBeCloseTo(84.1344746068543, 8)
   })
+
+  it.each([
+    { metric: "weightForAge", ageDays: 0, value: 200, expected: 0 },
+    { metric: "weightForAge", ageDays: 730, value: 40000, expected: 100 },
+    { metric: "lengthForAge", ageDays: 0, value: 20, expected: 0 },
+    { metric: "lengthForAge", ageDays: 730, value: 150, expected: 100 },
+    { metric: "headCircumferenceForAge", ageDays: 0, value: 15, expected: 0 },
+    { metric: "headCircumferenceForAge", ageDays: 730, value: 70, expected: 100 },
+  ] as const)(
+    "puts $metric at $value on day $ageDays, a limit growth records allow, at percentile $expected",
+    ({ metric, ageDays, value, expected }) => {
+      expect(percentileFor(metric, "female", ageDays, value)).toBe(expected)
+    },
+  )
 })
