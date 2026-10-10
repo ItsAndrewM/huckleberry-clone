@@ -1,4 +1,4 @@
-import { CalendarDaysIcon, ChartLineIcon, RulerIcon } from "lucide-react"
+import { CalendarDaysIcon, ChartLineIcon } from "lucide-react"
 import { ComingSoon } from "../shell/coming-soon.tsx"
 
 export const HistoryPage = () => (
@@ -11,8 +11,4 @@ export const HistoryPage = () => (
 
 export const TrendsPage = () => (
   <ComingSoon title="Trends" Icon={ChartLineIcon} description="Charts of feeding, diapers and sleep over time." />
-)
-
-export const GrowthPage = () => (
-  <ComingSoon title="Growth" Icon={RulerIcon} description="Weight, length and head size, with WHO percentiles." />
 )

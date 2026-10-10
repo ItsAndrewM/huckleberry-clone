@@ -187,7 +187,7 @@ Covers AC 6, 7, 12, 15 (export half), 16–20, 22, 23.
 | M3.7 Calendar Day view: hourly grid, duration blocks, point markers, growth strip, current-time line, lane layout (half-open, stable sort by start/end/id), cross-midnight fragments, marker clustering with an accessible list, tap-empty-slot to create | L | Layout is a pure function (`domain/calendar/layout.ts`), tested separately from rendering. AC 22, 23 |
 | M3.8 Calendar Week view: 7 columns, sticky headers, horizontal scroll, minimum column width; filters, period navigation, date picker | M | |
 | M3.9 History list view (accessible equivalent) with the same actions | S | |
-| M3.10 Trends: Day/Week/Month charts (Recharts), separate minutes and mL scales, numeric summaries next to each chart, "No entries" vs zero, partial-period labelling, averages with their denominator | M | |
+| M3.10 Trends: Day/Week/Month charts (TanStack Charts, which M4.5 adds; decided 10 Oct 2026), separate minutes and mL scales, numeric summaries next to each chart, "No entries" vs zero, partial-period labelling, averages with their denominator | M | |
 | M3.11 Export: `/api/export.json` (schema version, raw rows, audit) and `/api/export.csv` (events + growth tables) | S | |
 
 ### M4 — Growth and percentiles

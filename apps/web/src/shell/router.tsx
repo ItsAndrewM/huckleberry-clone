@@ -1,6 +1,7 @@
 import { createRootRoute, createRoute, createRouter } from "@tanstack/react-router"
+import { GrowthPage } from "../features/growth/growth-page.tsx"
 import { SettingsPage } from "../features/settings/settings-page.tsx"
-import { GrowthPage, HistoryPage, TrendsPage } from "../features/stubs.tsx"
+import { HistoryPage, TrendsPage } from "../features/stubs.tsx"
 import { TodayPage } from "../features/today/today-page.tsx"
 import { NotFoundPage } from "./not-found-page.tsx"
 import { Shell } from "./shell.tsx"
