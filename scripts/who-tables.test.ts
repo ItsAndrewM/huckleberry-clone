@@ -2,17 +2,22 @@ import { readdirSync, readFileSync } from "node:fs"
 import { describe, expect, it } from "vitest"
 import {
   checkWorkbook,
+  COLUMNS,
+  LAST_DAY,
   LMS_FILE,
   type LmsColumns,
   lmsJson,
   MANIFEST_FILE,
+  manifestJson,
   sha256Of,
   sharedStrings,
   sheetRows,
   type Table,
+  tableFromJson,
   tableJson,
   WHO_SOURCES,
   type WhoManifest,
+  whoManifest,
   type WhoSource,
   whoFiles,
   whoTable,
@@ -32,9 +37,19 @@ describe("the bundled WHO tables (packages/domain/data/who)", () => {
     expect(files.toSorted()).toEqual(manifest.files.map(({ path }) => path).toSorted())
   })
 
-  it("came from the workbooks pnpm who:tables downloads", () => {
-    const sources = manifest.sources.map(({ dataset, url }) => ({ dataset, url }))
-    expect(sources).toEqual(WHO_SOURCES.map(({ dataset, url }) => ({ dataset, url })))
+  it.each(WHO_SOURCES)("holds every column of $dataset, with a number for each day from 0 to 730", (source) => {
+    const table = tableFromJson(COLUMNS[source.kind], bundled(`${source.dataset}.json`).toString("utf8"), LAST_DAY)
+    expect(table).toHaveLength(LAST_DAY + 1)
+  })
+
+  it("is what pnpm who:tables writes from these tables, given the source sha256s it recorded", () => {
+    const recorded = new Map(manifest.sources.map(({ dataset, sha256 }) => [dataset, sha256]))
+    const reads = WHO_SOURCES.map((source) => ({
+      source,
+      sha256: recorded.get(source.dataset) ?? "",
+      table: tableFromJson(COLUMNS[source.kind], bundled(`${source.dataset}.json`).toString("utf8"), LAST_DAY),
+    }))
+    expect(bundled(MANIFEST_FILE).toString("utf8")).toBe(manifestJson(whoManifest(reads, whoFiles(reads))))
   })
 
   it("keeps the runtime L, M and S identical to the z-score tables'", () => {
@@ -149,6 +164,28 @@ describe("tableJson and lmsJson", () => {
     expect(lmsJson([{ indicator: "weightForAge", lms }])).toBe(
       '{\n  "weightForAge": [\n    {"L":0.3809,"M":3.2322,"S":0.14171}\n  ]\n}\n',
     )
+  })
+})
+
+describe("tableFromJson", () => {
+  it("reads back the table tableJson writes", () => {
+    const table = [
+      [0.3809, 3.2322],
+      [0.3259, 3.1957],
+    ]
+    expect(tableFromJson(["L", "M"], tableJson(["L", "M"], table), 1)).toEqual(table)
+  })
+
+  it.each([
+    { problem: "a missing column", text: '{"L":[1,2]}' },
+    { problem: "an extra column", text: '{"L":[1,2],"M":[1,2],"S":[1,2]}' },
+    { problem: "columns in another order", text: '{"M":[1,2],"L":[1,2]}' },
+    { problem: "a short column", text: '{"L":[1,2],"M":[1]}' },
+    { problem: "a null", text: '{"L":[1,2],"M":[1,null]}' },
+    { problem: "a value that isn't a number", text: '{"L":[1,2],"M":[1,"2"]}' },
+    { problem: "a column that isn't a list", text: '{"L":[1,2],"M":"12"}' },
+  ])("refuses $problem", ({ text }) => {
+    expect(() => tableFromJson(["L", "M"], text, 1)).toThrow(/^Expected /)
   })
 })
 

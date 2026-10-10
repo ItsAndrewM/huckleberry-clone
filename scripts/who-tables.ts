@@ -139,6 +139,18 @@ const jsonObject = (lines: readonly string[]) => `{\n${lines.join(",\n")}\n}\n`
 export const tableJson = (columns: readonly string[], table: Table): string =>
   jsonObject(columns.map((name, index) => `  ${JSON.stringify(name)}: ${JSON.stringify(column(table, index))}`))
 
+const isFullColumn = (values: readonly number[] | undefined, lastDay: number) =>
+  Array.isArray(values) && values.length === lastDay + 1 && values.every(Number.isFinite)
+
+export const tableFromJson = (columns: readonly string[], text: string, lastDay: number): Table => {
+  const parsed = new Map<string, readonly number[]>(Object.entries(JSON.parse(text)))
+  const found = [...parsed.keys()]
+  if (found.join() !== columns.join()) throw new Error(`Expected ${columns.join(", ")}; found ${found.join(", ")}`)
+  const partial = columns.find((name) => !isFullColumn(parsed.get(name), lastDay))
+  if (partial !== undefined) throw new Error(`Expected ${lastDay + 1} numbers in ${partial}`)
+  return Array.from({ length: lastDay + 1 }, (_, day) => columns.map((name) => parsed.get(name)?.[day] ?? Number.NaN))
+}
+
 export interface LmsColumns {
   readonly L: readonly number[]
   readonly M: readonly number[]
