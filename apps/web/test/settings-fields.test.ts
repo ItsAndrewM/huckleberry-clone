@@ -1,0 +1,63 @@
+import { HouseholdConflict, InvalidInput, ServiceUnavailable, Unauthorized } from "@bt/contracts"
+import { describe, expect, it } from "vitest"
+import { AuthRequired, Offline, Unexpected } from "../src/api/errors.ts"
+import { saveFailure } from "../src/features/settings/messages.ts"
+import { timeZoneGroups } from "../src/features/settings/time-zones.ts"
+import { unitChange } from "../src/features/settings/units.ts"
+
+const HOUSEHOLD = {
+  name: "Home",
+  timeZone: "America/Vancouver",
+  units: { volume: "ml", weight: "kg", length: "cm" },
+  version: 3,
+  updatedBy: "caregiver-2",
+  updatedAt: Date.UTC(2026, 9, 8),
+} as const
+
+describe("timeZoneGroups", () => {
+  it("groups the phone's zones by region, each sorted by place, with the household's zone kept even if unknown", () => {
+    const zones = ["Europe/London", "America/Vancouver", "America/Argentina/Buenos_Aires", "UTC"]
+    expect(timeZoneGroups(zones, "Asia/Calcutta")).toEqual([
+      {
+        region: "America",
+        zones: [
+          { value: "America/Argentina/Buenos_Aires", label: "Argentina / Buenos Aires" },
+          { value: "America/Vancouver", label: "Vancouver" },
+        ],
+      },
+      { region: "Asia", zones: [{ value: "Asia/Calcutta", label: "Calcutta" }] },
+      { region: "Europe", zones: [{ value: "Europe/London", label: "London" }] },
+      { region: "Other", zones: [{ value: "UTC", label: "UTC" }] },
+    ])
+  })
+})
+
+describe("unitChange", () => {
+  it("names the one unit a tap changes, and nothing for a value that isn't one of its choices", () => {
+    expect(unitChange("volume", "fl_oz")).toEqual({ volume: "fl_oz" })
+    expect(unitChange("weight", "lb_oz")).toEqual({ weight: "lb_oz" })
+    expect(unitChange("length", "in")).toEqual({ length: "in" })
+    expect(unitChange("volume", "lb_oz")).toBeUndefined()
+  })
+})
+
+describe("saveFailure", () => {
+  it.each([
+    [new Offline(), "Not saved: there's no connection. Try again once you're back online."],
+    [new AuthRequired(), "Not saved. Sign in, then try again."],
+    [new Unauthorized(), "Not saved. Sign in, then try again."],
+    [
+      new HouseholdConflict({ code: "STALE_VERSION", current: HOUSEHOLD }),
+      "This changed on another phone a moment ago. Check it and try again.",
+    ],
+    [new ServiceUnavailable(), "Not saved. Try again."],
+    [new Unexpected({ status: 500 }), "Not saved. Try again."],
+  ])("says why %o wasn't saved", (error, message) => {
+    expect(saveFailure(error)).toBe(message)
+  })
+
+  it("says nothing before a save, or for a refusal its fields explain", () => {
+    expect(saveFailure(null)).toBeUndefined()
+    expect(saveFailure(new InvalidInput({ fieldErrors: [{ path: "name", issue: "invalid" }] }))).toBeUndefined()
+  })
+})
