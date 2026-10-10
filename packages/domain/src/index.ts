@@ -8,7 +8,7 @@ export {
   sessionBounds,
   type Side,
 } from "./feed/feed.ts"
-export { ageInDays } from "./growth/age.ts"
+export { ageInDays, ageInMonthsAndDays, type MonthsAndDays } from "./growth/age.ts"
 export { percentile } from "./growth/normal-cdf.ts"
 export {
   CURVE_PERCENTILES,
