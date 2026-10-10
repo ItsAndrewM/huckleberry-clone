@@ -143,6 +143,9 @@ importers:
       '@bt/contracts':
         specifier: workspace:*
         version: link:../../packages/contracts
+      '@bt/domain':
+        specifier: workspace:*
+        version: link:../../packages/domain
       '@tanstack/react-query':
         specifier: 'catalog:'
         version: 5.104.1(react@19.3.0)

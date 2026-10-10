@@ -4,10 +4,21 @@ import { useSyncExternalStore } from "react"
 import { useApp } from "../app-context.ts"
 import { meQuery } from "./me.ts"
 import { type ChildFields, type HouseholdChange, rememberSaved, saveChild, saveHousehold } from "./settings.ts"
+import { last24hQuery, todayQuery } from "./today.ts"
 
 export const useMe = () => {
   const { api } = useApp()
   return useQuery(meQuery(api, useQueryClient()))
+}
+
+export const useToday = () => {
+  const { api } = useApp()
+  return useQuery(todayQuery(api))
+}
+
+export const useLast24h = () => {
+  const { api } = useApp()
+  return useQuery(last24hQuery(api))
 }
 
 export const useConnectivity = () => {

@@ -1535,7 +1535,8 @@
                               "diaper"
                             ],
                             "additionalProperties": false
-                          }
+                          },
+                          {}
                         ]
                       }
                     }
