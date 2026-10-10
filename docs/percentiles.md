@@ -27,7 +27,7 @@ The app works out a growth percentile only from WHO's Child Growth Standards for
 | WHO's SD4neg to SD4, through `zScoreFor` | ±0.002 in z | 0.0014: weight, SD3neg, day 7 |
 
 - **±0.5 points** is the implementation plan's bar. WHO prints every value to three decimals, so its P3 read back lands near 3, not on it.
-- **±0.002 in z** is the tight check. It absorbs that rounding, yet it fails a table read one day out of step. Reading the next day's L, M and S misses it in every SD column, on every day, by at least 0.00217 (head circumference, SD4, day 723).
+- **±0.002 in z** is the tight check. It absorbs that rounding, yet it fails a table read one day out of step. Reading the next day's L, M and S misses it in every SD column, on every day, by at least 0.0021 (head circumference, SD4, day 723).
 - **SD4 and SD4neg test the restricted application.** WHO's values for them are its restricted ones. Without the restriction, weight's SD4neg misses by up to 0.17 (day 728).
 
 ## Sources
