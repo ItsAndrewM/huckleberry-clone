@@ -1,5 +1,16 @@
 import { describe, expect, it } from "vitest"
-import { type DeployConfig, deployProblems } from "./release-checks.ts"
+import {
+  bookmarkFrom,
+  type Checkout,
+  checkoutProblems,
+  ciProblems,
+  type DeployConfig,
+  deployLogLine,
+  deployProblems,
+  withoutCloudflareEnv,
+} from "./release-checks.ts"
+
+const BOOKMARK = "0000007b-0000b26e-00001538-0c3e87bb37b3db5cc52eedb93cd3b96b"
 
 const DEPLOYABLE: DeployConfig = {
   name: "baby-tracker",
@@ -9,6 +20,8 @@ const DEPLOYABLE: DeployConfig = {
   vars: { ACCESS_AUD: "941d341f", ADMIN_SERVICE_TOKEN_CN: "a1b2c3.access" },
   observability: { logs: { invocation_logs: false } },
 }
+
+const ON_MAIN: Checkout = { branch: "main", clean: true, head: "7321bf2", originMain: "7321bf2" }
 
 describe("the Worker config a release deploys", () => {
   it("passes as built for production", () => {
@@ -56,5 +69,61 @@ describe("the Worker config a release deploys", () => {
     ],
   ])("refuses %s", (_label, change, problems) => {
     expect(deployProblems({ ...DEPLOYABLE, ...change })).toEqual(problems)
+  })
+})
+
+describe("the checkout a release deploys from", () => {
+  it("passes on a clean main that matches origin/main", () => {
+    expect(checkoutProblems(ON_MAIN)).toEqual([])
+  })
+
+  it.each([
+    ["a feature branch", { branch: "feature/x" }, ["the checkout is on main"]],
+    ["uncommitted changes", { clean: false }, ["the checkout has no uncommitted changes"]],
+    ["a main that's behind or ahead of origin", { originMain: "2eee922" }, ["main is the same commit as origin/main"]],
+  ])("refuses %s", (_label, change, problems) => {
+    expect(checkoutProblems({ ...ON_MAIN, ...change })).toEqual(problems)
+  })
+})
+
+describe("CI on the commit a release deploys", () => {
+  it("passes once a run has finished green", () => {
+    expect(ciProblems([{ status: "completed", conclusion: "success" }])).toEqual([])
+  })
+
+  it.each([
+    ["no run yet", [], ["CI has run on this commit"]],
+    ["a run still going", [{ status: "in_progress", conclusion: "" }], ["CI has finished on this commit"]],
+    ["a red run", [{ status: "completed", conclusion: "failure" }], ["CI passed on this commit"]],
+    ["a cancelled run", [{ status: "completed", conclusion: "cancelled" }], ["CI passed on this commit"]],
+  ])("refuses %s", (_label, runs, problems) => {
+    expect(ciProblems(runs)).toEqual(problems)
+  })
+})
+
+describe("the build a release runs", () => {
+  it("drops CLOUDFLARE_ENV, so a shell left on local still builds production", () => {
+    expect(withoutCloudflareEnv({ CLOUDFLARE_ENV: "local", PATH: "/usr/bin" })).toEqual({ PATH: "/usr/bin" })
+  })
+})
+
+describe("the bookmark a release takes before deploying", () => {
+  it("is read from the admin route's answer", () => {
+    expect(bookmarkFrom(200, JSON.stringify({ bookmark: BOOKMARK }))).toBe(BOOKMARK)
+  })
+
+  it.each([
+    ["a refusal", 401, JSON.stringify({ _tag: "Unauthorized" })],
+    ["Access's sign-in redirect, from a wrong service token", 302, ""],
+    ["an answer that isn't JSON", 200, "<html>"],
+    ["a bookmark that isn't one", 200, JSON.stringify({ bookmark: "yesterday" })],
+  ])("stops the release on %s", (_label, status, body) => {
+    expect(() => bookmarkFrom(status, body)).toThrow(`Couldn't take a bookmark before deploying: ${status}`)
+  })
+
+  it("is logged with the time and the commit, or noted as missing on the first deploy", () => {
+    const at = new Date(Date.UTC(2026, 9, 10, 18))
+    expect(deployLogLine(at, "7321bf2", BOOKMARK)).toBe(`2026-10-10T18:00:00.000Z 7321bf2 ${BOOKMARK}\n`)
+    expect(deployLogLine(at, "7321bf2", null)).toBe("2026-10-10T18:00:00.000Z 7321bf2 first-deploy-no-bookmark\n")
   })
 })
