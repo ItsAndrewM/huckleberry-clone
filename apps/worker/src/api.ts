@@ -1,8 +1,8 @@
-import { ServiceUnavailable, Unauthorized } from "@bt/contracts"
+import { SOCKET_PATH, ServiceUnavailable, Unauthorized } from "@bt/contracts"
 import type { Caller } from "./access.ts"
 import { type AdminHousehold, routeAdmin } from "./admin.ts"
 import { errorResponse } from "./error-response.ts"
-import { logOutage, logRefusal, type Refused, routeOf } from "./logs.ts"
+import { logForeignOrigin, logOutage, logRefusal, type Refused, routeOf } from "./logs.ts"
 
 export interface Household extends AdminHousehold {
   fetch(request: Request): Promise<Response>
@@ -38,6 +38,16 @@ const unavailable = (route: string) => (error: Error) => {
 const isAdmin = (caller: Caller, adminClientId: string | undefined): boolean =>
   caller.kind === "service" && adminClientId !== undefined && adminClientId !== "" && caller.clientId === adminClientId
 
+const toHousehold = (request: Request, route: string, email: string, household: Household) => {
+  const url = new URL(request.url)
+  const origin = request.headers.get("origin")
+  if (url.pathname === SOCKET_PATH && origin !== url.origin) {
+    logForeignOrigin(route, origin)
+    return new Response(null, { status: 403, headers: { "cache-control": "no-store" } })
+  }
+  return household.fetch(forHousehold(request, email)).catch(unavailable(route))
+}
+
 export const routeApi = (
   request: Request,
   caller: Caller,
@@ -58,5 +68,5 @@ export const routeApi = (
       : refuse(route, "not-admin")
   }
   if (caller.kind === "service") return refuse(route, "service-token")
-  return household.fetch(forHousehold(request, caller.email)).catch(unavailable(route))
+  return toHousehold(request, route, caller.email, household)
 }

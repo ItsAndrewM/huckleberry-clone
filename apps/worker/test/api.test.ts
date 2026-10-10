@@ -344,7 +344,7 @@ describe("a WebSocket upgrade", () => {
   it("reaches the household with its upgrade intact, and comes back as a live socket", async () => {
     const household = env.HOUSEHOLD.getByName(crypto.randomUUID())
     await household.seedHousehold(SEED)
-    const request = new Request(`${ORIGIN}/api/ws`, { headers: { upgrade: "websocket" } })
+    const request = new Request(`${ORIGIN}/api/ws`, { headers: { upgrade: "websocket", origin: ORIGIN } })
     const response = await routeApi(request, andrew, household, ADMIN_CLIENT_ID)
     expect(response.status).toBe(101)
     const socket = response.webSocket
@@ -355,6 +355,37 @@ describe("a WebSocket upgrade", () => {
     })
     socket.send(HEARTBEAT.ping)
     expect(await pong).toBe(HEARTBEAT.pong)
+  })
+
+  it.each([
+    [
+      "a sibling site on the same domain",
+      { origin: "https://jude-bedtime.bt.example.test" },
+      "https://jude-bedtime.bt.example.test",
+    ],
+    ["another site", { origin: "https://evil.test" }, "https://evil.test"],
+    ["the app over plain HTTP", { origin: "http://bt.example.test" }, "http://bt.example.test"],
+    ["a sandboxed page", { origin: "null" }, "null"],
+    ["no Origin at all", {}, null],
+  ])("is refused with 403 from %s, which never reaches the household", async (_label, headers, origin) => {
+    const consoleWarn = quietly("warn")
+    const { response, forwarded } = await route("/api/ws", andrew, { headers: { upgrade: "websocket", ...headers } })
+    expect(response.status).toBe(403)
+    expect(response.headers.get("cache-control")).toBe("no-store")
+    expect(response.webSocket).toBeNull()
+    expect(forwarded).toEqual([])
+    expect(consoleWarn).toHaveBeenCalledExactlyOnceWith({
+      event: "refused",
+      reason: "foreign-origin",
+      route: "GET /api/ws",
+      origin,
+    })
+  })
+
+  it("leaves the Origin of other requests to the browser's CORS, so only the socket is checked", async () => {
+    const { response, forwarded } = await route("/api/me", andrew, { headers: { origin: "https://evil.test" } })
+    expect(await response.text()).toBe("from the household")
+    expect(forwarded).toHaveLength(1)
   })
 })
 
