@@ -24,6 +24,15 @@ test("moves between the tabs, marking the one that's open", async ({ page }) => 
   }
 })
 
+test("marks the open tab even when the address carries a query", async ({ page }) => {
+  await page.goto("/history?week=2026-W41")
+  await expect(page.getByRole("heading", { name: "History", level: 1 })).toBeVisible()
+  await expect(page.getByRole("navigation", { name: "Main" }).getByRole("link", { name: "History" })).toHaveAttribute(
+    "aria-current",
+    "page",
+  )
+})
+
 test("answers a path no tab has with Page not found, and a way back to Today", async ({ page }) => {
   await page.goto("/no-such-page")
   await expect(page.getByRole("heading", { name: "Page not found", level: 1 })).toBeVisible()

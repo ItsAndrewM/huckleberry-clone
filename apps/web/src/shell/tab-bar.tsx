@@ -19,7 +19,7 @@ export const TabBar = () => (
         <li key={to} className="flex-1">
           <Link
             to={to}
-            activeOptions={{ exact: true }}
+            activeOptions={{ exact: true, includeSearch: false }}
             className="flex h-14 flex-col items-center justify-center gap-1 text-xs font-medium text-muted-foreground transition-colors data-[status=active]:text-primary"
           >
             <Icon aria-hidden="true" className="size-5" />
