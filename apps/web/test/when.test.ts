@@ -15,6 +15,10 @@ describe("resolveWhen", () => {
       ok: true,
       instant: at("2026-10-09T18:30:00Z"),
     })
+    expect(resolveWhen({ kind: "at", local: "2026-10-09T11:30", pick: null }, "Europe/London", NOON)).toEqual({
+      ok: true,
+      instant: at("2026-10-09T10:30:00Z"),
+    })
   })
 
   it("asks which 1:30 when the clocks go back, then takes the one picked", () => {
