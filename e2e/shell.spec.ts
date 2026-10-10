@@ -50,12 +50,24 @@ test("sends signed-in /api/* fetches through to the household, which knows the a
     household: {
       name: "Local household",
       timeZone: "America/Vancouver",
+      units: { volume: "ml", weight: "kg", length: "cm" },
+      version: expect.any(Number),
+      updatedBy: null,
+      updatedAt: expect.any(Number),
       caregivers: [
         { id: expect.any(String), displayName: "Andrew (local)" },
         { id: expect.any(String), displayName: "Emily (local)" },
       ],
     },
-    child: { name: "Robin", birthDate: "2026-09-01" },
+    child: {
+      name: "Robin",
+      birthDate: "2026-09-01",
+      sex: "female",
+      gestationalAgeDays: 281,
+      version: expect.any(Number),
+      updatedBy: null,
+      updatedAt: expect.any(Number),
+    },
   })
 })
 

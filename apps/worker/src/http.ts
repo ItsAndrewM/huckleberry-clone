@@ -21,6 +21,7 @@ import { meOf } from "./core/household.ts"
 import { last24hOf, todayOf } from "./core/today.ts"
 import { errorResponse } from "./error-response.ts"
 import { feedHandlers } from "./feed-handlers.ts"
+import { householdHandlers } from "./household-handlers.ts"
 import { mutations, type Saved } from "./mutations.ts"
 import type { Broadcast } from "./sockets.ts"
 
@@ -95,6 +96,7 @@ export const householdApi = (storage: DurableObjectStorage, broadcast: Broadcast
   )
   const groups = Layer.mergeAll(
     me,
+    householdHandlers(storage, broadcast),
     todayHandlers(storage.sql),
     diaperHandlers(storage, broadcast),
     feedHandlers(storage, broadcast),

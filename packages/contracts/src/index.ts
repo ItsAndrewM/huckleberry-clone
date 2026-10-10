@@ -40,6 +40,25 @@ export {
   ServiceUnavailable,
   Unauthorized,
 } from "./errors.ts"
+export {
+  Child,
+  ChildConflict,
+  ChildEdit,
+  ChildGroup,
+  GestationalAgeDays,
+  Household,
+  HouseholdConflict,
+  HouseholdEdit,
+  HouseholdGroup,
+  LengthUnit,
+  Name,
+  SavedChild,
+  SavedHousehold,
+  Sex,
+  Units,
+  VolumeUnit,
+  WeightUnit,
+} from "./household.ts"
 export { Caregiver, CaregiverName, Me } from "./me.ts"
 export { Changed, QueryKey, queryKeys } from "./query-keys.ts"
 export { CAREGIVER_DISABLED, ChangedMessage, HEARTBEAT, SOCKET_PATH } from "./socket.ts"

@@ -4,7 +4,7 @@ import { ANDREW, caregiverId, EMILY, newHousehold, SEED, seededHousehold } from 
 import { get, inStorage } from "./requests.ts"
 
 describe("GET /api/me", () => {
-  it("tells an active caregiver who they are, and their household and child", async () => {
+  it("tells an active caregiver who they are, and their household and child as Settings edits them", async () => {
     const response = await get(await seededHousehold(), "/api/me", "emily@example.test")
     expect(response.status).toBe(200)
     expect(await response.json()).toEqual({
@@ -12,12 +12,24 @@ describe("GET /api/me", () => {
       household: {
         name: "Test household",
         timeZone: "America/Vancouver",
+        units: { volume: "ml", weight: "kg", length: "cm" },
+        version: 1,
+        updatedBy: null,
+        updatedAt: expect.any(Number),
         caregivers: [
           { id: expect.any(String), displayName: "Andrew" },
           { id: expect.any(String), displayName: "Emily" },
         ],
       },
-      child: { name: "Robin", birthDate: "2026-09-01" },
+      child: {
+        name: "Robin",
+        birthDate: "2026-09-01",
+        sex: "female",
+        gestationalAgeDays: 281,
+        version: 1,
+        updatedBy: null,
+        updatedAt: expect.any(Number),
+      },
     })
   })
 

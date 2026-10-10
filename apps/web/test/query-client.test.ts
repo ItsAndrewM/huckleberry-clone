@@ -10,8 +10,24 @@ const json = { "content-type": "application/json" }
 const meFor = (email: string) =>
   JSON.stringify({
     caregiver: { id: email, email, displayName: email },
-    household: { name: "Home", timeZone: "America/Vancouver", caregivers: [] },
-    child: { name: "Robin", birthDate: "2026-09-01" },
+    household: {
+      name: "Home",
+      timeZone: "America/Vancouver",
+      units: { volume: "ml", weight: "kg", length: "cm" },
+      version: 1,
+      updatedBy: null,
+      updatedAt: Date.UTC(2026, 9, 8),
+      caregivers: [],
+    },
+    child: {
+      name: "Robin",
+      birthDate: "2026-09-01",
+      sex: "female",
+      gestationalAgeDays: 281,
+      version: 1,
+      updatedBy: null,
+      updatedAt: Date.UTC(2026, 9, 8),
+    },
   })
 
 describe("retryTransient", () => {

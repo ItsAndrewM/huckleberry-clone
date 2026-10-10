@@ -8,8 +8,24 @@ const ORIGIN = "https://bt.example.test"
 
 const ME = {
   caregiver: { id: "caregiver-1", email: "andrew@example.test", displayName: "Andrew" },
-  household: { name: "Home", timeZone: "America/Vancouver", caregivers: [] },
-  child: { name: "Robin", birthDate: "2026-09-01" },
+  household: {
+    name: "Home",
+    timeZone: "America/Vancouver",
+    units: { volume: "ml", weight: "kg", length: "cm" },
+    version: 1,
+    updatedBy: null,
+    updatedAt: Date.UTC(2026, 9, 8),
+    caregivers: [],
+  },
+  child: {
+    name: "Robin",
+    birthDate: "2026-09-01",
+    sex: "female",
+    gestationalAgeDays: 281,
+    version: 1,
+    updatedBy: null,
+    updatedAt: Date.UTC(2026, 9, 8),
+  },
 }
 
 const json = (status: number, body: string) =>
