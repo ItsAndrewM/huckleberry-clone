@@ -1,29 +1,80 @@
-import type { Caregiver, CaregiverName, Me } from "@bt/contracts"
+import type {
+  Caregiver,
+  CaregiverName,
+  Child,
+  Household,
+  LengthUnit,
+  Me,
+  Sex,
+  VolumeUnit,
+  WeightUnit,
+} from "@bt/contracts"
 import { canonicalTimeZone } from "@bt/domain"
 import type { HouseholdSeed, SeedResult } from "../seed.ts"
 
-type HouseholdRow = { name: string; time_zone: string }
+export type HouseholdRow = {
+  name: string
+  time_zone: string
+  volume_unit: VolumeUnit
+  weight_unit: WeightUnit
+  length_unit: LengthUnit
+  version: number
+  updated_by: string | null
+  updated_at: number
+}
+export type ChildRow = {
+  name: string
+  birth_date: string
+  sex: Sex
+  gestational_age_days: number
+  version: number
+  updated_by: string | null
+  updated_at: number
+}
 type CaregiverRow = { email: string; display_name: string }
-type ChildRow = { name: string; birth_date: string; sex: "female" | "male"; gestational_age_days: number }
+
+export const HOUSEHOLD_COLUMNS =
+  "name, time_zone, volume_unit, weight_unit, length_unit, version, updated_by, updated_at"
+export const CHILD_COLUMNS = "name, birth_date, sex, gestational_age_days, version, updated_by, updated_at"
+
+export const householdFrom = (row: HouseholdRow): Household => ({
+  name: row.name,
+  timeZone: row.time_zone,
+  units: { volume: row.volume_unit, weight: row.weight_unit, length: row.length_unit },
+  version: row.version,
+  updatedBy: row.updated_by,
+  updatedAt: row.updated_at,
+})
+
+export const childFrom = (row: ChildRow): Child => ({
+  name: row.name,
+  birthDate: row.birth_date,
+  sex: row.sex,
+  gestationalAgeDays: row.gestational_age_days,
+  version: row.version,
+  updatedBy: row.updated_by,
+  updatedAt: row.updated_at,
+})
+
+export const householdOf = (sql: SqlStorage): Household =>
+  householdFrom(sql.exec<HouseholdRow>(`SELECT ${HOUSEHOLD_COLUMNS} FROM household`).one())
+
+export const childOf = (sql: SqlStorage): Child =>
+  childFrom(sql.exec<ChildRow>(`SELECT ${CHILD_COLUMNS} FROM child`).one())
 
 const storedHousehold = (sql: SqlStorage): HouseholdSeed | undefined => {
-  const [household] = sql.exec<HouseholdRow>("SELECT name, time_zone FROM household").toArray()
+  const [household] = sql.exec<HouseholdRow>(`SELECT ${HOUSEHOLD_COLUMNS} FROM household`).toArray()
   if (household === undefined) return undefined
   const caregivers = sql
     .exec<CaregiverRow>("SELECT email, display_name FROM caregivers ORDER BY rowid")
     .toArray()
     .map(({ email, display_name }) => ({ email, displayName: display_name }))
-  const child = sql.exec<ChildRow>("SELECT name, birth_date, sex, gestational_age_days FROM child").one()
+  const { name, birthDate, sex, gestationalAgeDays } = childOf(sql)
   return {
     name: household.name,
     timeZone: household.time_zone,
     caregivers,
-    child: {
-      name: child.name,
-      birthDate: child.birth_date,
-      sex: child.sex,
-      gestationalAgeDays: child.gestational_age_days,
-    },
+    child: { name, birthDate, sex, gestationalAgeDays },
   }
 }
 
@@ -74,12 +125,8 @@ const caregiverNames = (sql: SqlStorage): CaregiverName[] =>
     .toArray()
     .map(({ id, display_name }) => ({ id, displayName: display_name }))
 
-export const meOf = (sql: SqlStorage, caregiver: Caregiver): Me => {
-  const household = sql.exec<HouseholdRow>("SELECT name, time_zone FROM household").one()
-  const child = sql.exec<{ name: string; birth_date: string }>("SELECT name, birth_date FROM child").one()
-  return {
-    caregiver,
-    household: { name: household.name, timeZone: household.time_zone, caregivers: caregiverNames(sql) },
-    child: { name: child.name, birthDate: child.birth_date },
-  }
-}
+export const meOf = (sql: SqlStorage, caregiver: Caregiver): Me => ({
+  caregiver,
+  household: { ...householdOf(sql), caregivers: caregiverNames(sql) },
+  child: childOf(sql),
+})

@@ -50,6 +50,58 @@
                         "timeZone": {
                           "type": "string"
                         },
+                        "units": {
+                          "type": "object",
+                          "properties": {
+                            "volume": {
+                              "type": "string",
+                              "enum": [
+                                "ml",
+                                "fl_oz"
+                              ]
+                            },
+                            "weight": {
+                              "type": "string",
+                              "enum": [
+                                "kg",
+                                "g",
+                                "lb_oz"
+                              ]
+                            },
+                            "length": {
+                              "type": "string",
+                              "enum": [
+                                "cm",
+                                "in"
+                              ]
+                            }
+                          },
+                          "required": [
+                            "volume",
+                            "weight",
+                            "length"
+                          ],
+                          "additionalProperties": false
+                        },
+                        "version": {
+                          "type": "integer",
+                          "minimum": 1
+                        },
+                        "updatedBy": {
+                          "anyOf": [
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "updatedAt": {
+                          "type": "integer",
+                          "minimum": 946684800000,
+                          "exclusiveMaximum": 4102444800000
+                        },
                         "caregivers": {
                           "type": "array",
                           "items": {
@@ -73,6 +125,10 @@
                       "required": [
                         "name",
                         "timeZone",
+                        "units",
+                        "version",
+                        "updatedBy",
+                        "updatedAt",
                         "caregivers"
                       ],
                       "additionalProperties": false
@@ -81,16 +137,55 @@
                       "type": "object",
                       "properties": {
                         "name": {
-                          "type": "string"
+                          "type": "string",
+                          "pattern": "^\\S[\\s\\S]*\\S$|^\\S$|^$",
+                          "minLength": 1,
+                          "maxLength": 60
                         },
                         "birthDate": {
                           "type": "string",
                           "format": "date"
+                        },
+                        "sex": {
+                          "type": "string",
+                          "enum": [
+                            "female",
+                            "male"
+                          ]
+                        },
+                        "gestationalAgeDays": {
+                          "type": "integer",
+                          "minimum": 154,
+                          "maximum": 314
+                        },
+                        "version": {
+                          "type": "integer",
+                          "minimum": 1
+                        },
+                        "updatedBy": {
+                          "anyOf": [
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "updatedAt": {
+                          "type": "integer",
+                          "minimum": 946684800000,
+                          "exclusiveMaximum": 4102444800000
                         }
                       },
                       "required": [
                         "name",
-                        "birthDate"
+                        "birthDate",
+                        "sex",
+                        "gestationalAgeDays",
+                        "version",
+                        "updatedBy",
+                        "updatedAt"
                       ],
                       "additionalProperties": false
                     }

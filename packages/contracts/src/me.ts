@@ -1,6 +1,6 @@
 import { Schema } from "effect"
 import { HttpApiEndpoint, HttpApiGroup } from "effect/http-api"
-import { LocalDate, TimeZone } from "./time.ts"
+import { Child, Household } from "./household.ts"
 
 export const Caregiver = Schema.Struct({ id: Schema.String, email: Schema.String, displayName: Schema.String })
 export type Caregiver = typeof Caregiver.Type
@@ -10,8 +10,8 @@ export type CaregiverName = typeof CaregiverName.Type
 
 export const Me = Schema.Struct({
   caregiver: Caregiver,
-  household: Schema.Struct({ name: Schema.String, timeZone: TimeZone, caregivers: Schema.Array(CaregiverName) }),
-  child: Schema.Struct({ name: Schema.String, birthDate: LocalDate }),
+  household: Schema.Struct({ ...Household.fields, caregivers: Schema.Array(CaregiverName) }),
+  child: Child,
 })
 export type Me = typeof Me.Type
 
