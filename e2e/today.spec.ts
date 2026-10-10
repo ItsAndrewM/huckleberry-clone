@@ -131,6 +131,8 @@ const boxOf = async (locator: Locator) => {
 
 const LAST_FEED_AT = NOW - 135 * MINUTE
 
+test.use({ timezoneId: "Europe/London" })
+
 test.describe("Today, with the household's answers played by the test", () => {
   test("shows how long since the last feed started, counting on, with what that feed held", async ({ page }) => {
     const [andrew] = await caregiversOf(page)
