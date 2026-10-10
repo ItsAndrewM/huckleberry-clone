@@ -10,6 +10,7 @@ describe("the API the household serves", () => {
     expect(endpoints.map(({ method, path }) => `${method} ${path}`)).toEqual([
       "GET /api/me",
       "PATCH /api/household",
+      "PATCH /api/child",
       "GET /api/today",
       "GET /api/last24h",
       "POST /api/diapers",
@@ -44,6 +45,7 @@ describe("the API the household serves", () => {
 
   it("names each record's 409 after its conflict class in docs/api.json, though each says Conflict on the wire", () => {
     expect(Object.keys(OpenApi.fromApi(Api).components.schemas).toSorted()).toEqual([
+      "ChildConflictEncoded",
       "DiaperConflictEncoded",
       "FeedConflictEncoded",
       "HouseholdConflictEncoded",
