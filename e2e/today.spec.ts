@@ -186,16 +186,25 @@ test.describe("Today, with the household's answers played by the test", () => {
     await expect(total(page, "Diapers")).toContainText("8")
   })
 
-  test("shows bottles in fl oz when the household uses them", async ({ page }) => {
+  test("shows bottles in fl oz wherever one appears, when the household uses them", async ({ page }) => {
     const me = await (await page.request.get("/api/me")).json()
+    const [andrew] = await caregiversOf(page)
     await page.route("**/api/me", (route) =>
       route.fulfill({
         json: { ...me, household: { ...me.household, units: { ...me.household.units, volume: "fl_oz" } } },
       }),
     )
-    await playToday(page, todayWith({ totals: TOTALS }))
+    const lastFeed = feed(LAST_FEED_AT, andrew.id, {
+      portions: [{ id: "p1", occurredAt: LAST_FEED_AT, breastMilkMl: 40, formulaMl: 20 }],
+    })
+    const recent = [{ kind: "feed", feed: lastFeed }]
+    await playToday(page, todayWith({ totals: TOTALS, lastFeed, recent }))
     await openToday(page)
     await expect(total(page, "Bottles")).toContainText("6.1 fl oz")
+    await expect(page.getByText(/7:15\sAM · 2\.0 fl oz/)).toBeVisible()
+    await expect(page.getByRole("list", { name: "Last 24 hours" }).getByRole("listitem")).toHaveText([
+      inOrder("Bottle", "2.0 fl oz", "7:15 AM", andrew.displayName),
+    ])
   })
 
   test("says so when the last 24 hours can't be loaded", async ({ page }) => {
