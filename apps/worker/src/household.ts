@@ -1,19 +1,28 @@
 import { SOCKET_PATH } from "@bt/contracts"
 import { DurableObject } from "cloudflare:workers"
-import { Schema } from "effect"
+import { Option, Schema } from "effect"
 import type { CaregiverStatus } from "./admin.ts"
-import { setCaregiverActive } from "./core/caregivers.ts"
+import { activeCaregiver, setCaregiverActive } from "./core/caregivers.ts"
 import { seedHousehold } from "./core/household.ts"
 import { PRUNE_EVERY_MS, pruneReceipts } from "./core/receipts.ts"
 import { migrate } from "./db/migrate.ts"
 import { MIGRATIONS } from "./db/migrations.ts"
 import { householdApi } from "./http.ts"
+import { type DefectContext, logDefect, routeOf } from "./logs.ts"
 import { HouseholdSeed, type SeedResult } from "./seed.ts"
 import { acceptSocket, answerClose, broadcastTo, closeSockets, heartbeat } from "./sockets.ts"
 
 interface HouseholdEnv {
   readonly LOCAL_HOUSEHOLD?: Schema.Json
 }
+
+const actionIdOf = Schema.decodeUnknownOption(Schema.fromJsonString(Schema.Struct({ actionId: Schema.String })))
+
+const defectContext = async (sql: SqlStorage, request: Request): Promise<DefectContext> => ({
+  route: routeOf(request.method, request.url),
+  caregiverId: activeCaregiver(sql, request.headers.get("x-bt-email") ?? undefined)?.id ?? null,
+  actionId: Option.getOrNull(Option.map(actionIdOf(await request.text()), ({ actionId }) => actionId)),
+})
 
 export const startHousehold = async (
   storage: DurableObjectStorage,
@@ -37,7 +46,9 @@ export class HouseholdDO extends DurableObject<HouseholdEnv> {
 
   override async fetch(request: Request): Promise<Response> {
     if (new URL(request.url).pathname === SOCKET_PATH) return acceptSocket(this.ctx, request)
+    const copy = request.clone()
     const response = await this.api.handler(request)
+    if (response.status === 500) logDefect(await defectContext(this.ctx.storage.sql, copy))
     response.headers.set("cache-control", "no-store")
     return response
   }
