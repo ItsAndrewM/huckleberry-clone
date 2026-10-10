@@ -10,6 +10,7 @@ export {
 } from "./feed/feed.ts"
 export { ageInDays } from "./growth/age.ts"
 export { girlsLms, type GrowthMetric, type Lms, WHO_LAST_DAY } from "./growth/who-lms.ts"
+export { zScoreLMS } from "./growth/z-score.ts"
 export { clipTo, contains, type DayPiece, durationMs, overlaps, splitByDays } from "./interval/interval.ts"
 export { affectedPeriods, type PeriodKey } from "./invalidation/affected-periods.ts"
 export {
