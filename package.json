@@ -15,6 +15,7 @@
     "pins:check": "node scripts/check-pins.ts",
     "api:docs": "node scripts/api-docs.ts",
     "icons": "node scripts/render-icons.ts",
+    "who:tables": "node scripts/fetch-who-tables.ts",
     "admin": "node --env-file-if-exists=.admin-token.env scripts/admin.ts"
   },
   "devDependencies": {
