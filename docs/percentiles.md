@@ -15,7 +15,7 @@ The app works out a growth percentile only from WHO's Child Growth Standards for
 
 M4.5's chart draws WHO's 3rd, 15th, 50th, 85th and 97th percentiles for each day. `valueAtPercentile(metric, sex, ageDays, percentile)` works each one out from the same L, M and S:
 
-1. **z:** the percentile's point on the standard normal distribution: ±1.8807936081512509 for the 3rd and 97th, ±1.0364333894937898 for the 15th and 85th, and 0 for the 50th.
+1. **z:** the percentile's point on the standard normal distribution: ±1.8807936081512509 for the 3rd and 97th, ±1.0364333894937896 for the 15th and 85th, and 0 for the 50th.
 2. **Value:** M(1 + L × S × z)^(1/L), or M × e^(S × z) when L is 0. All five curves lie inside ±3 SD, so the restricted application never applies.
 3. **Unit:** the value comes back in the unit growth records store, so a weight is multiplied by 1,000 into grams.
 

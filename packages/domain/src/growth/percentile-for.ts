@@ -15,9 +15,9 @@ export type CurvePercentile = (typeof CURVE_PERCENTILES)[number]
 
 const Z_OF_CURVE = {
   3: -1.8807936081512509,
-  15: -1.0364333894937898,
+  15: -1.0364333894937896,
   50: 0,
-  85: 1.0364333894937898,
+  85: 1.0364333894937896,
   97: 1.8807936081512509,
 } satisfies { readonly [curve in CurvePercentile]: number }
 
@@ -42,8 +42,8 @@ export const valueAtPercentile = (
   metric: GrowthMetric,
   sex: Sex,
   ageDays: number,
-  curve: CurvePercentile,
+  percentile: CurvePercentile,
 ): number | "unavailable" => {
   const lms = sex === "female" ? girlsLms(metric, ageDays) : null
-  return lms === null ? "unavailable" : valueAtZ(lms, Z_OF_CURVE[curve]) * RECORDED_PER_WHO_UNIT[metric]
+  return lms === null ? "unavailable" : valueAtZ(lms, Z_OF_CURVE[percentile]) * RECORDED_PER_WHO_UNIT[metric]
 }
