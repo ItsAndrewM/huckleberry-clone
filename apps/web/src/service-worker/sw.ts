@@ -1,9 +1,9 @@
-import { fetchBuild } from "./build-files.ts"
+import { fetchBuild, type Shell } from "./build-files.ts"
 import { routeOf } from "./routes.ts"
 import { assetResponse, cacheName, pageResponse, type SavedCopy, staleCaches } from "./shell-cache.ts"
 
 declare const self: ServiceWorkerGlobalScope
-declare const SHELL: { readonly version: string; readonly urls: readonly string[] }
+declare const SHELL: Shell
 
 const current = cacheName(SHELL.version)
 const network = (request: Request) => fetch(request)
@@ -18,7 +18,7 @@ const keepPreviousCopy = (failure: Error) => {
 
 self.addEventListener("install", (event) => {
   event.waitUntil(
-    fetchBuild(SHELL.urls, fetchFile)
+    fetchBuild(SHELL, fetchFile)
       .then((files) =>
         caches.open(current).then((cache) => Promise.all(files.map(([url, file]) => cache.put(url, file)))),
       )

@@ -1,12 +1,15 @@
 import { describe, expect, it } from "vitest"
-import { fetchBuild, isThisBuildsFile, loadsOnlySavedFiles } from "../src/service-worker/build-files.ts"
+import { fetchBuild, isThisBuildsFile, loadsOnlySavedFiles, pageMark } from "../src/service-worker/build-files.ts"
 
 const SCRIPT = "/assets/index-CSxg7yjE.js"
 const STYLES = "/assets/index-DDaxv4bF.css"
 const URLS = ["/", SCRIPT, STYLES]
+const VERSION = "ccaa3a9ccd3bbdfb"
+const SHELL = { version: VERSION, urls: URLS }
 const PAGE = `<script type="module" crossorigin src="${SCRIPT}"></script>
 <link rel="stylesheet" crossorigin href="${STYLES}">
-<link rel="icon" href="/icons/icon.svg" type="image/svg+xml">`
+<link rel="icon" href="/icons/icon.svg" type="image/svg+xml">
+${pageMark(VERSION)}`
 
 const file = (body: string, type: string, status = 200) =>
   new Response(body, { status, headers: { "content-type": type } })
@@ -62,20 +65,26 @@ describe("loadsOnlySavedFiles", () => {
 
 describe("fetchBuild", () => {
   it("fetches every file of the build when each answers as itself", async () => {
-    const files = await fetchBuild(URLS, serving(thisBuild()))
+    const files = await fetchBuild(SHELL, serving(thisBuild()))
     expect(files.map(([url]) => url)).toEqual(URLS)
   })
 
   it("fails, so the previous copy stays, when a deploy mid-install answers a script with the app's page", async () => {
     const files = thisBuild().set(SCRIPT, () => file(PAGE, "text/html; charset=utf-8"))
-    await expect(fetchBuild(URLS, serving(files))).rejects.toThrow(
+    await expect(fetchBuild(SHELL, serving(files))).rejects.toThrow(
       `${SCRIPT} answered 200 text/html; charset=utf-8, not this build's file`,
     )
   })
 
-  it("fails, so the previous copy stays, when the page comes from a newer deploy", async () => {
-    const newer = PAGE.replace("CSxg7yjE", "Zz9yXw8v")
-    const files = thisBuild().set("/", () => file(newer, "text/html; charset=utf-8"))
-    await expect(fetchBuild(URLS, serving(files))).rejects.toThrow("/ loads files this build didn't save")
+  it("fails, so the previous copy stays, when / is still the previous deploy's page, though it loads the same files", async () => {
+    const previous = PAGE.replace(pageMark(VERSION), pageMark("0123456789abcdef"))
+    const files = thisBuild().set("/", () => file(previous, "text/html; charset=utf-8"))
+    await expect(fetchBuild(SHELL, serving(files))).rejects.toThrow(`/ is another build's page, not ${VERSION}`)
+  })
+
+  it("fails, so the previous copy stays, when / loads files this build didn't save", async () => {
+    const elsewhere = PAGE.replace("CSxg7yjE", "Zz9yXw8v")
+    const files = thisBuild().set("/", () => file(elsewhere, "text/html; charset=utf-8"))
+    await expect(fetchBuild(SHELL, serving(files))).rejects.toThrow("/ loads files this build didn't save")
   })
 })
