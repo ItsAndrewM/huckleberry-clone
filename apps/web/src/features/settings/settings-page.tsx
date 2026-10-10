@@ -1,5 +1,7 @@
 import { useMe } from "../../api/hooks.ts"
 import { Page } from "../../shell/page.tsx"
+import { AccountSection } from "./account-section.tsx"
+import { ChildSection } from "./child-section.tsx"
 import { SettingsSection } from "./settings-section.tsx"
 import { ThemePicker } from "./theme-picker.tsx"
 import { TimeZoneSection } from "./time-zone-section.tsx"
@@ -16,6 +18,8 @@ export const SettingsPage = () => {
         <>
           <UnitsSection household={me.household} />
           <TimeZoneSection household={me.household} />
+          <ChildSection child={me.child} />
+          <AccountSection caregiver={me.caregiver} />
         </>
       )}
     </Page>

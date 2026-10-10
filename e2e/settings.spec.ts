@@ -15,14 +15,33 @@ interface Household {
   readonly updatedAt: number
 }
 
+interface Child {
+  readonly name: string
+  readonly birthDate: string
+  readonly sex: string
+  readonly gestationalAgeDays: number
+  readonly version: number
+  readonly updatedBy: string | null
+  readonly updatedAt: number
+}
+
 interface HouseholdEdit {
   readonly version: number
   readonly timeZone: string
   readonly units: Units
 }
 
+interface ChildEdit {
+  readonly version: number
+  readonly name: string
+  readonly birthDate: string
+  readonly sex: string
+  readonly gestationalAgeDays: number
+}
+
 interface Played {
   household: Household
+  child: Child
   readonly sent: string[]
 }
 
@@ -39,9 +58,11 @@ const householdOf = ({ name, timeZone, units, version, updatedBy, updatedAt }: H
 
 const playHousehold = async (page: Page): Promise<Played> => {
   const me = await (await page.request.get("/api/me")).json()
-  const played: Played = { household: householdOf(me.household), sent: [] }
+  const played: Played = { household: householdOf(me.household), child: me.child, sent: [] }
   await page.route("**/api/me", (route) =>
-    route.fulfill({ json: { ...me, household: { ...played.household, caregivers: me.household.caregivers } } }),
+    route.fulfill({
+      json: { ...me, household: { ...played.household, caregivers: me.household.caregivers }, child: played.child },
+    }),
   )
   await page.route("**/api/household", (route) => {
     const body = route.request().postData() ?? ""
@@ -49,6 +70,13 @@ const playHousehold = async (page: Page): Promise<Played> => {
     const edit: HouseholdEdit = JSON.parse(body)
     played.household = { ...played.household, timeZone: edit.timeZone, units: edit.units, version: edit.version + 1 }
     return route.fulfill({ json: { household: played.household, changed: CHANGED } })
+  })
+  await page.route("**/api/child", (route) => {
+    const body = route.request().postData() ?? ""
+    played.sent.push(body)
+    const { version, name, birthDate, sex, gestationalAgeDays }: ChildEdit = JSON.parse(body)
+    played.child = { ...played.child, name, birthDate, sex, gestationalAgeDays, version: version + 1 }
+    return route.fulfill({ json: { child: played.child, changed: CHANGED } })
   })
   return played
 }
@@ -97,4 +125,38 @@ test.describe("Settings, with the household's answers played by the test", () =>
       units: { ...theirs.units, weight: "lb_oz" },
     })
   })
+
+  test("saves the child's name, says so, and waits for the next change", async ({ page }) => {
+    const played = await playHousehold(page)
+    const { birthDate, sex, gestationalAgeDays, version } = played.child
+    await page.goto("/settings")
+    await page.getByLabel("Name").fill("Robin Rae")
+    await page.getByRole("button", { name: "Save" }).click()
+    await expect(page.getByText("Saved")).toBeVisible()
+    await expect(page.getByRole("button", { name: "Save" })).toBeDisabled()
+    expect(sentBodies(played)).toEqual([
+      { actionId: expect.any(String), version, name: "Robin Rae", birthDate, sex, gestationalAgeDays },
+    ])
+  })
+
+  test("explains a birth date the household refused, keeping what the parent typed", async ({ page }) => {
+    await playHousehold(page)
+    await page.route("**/api/child", (route) =>
+      route.fulfill({
+        status: 400,
+        json: { _tag: "InvalidInput", fieldErrors: [{ path: "birthDate", issue: "before_birth" }] },
+      }),
+    )
+    await page.goto("/settings")
+    await page.getByLabel("Birth date").fill("2026-09-04")
+    await page.getByRole("button", { name: "Save" }).click()
+    await expect(page.getByText("Some entries are from before this date. Move or delete them first.")).toBeVisible()
+    await expect(page.getByLabel("Birth date")).toHaveValue("2026-09-04")
+  })
+})
+
+test("shows who is signed in", async ({ page }) => {
+  await page.goto("/settings")
+  await expect(page.getByText("Andrew (local)")).toBeVisible()
+  await expect(page.getByText("andrew@example.test")).toBeVisible()
 })

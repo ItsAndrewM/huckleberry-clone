@@ -1,7 +1,8 @@
 import { HouseholdConflict, InvalidInput, ServiceUnavailable, Unauthorized } from "@bt/contracts"
 import { describe, expect, it } from "vitest"
 import { AuthRequired, Offline, Unexpected } from "../src/api/errors.ts"
-import { saveFailure } from "../src/features/settings/messages.ts"
+import { childFieldsOf, weeksAndDays } from "../src/features/settings/child-fields.ts"
+import { fieldMessage, saveFailure } from "../src/features/settings/messages.ts"
 import { timeZoneGroups } from "../src/features/settings/time-zones.ts"
 import { unitChange } from "../src/features/settings/units.ts"
 
@@ -59,5 +60,44 @@ describe("saveFailure", () => {
   it("says nothing before a save, or for a refusal its fields explain", () => {
     expect(saveFailure(null)).toBeUndefined()
     expect(saveFailure(new InvalidInput({ fieldErrors: [{ path: "name", issue: "invalid" }] }))).toBeUndefined()
+  })
+})
+
+describe("the child form", () => {
+  const formOf = (entries: Record<string, string>) => {
+    const form = new FormData()
+    for (const [name, value] of Object.entries(entries)) form.set(name, value)
+    return form
+  }
+
+  it("shows a gestational age as whole weeks and days", () => {
+    expect(weeksAndDays(281)).toEqual({ weeks: 40, days: 1 })
+  })
+
+  it("reads its fields, trimming the name and counting the age at birth in days", () => {
+    const form = formOf({ name: "  Robin Rae ", birthDate: "2026-09-01", sex: "male", weeks: "39", days: "6" })
+    expect(childFieldsOf(form)).toEqual({
+      name: "Robin Rae",
+      birthDate: "2026-09-01",
+      sex: "male",
+      gestationalAgeDays: 279,
+    })
+  })
+})
+
+describe("fieldMessage", () => {
+  it("explains each field the household refused, and nothing for one it took", () => {
+    const refused = new InvalidInput({
+      fieldErrors: [
+        { path: "birthDate", issue: "before_birth" },
+        { path: "name", issue: "invalid" },
+      ],
+    })
+    expect(fieldMessage(refused, "birthDate")).toBe(
+      "Some entries are from before this date. Move or delete them first.",
+    )
+    expect(fieldMessage(refused, "name")).toBe("Enter a name of up to 60 characters.")
+    expect(fieldMessage(refused, "sex")).toBeUndefined()
+    expect(fieldMessage(new Offline(), "name")).toBeUndefined()
   })
 })

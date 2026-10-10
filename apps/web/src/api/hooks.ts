@@ -1,9 +1,9 @@
-import type { Household } from "@bt/contracts"
+import type { Child, Household } from "@bt/contracts"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { useSyncExternalStore } from "react"
 import { useApp } from "../app-context.ts"
 import { meQuery } from "./me.ts"
-import { type HouseholdChange, rememberSaved, saveHousehold } from "./settings.ts"
+import { type ChildFields, type HouseholdChange, rememberSaved, saveChild, saveHousehold } from "./settings.ts"
 
 export const useMe = () => {
   const { api } = useApp()
@@ -29,3 +29,15 @@ export const useSaveHousehold = () => {
       ),
   })
 }
+
+export const useSaveChild = () => {
+  const { api } = useApp()
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ child, fields }: { readonly child: Child; readonly fields: ChildFields }) =>
+      saveChild(api, child, fields),
+    onSuccess: ({ child, changed }) => rememberSaved(queryClient, (me) => ({ ...me, child }), changed),
+  })
+}
+
+export type SaveChild = ReturnType<typeof useSaveChild>

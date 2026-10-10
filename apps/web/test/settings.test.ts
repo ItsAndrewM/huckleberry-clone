@@ -3,7 +3,7 @@ import { QueryClient } from "@tanstack/react-query"
 import { Schema } from "effect"
 import { describe, expect, it } from "vitest"
 import { connectApi } from "../src/api/client.ts"
-import { rememberSaved, saveHousehold } from "../src/api/settings.ts"
+import { rememberSaved, saveChild, saveHousehold } from "../src/api/settings.ts"
 
 const ORIGIN = "https://bt.example.test"
 const AT = Date.UTC(2026, 9, 8)
@@ -113,5 +113,31 @@ describe("rememberSaved", () => {
     expect(queryClient.getQueryData<Me>(queryKeys.me)?.household.timeZone).toBe("Asia/Tokyo")
     expect(queryClient.getQueryState(queryKeys.me)?.isInvalidated).toBe(false)
     expect(queryClient.getQueryState(queryKeys.today)?.isInvalidated).toBe(true)
+  })
+})
+
+describe("saveChild", () => {
+  it("sends the fields this parent changed on top of the child the other phone saved", async () => {
+    const theirs = { ...CHILD, birthDate: "2026-08-30", version: 2 }
+    const { api, bodies } = householdAnswering(stale(theirs), json(200, { child: theirs, changed: CHANGED }))
+    await saveChild(api, CHILD, { name: "Robin Rae", birthDate: "2026-09-01", sex: "female", gestationalAgeDays: 281 })
+    expect(bodies).toEqual([
+      {
+        actionId: expect.stringMatching(UUID),
+        version: 1,
+        name: "Robin Rae",
+        birthDate: "2026-09-01",
+        sex: "female",
+        gestationalAgeDays: 281,
+      },
+      {
+        actionId: expect.stringMatching(UUID),
+        version: 2,
+        name: "Robin Rae",
+        birthDate: "2026-08-30",
+        sex: "female",
+        gestationalAgeDays: 281,
+      },
+    ])
   })
 })
