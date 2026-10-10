@@ -89,9 +89,10 @@ export const COLUMNS = {
 const DAY_HEADINGS: ReadonlySet<string> = new Set(["Day", "Age"])
 const SHARED_STRING = /<si><t[^>]*>([^<]*)<\/t><\/si>/g
 const ROW = /<row\b[^>]*[^/]>(.*?)<\/row>/gs
-const CELL = /<c ([^>]*?)(?:\/>|>(?:<v>([^<]*)<\/v>)?<\/c>)/g
+const CELL = /<c\b([^>]*?)(?:\/>|>(?:<v>([^<]*)<\/v>)?<\/c>)/g
 const DECIMAL = /^-?\d+(?:\.\d+)?(?:E[-+]?\d+)?$/i
 const SHEET = /<sheet\b[^>]*\bname="([^"]*)"/g
+const CELL_REF = /\br="([A-Z]+)\d+"/
 
 export type Table = readonly (readonly number[])[]
 
@@ -100,10 +101,23 @@ export const sharedStrings = (xml: string): string[] => Array.from(xml.matchAll(
 const cellText = (attributes: string, value: string, strings: readonly string[]) =>
   attributes.includes('t="s"') ? (strings[Number(value)] ?? "") : value
 
+const columnIndex = (letters: string) =>
+  [...letters].reduce((index, letter) => index * 26 + letter.charCodeAt(0) - 64, 0) - 1
+
+const placedCells = (cells: string, strings: readonly string[]): string[] => {
+  const row: string[] = []
+  for (const [, attributes = "", value = ""] of cells.matchAll(CELL)) {
+    const [, letters] = CELL_REF.exec(attributes) ?? []
+    if (letters === undefined) throw new Error(`Expected a cell reference; found <c ${attributes}>`)
+    const column = columnIndex(letters)
+    if (row[column] !== undefined) throw new Error(`Expected one cell in column ${letters}; found two`)
+    row[column] = cellText(attributes, value, strings)
+  }
+  return Array.from({ length: row.length }, (_, column) => row[column] ?? "")
+}
+
 export const sheetRows = (sheetXml: string, strings: readonly string[]): string[][] =>
-  Array.from(sheetXml.matchAll(ROW), ([, cells = ""]) =>
-    Array.from(cells.matchAll(CELL), ([, attributes = "", value = ""]) => cellText(attributes, value, strings)),
-  )
+  Array.from(sheetXml.matchAll(ROW), ([, cells = ""]) => placedCells(cells, strings))
 
 export const checkWorkbook = (source: WhoSource, workbookXml: string): void => {
   const names = Array.from(workbookXml.matchAll(SHEET), ([, name = ""]) => name)

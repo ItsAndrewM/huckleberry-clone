@@ -93,6 +93,19 @@ describe("sheetRows", () => {
       ["", "1"],
     ])
   })
+
+  it("keeps each cell in the column its reference names, so a missing cell leaves a gap", () => {
+    expect(sheetRows(sheet('<c r="A1"><v>0</v></c><c r="C1"><v>2</v></c>'), [])).toEqual([["0", "", "2"]])
+  })
+
+  it("refuses two cells in one column", () => {
+    const xml = sheet('<c r="A1"><v>0</v></c><c r="A1"><v>1</v></c>')
+    expect(() => sheetRows(xml, [])).toThrow(/^Expected one cell in column A/)
+  })
+
+  it("refuses a cell without a reference", () => {
+    expect(() => sheetRows(sheet("<c><v>0</v></c>"), [])).toThrow(/^Expected a cell reference/)
+  })
 })
 
 const workbook = (...names: string[]) =>
@@ -147,6 +160,17 @@ describe("whoTable", () => {
     { problem: "too few days", rows: [["Day", ...LMS]] },
   ])("refuses $problem", ({ rows }) => {
     expect(() => whoTable(rows, LMS, 0)).toThrow(/^Expected /)
+  })
+
+  it("refuses a row missing P3 whose stray last cell would otherwise fill the gap", () => {
+    const strings = sharedStrings(
+      "<sst><si><t>Day</t></si><si><t>L</t></si><si><t>M</t></si><si><t>S</t></si><si><t>P3</t></si></sst>",
+    )
+    const xml = sheet(
+      ["A", "B", "C", "D", "E"].map((column, i) => `<c r="${column}1" t="s"><v>${i}</v></c>`).join(""),
+      '<c r="A2"><v>0</v></c><c r="B2"><v>0.3809</v></c><c r="C2"><v>3.2322</v></c><c r="D2"><v>0.14171</v></c><c r="F2"><v>2.4</v></c>',
+    )
+    expect(() => whoTable(sheetRows(xml, strings), [...LMS, "P3"], 0)).toThrow(/^Expected day 0 and 4 numbers/)
   })
 })
 
