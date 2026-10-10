@@ -3,8 +3,11 @@ import { expect, test } from "@playwright/test"
 const SIGNED_OUT_COOKIE = "bt-preview-signed-out"
 
 test("shows No connection while the phone is offline, and clears it once back online", async ({ page, context }) => {
+  const todayAnswered = Promise.all(["**/api/today", "**/api/last24h"].map((url) => page.waitForResponse(url)))
   await page.goto("/")
   await expect(page.getByText("Robin")).toBeVisible()
+  await Promise.all((await todayAnswered).map((response) => response.finished()))
+  await expect(page.getByText("Loading…")).toBeHidden()
   await context.setOffline(true)
   await expect(page.getByRole("alert").filter({ hasText: "No connection" })).toBeVisible()
   await context.setOffline(false)
@@ -49,7 +52,7 @@ test("signs in back to the tab the parent moved to after the prompt appeared", a
 })
 
 test("treats the household refusing the caregiver as signed out too", async ({ page }) => {
-  await page.route("**/api/me", (route) =>
+  await page.route("**/api/**", (route) =>
     route.fulfill({ status: 401, contentType: "application/json", body: '{"_tag":"Unauthorized"}' }),
   )
   await page.goto("/")
