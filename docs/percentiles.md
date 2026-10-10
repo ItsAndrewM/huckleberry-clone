@@ -1,6 +1,6 @@
 # Percentiles
 
-The app works out a growth percentile only from WHO's Child Growth Standards for girls, from birth to day 730. `packages/domain/test/growth/who-gate.test.ts` reads WHO's own tables back through the engine for every one of those days. Percentiles stay off the screen while it fails (M4.2).
+The app works out a growth percentile only from WHO's Child Growth Standards for girls, from birth to day 730. `packages/domain/test/growth/who-gate.test.ts` reads WHO's own tables back through the engine for every one of those days. CI runs it on every pull request, and nothing in the app turns percentiles off (decided 10 Oct 2026).
 
 ## How a percentile is worked out
 
@@ -17,7 +17,7 @@ The app works out a growth percentile only from WHO's Child Growth Standards for
 
 - a boy, since only girls' tables are bundled
 - an age that isn't a whole day from 0 to 730, such as a two-year visit on day 731 after a 29 February
-- a measurement that isn't a positive number
+- a measurement that isn't a positive, finite number
 
 ## The gate
 
@@ -26,8 +26,8 @@ The app works out a growth percentile only from WHO's Child Growth Standards for
 | WHO's P3, P15, P50, P85 and P97, through `percentileFor` | ±0.5 percentile points | 0.042: weight, P50, day 3 |
 | WHO's SD4neg to SD4, through `zScoreFor` | ±0.002 in z | 0.0014: weight, SD3neg, day 7 |
 
-- **±0.5 points** is the implementation plan's bar. WHO prints every value to three decimals, so its P3 read back lands near 3, not on it.
-- **±0.002 in z** is the tight check. It absorbs that rounding, yet it fails a table read one day out of step. Reading the next day's L, M and S misses it in every SD column, on every day, by at least 0.0021 (head circumference, SD4, day 723).
+- **±0.5 points** is the implementation plan's bar. WHO prints every P and SD value to three decimals, so its P3 read back lands near 3, not on it.
+- **±0.002 in z** is the tight check. It absorbs that rounding, yet it fails a table read one day out of step. Reading the next day's L, M and S puts z at least 0.0021 off in every SD column on days 0 to 729 (head circumference, SD4, day 723), and day 730 has no next day. Reading the previous day's does the same.
 - **SD4 and SD4neg test the restricted application.** WHO's values for them are its restricted ones. Without the restriction, weight's SD4neg misses by up to 0.17 (day 728).
 
 ## Sources

@@ -273,7 +273,7 @@ Spec scenarios that become named fixtures: the 15+15 min / 50+50 mL feed (AC 4),
 | Access on WebSocket upgrades from the installed PWA (S2) | Live updates | **Resolved in Step 0.** Works from desktop Chrome and the installed iPhone PWA with the hostname app and JWT verification. No ticket needed |
 | Static Assets and Access interaction (S4) | Assets get no `ctx.access`; the shell and `/sw.js` require sign-in | D5 verifies the JWT. The service worker installs and updates only while signed in. The installed app's cached shell opens offline (S4 pass) |
 | Import source unknown | M2 blocked | Ask now; M3 can go first |
-| WHO extreme-value handling and dataset choice | Wrong percentiles | M4.2 gate, which passes (`docs/percentiles.md`). Display stays off while it fails |
+| WHO extreme-value handling and dataset choice | Wrong percentiles | M4.2 gate, which passes (`docs/percentiles.md`). CI runs it on every pull request |
 | Two-person, single-environment ops | A bad migration hits live data | Migrations are forward-only and tested against an export of production data in a preview DO before deploy. Take a PITR bookmark before every deploy (add to the deploy script) |
 
 **Questions for Andrew and Emily before M1:**
