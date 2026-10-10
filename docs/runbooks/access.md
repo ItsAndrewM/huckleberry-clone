@@ -90,7 +90,7 @@ Run these on each iPhone:
 
 - **Code only** (the app misbehaves, but the data is right): roll back to the previous version with `pnpm --filter @bt/web exec wrangler rollback --config ../worker/wrangler.jsonc`. That config pins the account and names the Worker. Older code runs against a newer schema, because migrations only add.
 - **Data too:** find the bookmark taken before that deploy in `deploys.log`. Run `pnpm admin pitr:restore <bookmark>`. It answers with an `undo` bookmark, so keep that until you're sure. Without a bookmark, `pnpm admin pitr:restore --at 2026-10-10T18:00:00Z` rewinds to a time instead (it needs a zone, and must be within the last 30 days).
-- **Both:** restore the data first, then roll back the code. The restore also removes any migration that deploy applied.
+- **Both:** roll back the code first, then restore the data. The order matters: a restore restarts the household under whatever code is deployed, and the household applies the code's missing migrations at every start. Restoring under the bad code would run its migration again over the restored data. After the rollback, the older code starts on the newer schema (it skips ledger entries it doesn't know), and the restore then takes the data and the migration ledger back to before that deploy.
 - **A restore answers 503:** the restore is scheduled but the household didn't restart, so it would apply at the next restart instead. Run the same `pitr:restore` command again.
 
 A restore rewinds everything in the household, including caregivers. Every phone's socket drops and reconnects, and a caregiver the restore disabled is refused at that point.
