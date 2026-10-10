@@ -2,6 +2,7 @@ import type { LocalDate } from "../time/calendar.ts"
 import { type Instant, MINUTE_MS } from "../time/instant.ts"
 import { startOfDate } from "../time/wall-clock.ts"
 import type { TimeZone } from "../time/zone.ts"
+import { OUNCES_PER_POUND } from "../units/units.ts"
 
 export const VALIDATION_ISSUES = [
   "not_finite",
@@ -54,7 +55,7 @@ export const validateNotInFuture = (
   return instant <= serverNow + toleranceMs ? null : "in_future"
 }
 
-export const validateOunces = (ounces: number): ValidationIssue | null => {
+export const validateOuncePart = (ounces: number): ValidationIssue | null => {
   if (!Number.isFinite(ounces)) return "not_finite"
-  return ounces >= 0 && ounces < 16 ? null : "out_of_range"
+  return ounces >= 0 && ounces < OUNCES_PER_POUND ? null : "out_of_range"
 }

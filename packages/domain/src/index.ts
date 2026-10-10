@@ -52,7 +52,7 @@ export {
   type ValidationIssue,
   validateNotBeforeBirth,
   validateNotInFuture,
-  validateOunces,
+  validateOuncePart,
   validateVolumeMl,
   VALIDATION_ISSUES,
 } from "./validate/validate.ts"
