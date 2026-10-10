@@ -206,6 +206,13 @@ test.describe("Today, with the household's answers played by the test", () => {
     await expect(page.getByText("The last 24 hours couldn't be loaded.")).toBeVisible()
   })
 
+  test("says so when the household's details can't be loaded, though today's answer arrived", async ({ page }) => {
+    await playToday(page, todayWith({ totals: TOTALS }))
+    await page.route("**/api/me", (route) => route.fulfill({ status: 404 }))
+    await openToday(page)
+    await expect(page.getByText("Today couldn't be loaded.")).toBeVisible()
+  })
+
   test("lists the last 24 hours with who logged each, leaving out kinds this app doesn't know yet", async ({
     page,
   }) => {

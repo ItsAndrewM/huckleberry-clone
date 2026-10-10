@@ -29,14 +29,16 @@ const TodayCards = ({ today, last24h, last24hFailed, household }: TodayCardsProp
 }
 
 export const TodayPage = () => {
-  const { data: me } = useMe()
+  const { data: me, isError: meFailed } = useMe()
   const { data: today, isError } = useToday()
   const { data: last24h, isError: last24hFailed } = useLast24h()
   return (
     <div className="pb-16">
       <Page title="Today" subtitle={me?.child.name}>
         {today === undefined || me === undefined ? (
-          <output className="text-muted-foreground">{isError ? "Today couldn't be loaded." : "Loading…"}</output>
+          <output className="text-muted-foreground">
+            {isError || meFailed ? "Today couldn't be loaded." : "Loading…"}
+          </output>
         ) : (
           <TodayCards today={today} last24h={last24h?.totals} last24hFailed={last24hFailed} household={me.household} />
         )}
