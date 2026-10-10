@@ -14,6 +14,7 @@
     "e2e": "playwright test",
     "pins:check": "node scripts/check-pins.ts",
     "api:docs": "node scripts/api-docs.ts",
+    "icons": "node scripts/render-icons.ts",
     "admin": "node --env-file-if-exists=.admin-token.env scripts/admin.ts"
   },
   "devDependencies": {

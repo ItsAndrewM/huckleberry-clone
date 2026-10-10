@@ -8,7 +8,7 @@ export default defineConfig({
   forbidOnly: CI,
   retries: CI ? 1 : 0,
   reporter: CI ? [["github"], ["html", { open: "never" }]] : "list",
-  use: { baseURL: `http://localhost:${PORT}`, trace: "on-first-retry" },
+  use: { baseURL: `http://localhost:${PORT}`, trace: "on-first-retry", serviceWorkers: "block" },
   projects: [
     { name: "webkit", use: { ...devices["iPhone 15"] } },
     { name: "chromium", use: { ...devices["iPhone 15"], browserName: "chromium" } },

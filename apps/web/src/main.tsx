@@ -8,6 +8,7 @@ import { startLive } from "./api/live-connection.ts"
 import { socketUrl } from "./api/live.ts"
 import { createQueryClient } from "./api/query-client.ts"
 import { AppContext } from "./app-context.ts"
+import { registerServiceWorker } from "./service-worker/register.ts"
 import { router } from "./shell/router.tsx"
 import "./index.css"
 
@@ -27,6 +28,7 @@ const live = startLive({
   report: connectivity.report,
 })
 window.addEventListener("online", live.wake)
+if (import.meta.env.PROD) window.addEventListener("load", () => void registerServiceWorker(navigator.serviceWorker))
 
 createRoot(root).render(
   <StrictMode>
