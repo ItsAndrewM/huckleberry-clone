@@ -2,6 +2,8 @@ import { type BrowserContext, expect, type Page, test } from "@playwright/test"
 
 test.use({ serviceWorkers: "allow" })
 
+const ACCESS_EXPIRED_COOKIE = "bt-preview-access-expired"
+
 const openWithSavedCopy = async (page: Page) => {
   await page.goto("/")
   await expect(page.getByText("Robin")).toBeVisible()
@@ -46,6 +48,16 @@ test("leaves Sign in to the network, so offline it fails rather than opening the
   await openWithSavedCopy(page)
   await goOfflineLikeAPhone(page, context)
   await expect(page.goto("/api/login?return=%2F")).rejects.toThrow()
+})
+
+test("sends an expired session to Access's sign-in, not the saved app", async ({ page, context, baseURL }) => {
+  await openWithSavedCopy(page)
+  await page.route("https://access.example.test/**", (route) =>
+    route.fulfill({ contentType: "text/html", body: "<h1>Access sign-in</h1>" }),
+  )
+  await context.addCookies([{ name: ACCESS_EXPIRED_COOKIE, value: "1", url: baseURL ?? "" }])
+  await page.reload()
+  await expect(page.getByRole("heading", { name: "Access sign-in" })).toBeVisible()
 })
 
 test("opens the app online even when its saved copy can't be read", async ({ page, context, browserName }) => {
