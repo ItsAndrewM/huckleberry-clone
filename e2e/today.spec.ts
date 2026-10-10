@@ -187,6 +187,9 @@ test.describe("Today, with the household's answers played by the test", () => {
     await page.getByRole("button", { name: "Last 24 h" }).click()
     await expect(total(page, "Feeds started")).toContainText("9")
     await expect(total(page, "Diapers")).toContainText("8")
+    await page.getByRole("button", { name: "Today", exact: true }).click()
+    await expect(total(page, "Feeds started")).toContainText("6")
+    await expect(total(page, "Diapers")).toContainText("5")
   })
 
   test("shows bottles in fl oz wherever one appears, when the household uses them", async ({ page }) => {
