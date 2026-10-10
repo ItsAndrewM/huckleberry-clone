@@ -1,3 +1,4 @@
+import { fetchBuild } from "./build-files.ts"
 import { routeOf } from "./routes.ts"
 import { assetResponse, cacheName, pageResponse, type SavedCopy, staleCaches } from "./shell-cache.ts"
 
@@ -6,16 +7,23 @@ declare const SHELL: { readonly version: string; readonly urls: readonly string[
 
 const current = cacheName(SHELL.version)
 const network = (request: Request) => fetch(request)
+const fetchFile = (url: string) => fetch(url, { cache: "no-cache", redirect: "error" })
 const saved: SavedCopy = { match: (request, options) => caches.match(request, { ...options, cacheName: current }) }
 const reportUnreadableCopy = (failure: Error) =>
   console.error("Couldn't read the offline copy, so asked the network", failure)
+const keepPreviousCopy = (failure: Error) => {
+  console.error("Kept the previous offline copy: this build's files didn't all arrive as themselves", failure)
+  throw failure
+}
 
 self.addEventListener("install", (event) => {
   event.waitUntil(
-    caches
-      .open(current)
-      .then((cache) => cache.addAll(SHELL.urls.map((url) => new Request(url, { cache: "no-cache" }))))
-      .then(() => self.skipWaiting()),
+    fetchBuild(SHELL.urls, fetchFile)
+      .then((files) =>
+        caches.open(current).then((cache) => Promise.all(files.map(([url, file]) => cache.put(url, file)))),
+      )
+      .then(() => self.skipWaiting())
+      .catch(keepPreviousCopy),
   )
 })
 
