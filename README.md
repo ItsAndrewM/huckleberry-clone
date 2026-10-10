@@ -22,4 +22,5 @@ Locally, `pnpm dev` and `pnpm e2e` run the `local` environment in `apps/worker/w
 | `pnpm bundle:check` | Fails if the Worker is over 400 KiB gzip (run `pnpm build` first) |
 | `pnpm e2e` | Playwright, WebKit and Chromium at iPhone size (`pnpm exec playwright install chromium webkit` once) |
 | `pnpm api:docs` | Rewrites `docs/api.json` from the API in `packages/contracts`. A test fails while it's stale |
+| `pnpm who:tables` | Downloads WHO's six growth workbooks for girls, checks them, and rewrites `packages/domain/data/who` and its `MANIFEST.json`. Needs the network and `unzip`; CI never runs it. A test fails if a bundled file no longer matches its sha256 |
 | `pnpm admin household:seed …` | Seeds the deployed household, once, through `/api/admin/household`. Reads `BT_URL`, `CF_ACCESS_CLIENT_ID` and `CF_ACCESS_CLIENT_SECRET` (the admin service token) from `.admin-token.env`, which git ignores. `pnpm admin` prints the flags |

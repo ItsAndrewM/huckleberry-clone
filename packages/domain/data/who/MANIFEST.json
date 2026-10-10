@@ -1,0 +1,92 @@
+{
+  "standard": "WHO Child Growth Standards (2006), expanded tables for girls",
+  "days": {
+    "first": 0,
+    "last": 730
+  },
+  "sources": [
+    {
+      "dataset": "wfa-girls-zscore-expanded-tables",
+      "url": "https://cdn.who.int/media/docs/default-source/child-growth/child-growth-standards/indicators/weight-for-age/expanded-tables/wfa-girls-zscore-expanded-tables.xlsx?sfvrsn=f01bc813_10",
+      "sha256": "ee3ae12cb96c6c5541cdf43665c03ce6c984f877859a183a5f6104eb06a49a6e"
+    },
+    {
+      "dataset": "wfa-girls-percentiles-expanded-tables",
+      "url": "https://cdn.who.int/media/docs/default-source/child-growth/child-growth-standards/indicators/weight-for-age/expanded-tables/wfa-girls-percentiles-expanded-tables.xlsx?sfvrsn=54cfa5e8_9",
+      "sha256": "5bdfd79de222d0f660c1662adc02995e879374f5b3260571a357a2ec771da629"
+    },
+    {
+      "dataset": "lhfa-girls-zscore-expanded-tables",
+      "url": "https://cdn.who.int/media/docs/default-source/child-growth/child-growth-standards/indicators/length-height-for-age/expandable-tables/lhfa-girls-zscore-expanded-tables.xlsx?sfvrsn=27f1e2cb_10",
+      "sha256": "6aa2876319449a6b1f4d825848128902114ff53c67b92b86a0c5140846013059"
+    },
+    {
+      "dataset": "lhfa-girls-percentiles-expanded-tables",
+      "url": "https://cdn.who.int/media/docs/default-source/child-growth/child-growth-standards/indicators/length-height-for-age/expandable-tables/lhfa-girls-percentiles-expanded-tables.xlsx?sfvrsn=478569a5_9",
+      "sha256": "92b5b0306d87f32eeb1d0c68f32aceda55121ff9a2600af517ba2a5b8dc84851"
+    },
+    {
+      "dataset": "hcfa-girls-zscore-expanded-tables",
+      "url": "https://cdn.who.int/media/docs/default-source/child-growth/child-growth-standards/indicators/head-circumference-for-age/expanded-tables/hcfa-girls-zscore-expanded-tables.xlsx?sfvrsn=3a34b8b0_8",
+      "sha256": "8eec3770d1027ce1b3b96a7b89fd1e77070558a7791b17b4462cda8a813324a3"
+    },
+    {
+      "dataset": "hcfa-girls-percentiles-expanded-tables",
+      "url": "https://cdn.who.int/media/docs/default-source/child-growth/child-growth-standards/indicators/head-circumference-for-age/expanded-tables/hcfa-girls-percentiles-expanded-tables.xlsx?sfvrsn=71b282d1_13",
+      "sha256": "3e097ab1c73c9b376faea2bde2f10de761efbde486c9d6092a8ef63d21f2a5ff"
+    }
+  ],
+  "files": [
+    {
+      "path": "wfa-girls-zscore-expanded-tables.json",
+      "sha256": "883ffad4d5fa480c9aeeb2ec26b4f64f7b036a3d06dbe028ecda193de9f946c3",
+      "from": [
+        "wfa-girls-zscore-expanded-tables"
+      ]
+    },
+    {
+      "path": "wfa-girls-percentiles-expanded-tables.json",
+      "sha256": "a8d8caeae5f7d33c5fff752ef35bf05e39e0d1bf54b49c1d36310903c673e644",
+      "from": [
+        "wfa-girls-percentiles-expanded-tables"
+      ]
+    },
+    {
+      "path": "lhfa-girls-zscore-expanded-tables.json",
+      "sha256": "8f889e082fc0c96955f048b7e35be8de6205f7fcb6e5b0e2dc464f14eecf0499",
+      "from": [
+        "lhfa-girls-zscore-expanded-tables"
+      ]
+    },
+    {
+      "path": "lhfa-girls-percentiles-expanded-tables.json",
+      "sha256": "644aea1463acd985802cdb2848817d7c3eba82a3cec4de87c2e4cb5b4c6a3785",
+      "from": [
+        "lhfa-girls-percentiles-expanded-tables"
+      ]
+    },
+    {
+      "path": "hcfa-girls-zscore-expanded-tables.json",
+      "sha256": "1a17f16a9a19a2c252a2d5295928c7d30869822abd97e96e60866e4d8ccb1ab3",
+      "from": [
+        "hcfa-girls-zscore-expanded-tables"
+      ]
+    },
+    {
+      "path": "hcfa-girls-percentiles-expanded-tables.json",
+      "sha256": "a631ed99c672f2c6e56bb7e8a0709ae9d2da136ea8185ca537a6f33c7156acfd",
+      "from": [
+        "hcfa-girls-percentiles-expanded-tables"
+      ]
+    },
+    {
+      "path": "lms-girls.json",
+      "sha256": "a2b1c0060dbd1ae3c2e8c2f85c8cb51453a09717ed445a5caa7bd7758ee02277",
+      "from": [
+        "wfa-girls-zscore-expanded-tables",
+        "lhfa-girls-zscore-expanded-tables",
+        "hcfa-girls-zscore-expanded-tables"
+      ]
+    }
+  ]
+}

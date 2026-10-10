@@ -1,3 +1,5 @@
+import { createHash } from "node:crypto"
+
 export type Indicator = "weightForAge" | "lengthForAge" | "headCircumferenceForAge"
 export type TableKind = "zscore" | "percentiles"
 
@@ -8,8 +10,50 @@ export interface WhoSource {
   readonly url: string
 }
 
+const INDICATORS_URL = "https://cdn.who.int/media/docs/default-source/child-growth/child-growth-standards/indicators"
+
+export const WHO_SOURCES: readonly WhoSource[] = [
+  {
+    dataset: "wfa-girls-zscore-expanded-tables",
+    indicator: "weightForAge",
+    kind: "zscore",
+    url: `${INDICATORS_URL}/weight-for-age/expanded-tables/wfa-girls-zscore-expanded-tables.xlsx?sfvrsn=f01bc813_10`,
+  },
+  {
+    dataset: "wfa-girls-percentiles-expanded-tables",
+    indicator: "weightForAge",
+    kind: "percentiles",
+    url: `${INDICATORS_URL}/weight-for-age/expanded-tables/wfa-girls-percentiles-expanded-tables.xlsx?sfvrsn=54cfa5e8_9`,
+  },
+  {
+    dataset: "lhfa-girls-zscore-expanded-tables",
+    indicator: "lengthForAge",
+    kind: "zscore",
+    url: `${INDICATORS_URL}/length-height-for-age/expandable-tables/lhfa-girls-zscore-expanded-tables.xlsx?sfvrsn=27f1e2cb_10`,
+  },
+  {
+    dataset: "lhfa-girls-percentiles-expanded-tables",
+    indicator: "lengthForAge",
+    kind: "percentiles",
+    url: `${INDICATORS_URL}/length-height-for-age/expandable-tables/lhfa-girls-percentiles-expanded-tables.xlsx?sfvrsn=478569a5_9`,
+  },
+  {
+    dataset: "hcfa-girls-zscore-expanded-tables",
+    indicator: "headCircumferenceForAge",
+    kind: "zscore",
+    url: `${INDICATORS_URL}/head-circumference-for-age/expanded-tables/hcfa-girls-zscore-expanded-tables.xlsx?sfvrsn=3a34b8b0_8`,
+  },
+  {
+    dataset: "hcfa-girls-percentiles-expanded-tables",
+    indicator: "headCircumferenceForAge",
+    kind: "percentiles",
+    url: `${INDICATORS_URL}/head-circumference-for-age/expanded-tables/hcfa-girls-percentiles-expanded-tables.xlsx?sfvrsn=71b282d1_13`,
+  },
+]
+
 export const LAST_DAY = 730
 export const LMS_FILE = "lms-girls.json"
+export const MANIFEST_FILE = "MANIFEST.json"
 
 const LMS_COLUMNS = ["L", "M", "S"] as const
 
@@ -144,3 +188,33 @@ export const whoFiles = (reads: readonly SourceRead[]): DataFile[] => {
     },
   ]
 }
+
+export const sha256Of = (bytes: Uint8Array | string): string => createHash("sha256").update(bytes).digest("hex")
+
+export interface ManifestSource {
+  readonly dataset: string
+  readonly url: string
+  readonly sha256: string
+}
+
+export interface ManifestFile {
+  readonly path: string
+  readonly sha256: string
+  readonly from: readonly string[]
+}
+
+export interface WhoManifest {
+  readonly standard: string
+  readonly days: { readonly first: number; readonly last: number }
+  readonly sources: readonly ManifestSource[]
+  readonly files: readonly ManifestFile[]
+}
+
+export const whoManifest = (reads: readonly SourceRead[], files: readonly DataFile[]): WhoManifest => ({
+  standard: "WHO Child Growth Standards (2006), expanded tables for girls",
+  days: { first: 0, last: LAST_DAY },
+  sources: reads.map(({ source, sha256 }) => ({ dataset: source.dataset, url: source.url, sha256 })),
+  files: files.map(({ path, text, from }) => ({ path, sha256: sha256Of(text), from })),
+})
+
+export const manifestJson = (manifest: WhoManifest): string => `${JSON.stringify(manifest, null, 2)}\n`

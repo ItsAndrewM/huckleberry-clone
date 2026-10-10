@@ -1,15 +1,49 @@
+import { readdirSync, readFileSync } from "node:fs"
 import { describe, expect, it } from "vitest"
 import {
   LMS_FILE,
+  type LmsColumns,
   lmsJson,
+  MANIFEST_FILE,
+  sha256Of,
   sharedStrings,
   sheetRows,
   type Table,
   tableJson,
+  WHO_SOURCES,
+  type WhoManifest,
   type WhoSource,
   whoFiles,
   whoTable,
 } from "./who-tables.ts"
+
+const dataDir = new URL("../packages/domain/data/who/", import.meta.url)
+const bundled = (path: string) => readFileSync(new URL(path, dataDir))
+const manifest: WhoManifest = JSON.parse(bundled(MANIFEST_FILE).toString("utf8"))
+
+describe("the bundled WHO tables (packages/domain/data/who)", () => {
+  it.each(manifest.files)("$path matches its sha256 in MANIFEST.json", ({ path, sha256 }) => {
+    expect(sha256Of(bundled(path))).toBe(sha256)
+  })
+
+  it("lists every file beside it, and nothing else", () => {
+    const files = readdirSync(dataDir).filter((name) => name !== MANIFEST_FILE)
+    expect(files.toSorted()).toEqual(manifest.files.map(({ path }) => path).toSorted())
+  })
+
+  it("came from the workbooks pnpm who:tables downloads", () => {
+    const sources = manifest.sources.map(({ dataset, url }) => ({ dataset, url }))
+    expect(sources).toEqual(WHO_SOURCES.map(({ dataset, url }) => ({ dataset, url })))
+  })
+
+  it("keeps the runtime L, M and S identical to the z-score tables'", () => {
+    const zscores = WHO_SOURCES.filter(({ kind }) => kind === "zscore").map(({ dataset, indicator }) => {
+      const lms: LmsColumns = JSON.parse(bundled(`${dataset}.json`).toString("utf8"))
+      return { indicator, lms }
+    })
+    expect(bundled(LMS_FILE).toString("utf8")).toBe(lmsJson(zscores))
+  })
+})
 
 const SHARED_STRINGS = "<sst><si><t>Day</t></si><si><t>L</t></si></sst>"
 const sheet = (...rows: string[]) =>
