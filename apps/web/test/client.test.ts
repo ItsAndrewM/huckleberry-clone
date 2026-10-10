@@ -8,7 +8,7 @@ const ORIGIN = "https://bt.example.test"
 
 const ME = {
   caregiver: { id: "caregiver-1", email: "andrew@example.test", displayName: "Andrew" },
-  household: { name: "Home", timeZone: "America/Vancouver" },
+  household: { name: "Home", timeZone: "America/Vancouver", caregivers: [] },
   child: { name: "Robin", birthDate: "2026-09-01" },
 }
 

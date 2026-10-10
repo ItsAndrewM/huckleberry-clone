@@ -10,7 +10,7 @@ const json = { "content-type": "application/json" }
 const meFor = (email: string) =>
   JSON.stringify({
     caregiver: { id: email, email, displayName: email },
-    household: { name: "Home", timeZone: "America/Vancouver" },
+    household: { name: "Home", timeZone: "America/Vancouver", caregivers: [] },
     child: { name: "Robin", birthDate: "2026-09-01" },
   })
 
