@@ -63,4 +63,19 @@ test.describe("with the household's socket played by the test", () => {
     await page.clock.runFor(10 * HEARTBEAT_MS)
     expect(sockets).toHaveLength(1)
   })
+
+  test("hides No connection when the household next answers the heartbeat, after a refetch failed while the socket stayed up", async ({
+    page,
+  }) => {
+    socket(0).onMessage((message) => {
+      if (message === "ping") socket(0).send("pong")
+    })
+    await page.route("**/api/me", (route) => route.abort())
+    socket(0).send(JSON.stringify({ changed: [["me"]] }))
+    const noConnection = page.getByRole("alert").filter({ hasText: "No connection" })
+    await expect(noConnection).toBeVisible()
+    await page.clock.runFor(HEARTBEAT_MS)
+    await expect(noConnection).toBeHidden()
+    expect(sockets).toHaveLength(1)
+  })
 })

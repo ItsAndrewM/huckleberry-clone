@@ -103,6 +103,16 @@ describe("startLive", () => {
     expect(stale()).toBe(0)
   })
 
+  it("treats every message it hears from the household, a pong or a change, as the network being up", () => {
+    const { latest, signals } = live()
+    latest().opens()
+    vi.advanceTimersByTime(HEARTBEAT_MS)
+    latest().hears(HEARTBEAT.pong)
+    expect(signals).toEqual(["online", "online"])
+    latest().hears(JSON.stringify({ changed: [["today"]] }))
+    expect(signals).toEqual(["online", "online", "online"])
+  })
+
   it("passes on the keys a changed message names", () => {
     const { latest, changed, stale } = live()
     latest().opens()

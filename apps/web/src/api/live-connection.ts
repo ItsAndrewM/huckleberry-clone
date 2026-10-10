@@ -50,6 +50,7 @@ export const startLive = ({ open, onChanged, onStale, report, random = Math.rand
   }
 
   const hears = (data: string) => {
+    report("online")
     if (data === HEARTBEAT.pong) {
       awaitingPong = false
       return
