@@ -28,6 +28,12 @@ describe("percentile", () => {
     expect(percentile(z)).toBe(expected)
   })
 
+  it("stays within 0 to 100 near 8 SD, where the series' last digits cancel", () => {
+    const z = 7.98673
+    expect(percentile(-z)).toBeGreaterThanOrEqual(0)
+    expect(percentile(z)).toBeLessThanOrEqual(100)
+  })
+
   it("has no percentile for no number", () => {
     expect(percentile(Number.NaN)).toBeNaN()
   })

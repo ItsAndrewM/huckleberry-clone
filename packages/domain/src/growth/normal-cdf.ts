@@ -16,5 +16,5 @@ export const percentile = (z: number): number => {
   if (Number.isNaN(z)) return Number.NaN
   if (z <= -NEGLIGIBLE_TAIL_Z) return 0
   if (z >= NEGLIGIBLE_TAIL_Z) return 100
-  return 100 * (0.5 + marsagliaSeries(z) * Math.exp(-0.5 * z * z - LN_SQRT_TWO_PI))
+  return Math.min(100, Math.max(0, 100 * (0.5 + marsagliaSeries(z) * Math.exp(-0.5 * z * z - LN_SQRT_TWO_PI))))
 }
