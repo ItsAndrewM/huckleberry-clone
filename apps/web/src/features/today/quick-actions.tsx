@@ -11,7 +11,7 @@ export const QuickActions = () => (
   <div className="fixed inset-x-0 bottom-[calc(3.5rem+env(safe-area-inset-bottom))] border-t bg-background/95 backdrop-blur-sm">
     <section aria-label="Log" className="mx-auto flex max-w-lg gap-2 px-4 py-2">
       {ACTIONS.map(({ label, Icon }) => (
-        <Button key={label} variant="secondary" size="lg" className="h-12 flex-1" disabled>
+        <Button key={label} variant="secondary" size="lg" className="h-12 flex-1 gap-1.5 px-2" disabled>
           <Icon aria-hidden="true" />
           {label}
         </Button>

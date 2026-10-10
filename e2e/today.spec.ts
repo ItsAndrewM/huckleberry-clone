@@ -1,4 +1,4 @@
-import { expect, type Page, test } from "@playwright/test"
+import { expect, type Locator, type Page, test } from "@playwright/test"
 
 const MINUTE = 60_000
 const DAY = 24 * 60 * MINUTE
@@ -123,6 +123,12 @@ const inOrder = (...parts: ReadonlyArray<string>) =>
 const total = (page: Page, label: string) =>
   page.locator("dl > div").filter({ has: page.getByRole("term").filter({ hasText: label }) })
 
+const boxOf = async (locator: Locator) => {
+  const box = await locator.boundingBox()
+  if (box === null) throw new Error(`${locator} isn't on screen to measure`)
+  return box
+}
+
 const LAST_FEED_AT = NOW - 135 * MINUTE
 
 test.describe("Today, with the household's answers played by the test", () => {
@@ -245,9 +251,25 @@ test.describe("Today, with the household's answers played by the test", () => {
   test("keeps the quick actions above the tabs, ready for the sheets in M1.12", async ({ page }) => {
     await playToday(page, todayWith({}))
     await openToday(page)
-    const actions = page.getByRole("region", { name: "Log" }).getByRole("button")
+    const actions = page.getByRole("region", { name: "Log", exact: true }).getByRole("button")
     await expect(actions).toHaveText(["Bottle", "Nursing", "Diaper"])
     for (const action of await actions.all()) await expect(action).toBeDisabled()
+  })
+
+  test("fits the quick actions on a 360-pixel-wide phone, resting on the tab bar", async ({ page }) => {
+    const width = 360
+    const gutter = 16
+    await page.setViewportSize({ width, height: 640 })
+    await playToday(page, todayWith({}))
+    await openToday(page)
+    const log = page.getByRole("region", { name: "Log", exact: true })
+    const bottle = await boxOf(log.getByRole("button", { name: "Bottle" }))
+    const diaper = await boxOf(log.getByRole("button", { name: "Diaper" }))
+    const bar = await boxOf(log)
+    const tabs = await boxOf(page.getByRole("navigation", { name: "Main" }))
+    expect(bottle.x).toBeGreaterThanOrEqual(gutter)
+    expect(diaper.x + diaper.width).toBeLessThanOrEqual(width - gutter)
+    expect(Math.abs(bar.y + bar.height - tabs.y)).toBeLessThanOrEqual(1)
   })
 })
 
