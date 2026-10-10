@@ -54,4 +54,21 @@ describe("createClock", () => {
     leave()
     expect(vi.getTimerCount()).toBe(0)
   })
+
+  it("ticks again for a screen that comes back after every screen had left", () => {
+    const clock = createClock(SECOND)
+    const first = vi.fn<() => void>()
+    const leave = clock.subscribe(first)
+    vi.advanceTimersByTime(SECOND)
+    expect(first).toHaveBeenCalledTimes(1)
+    leave()
+    expect(vi.getTimerCount()).toBe(0)
+    const ticks: number[] = []
+    clock.subscribe(() => ticks.push(clock.now()))
+    vi.advanceTimersByTime(299)
+    expect(ticks).toEqual([])
+    vi.advanceTimersByTime(2 * SECOND + 1)
+    expect(ticks).toEqual([AT + 2 * SECOND, AT + 3 * SECOND, AT + 4 * SECOND])
+    expect(first).toHaveBeenCalledTimes(1)
+  })
 })
