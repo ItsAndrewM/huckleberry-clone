@@ -2,10 +2,11 @@ import {
   type Changed,
   type Child,
   ChildConflict,
-  type ChildEdit,
+  ChildEdit,
   type Household,
   HouseholdConflict,
   type HouseholdEdit,
+  invalidInputFrom,
   type Me,
   queryKeys,
   type SavedChild,
@@ -13,6 +14,7 @@ import {
   type Units,
 } from "@bt/contracts"
 import type { QueryClient } from "@tanstack/react-query"
+import { Result, Schema } from "effect"
 import type { HouseholdApi } from "./client.ts"
 
 export interface HouseholdChange {
@@ -61,9 +63,14 @@ export const childEdit = (latest: Child, shown: Child, fields: ChildFields): Chi
     fields.gestationalAgeDays === shown.gestationalAgeDays ? latest.gestationalAgeDays : fields.gestationalAgeDays,
 })
 
+const checkChildEdit = Schema.decodeUnknownResult(ChildEdit, { errors: "all" })
+
 export const saveChild = async (api: HouseholdApi, shown: Child, fields: ChildFields): Promise<SavedChild> => {
-  const send = (latest: Child) =>
-    api.request((client) => client.child.editChild({ payload: childEdit(latest, shown, fields) }))
+  const send = (latest: Child) => {
+    const edit = checkChildEdit(childEdit(latest, shown, fields))
+    if (Result.isFailure(edit)) throw invalidInputFrom(edit.failure.issue)
+    return api.request((client) => client.child.editChild({ payload: edit.success }))
+  }
   try {
     return await send(shown)
   } catch (error) {

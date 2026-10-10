@@ -117,6 +117,21 @@ describe("rememberSaved", () => {
 })
 
 describe("saveChild", () => {
+  it("names each field the household would refuse, a blank name, a blank birth date and an age at birth out of range, and sends nothing", async () => {
+    const { api, bodies } = householdAnswering()
+    const fields = { name: "", birthDate: "", sex: "female", gestationalAgeDays: 50 } as const
+    const refusal = await saveChild(api, CHILD, fields).catch((error: Error) => error)
+    expect(refusal).toBeInstanceOf(InvalidInput)
+    expect(refusal).toMatchObject({
+      fieldErrors: [
+        { path: "name", issue: "invalid" },
+        { path: "birthDate", issue: "invalid" },
+        { path: "gestationalAgeDays", issue: "invalid" },
+      ],
+    })
+    expect(bodies).toEqual([])
+  })
+
   it("sends the fields this parent changed on top of the child the other phone saved", async () => {
     const theirs = { ...CHILD, birthDate: "2026-08-30", version: 2 }
     const { api, bodies } = householdAnswering(stale(theirs), json(200, { child: theirs, changed: CHANGED }))
