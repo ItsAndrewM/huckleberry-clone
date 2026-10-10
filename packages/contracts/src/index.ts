@@ -41,6 +41,21 @@ export {
   Unauthorized,
 } from "./errors.ts"
 export {
+  Growth,
+  GrowthGroup,
+  MAX_HEAD_CM,
+  MAX_LENGTH_CM,
+  MAX_WEIGHT_G,
+  Measurement,
+  MeasurementConflict,
+  MeasurementEdit,
+  MIN_HEAD_CM,
+  MIN_LENGTH_CM,
+  MIN_WEIGHT_G,
+  NewMeasurement,
+  SavedMeasurement,
+} from "./growth.ts"
+export {
   Child,
   ChildConflict,
   ChildEdit,

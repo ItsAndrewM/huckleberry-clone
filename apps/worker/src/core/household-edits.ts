@@ -63,6 +63,7 @@ const earliestRecordAt = (sql: SqlStorage): Instant | null =>
       `SELECT min(at) AS at FROM (
          SELECT min(occurred_at) AS at FROM diapers WHERE deleted_at IS NULL
          UNION ALL SELECT min(started_at) FROM feeds WHERE deleted_at IS NULL
+         UNION ALL SELECT min(measured_at) FROM growth_measurements WHERE deleted_at IS NULL
        )`,
     )
     .one().at

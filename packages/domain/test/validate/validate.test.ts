@@ -5,7 +5,7 @@ import {
   validateEndAfterStart,
   validateNotBeforeBirth,
   validateNotInFuture,
-  validateOunces,
+  validateOuncePart,
   validateVolumeMl,
 } from "../../src/index.ts"
 import { VANCOUVER } from "../fixtures/zones.ts"
@@ -100,14 +100,14 @@ describe("validateNotInFuture", () => {
   })
 })
 
-describe("validateOunces", () => {
+describe("validateOuncePart", () => {
   it.each([
     [0, null],
     [15.9, null],
     [16, "out_of_range"],
     [-0.1, "out_of_range"],
     [Number.NaN, "not_finite"],
-  ])("%s oz gives %s", (ounces, issue) => {
-    expect(validateOunces(ounces)).toBe(issue)
+  ])("takes %s oz as the ounce part of a weight: %s", (ounces, issue) => {
+    expect(validateOuncePart(ounces)).toBe(issue)
   })
 })
