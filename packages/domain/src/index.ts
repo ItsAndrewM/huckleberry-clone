@@ -8,6 +8,7 @@ export {
   sessionBounds,
   type Side,
 } from "./feed/feed.ts"
+export { girlsLms, type GrowthMetric, type Lms, WHO_LAST_DAY } from "./growth/who-lms.ts"
 export { clipTo, contains, type DayPiece, durationMs, overlaps, splitByDays } from "./interval/interval.ts"
 export { affectedPeriods, type PeriodKey } from "./invalidation/affected-periods.ts"
 export {
