@@ -20,21 +20,22 @@ export const ChildForm = ({ child, save }: ChildFormProps) => {
     event.preventDefault()
     save.mutate({ child, fields: childFieldsOf(new FormData(event.currentTarget)) })
   }
-  const saved = save.isSuccess && !edited
+  const saved = !edited && save.data?.child.version === child.version
+  const failure = save.variables?.child.version === child.version ? save.error : null
   return (
     <form noValidate className="flex flex-col gap-4" onChange={() => setEdited(true)} onSubmit={submit}>
-      <TextField name="name" label="Name" defaultValue={child.name} error={fieldMessage(save.error, "name")} />
+      <TextField name="name" label="Name" defaultValue={child.name} error={fieldMessage(failure, "name")} />
       <TextField
         name="birthDate"
         type="date"
         label="Birth date"
         defaultValue={child.birthDate}
-        error={fieldMessage(save.error, "birthDate")}
+        error={fieldMessage(failure, "birthDate")}
       />
       <SexChoice defaultValue={child.sex} />
       <GestationalAgeField
         gestationalAgeDays={child.gestationalAgeDays}
-        error={fieldMessage(save.error, "gestationalAgeDays")}
+        error={fieldMessage(failure, "gestationalAgeDays")}
       />
       <div className="flex items-center gap-3">
         <Button type="submit" size="lg" disabled={!edited || save.isPending}>
@@ -42,7 +43,7 @@ export const ChildForm = ({ child, save }: ChildFormProps) => {
         </Button>
         {saved ? <output className="text-sm text-muted-foreground">Saved</output> : null}
       </div>
-      <SaveFailure error={save.error} />
+      <SaveFailure error={failure} />
     </form>
   )
 }

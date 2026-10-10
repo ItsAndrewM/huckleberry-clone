@@ -1,4 +1,4 @@
-import { expect, type Page, test } from "@playwright/test"
+import { expect, type Page, test, type WebSocketRoute } from "@playwright/test"
 
 interface Units {
   readonly volume: string
@@ -83,6 +83,18 @@ const playHousehold = async (page: Page): Promise<Played> => {
 
 const sentBodies = (played: Played) => played.sent.map((body) => JSON.parse(body))
 
+const playSocket = async (page: Page) => {
+  const sockets: WebSocketRoute[] = []
+  await page.routeWebSocket(/\/api\/ws$/, (socket) => {
+    sockets.push(socket)
+  })
+  return async (change: Partial<Child>, played: Played) => {
+    await expect.poll(() => sockets.length).toBeGreaterThan(0)
+    played.child = { ...played.child, ...change, version: played.child.version + 1 }
+    sockets.at(-1)?.send(JSON.stringify({ changed: [["me"]] }))
+  }
+}
+
 test.describe("Settings, with the household's answers played by the test", () => {
   test("saves bottles in fl oz for both phones, keeping the zone and the other units", async ({ page }) => {
     const played = await playHousehold(page)
@@ -152,6 +164,38 @@ test.describe("Settings, with the household's answers played by the test", () =>
     await page.getByRole("button", { name: "Save" }).click()
     await expect(page.getByText("Some entries are from before this date. Move or delete them first.")).toBeVisible()
     await expect(page.getByLabel("Birth date")).toHaveValue("2026-09-04")
+  })
+
+  test("doesn't say Saved for an edit the other phone's save replaced", async ({ page }) => {
+    const played = await playHousehold(page)
+    const otherPhoneSaves = await playSocket(page)
+    await page.goto("/settings")
+    await page.getByLabel("Name").fill("Robin Rae")
+    await page.getByRole("button", { name: "Save" }).click()
+    await expect(page.getByText("Saved")).toBeVisible()
+    await page.getByLabel("Name").fill("Robin Ray")
+    await otherPhoneSaves({ name: "Robbie" }, played)
+    await expect(page.getByLabel("Name")).toHaveValue("Robbie")
+    await expect(page.getByText("Saved")).toBeHidden()
+  })
+
+  test("drops a refusal once the other phone's save has replaced what it was about", async ({ page }) => {
+    const played = await playHousehold(page)
+    const otherPhoneSaves = await playSocket(page)
+    await page.route("**/api/child", (route) =>
+      route.fulfill({
+        status: 400,
+        json: { _tag: "InvalidInput", fieldErrors: [{ path: "birthDate", issue: "before_birth" }] },
+      }),
+    )
+    await page.goto("/settings")
+    await page.getByLabel("Birth date").fill("2026-09-04")
+    await page.getByRole("button", { name: "Save" }).click()
+    const refusal = page.getByText("Some entries are from before this date. Move or delete them first.")
+    await expect(refusal).toBeVisible()
+    await otherPhoneSaves({ birthDate: "2026-08-30" }, played)
+    await expect(page.getByLabel("Birth date")).toHaveValue("2026-08-30")
+    await expect(refusal).toBeHidden()
   })
 })
 
