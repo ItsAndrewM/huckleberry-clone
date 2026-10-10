@@ -47,3 +47,14 @@ test("leaves Sign in to the network, so offline it fails rather than opening the
   await goOfflineLikeAPhone(page, context)
   await expect(page.goto("/api/login?return=%2F")).rejects.toThrow()
 })
+
+test("opens the app online even when its saved copy can't be read", async ({ page, context, browserName }) => {
+  test.skip(browserName !== "chromium", "only Chromium lets a test reach inside the service worker")
+  await openWithSavedCopy(page)
+  const worker = context.serviceWorkers()[0] ?? (await context.waitForEvent("serviceworker"))
+  await worker.evaluate(
+    "caches.open = caches.match = () => Promise.reject(new DOMException('The operation failed for an unknown transient reason.', 'UnknownError'))",
+  )
+  await page.reload()
+  await expect(page.getByText("Robin")).toBeVisible()
+})

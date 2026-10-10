@@ -16,6 +16,16 @@ const savedCopy = (files: ReadonlyMap<string, Response>) => {
 
 const answering = (response: Response) => () => Promise.resolve(response)
 
+const unreadable = {
+  match: () =>
+    Promise.reject(new DOMException("The operation failed for an unknown transient reason.", "UnknownError")),
+}
+
+const reporter = () => {
+  const failures: Error[] = []
+  return { failures, report: (failure: Error) => void failures.push(failure) }
+}
+
 describe("cacheName and staleCaches", () => {
   it("names a build's cache by its version", () => {
     expect(cacheName("1a2b3c")).toBe("bt-shell-1a2b3c")
@@ -58,12 +68,30 @@ describe("assetResponse", () => {
   it("answers from the saved copy without the network, whatever Origin the request carries", async () => {
     const saved = new Response("saved script")
     const copy = savedCopy(new Map([["/assets/index-CSxg7yjE.js", saved]]))
-    expect(await assetResponse(script, offline, copy)).toBe(saved)
+    const { failures, report } = reporter()
+    expect(await assetResponse(script, offline, copy, report)).toBe(saved)
     expect(copy.lookups).toEqual([{ path: "/assets/index-CSxg7yjE.js", options: { ignoreVary: true } }])
+    expect(failures).toEqual([])
   })
 
   it("fetches what isn't saved from the network", async () => {
     const fetched = new Response("fetched")
-    expect(await assetResponse(script, answering(fetched), savedCopy(new Map()))).toBe(fetched)
+    const { failures, report } = reporter()
+    expect(await assetResponse(script, answering(fetched), savedCopy(new Map()), report)).toBe(fetched)
+    expect(failures).toEqual([])
+  })
+
+  it("fetches from the network when the saved copy can't be read, and reports why", async () => {
+    const fetched = new Response("fetched")
+    const { failures, report } = reporter()
+    expect(await assetResponse(script, answering(fetched), unreadable, report)).toBe(fetched)
+    expect(failures.map(({ name }) => name)).toEqual(["UnknownError"])
+  })
+})
+
+describe("pageResponse with a saved copy that can't be read", () => {
+  it("still opens the page from the network, since it never reads the saved copy first", async () => {
+    const fetched = new Response("<html>")
+    expect(await pageResponse(new Request(`${ORIGIN}/`), answering(fetched), unreadable)).toBe(fetched)
   })
 })
