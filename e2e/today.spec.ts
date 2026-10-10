@@ -241,6 +241,14 @@ test.describe("Today, with the household's answers played by the test", () => {
     await expect(page.getByText("Nothing logged in the last 24 hours.")).toBeVisible()
     await expect(total(page, "Feeds started")).toContainText("0")
   })
+
+  test("keeps the quick actions above the tabs, ready for the sheets in M1.12", async ({ page }) => {
+    await playToday(page, todayWith({}))
+    await openToday(page)
+    const actions = page.getByRole("region", { name: "Log" }).getByRole("button")
+    await expect(actions).toHaveText(["Bottle", "Nursing", "Diaper"])
+    for (const action of await actions.all()) await expect(action).toBeDisabled()
+  })
 })
 
 test("shows a diaper the other phone just logged, without a reload", async ({ page }) => {

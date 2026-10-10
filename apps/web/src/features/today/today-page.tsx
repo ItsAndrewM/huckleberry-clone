@@ -4,6 +4,7 @@ import { Page } from "../../shell/page.tsx"
 import { useNow } from "../../timer/use-now.ts"
 import { displayOf } from "./display.ts"
 import { FeedCard } from "./feed-card.tsx"
+import { QuickActions } from "./quick-actions.tsx"
 import { RecentList } from "./recent-list.tsx"
 import { recentRows } from "./recent-rows.ts"
 import { TotalsCard } from "./totals-card.tsx"
@@ -32,12 +33,15 @@ export const TodayPage = () => {
   const { data: today, isError } = useToday()
   const { data: last24h, isError: last24hFailed } = useLast24h()
   return (
-    <Page title="Today" subtitle={me?.child.name}>
-      {today === undefined || me === undefined ? (
-        <output className="text-muted-foreground">{isError ? "Today couldn't be loaded." : "Loading…"}</output>
-      ) : (
-        <TodayCards today={today} last24h={last24h?.totals} last24hFailed={last24hFailed} household={me.household} />
-      )}
-    </Page>
+    <div className="pb-16">
+      <Page title="Today" subtitle={me?.child.name}>
+        {today === undefined || me === undefined ? (
+          <output className="text-muted-foreground">{isError ? "Today couldn't be loaded." : "Loading…"}</output>
+        ) : (
+          <TodayCards today={today} last24h={last24h?.totals} last24hFailed={last24hFailed} household={me.household} />
+        )}
+      </Page>
+      <QuickActions />
+    </div>
   )
 }
