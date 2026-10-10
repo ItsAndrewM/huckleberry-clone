@@ -78,4 +78,31 @@ test.describe("with the household's socket played by the test", () => {
     await expect(noConnection).toBeHidden()
     expect(sockets).toHaveLength(1)
   })
+
+  test("drops a socket the household stops answering within two beats, then opens another and refetches everything", async ({
+    page,
+  }) => {
+    const refetch = page.waitForRequest("**/api/me")
+    await page.clock.runFor(HEARTBEAT_MS)
+    expect(sockets).toHaveLength(1)
+    await page.clock.runFor(HEARTBEAT_MS)
+    await page.clock.runFor(FIRST_RETRY_AT_MOST)
+    await expect.poll(() => sockets.length).toBe(2)
+    await refetch
+  })
+
+  test("keeps a socket whose ping has gone unanswered for only one beat", async ({ page }) => {
+    await page.clock.runFor(HEARTBEAT_MS)
+    await page.clock.runFor(FIRST_RETRY_AT_MOST)
+    expect(sockets).toHaveLength(1)
+  })
+
+  test("reconnects at once when the browser comes back online, without waiting for the retry timer", async ({
+    page,
+  }) => {
+    await page.clock.pauseAt(new Date(Date.now() + 2_000))
+    await socket(0).close({ code: 1011, reason: "restarting" })
+    await page.evaluate('window.dispatchEvent(new Event("online"))')
+    await expect.poll(() => sockets.length).toBe(2)
+  })
 })
