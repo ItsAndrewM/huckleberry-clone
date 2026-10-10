@@ -9,9 +9,12 @@ export const weeksAndDays = (gestationalAgeDays: number) => ({
 
 const text = (form: FormData, name: string) => String(form.get(name) ?? "")
 
+const ageInDays = (weeks: number, days: number) =>
+  Number.isInteger(days) && days >= 0 && days < DAYS_PER_WEEK ? weeks * DAYS_PER_WEEK + days : Number.NaN
+
 export const childFieldsOf = (form: FormData): ChildFields => ({
   name: text(form, "name").trim(),
   birthDate: text(form, "birthDate"),
   sex: text(form, "sex") === "male" ? "male" : "female",
-  gestationalAgeDays: Number(text(form, "weeks")) * DAYS_PER_WEEK + Number(text(form, "days")),
+  gestationalAgeDays: ageInDays(Number(text(form, "weeks")), Number(text(form, "days"))),
 })

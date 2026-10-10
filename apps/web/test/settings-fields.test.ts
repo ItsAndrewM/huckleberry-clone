@@ -83,6 +83,11 @@ describe("the child form", () => {
       gestationalAgeDays: 279,
     })
   })
+
+  it.each(["7", "11", "-1", "2.5"])("refuses %s days rather than rolling them into the weeks", (days) => {
+    const form = formOf({ name: "Robin", birthDate: "2026-09-01", sex: "female", weeks: "39", days })
+    expect(childFieldsOf(form).gestationalAgeDays).toBeNaN()
+  })
 })
 
 describe("fieldMessage", () => {
