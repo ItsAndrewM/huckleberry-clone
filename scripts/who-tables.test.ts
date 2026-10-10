@@ -1,6 +1,7 @@
 import { readdirSync, readFileSync } from "node:fs"
 import { describe, expect, it } from "vitest"
 import {
+  checkWorkbook,
   LMS_FILE,
   type LmsColumns,
   lmsJson,
@@ -45,6 +46,21 @@ describe("the bundled WHO tables (packages/domain/data/who)", () => {
   })
 })
 
+const PREFIXES = { weightForAge: "wfa", lengthForAge: "lhfa", headCircumferenceForAge: "hcfa" } as const
+
+describe("WHO_SOURCES", () => {
+  it.each(WHO_SOURCES)("names the file, the girls' table and the kind of $dataset alike", (source) => {
+    expect(new URL(source.url).pathname.split("/").at(-1)).toBe(`${source.dataset}.xlsx`)
+    expect(source.dataset).toBe(`${PREFIXES[source.indicator]}-girls-${source.kind}-expanded-tables`)
+    expect(source.sheet.toLowerCase()).toMatch(source.kind === "zscore" ? /_girls_z_exp$/ : /_girls_p_exp$/)
+  })
+
+  it("has each indicator's z-score and percentile workbooks, once each", () => {
+    const tables = new Set(WHO_SOURCES.map(({ indicator, kind }) => `${indicator} ${kind}`))
+    expect([tables.size, WHO_SOURCES.length]).toEqual([6, 6])
+  })
+})
+
 const SHARED_STRINGS = "<sst><si><t>Day</t></si><si><t>L</t></si></sst>"
 const sheet = (...rows: string[]) =>
   `<worksheet><sheetData>${rows.map((cells, i) => `<row r="${i + 1}" spans="1:2">${cells}</row>`).join("")}</sheetData></worksheet>`
@@ -61,6 +77,33 @@ describe("sheetRows", () => {
       ["0", "3.7830000000000003E-2"],
       ["", "1"],
     ])
+  })
+})
+
+const workbook = (...names: string[]) =>
+  `<workbook><sheets>${names.map((name, i) => `<sheet name="${name}" sheetId="${i + 1}" r:id="rId${i + 1}"/>`).join("")}</sheets></workbook>`
+
+const girlsWeight: WhoSource = {
+  dataset: "wfa-girls-zscore-expanded-tables",
+  sheet: "WFA_girls_z_exp",
+  indicator: "weightForAge",
+  kind: "zscore",
+  url: "https://who.test/wfa-girls-zscore-expanded-tables.xlsx",
+}
+
+describe("checkWorkbook", () => {
+  it("accepts the one sheet WHO names the table by", () => {
+    expect(() => checkWorkbook(girlsWeight, workbook("WFA_girls_z_exp"))).not.toThrow()
+  })
+
+  it.each([
+    { problem: "the boys' table under the girls' name", names: ["WFA_boys_z_exp"] },
+    { problem: "a second sheet", names: ["WFA_girls_z_exp", "Notes"] },
+    { problem: "no sheet", names: [] },
+  ])("refuses $problem", ({ names }) => {
+    expect(() => checkWorkbook(girlsWeight, workbook(...names))).toThrow(
+      /^wfa-girls-zscore-expanded-tables: expected one sheet, WFA_girls_z_exp; found /,
+    )
   })
 })
 
@@ -109,7 +152,13 @@ describe("tableJson and lmsJson", () => {
   })
 })
 
-const zscore: WhoSource = { dataset: "z", indicator: "weightForAge", kind: "zscore", url: "https://who.test/z.xlsx" }
+const zscore: WhoSource = {
+  dataset: "z",
+  sheet: "z",
+  indicator: "weightForAge",
+  kind: "zscore",
+  url: "https://who.test/z.xlsx",
+}
 const percentiles: WhoSource = { ...zscore, dataset: "p", kind: "percentiles" }
 const read = (source: WhoSource, table: Table) => ({ source, sha256: "", table })
 

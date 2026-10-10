@@ -5,6 +5,7 @@ export type TableKind = "zscore" | "percentiles"
 
 export interface WhoSource {
   readonly dataset: string
+  readonly sheet: string
   readonly indicator: Indicator
   readonly kind: TableKind
   readonly url: string
@@ -15,36 +16,42 @@ const INDICATORS_URL = "https://cdn.who.int/media/docs/default-source/child-grow
 export const WHO_SOURCES: readonly WhoSource[] = [
   {
     dataset: "wfa-girls-zscore-expanded-tables",
+    sheet: "WFA_girls_z_exp",
     indicator: "weightForAge",
     kind: "zscore",
     url: `${INDICATORS_URL}/weight-for-age/expanded-tables/wfa-girls-zscore-expanded-tables.xlsx?sfvrsn=f01bc813_10`,
   },
   {
     dataset: "wfa-girls-percentiles-expanded-tables",
+    sheet: "wfa_girls_p_exp",
     indicator: "weightForAge",
     kind: "percentiles",
     url: `${INDICATORS_URL}/weight-for-age/expanded-tables/wfa-girls-percentiles-expanded-tables.xlsx?sfvrsn=54cfa5e8_9`,
   },
   {
     dataset: "lhfa-girls-zscore-expanded-tables",
+    sheet: "LFA_girls_z_exp",
     indicator: "lengthForAge",
     kind: "zscore",
     url: `${INDICATORS_URL}/length-height-for-age/expandable-tables/lhfa-girls-zscore-expanded-tables.xlsx?sfvrsn=27f1e2cb_10`,
   },
   {
     dataset: "lhfa-girls-percentiles-expanded-tables",
+    sheet: "lhfa_girls_p_exp",
     indicator: "lengthForAge",
     kind: "percentiles",
     url: `${INDICATORS_URL}/length-height-for-age/expandable-tables/lhfa-girls-percentiles-expanded-tables.xlsx?sfvrsn=478569a5_9`,
   },
   {
     dataset: "hcfa-girls-zscore-expanded-tables",
+    sheet: "HCFA_girls_z_exp",
     indicator: "headCircumferenceForAge",
     kind: "zscore",
     url: `${INDICATORS_URL}/head-circumference-for-age/expanded-tables/hcfa-girls-zscore-expanded-tables.xlsx?sfvrsn=3a34b8b0_8`,
   },
   {
     dataset: "hcfa-girls-percentiles-expanded-tables",
+    sheet: "hcfa_girls_p_exp",
     indicator: "headCircumferenceForAge",
     kind: "percentiles",
     url: `${INDICATORS_URL}/head-circumference-for-age/expanded-tables/hcfa-girls-percentiles-expanded-tables.xlsx?sfvrsn=71b282d1_13`,
@@ -84,6 +91,7 @@ const SHARED_STRING = /<si><t[^>]*>([^<]*)<\/t><\/si>/g
 const ROW = /<row\b[^>]*[^/]>(.*?)<\/row>/gs
 const CELL = /<c ([^>]*?)(?:\/>|>(?:<v>([^<]*)<\/v>)?<\/c>)/g
 const DECIMAL = /^-?\d+(?:\.\d+)?(?:E[-+]?\d+)?$/i
+const SHEET = /<sheet\b[^>]*\bname="([^"]*)"/g
 
 export type Table = readonly (readonly number[])[]
 
@@ -96,6 +104,13 @@ export const sheetRows = (sheetXml: string, strings: readonly string[]): string[
   Array.from(sheetXml.matchAll(ROW), ([, cells = ""]) =>
     Array.from(cells.matchAll(CELL), ([, attributes = "", value = ""]) => cellText(attributes, value, strings)),
   )
+
+export const checkWorkbook = (source: WhoSource, workbookXml: string): void => {
+  const names = Array.from(workbookXml.matchAll(SHEET), ([, name = ""]) => name)
+  if (names.length !== 1 || names[0] !== source.sheet) {
+    throw new Error(`${source.dataset}: expected one sheet, ${source.sheet}; found ${names.join(", ")}`)
+  }
+}
 
 const numberOf = (text: string) => (DECIMAL.test(text) ? Number(text) : Number.NaN)
 

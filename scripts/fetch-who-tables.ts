@@ -4,6 +4,7 @@ import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { fileURLToPath } from "node:url"
 import {
+  checkWorkbook,
   COLUMNS,
   LAST_DAY,
   MANIFEST_FILE,
@@ -23,7 +24,7 @@ const dataDir = fileURLToPath(new URL("../packages/domain/data/who/", import.met
 const downloads = mkdtempSync(join(tmpdir(), "who-tables-"))
 
 const download = async ({ dataset, url }: WhoSource) => {
-  const response = await fetch(url)
+  const response = await fetch(url, { redirect: "error" })
   if (!response.ok) throw new Error(`${dataset}: HTTP ${response.status} from ${url}`)
   return new Uint8Array(await response.arrayBuffer())
 }
@@ -38,6 +39,7 @@ const read = async (source: WhoSource): Promise<SourceRead> => {
   const bytes = await download(source)
   const workbook = join(downloads, `${source.dataset}.xlsx`)
   writeFileSync(workbook, bytes)
+  checkWorkbook(source, unzipped(workbook, "xl/workbook.xml"))
   const strings = sharedStrings(unzipped(workbook, "xl/sharedStrings.xml"))
   const rows = sheetRows(unzipped(workbook, "xl/worksheets/sheet1.xml"), strings)
   return { source, sha256: sha256Of(bytes), table: whoTable(rows, COLUMNS[source.kind], LAST_DAY) }
