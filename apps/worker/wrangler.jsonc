@@ -25,7 +25,7 @@
     "ACCESS_TEAM_DOMAIN": "https://misty-wildflower-0505.cloudflareaccess.com",
     // The "Baby tracker" Access app's AUD tag, and its admin service token's Client ID (docs/runbooks/access.md).
     "ACCESS_AUD": "941d341f1c2f5665493d828a1babe3c49eee9f1e9db0b6f1e0c450297817a65b",
-    "ADMIN_SERVICE_TOKEN_CN": "",
+    "ADMIN_SERVICE_TOKEN_CN": "028c076d56931d34ae295be519927e01.access",
   },
   // `vite dev` and `vite preview` sign every request in as this identity; deploys ignore it.
   "access": {

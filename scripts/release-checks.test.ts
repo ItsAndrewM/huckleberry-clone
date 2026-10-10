@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs"
+import ts from "typescript"
 import { describe, expect, it } from "vitest"
 import {
   bookmarkFrom,
@@ -26,6 +28,13 @@ const ON_MAIN: Checkout = { branch: "main", clean: true, head: "7321bf2", origin
 describe("the Worker config a release deploys", () => {
   it("passes as built for production", () => {
     expect(deployProblems(DEPLOYABLE)).toEqual([])
+  })
+
+  it("passes as committed in apps/worker/wrangler.jsonc", () => {
+    const path = new URL("../apps/worker/wrangler.jsonc", import.meta.url)
+    const { config, error } = ts.parseConfigFileTextToJson(path.pathname, readFileSync(path, "utf8"))
+    expect(error).toBeUndefined()
+    expect(deployProblems(config)).toEqual([])
   })
 
   it.each([
