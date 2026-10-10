@@ -1,7 +1,8 @@
 import { FeedConflict } from "@bt/contracts"
 import { describe, expect, it } from "vitest"
+import type { Action } from "../src/api/actions.ts"
 import { Offline } from "../src/api/errors.ts"
-import type { Sending } from "../src/sheets/sending.ts"
+import { closesOnSend, type Sending } from "../src/sheets/sending.ts"
 import { CLOSED, expiredState, failedState, savedState, sendingState } from "../src/sheets/sheets-state.ts"
 import { TOAST_MS } from "../src/sheets/undo.ts"
 import { diaperAt, feedAt, NOW } from "./today-fixtures.ts"
@@ -17,6 +18,101 @@ const SWITCH: Sending = {
   sheet: "nursing",
   action: { kind: "switchSide", id: "feed-1", payload: { actionId: ACTION_ID, version: 3, occurredAt: NOW } },
 }
+
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
+
+const STARTED: Sending = {
+  sheet: "nursing",
+  action: { kind: "startFeed", payload: { actionId: ACTION_ID, side: "left", startedAt: NOW } },
+}
+
+const BOTTLE_FEED: Sending = {
+  sheet: "bottle",
+  action: {
+    kind: "logFeed",
+    payload: { actionId: ACTION_ID, segments: [], portions: [{ occurredAt: NOW, breastMilkMl: 40, formulaMl: 0 }] },
+  },
+}
+
+const PAST_FEED: Sending = {
+  sheet: "pastFeed",
+  action: {
+    kind: "logFeed",
+    payload: {
+      actionId: ACTION_ID,
+      segments: [
+        { side: "left", startedAt: NOW - 1_800_000, endedAt: NOW - 1_200_000 },
+        { side: "right", startedAt: NOW - 1_200_000, endedAt: NOW - 600_000 },
+      ],
+      portions: [],
+    },
+  },
+}
+
+const PAUSE: Sending = {
+  sheet: "nursing",
+  action: { kind: "pauseFeed", id: "feed-1", payload: { actionId: ACTION_ID, version: 3, occurredAt: NOW } },
+}
+
+const RESUME: Sending = {
+  sheet: "nursing",
+  action: {
+    kind: "resumeFeed",
+    id: "feed-1",
+    payload: { actionId: ACTION_ID, version: 3, side: "right", occurredAt: NOW },
+  },
+}
+
+const ADD_BOTTLE: Sending = {
+  sheet: "bottle",
+  action: {
+    kind: "addBottle",
+    id: "feed-1",
+    payload: { actionId: ACTION_ID, version: 3, occurredAt: NOW, breastMilkMl: 40, formulaMl: 0 },
+  },
+}
+
+const FINISH: Sending = {
+  sheet: "nursing",
+  action: {
+    kind: "finishFeed",
+    id: "feed-1",
+    payload: { actionId: ACTION_ID, version: 3, occurredAt: NOW, deleteIfEmpty: false },
+  },
+}
+
+const UNDO_DIAPER: Sending = {
+  sheet: "diaper",
+  action: { kind: "deleteDiaper", id: "diaper-1", payload: { actionId: ACTION_ID, version: 1 } },
+}
+
+const UNDO_FEED: Sending = {
+  sheet: "nursing",
+  action: { kind: "deleteFeed", id: "feed-7", payload: { actionId: ACTION_ID, version: 2 } },
+}
+
+const UNDO_PORTION: Sending = {
+  sheet: "bottle",
+  action: {
+    kind: "deletePortion",
+    id: "portion-9",
+    payload: { actionId: ACTION_ID, version: 3, deleteIfEmpty: false },
+  },
+}
+
+const CLOSING = {
+  logDiaper: { sending: DIAPER, closes: true },
+  deleteDiaper: { sending: UNDO_DIAPER, closes: false },
+  logFeed: { sending: BOTTLE_FEED, closes: true },
+  startFeed: { sending: STARTED, closes: true },
+  switchSide: { sending: SWITCH, closes: false },
+  pauseFeed: { sending: PAUSE, closes: false },
+  resumeFeed: { sending: RESUME, closes: false },
+  addBottle: { sending: ADD_BOTTLE, closes: true },
+  finishFeed: { sending: FINISH, closes: true },
+  deleteFeed: { sending: UNDO_FEED, closes: false },
+  deletePortion: { sending: UNDO_PORTION, closes: false },
+} satisfies Record<Action["kind"], { readonly sending: Sending; readonly closes: boolean }>
 
 describe("sending", () => {
   it("closes a sheet that creates an entry while online, so the entry shows at once", () => {
@@ -92,5 +188,120 @@ describe("a conflict", () => {
     const current = feedAt(NOW, { id: "feed-1", version: 4 })
     const failed = { sending: SWITCH, error: new FeedConflict({ code: "STALE_VERSION", current }) }
     expect(failedState({ ...CLOSED, open: "nursing" }, failed, NOW)).toMatchObject({ open: "nursing", failed })
+  })
+})
+
+describe("the Undo for a new feed", () => {
+  it.each([
+    { message: "Feed started", sending: STARTED },
+    { message: "Bottle saved", sending: BOTTLE_FEED },
+    { message: "Feed saved", sending: PAST_FEED },
+  ])("$message offers to delete the feed at the version the household answered", ({ message, sending }) => {
+    const feed = feedAt(NOW, { id: "feed-7", version: 2 })
+    const { toast } = savedState(CLOSED, sending, { feed, changed: [] }, NOW)
+    expect(toast).toMatchObject({
+      message,
+      undo: { sheet: sending.sheet, action: { kind: "deleteFeed", id: "feed-7", payload: { version: 2 } } },
+    })
+  })
+})
+
+describe("the Undo for a bottle added to a feed", () => {
+  it("targets the newest portion that matches the bottle in time and amounts", () => {
+    const bottle = { occurredAt: NOW - 600_000, breastMilkMl: 40, formulaMl: 0 }
+    const sending: Sending = {
+      sheet: "bottle",
+      action: { kind: "addBottle", id: "feed-1", payload: { actionId: ACTION_ID, version: 2, ...bottle } },
+    }
+    const portions = [
+      { id: "portion-earlier-other", occurredAt: NOW - 1_800_000, breastMilkMl: 60, formulaMl: 0 },
+      { id: "portion-earlier-same", ...bottle },
+      { id: "portion-newest-same", ...bottle },
+      { id: "portion-other-time", ...bottle, occurredAt: NOW },
+      { id: "portion-other-breast", ...bottle, breastMilkMl: 60 },
+      { id: "portion-other-formula", ...bottle, formulaMl: 30 },
+    ]
+    const feed = feedAt(NOW - 1_800_000, { id: "feed-1", version: 3, portions })
+    const { toast } = savedState(CLOSED, sending, { feed, changed: [] }, NOW)
+    expect(toast?.undo?.action).toMatchObject({
+      kind: "deletePortion",
+      id: "portion-newest-same",
+      payload: { version: 3, deleteIfEmpty: false },
+    })
+  })
+})
+
+describe("the Undo's own action", () => {
+  it.each([
+    { label: "a diaper", sending: DIAPER, saved: { diaper: diaperAt(NOW, { id: "diaper-1" }), changed: [] } },
+    { label: "a started feed", sending: STARTED, saved: { feed: feedAt(NOW, { id: "feed-7" }), changed: [] } },
+  ])("for $label, gets a fresh actionId, not the create's", ({ sending, saved }) => {
+    const { toast } = savedState(CLOSED, sending, saved, NOW)
+    const actionId = toast?.undo?.action.payload.actionId
+    expect(actionId).toMatch(UUID)
+    expect(actionId).not.toBe(ACTION_ID)
+  })
+})
+
+describe("what a send clears", () => {
+  it.each([
+    { kind: "deleteDiaper", sending: UNDO_DIAPER },
+    { kind: "deleteFeed", sending: UNDO_FEED },
+    { kind: "deletePortion", sending: UNDO_PORTION },
+  ])("an Undo send ($kind) clears the toast and any failure", ({ sending }) => {
+    const { toast } = savedState(CLOSED, DIAPER, { diaper: diaperAt(NOW, { id: "diaper-1" }), changed: [] }, NOW)
+    const failed = { sending: DIAPER, error: new Offline() }
+    expect(sendingState({ ...CLOSED, toast, failed }, sending, true)).toMatchObject({ toast: null, failed: null })
+  })
+
+  it("a create keeps a toast that is still showing, and clears the failure", () => {
+    const earlier = savedState(CLOSED, DIAPER, { diaper: diaperAt(NOW, { id: "diaper-1" }), changed: [] }, NOW)
+    const failed = { sending: BOTTLE_FEED, error: new Offline() }
+    const state = sendingState({ ...earlier, failed }, DIAPER, true)
+    expect(state.toast).toBe(earlier.toast)
+    expect(state.failed).toBeNull()
+  })
+})
+
+describe("which sends close their sheet", () => {
+  it.each(Object.entries(CLOSING))("closes on send: %s", (_kind, { sending, closes }) => {
+    expect(closesOnSend(sending)).toBe(closes)
+  })
+})
+
+describe("a failed create", () => {
+  it("keeps a toast that is still showing", () => {
+    const earlier = savedState(CLOSED, DIAPER, { diaper: diaperAt(NOW, { id: "diaper-1" }), changed: [] }, NOW)
+    const state = failedState(earlier, { sending: BOTTLE_FEED, error: new Offline() }, NOW + 1_000)
+    expect(state).toMatchObject({ open: "bottle", failed: { sending: BOTTLE_FEED } })
+    expect(state.toast).toBe(earlier.toast)
+  })
+})
+
+describe("an older toast's sweep", () => {
+  it("leaves a newer toast in place when the older toast's time is up", () => {
+    const older = savedState(CLOSED, DIAPER, { diaper: diaperAt(NOW, { id: "diaper-1" }), changed: [] }, NOW)
+    const newer = savedState(
+      older,
+      DIAPER,
+      { diaper: diaperAt(NOW + 2_000, { id: "diaper-2" }), changed: [] },
+      NOW + 2_000,
+    )
+    expect(expiredState(newer, NOW + TOAST_MS).toast).toBe(newer.toast)
+  })
+})
+
+describe("a failed Undo", () => {
+  it("says it wasn't undone when the error is not being offline", () => {
+    const current = feedAt(NOW, { id: "feed-1", version: 4 })
+    const undo: Sending = {
+      sheet: "nursing",
+      action: { kind: "deleteFeed", id: "feed-1", payload: { actionId: ACTION_ID, version: 3 } },
+    }
+    const error = new FeedConflict({ code: "STALE_VERSION", current })
+    expect(failedState(CLOSED, { sending: undo, error }, NOW)).toEqual({
+      ...CLOSED,
+      toast: { message: "That wasn't undone.", undo: null, until: NOW + TOAST_MS },
+    })
   })
 })
