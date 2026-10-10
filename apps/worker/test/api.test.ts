@@ -17,21 +17,24 @@ interface Recorded {
   readonly forwarded: Request[]
   readonly seeded: HouseholdSeed[]
   readonly toggled: string[]
+  readonly emailChanges: string[]
 }
 
 const recordingHousehold = (alreadySeeded = false): Household & Recorded => {
   const forwarded: Request[] = []
   const seeded: HouseholdSeed[] = []
   const toggled: string[] = []
+  const emailChanges: string[] = []
+  const emails = SEED.caregivers.map((caregiver) => caregiver.email)
   const toggle = async (email: string, active: boolean) => {
     toggled.push(`${active ? "enable" : "disable"} ${email}`)
-    const known = SEED.caregivers.some((caregiver) => caregiver.email === email)
-    return known ? { email, active, closedSockets: active ? 0 : 2 } : undefined
+    return emails.includes(email) ? { email, active, closedSockets: active ? 0 : 2 } : undefined
   }
   return {
     forwarded,
     seeded,
     toggled,
+    emailChanges,
     fetch: async (request) => {
       forwarded.push(request)
       return new Response("from the household")
@@ -42,14 +45,22 @@ const recordingHousehold = (alreadySeeded = false): Household & Recorded => {
     },
     disableCaregiver: (email) => toggle(email, false),
     enableCaregiver: (email) => toggle(email, true),
+    setCaregiverEmail: async (email, newEmail) => {
+      emailChanges.push(`${email} -> ${newEmail}`)
+      if (emails.includes(newEmail)) return { kind: "taken" }
+      return emails.includes(email) ? { kind: "changed", email: newEmail, closedSockets: 1 } : { kind: "unknown" }
+    },
   }
 }
 
+const lost = () => Promise.reject(new Error("Network connection lost."))
+
 const unreachableHousehold: Household = {
   fetch: () => Promise.reject(new Error("Durable Object reset because its code was updated.")),
-  seedHousehold: () => Promise.reject(new Error("Network connection lost.")),
-  disableCaregiver: () => Promise.reject(new Error("Network connection lost.")),
-  enableCaregiver: () => Promise.reject(new Error("Network connection lost.")),
+  seedHousehold: lost,
+  disableCaregiver: lost,
+  enableCaregiver: lost,
+  setCaregiverEmail: lost,
 }
 
 const routeWith =
@@ -57,7 +68,8 @@ const routeWith =
   async (path: string, caller: Caller, init: RequestInit = {}) => {
     const household = recordingHousehold(alreadySeeded)
     const response = await routeApi(new Request(`${ORIGIN}${path}`, init), caller, household, adminClientId)
-    return { response, forwarded: household.forwarded, seeded: household.seeded, toggled: household.toggled }
+    const { forwarded, seeded, toggled, emailChanges } = household
+    return { response, forwarded, seeded, toggled, emailChanges }
   }
 
 const route = routeWith(ADMIN_CLIENT_ID)
@@ -337,6 +349,74 @@ describe("disabling and enabling a caregiver (POST /api/admin/caregiver/disable 
     )
     expect(response.status).toBe(401)
     expect(toggled).toEqual([])
+  })
+})
+
+const jsonRequest = (body: string): RequestInit => ({
+  method: "POST",
+  headers: { "content-type": "application/json" },
+  body,
+})
+
+interface EmailChangeBody {
+  readonly email?: string
+  readonly newEmail?: string
+}
+
+describe("changing a caregiver's email (POST /api/admin/caregiver/set-email)", () => {
+  const setEmail = (body: EmailChangeBody) =>
+    route("/api/admin/caregiver/set-email", adminToken, jsonRequest(JSON.stringify(body)))
+
+  it("changes it as the admin, and answers 200 no-store with the new email and the sockets it closed", async () => {
+    const { response, emailChanges, forwarded } = await setEmail({
+      email: "emily@example.test",
+      newEmail: "emily.new@example.test",
+    })
+    expect(response.status).toBe(200)
+    expect(response.headers.get("cache-control")).toBe("no-store")
+    expect(await response.json()).toEqual({ email: "emily.new@example.test", closedSockets: 1 })
+    expect(emailChanges).toEqual(["emily@example.test -> emily.new@example.test"])
+    expect(forwarded).toEqual([])
+  })
+
+  it("answers 404 when no caregiver has the old email", async () => {
+    const { response } = await setEmail({ email: "stranger@example.test", newEmail: "emily.new@example.test" })
+    expect(response.status).toBe(404)
+    expect(await response.json()).toEqual({ _tag: "NotFound" })
+  })
+
+  it("refuses an email another caregiver already has with 400 on newEmail", async () => {
+    const { response } = await setEmail({ email: "emily@example.test", newEmail: "andrew@example.test" })
+    expect(response.status).toBe(400)
+    expect(await response.json()).toEqual({
+      _tag: "InvalidInput",
+      fieldErrors: [{ path: "newEmail", issue: "invalid" }],
+    })
+  })
+
+  it.each([
+    ["a new email in capitals", { email: "emily@example.test", newEmail: "Emily@Example.test" }, ["newEmail"]],
+    ["an old email that isn't one", { email: "emily", newEmail: "emily.new@example.test" }, ["email"]],
+    ["no new email", { email: "emily@example.test" }, ["newEmail"]],
+  ])("refuses %s with 400, and changes no one", async (_label, body, paths) => {
+    const { response, emailChanges } = await setEmail(body)
+    expect(response.status).toBe(400)
+    expect(await response.json()).toEqual({
+      _tag: "InvalidInput",
+      fieldErrors: paths.map((path) => ({ path, issue: "invalid" })),
+    })
+    expect(emailChanges).toEqual([])
+  })
+
+  it("is refused to a caregiver, before the body is read", async () => {
+    quietly("warn")
+    const { response, emailChanges } = await route(
+      "/api/admin/caregiver/set-email",
+      andrew,
+      jsonRequest(JSON.stringify({ email: "andrew@example.test", newEmail: "andrew.new@example.test" })),
+    )
+    expect(response.status).toBe(401)
+    expect(emailChanges).toEqual([])
   })
 })
 

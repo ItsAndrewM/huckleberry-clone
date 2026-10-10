@@ -1,8 +1,8 @@
 import { SOCKET_PATH } from "@bt/contracts"
 import { DurableObject } from "cloudflare:workers"
 import { Option, Schema } from "effect"
-import type { CaregiverStatus } from "./admin.ts"
-import { activeCaregiver, setCaregiverActive } from "./core/caregivers.ts"
+import type { CaregiverStatus, EmailChangeResult } from "./admin.ts"
+import { activeCaregiver, setCaregiverActive, setCaregiverEmail } from "./core/caregivers.ts"
 import { seedHousehold } from "./core/household.ts"
 import { PRUNE_EVERY_MS, pruneReceipts } from "./core/receipts.ts"
 import { migrate } from "./db/migrate.ts"
@@ -77,6 +77,13 @@ export class HouseholdDO extends DurableObject<HouseholdEnv> {
   enableCaregiver(email: string): CaregiverStatus | undefined {
     const caregiverId = setCaregiverActive(this.ctx.storage.sql, email, true, Date.now())
     return caregiverId === undefined ? undefined : { email, active: true, closedSockets: 0 }
+  }
+
+  setCaregiverEmail(email: string, newEmail: string): EmailChangeResult {
+    const change = setCaregiverEmail(this.ctx.storage.sql, email, newEmail, Date.now())
+    return change.kind === "changed"
+      ? { kind: "changed", email: newEmail, closedSockets: closeSockets(this.ctx, change.caregiverId) }
+      : change
   }
 }
 
