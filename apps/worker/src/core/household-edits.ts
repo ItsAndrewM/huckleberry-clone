@@ -81,7 +81,7 @@ export const editChild =
     if (current.version !== edit.version) {
       return { ok: false, error: new ChildConflict({ code: "STALE_VERSION", current }) }
     }
-    const issue = birthDateIssue(sql, edit.birthDate, stamp.now)
+    const issue = edit.birthDate === current.birthDate ? null : birthDateIssue(sql, edit.birthDate, stamp.now)
     if (issue !== null) return { ok: false, error: new InvalidInput({ fieldErrors: [{ path: "birthDate", issue }] }) }
     const row = sql
       .exec<ChildRow>(

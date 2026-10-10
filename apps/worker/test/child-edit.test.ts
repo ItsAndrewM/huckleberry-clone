@@ -9,6 +9,7 @@ const decodeSaved = Schema.decodeUnknownSync(Schema.toCodecJson(SavedChild))
 const decodeSavedDiaper = Schema.decodeUnknownSync(Schema.toCodecJson(SavedDiaper))
 
 const PROFILE_CHANGED = [["me"], ["today"], ["last24h"]]
+const SEP_1_AT_02_30 = Date.UTC(2026, 8, 1, 9, 30)
 const SEP_3_BEGINS = Date.UTC(2026, 8, 3, 7)
 const OCT_8_AT_22 = Date.UTC(2026, 9, 9, 5)
 
@@ -109,6 +110,21 @@ describe("PATCH /api/child", () => {
     expect(await sendJson(household, "PATCH", "/api/child", editOf(1, "2026-09-04"))).toEqual(
       refusedBirthDate("before_birth"),
     )
+  })
+
+  it("takes a name-only edit when a move west has put an early entry before the unchanged birth date", async () => {
+    const household = await seededHousehold()
+    await logDiaper(household, SEP_1_AT_02_30)
+    await sendJson(household, "PATCH", "/api/household", {
+      actionId: crypto.randomUUID(),
+      version: 1,
+      timeZone: "Pacific/Honolulu",
+      units: { volume: "ml", weight: "kg", length: "cm" },
+    })
+    expect(await sendJson(household, "PATCH", "/api/child", editOf(1))).toMatchObject({
+      status: 200,
+      body: { child: { name: "Robin Rae", birthDate: "2026-09-01" } },
+    })
   })
 
   it("answers 400 naming each field it can't take", async () => {
