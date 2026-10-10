@@ -6,10 +6,10 @@
     <meta name="color-scheme" content="light dark" />
     <title>Baby tracker</title>
     <script>
-      {
+      try {
         const theme = localStorage.getItem("bt.theme")
         if (theme === "light" || theme === "dark") document.documentElement.dataset.theme = theme
-      }
+      } catch {}
     </script>
   </head>
   <body>

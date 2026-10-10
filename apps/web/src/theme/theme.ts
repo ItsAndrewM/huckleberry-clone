@@ -8,17 +8,25 @@ type ThemeRoot = Pick<HTMLElement, "dataset">
 
 const isChosen = (value: string | null): value is "light" | "dark" => value === "light" || value === "dark"
 
-export const storedTheme = (storage: ThemeStorage): Theme => {
-  const stored = storage.getItem(THEME_KEY)
+const attempt = <A>(run: () => A, otherwise: A): A => {
+  try {
+    return run()
+  } catch {
+    return otherwise
+  }
+}
+
+export const storedTheme = (openStorage: () => ThemeStorage): Theme => {
+  const stored = attempt(() => openStorage().getItem(THEME_KEY), null)
   return isChosen(stored) ? stored : "system"
 }
 
-export const applyTheme = (theme: Theme, storage: ThemeStorage, root: ThemeRoot) => {
+export const applyTheme = (theme: Theme, openStorage: () => ThemeStorage, root: ThemeRoot) => {
   if (theme === "system") {
-    storage.removeItem(THEME_KEY)
     delete root.dataset.theme
+    attempt(() => openStorage().removeItem(THEME_KEY), undefined)
     return
   }
-  storage.setItem(THEME_KEY, theme)
   root.dataset.theme = theme
+  attempt(() => openStorage().setItem(THEME_KEY, theme), undefined)
 }

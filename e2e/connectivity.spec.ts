@@ -23,10 +23,29 @@ test("asks to sign in once Access has signed the parent out, and signs in back t
   const banner = page.getByRole("alert").filter({ hasText: "Sign in to continue" })
   await expect(banner).toBeVisible()
 
-  await banner.getByRole("button", { name: "Sign in" }).click()
+  await banner.getByRole("link", { name: "Sign in" }).click()
   await expect(page).toHaveURL("/history")
   await expect(page.getByRole("heading", { name: "History", level: 1 })).toBeVisible()
   await expect(page.getByRole("alert")).toHaveCount(0)
+})
+
+test("signs in back to the tab the parent moved to after the prompt appeared", async ({ page, context, baseURL }) => {
+  await page.goto("/history")
+  await expect(page.getByRole("heading", { name: "History", level: 1 })).toBeVisible()
+  await context.addCookies([{ name: SIGNED_OUT_COOKIE, value: "1", url: baseURL ?? "" }])
+  await page.reload()
+  const signIn = page
+    .getByRole("alert")
+    .filter({ hasText: "Sign in to continue" })
+    .getByRole("link", { name: "Sign in" })
+  await expect(signIn).toHaveAttribute("href", "/api/login?return=%2Fhistory")
+
+  await page.getByRole("navigation", { name: "Main" }).getByRole("link", { name: "Growth" }).click()
+  await expect(page.getByRole("heading", { name: "Growth", level: 1 })).toBeVisible()
+  await expect(signIn).toHaveAttribute("href", "/api/login?return=%2Fgrowth")
+  await signIn.click()
+  await expect(page).toHaveURL("/growth")
+  await expect(page.getByRole("heading", { name: "Growth", level: 1 })).toBeVisible()
 })
 
 test("treats the household refusing the caregiver as signed out too", async ({ page }) => {

@@ -33,6 +33,24 @@ test("keeps a chosen theme over the phone's setting, from the first paint after 
   expect(await background(page)).not.toBe(light)
 })
 
+test("still switches theme for the page when the browser blocks storage", async ({ page }) => {
+  const errors: string[] = []
+  page.on("pageerror", (error) => errors.push(error.message))
+  await page.addInitScript(
+    'Object.defineProperty(window, "localStorage", { get: () => { throw new DOMException("The operation is insecure.", "SecurityError") } })',
+  )
+  await page.emulateMedia({ colorScheme: "light" })
+  await page.goto("/settings")
+  await expect(themeButton(page, "System")).toHaveAttribute("aria-pressed", "true")
+  const light = await background(page)
+
+  await themeButton(page, "Dark").click()
+  await expect(themeButton(page, "Dark")).toHaveAttribute("aria-pressed", "true")
+  await expect(page.locator("html")).toHaveAttribute("data-theme", "dark")
+  expect(await background(page)).not.toBe(light)
+  expect(errors).toEqual([])
+})
+
 test("goes back to the phone's setting when System is chosen", async ({ page }) => {
   await page.emulateMedia({ colorScheme: "light" })
   await page.goto("/settings")

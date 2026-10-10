@@ -1,7 +1,8 @@
+import { useLocation } from "@tanstack/react-router"
 import { LogInIcon, WifiOffIcon } from "lucide-react"
 import { useConnectivity } from "../api/hooks.ts"
 import { Alert, AlertAction, AlertDescription, AlertTitle } from "../components/ui/alert.tsx"
-import { Button } from "../components/ui/button.tsx"
+import { buttonVariants } from "../components/ui/button.tsx"
 import { signInUrl } from "./sign-in.ts"
 
 const OfflineBanner = () => (
@@ -12,18 +13,21 @@ const OfflineBanner = () => (
   </Alert>
 )
 
-const SignInBanner = () => (
-  <Alert className="rounded-none border-x-0 border-t-0 px-4 py-3">
-    <LogInIcon aria-hidden="true" />
-    <AlertTitle>Sign in to continue</AlertTitle>
-    <AlertDescription>Your sign-in has expired.</AlertDescription>
-    <AlertAction className="top-1/2 right-4 -translate-y-1/2">
-      <Button size="lg" onClick={() => window.location.assign(signInUrl(window.location))}>
-        Sign in
-      </Button>
-    </AlertAction>
-  </Alert>
-)
+const SignInBanner = () => {
+  const href = useLocation({ select: ({ pathname, searchStr }) => signInUrl({ pathname, search: searchStr }) })
+  return (
+    <Alert className="rounded-none border-x-0 border-t-0 px-4 py-3">
+      <LogInIcon aria-hidden="true" />
+      <AlertTitle>Sign in to continue</AlertTitle>
+      <AlertDescription>Your sign-in has expired.</AlertDescription>
+      <AlertAction className="top-1/2 right-4 -translate-y-1/2">
+        <a href={href} className={buttonVariants({ size: "lg" })}>
+          Sign in
+        </a>
+      </AlertAction>
+    </Alert>
+  )
+}
 
 export const ConnectionBanner = () => {
   const connectivity = useConnectivity()
