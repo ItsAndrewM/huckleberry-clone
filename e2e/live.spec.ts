@@ -30,8 +30,11 @@ test.describe("with the household's socket played by the test", () => {
     await page.routeWebSocket(/\/api\/ws$/, (socket) => {
       sockets.push(socket)
     })
+    const todayAnswered = Promise.all(["**/api/today"].map((url) => page.waitForResponse(url)))
     await page.goto("/")
     await expect(page.getByText("Robin")).toBeVisible()
+    await Promise.all((await todayAnswered).map((response) => response.finished()))
+    await expect(page.getByText("Loading…")).toBeHidden()
     await expect.poll(() => sockets.length).toBe(1)
   })
 
