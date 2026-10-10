@@ -8324,6 +8324,1502 @@
           "required": true
         }
       }
+    },
+    "/api/growth": {
+      "get": {
+        "tags": [
+          "growth"
+        ],
+        "operationId": "growth.growth",
+        "parameters": [],
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "measurements": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string"
+                          },
+                          "measuredAt": {
+                            "type": "integer",
+                            "minimum": 946684800000,
+                            "exclusiveMaximum": 4102444800000
+                          },
+                          "weightG": {
+                            "anyOf": [
+                              {
+                                "type": "number",
+                                "minimum": 200,
+                                "maximum": 40000
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "lengthCm": {
+                            "anyOf": [
+                              {
+                                "type": "number",
+                                "minimum": 20,
+                                "maximum": 150
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "headCm": {
+                            "anyOf": [
+                              {
+                                "type": "number",
+                                "minimum": 15,
+                                "maximum": 70
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "version": {
+                            "type": "integer",
+                            "minimum": 1
+                          },
+                          "createdBy": {
+                            "type": "string"
+                          },
+                          "createdAt": {
+                            "type": "integer",
+                            "minimum": 946684800000,
+                            "exclusiveMaximum": 4102444800000
+                          },
+                          "updatedBy": {
+                            "type": "string"
+                          },
+                          "updatedAt": {
+                            "type": "integer",
+                            "minimum": 946684800000,
+                            "exclusiveMaximum": 4102444800000
+                          },
+                          "deletedAt": {
+                            "anyOf": [
+                              {
+                                "type": "integer",
+                                "minimum": 946684800000,
+                                "exclusiveMaximum": 4102444800000
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "measuredAt",
+                          "weightG",
+                          "lengthCm",
+                          "headCm",
+                          "version",
+                          "createdBy",
+                          "createdAt",
+                          "updatedBy",
+                          "updatedAt",
+                          "deletedAt"
+                        ],
+                        "additionalProperties": false
+                      }
+                    }
+                  },
+                  "required": [
+                    "measurements"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "InvalidInput",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvalidInputEncoded"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnauthorizedEncoded"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "growth"
+        ],
+        "operationId": "growth.logMeasurement",
+        "parameters": [],
+        "security": [],
+        "responses": {
+          "201": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "measurement": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string"
+                        },
+                        "measuredAt": {
+                          "type": "integer",
+                          "minimum": 946684800000,
+                          "exclusiveMaximum": 4102444800000
+                        },
+                        "weightG": {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                              "minimum": 200,
+                              "maximum": 40000
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "lengthCm": {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                              "minimum": 20,
+                              "maximum": 150
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "headCm": {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                              "minimum": 15,
+                              "maximum": 70
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "version": {
+                          "type": "integer",
+                          "minimum": 1
+                        },
+                        "createdBy": {
+                          "type": "string"
+                        },
+                        "createdAt": {
+                          "type": "integer",
+                          "minimum": 946684800000,
+                          "exclusiveMaximum": 4102444800000
+                        },
+                        "updatedBy": {
+                          "type": "string"
+                        },
+                        "updatedAt": {
+                          "type": "integer",
+                          "minimum": 946684800000,
+                          "exclusiveMaximum": 4102444800000
+                        },
+                        "deletedAt": {
+                          "anyOf": [
+                            {
+                              "type": "integer",
+                              "minimum": 946684800000,
+                              "exclusiveMaximum": 4102444800000
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "measuredAt",
+                        "weightG",
+                        "lengthCm",
+                        "headCm",
+                        "version",
+                        "createdBy",
+                        "createdAt",
+                        "updatedBy",
+                        "updatedAt",
+                        "deletedAt"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "changed": {
+                      "type": "array",
+                      "items": {
+                        "anyOf": [
+                          {
+                            "type": "array",
+                            "prefixItems": [
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "me"
+                                ]
+                              }
+                            ],
+                            "maxItems": 1,
+                            "minItems": 1
+                          },
+                          {
+                            "type": "array",
+                            "prefixItems": [
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "today"
+                                ]
+                              }
+                            ],
+                            "maxItems": 1,
+                            "minItems": 1
+                          },
+                          {
+                            "type": "array",
+                            "prefixItems": [
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "last24h"
+                                ]
+                              }
+                            ],
+                            "maxItems": 1,
+                            "minItems": 1
+                          },
+                          {
+                            "type": "array",
+                            "prefixItems": [
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "day"
+                                ]
+                              },
+                              {
+                                "type": "string",
+                                "format": "date"
+                              }
+                            ],
+                            "maxItems": 2,
+                            "minItems": 2
+                          },
+                          {
+                            "type": "array",
+                            "prefixItems": [
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "week"
+                                ]
+                              },
+                              {
+                                "type": "string",
+                                "pattern": "^\\d{4}-W\\d{2}$"
+                              }
+                            ],
+                            "maxItems": 2,
+                            "minItems": 2
+                          },
+                          {
+                            "type": "array",
+                            "prefixItems": [
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "month"
+                                ]
+                              },
+                              {
+                                "type": "string",
+                                "pattern": "^\\d{4}-\\d{2}$"
+                              }
+                            ],
+                            "maxItems": 2,
+                            "minItems": 2
+                          },
+                          {
+                            "type": "array",
+                            "prefixItems": [
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "growth"
+                                ]
+                              }
+                            ],
+                            "maxItems": 1,
+                            "minItems": 1
+                          },
+                          {
+                            "type": "array",
+                            "prefixItems": [
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "deleted"
+                                ]
+                              }
+                            ],
+                            "maxItems": 1,
+                            "minItems": 1
+                          }
+                        ]
+                      }
+                    }
+                  },
+                  "required": [
+                    "measurement",
+                    "changed"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "InvalidInput",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvalidInputEncoded"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnauthorizedEncoded"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "MeasurementConflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MeasurementConflictEncoded"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "actionId": {
+                    "type": "string",
+                    "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|[fF]{8}-[fF]{4}-[fF]{4}-[fF]{4}-[fF]{12})$",
+                    "format": "uuid"
+                  },
+                  "measuredAt": {
+                    "type": "integer",
+                    "minimum": 946684800000,
+                    "exclusiveMaximum": 4102444800000
+                  },
+                  "weightG": {
+                    "anyOf": [
+                      {
+                        "type": "number",
+                        "minimum": 200,
+                        "maximum": 40000
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "lengthCm": {
+                    "anyOf": [
+                      {
+                        "type": "number",
+                        "minimum": 20,
+                        "maximum": 150
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "headCm": {
+                    "anyOf": [
+                      {
+                        "type": "number",
+                        "minimum": 15,
+                        "maximum": 70
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  }
+                },
+                "required": [
+                  "actionId",
+                  "measuredAt",
+                  "weightG",
+                  "lengthCm",
+                  "headCm"
+                ],
+                "additionalProperties": false
+              }
+            }
+          },
+          "required": true
+        }
+      }
+    },
+    "/api/growth/{id}": {
+      "patch": {
+        "tags": [
+          "growth"
+        ],
+        "operationId": "growth.editMeasurement",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "schema": {
+              "type": "string"
+            },
+            "required": true
+          }
+        ],
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "measurement": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string"
+                        },
+                        "measuredAt": {
+                          "type": "integer",
+                          "minimum": 946684800000,
+                          "exclusiveMaximum": 4102444800000
+                        },
+                        "weightG": {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                              "minimum": 200,
+                              "maximum": 40000
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "lengthCm": {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                              "minimum": 20,
+                              "maximum": 150
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "headCm": {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                              "minimum": 15,
+                              "maximum": 70
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "version": {
+                          "type": "integer",
+                          "minimum": 1
+                        },
+                        "createdBy": {
+                          "type": "string"
+                        },
+                        "createdAt": {
+                          "type": "integer",
+                          "minimum": 946684800000,
+                          "exclusiveMaximum": 4102444800000
+                        },
+                        "updatedBy": {
+                          "type": "string"
+                        },
+                        "updatedAt": {
+                          "type": "integer",
+                          "minimum": 946684800000,
+                          "exclusiveMaximum": 4102444800000
+                        },
+                        "deletedAt": {
+                          "anyOf": [
+                            {
+                              "type": "integer",
+                              "minimum": 946684800000,
+                              "exclusiveMaximum": 4102444800000
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "measuredAt",
+                        "weightG",
+                        "lengthCm",
+                        "headCm",
+                        "version",
+                        "createdBy",
+                        "createdAt",
+                        "updatedBy",
+                        "updatedAt",
+                        "deletedAt"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "changed": {
+                      "type": "array",
+                      "items": {
+                        "anyOf": [
+                          {
+                            "type": "array",
+                            "prefixItems": [
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "me"
+                                ]
+                              }
+                            ],
+                            "maxItems": 1,
+                            "minItems": 1
+                          },
+                          {
+                            "type": "array",
+                            "prefixItems": [
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "today"
+                                ]
+                              }
+                            ],
+                            "maxItems": 1,
+                            "minItems": 1
+                          },
+                          {
+                            "type": "array",
+                            "prefixItems": [
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "last24h"
+                                ]
+                              }
+                            ],
+                            "maxItems": 1,
+                            "minItems": 1
+                          },
+                          {
+                            "type": "array",
+                            "prefixItems": [
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "day"
+                                ]
+                              },
+                              {
+                                "type": "string",
+                                "format": "date"
+                              }
+                            ],
+                            "maxItems": 2,
+                            "minItems": 2
+                          },
+                          {
+                            "type": "array",
+                            "prefixItems": [
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "week"
+                                ]
+                              },
+                              {
+                                "type": "string",
+                                "pattern": "^\\d{4}-W\\d{2}$"
+                              }
+                            ],
+                            "maxItems": 2,
+                            "minItems": 2
+                          },
+                          {
+                            "type": "array",
+                            "prefixItems": [
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "month"
+                                ]
+                              },
+                              {
+                                "type": "string",
+                                "pattern": "^\\d{4}-\\d{2}$"
+                              }
+                            ],
+                            "maxItems": 2,
+                            "minItems": 2
+                          },
+                          {
+                            "type": "array",
+                            "prefixItems": [
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "growth"
+                                ]
+                              }
+                            ],
+                            "maxItems": 1,
+                            "minItems": 1
+                          },
+                          {
+                            "type": "array",
+                            "prefixItems": [
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "deleted"
+                                ]
+                              }
+                            ],
+                            "maxItems": 1,
+                            "minItems": 1
+                          }
+                        ]
+                      }
+                    }
+                  },
+                  "required": [
+                    "measurement",
+                    "changed"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "InvalidInput",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvalidInputEncoded"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnauthorizedEncoded"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "NotFound",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotFoundEncoded"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "MeasurementConflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MeasurementConflictEncoded"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "actionId": {
+                    "type": "string",
+                    "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|[fF]{8}-[fF]{4}-[fF]{4}-[fF]{4}-[fF]{12})$",
+                    "format": "uuid"
+                  },
+                  "version": {
+                    "type": "integer",
+                    "minimum": 1
+                  },
+                  "measuredAt": {
+                    "type": "integer",
+                    "minimum": 946684800000,
+                    "exclusiveMaximum": 4102444800000
+                  },
+                  "weightG": {
+                    "anyOf": [
+                      {
+                        "type": "number",
+                        "minimum": 200,
+                        "maximum": 40000
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "lengthCm": {
+                    "anyOf": [
+                      {
+                        "type": "number",
+                        "minimum": 20,
+                        "maximum": 150
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "headCm": {
+                    "anyOf": [
+                      {
+                        "type": "number",
+                        "minimum": 15,
+                        "maximum": 70
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  }
+                },
+                "required": [
+                  "actionId",
+                  "version",
+                  "measuredAt",
+                  "weightG",
+                  "lengthCm",
+                  "headCm"
+                ],
+                "additionalProperties": false
+              }
+            }
+          },
+          "required": true
+        }
+      },
+      "delete": {
+        "tags": [
+          "growth"
+        ],
+        "operationId": "growth.deleteMeasurement",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "schema": {
+              "type": "string"
+            },
+            "required": true
+          }
+        ],
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "measurement": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string"
+                        },
+                        "measuredAt": {
+                          "type": "integer",
+                          "minimum": 946684800000,
+                          "exclusiveMaximum": 4102444800000
+                        },
+                        "weightG": {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                              "minimum": 200,
+                              "maximum": 40000
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "lengthCm": {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                              "minimum": 20,
+                              "maximum": 150
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "headCm": {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                              "minimum": 15,
+                              "maximum": 70
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "version": {
+                          "type": "integer",
+                          "minimum": 1
+                        },
+                        "createdBy": {
+                          "type": "string"
+                        },
+                        "createdAt": {
+                          "type": "integer",
+                          "minimum": 946684800000,
+                          "exclusiveMaximum": 4102444800000
+                        },
+                        "updatedBy": {
+                          "type": "string"
+                        },
+                        "updatedAt": {
+                          "type": "integer",
+                          "minimum": 946684800000,
+                          "exclusiveMaximum": 4102444800000
+                        },
+                        "deletedAt": {
+                          "anyOf": [
+                            {
+                              "type": "integer",
+                              "minimum": 946684800000,
+                              "exclusiveMaximum": 4102444800000
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "measuredAt",
+                        "weightG",
+                        "lengthCm",
+                        "headCm",
+                        "version",
+                        "createdBy",
+                        "createdAt",
+                        "updatedBy",
+                        "updatedAt",
+                        "deletedAt"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "changed": {
+                      "type": "array",
+                      "items": {
+                        "anyOf": [
+                          {
+                            "type": "array",
+                            "prefixItems": [
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "me"
+                                ]
+                              }
+                            ],
+                            "maxItems": 1,
+                            "minItems": 1
+                          },
+                          {
+                            "type": "array",
+                            "prefixItems": [
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "today"
+                                ]
+                              }
+                            ],
+                            "maxItems": 1,
+                            "minItems": 1
+                          },
+                          {
+                            "type": "array",
+                            "prefixItems": [
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "last24h"
+                                ]
+                              }
+                            ],
+                            "maxItems": 1,
+                            "minItems": 1
+                          },
+                          {
+                            "type": "array",
+                            "prefixItems": [
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "day"
+                                ]
+                              },
+                              {
+                                "type": "string",
+                                "format": "date"
+                              }
+                            ],
+                            "maxItems": 2,
+                            "minItems": 2
+                          },
+                          {
+                            "type": "array",
+                            "prefixItems": [
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "week"
+                                ]
+                              },
+                              {
+                                "type": "string",
+                                "pattern": "^\\d{4}-W\\d{2}$"
+                              }
+                            ],
+                            "maxItems": 2,
+                            "minItems": 2
+                          },
+                          {
+                            "type": "array",
+                            "prefixItems": [
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "month"
+                                ]
+                              },
+                              {
+                                "type": "string",
+                                "pattern": "^\\d{4}-\\d{2}$"
+                              }
+                            ],
+                            "maxItems": 2,
+                            "minItems": 2
+                          },
+                          {
+                            "type": "array",
+                            "prefixItems": [
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "growth"
+                                ]
+                              }
+                            ],
+                            "maxItems": 1,
+                            "minItems": 1
+                          },
+                          {
+                            "type": "array",
+                            "prefixItems": [
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "deleted"
+                                ]
+                              }
+                            ],
+                            "maxItems": 1,
+                            "minItems": 1
+                          }
+                        ]
+                      }
+                    }
+                  },
+                  "required": [
+                    "measurement",
+                    "changed"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "InvalidInput",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvalidInputEncoded"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnauthorizedEncoded"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "NotFound",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotFoundEncoded"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "MeasurementConflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MeasurementConflictEncoded"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "actionId": {
+                    "type": "string",
+                    "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|[fF]{8}-[fF]{4}-[fF]{4}-[fF]{4}-[fF]{12})$",
+                    "format": "uuid"
+                  },
+                  "version": {
+                    "type": "integer",
+                    "minimum": 1
+                  }
+                },
+                "required": [
+                  "actionId",
+                  "version"
+                ],
+                "additionalProperties": false
+              }
+            }
+          },
+          "required": true
+        }
+      }
+    },
+    "/api/growth/{id}/restore": {
+      "post": {
+        "tags": [
+          "growth"
+        ],
+        "operationId": "growth.restoreMeasurement",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "schema": {
+              "type": "string"
+            },
+            "required": true
+          }
+        ],
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "measurement": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string"
+                        },
+                        "measuredAt": {
+                          "type": "integer",
+                          "minimum": 946684800000,
+                          "exclusiveMaximum": 4102444800000
+                        },
+                        "weightG": {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                              "minimum": 200,
+                              "maximum": 40000
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "lengthCm": {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                              "minimum": 20,
+                              "maximum": 150
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "headCm": {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                              "minimum": 15,
+                              "maximum": 70
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "version": {
+                          "type": "integer",
+                          "minimum": 1
+                        },
+                        "createdBy": {
+                          "type": "string"
+                        },
+                        "createdAt": {
+                          "type": "integer",
+                          "minimum": 946684800000,
+                          "exclusiveMaximum": 4102444800000
+                        },
+                        "updatedBy": {
+                          "type": "string"
+                        },
+                        "updatedAt": {
+                          "type": "integer",
+                          "minimum": 946684800000,
+                          "exclusiveMaximum": 4102444800000
+                        },
+                        "deletedAt": {
+                          "anyOf": [
+                            {
+                              "type": "integer",
+                              "minimum": 946684800000,
+                              "exclusiveMaximum": 4102444800000
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "measuredAt",
+                        "weightG",
+                        "lengthCm",
+                        "headCm",
+                        "version",
+                        "createdBy",
+                        "createdAt",
+                        "updatedBy",
+                        "updatedAt",
+                        "deletedAt"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "changed": {
+                      "type": "array",
+                      "items": {
+                        "anyOf": [
+                          {
+                            "type": "array",
+                            "prefixItems": [
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "me"
+                                ]
+                              }
+                            ],
+                            "maxItems": 1,
+                            "minItems": 1
+                          },
+                          {
+                            "type": "array",
+                            "prefixItems": [
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "today"
+                                ]
+                              }
+                            ],
+                            "maxItems": 1,
+                            "minItems": 1
+                          },
+                          {
+                            "type": "array",
+                            "prefixItems": [
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "last24h"
+                                ]
+                              }
+                            ],
+                            "maxItems": 1,
+                            "minItems": 1
+                          },
+                          {
+                            "type": "array",
+                            "prefixItems": [
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "day"
+                                ]
+                              },
+                              {
+                                "type": "string",
+                                "format": "date"
+                              }
+                            ],
+                            "maxItems": 2,
+                            "minItems": 2
+                          },
+                          {
+                            "type": "array",
+                            "prefixItems": [
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "week"
+                                ]
+                              },
+                              {
+                                "type": "string",
+                                "pattern": "^\\d{4}-W\\d{2}$"
+                              }
+                            ],
+                            "maxItems": 2,
+                            "minItems": 2
+                          },
+                          {
+                            "type": "array",
+                            "prefixItems": [
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "month"
+                                ]
+                              },
+                              {
+                                "type": "string",
+                                "pattern": "^\\d{4}-\\d{2}$"
+                              }
+                            ],
+                            "maxItems": 2,
+                            "minItems": 2
+                          },
+                          {
+                            "type": "array",
+                            "prefixItems": [
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "growth"
+                                ]
+                              }
+                            ],
+                            "maxItems": 1,
+                            "minItems": 1
+                          },
+                          {
+                            "type": "array",
+                            "prefixItems": [
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "deleted"
+                                ]
+                              }
+                            ],
+                            "maxItems": 1,
+                            "minItems": 1
+                          }
+                        ]
+                      }
+                    }
+                  },
+                  "required": [
+                    "measurement",
+                    "changed"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "InvalidInput",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvalidInputEncoded"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnauthorizedEncoded"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "NotFound",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotFoundEncoded"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "MeasurementConflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MeasurementConflictEncoded"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "actionId": {
+                    "type": "string",
+                    "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|[fF]{8}-[fF]{4}-[fF]{4}-[fF]{4}-[fF]{12})$",
+                    "format": "uuid"
+                  },
+                  "version": {
+                    "type": "integer",
+                    "minimum": 1
+                  }
+                },
+                "required": [
+                  "actionId",
+                  "version"
+                ],
+                "additionalProperties": false
+              }
+            }
+          },
+          "required": true
+        }
+      }
     }
   },
   "components": {
@@ -8340,6 +9836,185 @@
         },
         "required": [
           "_tag"
+        ],
+        "additionalProperties": false
+      },
+      "MeasurementConflictEncoded": {
+        "type": "object",
+        "properties": {
+          "_tag": {
+            "type": "string",
+            "enum": [
+              "Conflict"
+            ]
+          },
+          "code": {
+            "type": "string",
+            "enum": [
+              "STALE_VERSION",
+              "ACTION_REPLAY_MISMATCH"
+            ]
+          },
+          "current": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "measuredAt": {
+                "type": "integer",
+                "minimum": 946684800000,
+                "exclusiveMaximum": 4102444800000
+              },
+              "weightG": {
+                "anyOf": [
+                  {
+                    "type": "number",
+                    "minimum": 200,
+                    "maximum": 40000
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "lengthCm": {
+                "anyOf": [
+                  {
+                    "type": "number",
+                    "minimum": 20,
+                    "maximum": 150
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "headCm": {
+                "anyOf": [
+                  {
+                    "type": "number",
+                    "minimum": 15,
+                    "maximum": 70
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "version": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "createdBy": {
+                "type": "string"
+              },
+              "createdAt": {
+                "type": "integer",
+                "minimum": 946684800000,
+                "exclusiveMaximum": 4102444800000
+              },
+              "updatedBy": {
+                "type": "string"
+              },
+              "updatedAt": {
+                "type": "integer",
+                "minimum": 946684800000,
+                "exclusiveMaximum": 4102444800000
+              },
+              "deletedAt": {
+                "anyOf": [
+                  {
+                    "type": "integer",
+                    "minimum": 946684800000,
+                    "exclusiveMaximum": 4102444800000
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              }
+            },
+            "required": [
+              "id",
+              "measuredAt",
+              "weightG",
+              "lengthCm",
+              "headCm",
+              "version",
+              "createdBy",
+              "createdAt",
+              "updatedBy",
+              "updatedAt",
+              "deletedAt"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "_tag",
+          "code",
+          "current"
+        ],
+        "additionalProperties": false
+      },
+      "NotFoundEncoded": {
+        "type": "object",
+        "properties": {
+          "_tag": {
+            "type": "string",
+            "enum": [
+              "NotFound"
+            ]
+          }
+        },
+        "required": [
+          "_tag"
+        ],
+        "additionalProperties": false
+      },
+      "InvalidInputEncoded": {
+        "type": "object",
+        "properties": {
+          "_tag": {
+            "type": "string",
+            "enum": [
+              "InvalidInput"
+            ]
+          },
+          "fieldErrors": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "path": {
+                  "type": "string"
+                },
+                "issue": {
+                  "type": "string",
+                  "enum": [
+                    "not_finite",
+                    "not_positive",
+                    "too_many_decimals",
+                    "end_not_after_start",
+                    "before_birth",
+                    "in_future",
+                    "out_of_range",
+                    "invalid"
+                  ]
+                }
+              },
+              "required": [
+                "path",
+                "issue"
+              ],
+              "additionalProperties": false
+            }
+          }
+        },
+        "required": [
+          "_tag",
+          "fieldErrors"
         ],
         "additionalProperties": false
       },
@@ -8521,66 +10196,6 @@
           "_tag",
           "code",
           "current"
-        ],
-        "additionalProperties": false
-      },
-      "NotFoundEncoded": {
-        "type": "object",
-        "properties": {
-          "_tag": {
-            "type": "string",
-            "enum": [
-              "NotFound"
-            ]
-          }
-        },
-        "required": [
-          "_tag"
-        ],
-        "additionalProperties": false
-      },
-      "InvalidInputEncoded": {
-        "type": "object",
-        "properties": {
-          "_tag": {
-            "type": "string",
-            "enum": [
-              "InvalidInput"
-            ]
-          },
-          "fieldErrors": {
-            "type": "array",
-            "items": {
-              "type": "object",
-              "properties": {
-                "path": {
-                  "type": "string"
-                },
-                "issue": {
-                  "type": "string",
-                  "enum": [
-                    "not_finite",
-                    "not_positive",
-                    "too_many_decimals",
-                    "end_not_after_start",
-                    "before_birth",
-                    "in_future",
-                    "out_of_range",
-                    "invalid"
-                  ]
-                }
-              },
-              "required": [
-                "path",
-                "issue"
-              ],
-              "additionalProperties": false
-            }
-          }
-        },
-        "required": [
-          "_tag",
-          "fieldErrors"
         ],
         "additionalProperties": false
       },
@@ -8876,6 +10491,9 @@
     },
     {
       "name": "portions"
+    },
+    {
+      "name": "growth"
     }
   ]
 }
