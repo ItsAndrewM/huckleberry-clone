@@ -166,7 +166,7 @@ If the "Baby tracker" app is ever deleted, recreate it before anything else, so 
 
 ## Rotating the admin token
 
-The token lasts a year. Before it expires, refresh it in Zero Trust (Access controls, Service credentials, Service tokens): Refresh keeps the same Client ID and secret.
+The token never expires (Andrew's choice, 10 Oct 2026), so nothing needs renewing. The only reason to change it is a secret that might have leaked.
 
 If the secret leaks, replace the token; don't rotate it. Rotating keeps the Client ID, and the Worker admits any Access JWT that carries it, including ones already issued against the leaked secret, for up to 730 hours. Replace it in this order, so `pnpm release` can still take its bookmark:
 
