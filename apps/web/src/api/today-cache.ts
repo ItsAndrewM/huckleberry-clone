@@ -1,7 +1,7 @@
 import type { Feed, RecentEntry, Today, Totals } from "@bt/contracts"
 import { type DiaperChange, roundTo, type StartedFeed, totalsIn, zonedDayBounds } from "@bt/domain"
 import type { Action } from "./actions.ts"
-import { type Author, isPending, pendingDiaper, pendingFeed, pendingId, startedFeed, withBottle } from "./pending.ts"
+import { type Author, pendingDiaper, pendingFeed, pendingId, startedFeed, withBottle } from "./pending.ts"
 import type { Saved } from "./send.ts"
 
 export interface Pending extends Author {
@@ -80,7 +80,7 @@ export const pendingToday = (today: Today, action: Action, pending: Pending): To
 
 const activeAfter = (active: Feed | null, feed: Feed): Feed | null => {
   if (feed.deletedAt === null && feed.status === "active") return feed
-  return active !== null && (active.id === feed.id || isPending(active.id)) ? null : active
+  return active !== null && active.id === feed.id ? null : active
 }
 
 const savedFeed = (today: Today, feed: Feed, recent: ReadonlyArray<RecentEntry>): Today => {

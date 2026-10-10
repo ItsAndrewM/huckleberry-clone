@@ -4,6 +4,7 @@ import { pendingToday, savedToday } from "../src/api/today-cache.ts"
 import { ANDREW, diaperAt, feedAt, MINUTE, NO_TOTALS, NOW, nursedFor, todayWith, ZONE } from "./today-fixtures.ts"
 
 const ACTION_ID = "4b1c2a5e-8f3d-4c6b-9a7e-2d1f0e3c5b6a"
+const OTHER_ACTION_ID = "9d2e7f40-1a3b-4c5d-8e6f-7a8b9c0d1e2f"
 const pending = { by: ANDREW, now: NOW, zone: ZONE }
 const MIDNIGHT = Date.UTC(2026, 9, 9, 7)
 
@@ -70,9 +71,66 @@ describe("pendingToday", () => {
     }
     expect(pendingToday(today, action, pending)).toBe(today)
   })
+
+  it("logs a bottle with no feed running as a finished feed at the bottle's time", () => {
+    const bottle = { occurredAt: NOW - 10 * MINUTE, breastMilkMl: 40, formulaMl: 0 }
+    const next = pendingToday(
+      todayWith(),
+      { kind: "logFeed", payload: { actionId: ACTION_ID, segments: [], portions: [bottle] } },
+      pending,
+    )
+    expect(next.activeFeed).toBeNull()
+    expect(next.lastFeed).toMatchObject({
+      id: pendingId(ACTION_ID),
+      status: "completed",
+      startedAt: bottle.occurredAt,
+      endedAt: bottle.occurredAt,
+    })
+    expect(next.totals).toEqual({ ...NO_TOTALS, feedsStarted: 1, breastMilkMl: 40, bottleMl: 40 })
+  })
+
+  it("counts a past feed's left and right sides in their own seconds", () => {
+    const next = pendingToday(
+      todayWith(),
+      {
+        kind: "logFeed",
+        payload: {
+          actionId: ACTION_ID,
+          segments: [
+            { side: "left", startedAt: NOW - 30 * MINUTE, endedAt: NOW - 20 * MINUTE },
+            { side: "right", startedAt: NOW - 20 * MINUTE, endedAt: NOW - 12 * MINUTE },
+          ],
+          portions: [],
+        },
+      },
+      pending,
+    )
+    expect(next.totals).toEqual({
+      ...NO_TOTALS,
+      feedsStarted: 1,
+      leftSeconds: 600,
+      rightSeconds: 480,
+      nursingSeconds: 1080,
+    })
+  })
+
+  it("leaves Today alone for a finish, which waits for the household", () => {
+    const today = todayWith()
+    const action = {
+      kind: "finishFeed" as const,
+      id: "feed-elsewhere",
+      payload: { actionId: ACTION_ID, version: 1, occurredAt: NOW, deleteIfEmpty: false },
+    }
+    expect(pendingToday(today, action, pending)).toBe(today)
+  })
 })
 
 describe("savedToday", () => {
+  const start = {
+    kind: "startFeed" as const,
+    payload: { actionId: ACTION_ID, side: "left" as const, startedAt: NOW - 2 * MINUTE },
+  }
+
   it("swaps the pending entry for the household's answer", () => {
     const action = {
       kind: "logDiaper" as const,
@@ -109,5 +167,43 @@ describe("savedToday", () => {
     }
     const next = savedToday(today, { feed: { ...feed, deletedAt: NOW, version: 2 }, changed: [] }, action)
     expect(next.recent).toEqual([])
+  })
+
+  it("swaps a feed being started for the household's answer in the running, last and recent slots", () => {
+    const started = pendingToday(todayWith(), start, pending)
+    const answered = feedAt(NOW - 2 * MINUTE, {
+      id: "feed-real",
+      status: "active",
+      endedAt: null,
+      segments: [{ id: "feed-real-0", side: "left", startedAt: NOW - 2 * MINUTE, endedAt: null }],
+    })
+    const next = savedToday(started, { feed: answered, changed: [] }, start)
+    expect(next.activeFeed).toEqual(answered)
+    expect(next.lastFeed).toEqual(answered)
+    expect(next.recent).toEqual([{ kind: "feed", feed: answered }])
+  })
+
+  it("keeps a feed being started running when another feed's deletion answers first", () => {
+    const started = pendingToday(todayWith(), start, pending)
+    const other = feedAt(NOW - 30 * MINUTE, { id: "feed-other" })
+    const action = {
+      kind: "deleteFeed" as const,
+      id: other.id,
+      payload: { actionId: OTHER_ACTION_ID, version: 1 },
+    }
+    const next = savedToday(started, { feed: { ...other, deletedAt: NOW, version: 2 }, changed: [] }, action)
+    expect(next.activeFeed?.id).toBe(pendingId(ACTION_ID))
+  })
+
+  it("keeps a feed being started running when another feed's finish answers first", () => {
+    const started = pendingToday(todayWith(), start, pending)
+    const other = { ...nursedFor(feedAt(NOW - 30 * MINUTE, { id: "feed-other" }), "left", 10), version: 2 }
+    const action = {
+      kind: "finishFeed" as const,
+      id: other.id,
+      payload: { actionId: OTHER_ACTION_ID, version: 1, occurredAt: NOW - 20 * MINUTE, deleteIfEmpty: false },
+    }
+    const next = savedToday(started, { feed: other, changed: [] }, action)
+    expect(next.activeFeed?.id).toBe(pendingId(ACTION_ID))
   })
 })
