@@ -3,6 +3,7 @@ import { HttpApi, HttpApiMiddleware, OpenApi } from "effect/http-api"
 import { DiapersGroup } from "./diapers.ts"
 import { InvalidInput, Unauthorized } from "./errors.ts"
 import { FeedsGroup, PortionsGroup, SegmentsGroup } from "./feeds.ts"
+import { HouseholdGroup } from "./household.ts"
 import { type Caregiver, MeGroup } from "./me.ts"
 import { TodayGroup } from "./today.ts"
 
@@ -19,6 +20,7 @@ export class InvalidInputs extends HttpApiMiddleware.Service<InvalidInputs>()("b
 
 export class Api extends HttpApi.make("baby-tracker")
   .add(MeGroup)
+  .add(HouseholdGroup)
   .add(TodayGroup)
   .add(DiapersGroup)
   .add(FeedsGroup)

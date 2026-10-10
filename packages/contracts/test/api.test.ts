@@ -9,6 +9,7 @@ describe("the API the household serves", () => {
   it("has exactly these endpoints, so the checks below can't pass on an empty list", () => {
     expect(endpoints.map(({ method, path }) => `${method} ${path}`)).toEqual([
       "GET /api/me",
+      "PATCH /api/household",
       "GET /api/today",
       "GET /api/last24h",
       "POST /api/diapers",
@@ -45,6 +46,7 @@ describe("the API the household serves", () => {
     expect(Object.keys(OpenApi.fromApi(Api).components.schemas).toSorted()).toEqual([
       "DiaperConflictEncoded",
       "FeedConflictEncoded",
+      "HouseholdConflictEncoded",
       "InvalidInputEncoded",
       "NotFoundEncoded",
       "UnauthorizedEncoded",
