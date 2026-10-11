@@ -167,6 +167,19 @@ test("edits a measurement from its card, sending what wasn't touched back unchan
   }
 })
 
+test("opens a measurement from anywhere on its card", async ({ page }) => {
+  const { answer } = await playGrowth(page, STORED, { weight: "kg", length: "cm" })
+  await answer(200, saved(EARLIER))
+  await openGrowth(page)
+  await page
+    .getByRole("listitem")
+    .filter({ hasText: "Sep 15, 2026" })
+    .click({ position: { x: 60, y: 100 } })
+  const sheet = page.getByRole("dialog", { name: "Edit measurement" })
+  await expect(sheet.getByRole("textbox", { name: "Weight" })).toHaveValue("3.6")
+  await expect(sheet.getByRole("textbox", { name: "Head circumference" })).toHaveValue("35.1")
+})
+
 test("asks before deleting a measurement whose every value is cleared", async ({ page }) => {
   const { played, answer } = await playGrowth(page, STORED, { weight: "kg", length: "cm" })
   await answer(200, saved({ ...EARLIER, version: 2, deletedAt: NOW }), [NEWEST])
@@ -176,6 +189,8 @@ test("asks before deleting a measurement whose every value is cleared", async ({
   await sheet.getByRole("textbox", { name: "Weight" }).fill("")
   await sheet.getByRole("textbox", { name: "Head circumference" }).fill("")
   await expect(sheet.getByText("Every value is cleared. Delete this measurement?")).toBeVisible()
+  await expect(sheet.getByRole("textbox", { name: "Head circumference" })).toBeFocused()
+  await expect(sheet.getByRole("button", { name: "Keep it" })).toHaveCount(0)
   await expect(sheet.getByRole("button", { name: "Save" })).toHaveCount(0)
   await sheet.getByRole("button", { name: "Delete", exact: true }).click()
   await expect
@@ -191,6 +206,8 @@ test("deletes a measurement only once the parent confirms", async ({ page }) => 
   await page.getByRole("button", { name: "Edit the measurement from Oct 6, 2026" }).click()
   const sheet = page.getByRole("dialog", { name: "Edit measurement" })
   await sheet.getByRole("button", { name: "Delete measurement" }).click()
+  await expect(sheet.getByRole("alert")).toContainText("Delete this measurement?")
+  await expect(sheet.getByRole("button", { name: "Keep it" })).toBeFocused()
   await sheet.getByRole("button", { name: "Keep it" }).click()
   await expect(sheet.getByRole("button", { name: "Save" })).toBeVisible()
   await sheet.getByRole("button", { name: "Delete measurement" }).click()
@@ -198,6 +215,25 @@ test("deletes a measurement only once the parent confirms", async ({ page }) => 
   await expect
     .poll(() => played.sent)
     .toEqual([{ method: "DELETE", path: "/api/growth/m3", body: { actionId: ACTION_ID, version: 1 } }])
+})
+
+test("keeps the focus in the field being typed in, though the delete was asked and every value cleared", async ({
+  page,
+}) => {
+  const { answer } = await playGrowth(page, STORED, { weight: "kg", length: "cm" })
+  await answer(200, saved(NEWEST))
+  await openGrowth(page)
+  await page.getByRole("button", { name: "Edit the measurement from Oct 6, 2026" }).click()
+  const sheet = page.getByRole("dialog", { name: "Edit measurement" })
+  await sheet.getByRole("button", { name: "Delete measurement" }).click()
+  for (const name of ["Weight", "Length", "Head circumference"]) {
+    await sheet.getByRole("textbox", { name }).fill("")
+  }
+  await expect(sheet.getByText("Every value is cleared. Delete this measurement?")).toBeVisible()
+  const weight = sheet.getByRole("textbox", { name: "Weight" })
+  await weight.pressSequentially("45")
+  await expect(weight).toHaveValue("45")
+  await expect(weight).toBeFocused()
 })
 
 test("says who changed the measurement when the other phone saved first, and keeps the sheet open", async ({

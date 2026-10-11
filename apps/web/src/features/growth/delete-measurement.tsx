@@ -7,6 +7,8 @@ interface DeleteMeasurementProps {
   readonly onDelete: () => void
 }
 
+const focusOnArrival = (button: HTMLButtonElement | null) => button?.focus()
+
 export const DeleteMeasurement = ({ cleared, onDelete }: DeleteMeasurementProps) => {
   const [asked, setAsked] = useState(false)
   if (!asked && !cleared) {
@@ -18,7 +20,7 @@ export const DeleteMeasurement = ({ cleared, onDelete }: DeleteMeasurementProps)
     )
   }
   return (
-    <div className="flex flex-col gap-3 rounded-lg bg-destructive/10 p-3">
+    <div role="alert" className="flex flex-col gap-3 rounded-lg border p-3">
       <p className="text-sm">
         {cleared ? "Every value is cleared. Delete this measurement?" : "Delete this measurement?"}
       </p>
@@ -26,11 +28,16 @@ export const DeleteMeasurement = ({ cleared, onDelete }: DeleteMeasurementProps)
         <Button variant="destructive" size="lg" className="flex-1" onClick={onDelete}>
           Delete
         </Button>
-        {cleared ? null : (
-          <Button variant="outline" size="lg" className="flex-1" onClick={() => setAsked(false)}>
-            Keep it
-          </Button>
-        )}
+        <Button
+          ref={focusOnArrival}
+          hidden={cleared}
+          variant="outline"
+          size="lg"
+          className="flex-1"
+          onClick={() => setAsked(false)}
+        >
+          Keep it
+        </Button>
       </div>
     </div>
   )

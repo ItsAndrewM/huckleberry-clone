@@ -47,7 +47,7 @@ export const MeasurementCardView = ({ card, onEdit }: MeasurementCardViewProps) 
           variant="ghost"
           size="icon-lg"
           aria-label={`Edit the measurement from ${card.measuredOn}`}
-          className="-mr-2 after:absolute after:inset-0"
+          className="-mr-2 after:absolute after:inset-0 active:not-aria-[haspopup]:translate-none"
           onClick={() => onEdit(card.id)}
         >
           <ChevronRightIcon aria-hidden="true" />
