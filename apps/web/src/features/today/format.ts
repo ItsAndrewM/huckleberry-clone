@@ -18,8 +18,5 @@ export const formatSince = (seconds: number) => (seconds < MINUTE_S ? "Just now"
 export const formatVolume = (ml: number, unit: VolumeUnit) =>
   unit === "ml" ? `${Math.round(ml)} mL` : `${roundTo(flOzFromMl(ml), 1).toFixed(1)} fl oz`
 
-export const clockTime = (instant: number, timeZone: string, locale?: string) =>
-  new Intl.DateTimeFormat(locale, { hour: "numeric", minute: "2-digit", timeZone }).format(instant)
-
 export const presentParts = (parts: ReadonlyArray<readonly [number, string]>) =>
   parts.filter(([amount]) => amount > 0).map(([, text]) => text)

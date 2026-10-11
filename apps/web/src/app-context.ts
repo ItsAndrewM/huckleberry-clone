@@ -1,10 +1,12 @@
 import { createContext, use } from "react"
 import type { HouseholdApi } from "./api/client.ts"
 import type { ConnectivityStore } from "./api/connectivity.ts"
+import type { Draft } from "./sheets/drafts.ts"
 
 export interface App {
   readonly api: HouseholdApi
   readonly connectivity: ConnectivityStore
+  readonly draft: Draft | null
 }
 
 export const AppContext = createContext<App | null>(null)

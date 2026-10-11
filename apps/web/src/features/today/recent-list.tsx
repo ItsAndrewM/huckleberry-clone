@@ -20,7 +20,7 @@ const RecentItem = ({ row }: { readonly row: RecentRow }) => {
         <time dateTime={new Date(row.at).toISOString()} className="text-sm tabular-nums">
           {row.time}
         </time>
-        <p className="text-xs text-muted-foreground">{row.by}</p>
+        <p className="text-xs text-muted-foreground">{row.saving ? "Saving…" : row.by}</p>
       </div>
     </li>
   )

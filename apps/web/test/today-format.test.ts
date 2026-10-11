@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest"
-import { clockTime, formatMinutes, formatSince, formatVolume, presentParts } from "../src/features/today/format.ts"
+import { clockTime } from "../src/clock-time.ts"
+import { formatMinutes, formatSince, formatVolume, presentParts } from "../src/features/today/format.ts"
 import { ZONE } from "./today-fixtures.ts"
 
 describe("formatMinutes", () => {

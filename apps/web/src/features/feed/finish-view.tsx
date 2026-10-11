@@ -1,0 +1,68 @@
+import type { Feed, NursingSegment } from "@bt/contracts"
+import { useState } from "react"
+import { Button } from "../../components/ui/button.tsx"
+import { FailureNote } from "../../sheets/failure-note.tsx"
+import { failedFor, useSheets } from "../../sheets/sheets-context.ts"
+import { tapTime } from "../../sheets/tap-time.ts"
+import { WhenField } from "../../sheets/when-field.tsx"
+import { resolveWhen } from "../../sheets/when.ts"
+import { useNow } from "../../timer/use-now.ts"
+import { emptiedBy, sentStop } from "./nursing-session.ts"
+import { controlsWait, finishAction } from "./nursing-state.ts"
+
+interface FinishViewProps {
+  readonly feed: Feed
+  readonly segment: NursingSegment
+  readonly zone: string
+  readonly onBack: () => void
+}
+
+export const FinishView = ({ feed, segment, zone, onBack }: FinishViewProps) => {
+  const sheets = useSheets()
+  const failed = failedFor(sheets, "nursing")
+  const [when, setWhen] = useState(() => sentStop(failed, zone))
+  const now = useNow()
+  const emptied = emptiedBy(failed)
+  if (emptied !== null) {
+    const deleteFeed = () => {
+      sheets.discard(emptied.failed)
+      sheets.send({ sheet: "nursing", action: finishAction(emptied.current, emptied.stoppedAt, true) })
+    }
+    const keepFeed = () => {
+      sheets.discard(emptied.failed)
+      onBack()
+    }
+    return (
+      <div role="alert" className="flex flex-col gap-3">
+        <p className="text-base">Stopping at the start leaves nothing in this feed. Delete it?</p>
+        <Button variant="destructive" size="lg" disabled={controlsWait(sheets.busy, feed)} onClick={deleteFeed}>
+          Delete feed
+        </Button>
+        <Button variant="ghost" size="lg" onClick={keepFeed}>
+          Keep it
+        </Button>
+      </div>
+    )
+  }
+  const finish = () => {
+    const resolved = resolveWhen(when, zone, tapTime(), segment.startedAt)
+    if (resolved.ok) sheets.send({ sheet: "nursing", action: finishAction(feed, resolved.instant, false) })
+  }
+  return (
+    <>
+      <WhenField label="Stopped" when={when} onChange={setWhen} zone={zone} now={now} earliest={segment.startedAt} />
+      <Button
+        size="lg"
+        className="h-14 text-lg"
+        disabled={!resolveWhen(when, zone, now, segment.startedAt).ok || controlsWait(sheets.busy, feed)}
+        onClick={finish}
+      >
+        Finish feed
+      </Button>
+      <Button variant="ghost" size="lg" onClick={onBack}>
+        Back
+      </Button>
+      <FailureNote sheet="nursing" />
+    </>
+  )
+}

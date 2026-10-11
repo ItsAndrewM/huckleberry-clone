@@ -1,6 +1,13 @@
 import fc from "fast-check"
 import { describe, expect, it } from "vitest"
-import { addDaysToDate, type Instant, type LocalResolution, resolveLocal, startOfDate } from "../../src/index.ts"
+import {
+  addDaysToDate,
+  type Instant,
+  localDateTimeOf,
+  type LocalResolution,
+  resolveLocal,
+  startOfDate,
+} from "../../src/index.ts"
 import { intlDate, intlWallClock, LONDON, VANCOUVER, zonedInstants } from "../fixtures/zones.ts"
 
 const at = (iso: string) => Date.parse(iso)
@@ -55,6 +62,28 @@ describe("resolveLocal (D11)", () => {
       fc.property(zonedInstants, ([instant, zone]) => {
         const minute = instant - (instant % 60_000)
         expect(instantsOf(resolveLocal(intlWallClock(minute, zone), zone))).toContain(minute)
+      }),
+    )
+  })
+})
+
+describe("localDateTimeOf", () => {
+  it("reads the household's wall clock at an instant, to the minute", () => {
+    expect(localDateTimeOf(at("2026-10-07T06:30:59Z"), VANCOUVER)).toBe("2026-10-06T23:30")
+  })
+
+  it("reads 1:30 twice on the night clocks go back", () => {
+    expect(localDateTimeOf(at("2025-11-02T08:30:00Z"), VANCOUVER)).toBe("2025-11-02T01:30")
+    expect(localDateTimeOf(at("2025-11-02T09:30:00Z"), VANCOUVER)).toBe("2025-11-02T01:30")
+  })
+
+  it("matches what Intl shows, and resolves back to the same minute, in every zone", () => {
+    fc.assert(
+      fc.property(zonedInstants, ([instant, zone]) => {
+        const minute = instant - (instant % 60_000)
+        const local = localDateTimeOf(instant, zone)
+        expect(local).toBe(intlWallClock(instant, zone))
+        expect(instantsOf(resolveLocal(local, zone))).toContain(minute)
       }),
     )
   })
