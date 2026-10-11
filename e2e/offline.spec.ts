@@ -45,8 +45,10 @@ test("opens its saved copy on a slow network even when the session has expired, 
     { name: SLOW_PAGES_COOKIE, value: "1", url: baseURL ?? "" },
     { name: SIGNED_OUT_COOKIE, value: "1", url: baseURL ?? "" },
   ])
+  const started = Date.now()
   await page.reload()
   await expect(page.getByRole("alert").filter({ hasText: "Sign in to continue" })).toBeVisible()
+  expect(Date.now() - started).toBeLessThan(SLOW_PAGE_MS / 2)
 })
 
 test("says in Settings that this phone's offline copy is saved for this version", async ({ page }) => {
