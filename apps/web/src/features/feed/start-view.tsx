@@ -1,5 +1,6 @@
 import type { Side } from "@bt/contracts"
 import { useState } from "react"
+import { Button } from "../../components/ui/button.tsx"
 import { FailureNote } from "../../sheets/failure-note.tsx"
 import { failedFor, useSheets } from "../../sheets/sheets-context.ts"
 import { tapTime } from "../../sheets/tap-time.ts"
@@ -30,6 +31,9 @@ export const StartView = ({ lastSide, zone }: StartViewProps) => {
       <WhenField label="Started" when={when} onChange={setWhen} zone={zone} now={now} />
       <SidePicker label="Start on" lastSide={lastSide} disabled={!resolveWhen(when, zone, now).ok} onPick={start} />
       <FailureNote sheet="nursing" />
+      <Button variant="ghost" size="lg" onClick={() => sheets.show("pastFeed")}>
+        Log a past feed
+      </Button>
     </>
   )
 }
