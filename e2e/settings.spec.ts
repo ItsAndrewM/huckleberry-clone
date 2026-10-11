@@ -199,6 +199,17 @@ test.describe("Settings, with the household's answers played by the test", () =>
   })
 })
 
+test("loads the household's settings on Try again after they couldn't be loaded", async ({ page }) => {
+  let refusing = true
+  await page.route("**/api/me", (route) => (refusing ? route.fulfill({ status: 404 }) : route.continue()))
+  await page.goto("/settings")
+  await expect(page.getByText("The household's settings couldn't be loaded.")).toBeVisible()
+  await expect(page.getByRole("heading", { name: "Theme" })).toBeVisible()
+  refusing = false
+  await page.getByRole("button", { name: "Try again" }).click()
+  await expect(page.getByText("Andrew (local)")).toBeVisible()
+})
+
 test("shows who is signed in", async ({ page }) => {
   await page.goto("/settings")
   await expect(page.getByText("Andrew (local)")).toBeVisible()

@@ -228,6 +228,32 @@ test.describe("Today, with the household's answers played by the test", () => {
     await expect(page.getByText("Today couldn't be loaded.")).toBeVisible()
   })
 
+  test("loads Today on Try again, once the household's details answer", async ({ page }) => {
+    await playToday(page, todayWith({ totals: TOTALS }))
+    let refusing = true
+    await page.route("**/api/me", (route) => (refusing ? route.fulfill({ status: 404 }) : route.continue()))
+    await openToday(page)
+    await expect(page.getByText("Today couldn't be loaded.")).toBeVisible()
+    refusing = false
+    await page.getByRole("button", { name: "Try again" }).click()
+    await expect(total(page, "Feeds started")).toContainText("6")
+    await expect(page.getByRole("button", { name: "Try again" })).toBeHidden()
+  })
+
+  test("loads the last 24 hours on Try again", async ({ page }) => {
+    await playToday(page, todayWith({ totals: TOTALS }))
+    let refusing = true
+    await page.route("**/api/last24h", (route) =>
+      refusing ? route.abort() : route.fulfill({ json: { from: NOW - DAY, totals: { ...TOTALS, diapers: 7 } } }),
+    )
+    await openToday(page)
+    await page.getByRole("button", { name: "Last 24 h" }).click()
+    await expect(page.getByText("The last 24 hours couldn't be loaded.")).toBeVisible()
+    refusing = false
+    await page.getByRole("button", { name: "Try again" }).click()
+    await expect(total(page, "Diapers")).toContainText("7")
+  })
+
   test("lists the last 24 hours with who logged each, leaving out kinds this app doesn't know yet", async ({
     page,
   }) => {
