@@ -1,5 +1,6 @@
 import {
   ComponentDelete,
+  DiaperEdit,
   FeedFinish,
   FeedResume,
   FeedStart,
@@ -17,7 +18,11 @@ const onRecord = <const Kind extends string, Payload extends Schema.Top>(kind: K
 const created = <const Kind extends string, Payload extends Schema.Top>(kind: Kind, payload: Payload) =>
   Schema.Struct({ kind: Schema.Literal(kind), payload })
 
-export const DiaperAction = Schema.Union([created("logDiaper", NewDiaper), onRecord("deleteDiaper", VersionedAction)])
+export const DiaperAction = Schema.Union([
+  created("logDiaper", NewDiaper),
+  onRecord("editDiaper", DiaperEdit),
+  onRecord("deleteDiaper", VersionedAction),
+])
 export type DiaperAction = typeof DiaperAction.Type
 
 export const FeedAction = Schema.Union([
@@ -30,6 +35,7 @@ export const FeedAction = Schema.Union([
   onRecord("finishFeed", FeedFinish),
   onRecord("deleteFeed", VersionedAction),
   onRecord("deletePortion", ComponentDelete),
+  onRecord("editPortion", VersionedPortion),
 ])
 export type FeedAction = typeof FeedAction.Type
 
@@ -37,4 +43,4 @@ export const Action = Schema.Union([DiaperAction, FeedAction])
 export type Action = typeof Action.Type
 
 export const isDiaperAction = (action: Action): action is DiaperAction =>
-  action.kind === "logDiaper" || action.kind === "deleteDiaper"
+  action.kind === "logDiaper" || action.kind === "editDiaper" || action.kind === "deleteDiaper"

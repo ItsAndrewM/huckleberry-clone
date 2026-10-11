@@ -12,6 +12,14 @@ export interface Failed {
   readonly error: Error
 }
 
-const CLOSES_ON_SEND = new Set<Action["kind"]>(["logDiaper", "logFeed", "startFeed", "addBottle", "finishFeed"])
+const CLOSES_ON_SEND = new Set<Action["kind"]>([
+  "logDiaper",
+  "logFeed",
+  "startFeed",
+  "addBottle",
+  "finishFeed",
+  "editDiaper",
+  "editPortion",
+])
 
 export const closesOnSend = ({ action }: Sending) => CLOSES_ON_SEND.has(action.kind)

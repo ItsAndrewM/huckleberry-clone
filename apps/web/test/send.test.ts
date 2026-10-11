@@ -58,6 +58,12 @@ const ROUTES: ReadonlyArray<readonly [Action, string, string, number]> = [
     "/api/portions/portion-1",
     200,
   ],
+  [
+    { kind: "editPortion", id: "portion-1", payload: { ...AT, ...BOTTLE, breastMilkMl: 90 } },
+    "PATCH",
+    "/api/portions/portion-1",
+    200,
+  ],
 ]
 
 describe("send", () => {
@@ -80,6 +86,17 @@ describe("send", () => {
       ["POST", `${ORIGIN}/api/diapers`],
       ["DELETE", `${ORIGIN}/api/diapers/diaper-1`],
     ])
+  })
+
+  it("edits a diaper at /api/diapers/:id with its payload", async () => {
+    const saved = JSON.stringify({ diaper: diaperAt(NOW, { id: "diaper-1", version: 3 }), changed: [] })
+    const { api, requests } = household(200, saved)
+    const payload = { ...AT, wet: false, dirty: true }
+    const edit = send(api, { kind: "editDiaper", id: "diaper-1", payload })
+    await expect(edit).resolves.toMatchObject({ diaper: { id: "diaper-1", version: 3 } })
+    const [request] = requests
+    expect([request?.method, request?.url]).toEqual(["PATCH", `${ORIGIN}/api/diapers/diaper-1`])
+    expect(await request?.json()).toEqual(payload)
   })
 
   it("decodes the household's conflict with its copy of the feed", async () => {
