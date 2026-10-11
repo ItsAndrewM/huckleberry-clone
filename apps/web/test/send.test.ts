@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest"
 import type { Action } from "../src/api/actions.ts"
 import { connectApi } from "../src/api/client.ts"
 import { send } from "../src/api/send.ts"
+import { measurement } from "./growth-fixtures.ts"
 import { diaperAt, feedAt, NOW } from "./today-fixtures.ts"
 
 const ORIGIN = "https://bt.example.test"
@@ -28,19 +29,7 @@ const household = (status: number, body: string) => {
 
 const BOTTLE = { occurredAt: NOW, breastMilkMl: 60, formulaMl: 0 }
 
-const measurementAt = (measuredAt: number) => ({
-  id: "m1",
-  measuredAt,
-  weightG: 4300,
-  lengthCm: null,
-  headCm: 36.8,
-  version: 1,
-  createdBy: "caregiver-andrew",
-  createdAt: measuredAt,
-  updatedBy: "caregiver-andrew",
-  updatedAt: measuredAt,
-  deletedAt: null,
-})
+const STORED_MEASUREMENT = measurement("m1", NOW, { weightG: 4300, headCm: 36.8 })
 
 const ROUTES: ReadonlyArray<readonly [Action, string, string, number]> = [
   [{ kind: "logFeed", payload: { actionId: ACTION_ID, segments: [], portions: [BOTTLE] } }, "POST", "/api/feeds", 201],
@@ -97,7 +86,7 @@ describe("send", () => {
   })
 
   it("logs, edits and deletes measurements at /api/growth", async () => {
-    const saved = JSON.stringify({ measurement: measurementAt(NOW), changed: [["growth"]] })
+    const saved = JSON.stringify({ measurement: STORED_MEASUREMENT, changed: [["growth"]] })
     const values = { measuredAt: NOW, weightG: 4300, lengthCm: null, headCm: 36.8 }
     const actions: ReadonlyArray<readonly [Action, number]> = [
       [{ kind: "logMeasurement", payload: { actionId: ACTION_ID, ...values } }, 201],
@@ -118,7 +107,7 @@ describe("send", () => {
   })
 
   it("decodes the household's conflict with its copy of the measurement", async () => {
-    const current = { ...measurementAt(NOW), version: 3 }
+    const current = { ...STORED_MEASUREMENT, version: 3 }
     const { api } = household(409, JSON.stringify({ _tag: "Conflict", code: "STALE_VERSION", current }))
     const payload = { actionId: ACTION_ID, version: 2, measuredAt: NOW, weightG: 4300, lengthCm: null, headCm: null }
     const failure = send(api, { kind: "editMeasurement", id: "m1", payload })

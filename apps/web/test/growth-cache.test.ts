@@ -20,6 +20,19 @@ const logged = (measuredAt: number, actionId = ACTION_ID) =>
 
 const DELETED_M2 = { kind: "deleteMeasurement", id: "m2", payload: { actionId: ACTION_ID, version: 1 } } as const
 
+const EDITED_M1 = {
+  kind: "editMeasurement",
+  id: "m1",
+  payload: {
+    actionId: ACTION_ID,
+    version: 1,
+    measuredAt: at("2026-10-07", 8),
+    weightG: 3150,
+    lengthCm: null,
+    headCm: null,
+  },
+} as const
+
 describe("pendingGrowth", () => {
   it("lists a new measurement at once, in its place by time, newest first", () => {
     const growth = pendingGrowth(GROWTH, logged(at("2026-09-20", 10)), AUTHOR)
@@ -55,6 +68,11 @@ describe("pendingGrowth", () => {
     expect(pendingGrowth(GROWTH, { kind: "editMeasurement", id: "gone", payload }, AUTHOR)).toBe(GROWTH)
   })
 
+  it("leaves the list alone for a delete of a measurement it doesn't hold", () => {
+    const payload = { actionId: ACTION_ID, version: 1 }
+    expect(pendingGrowth(GROWTH, { kind: "deleteMeasurement", id: "gone", payload }, AUTHOR)).toBe(GROWTH)
+  })
+
   it("takes a deleted measurement off the list at once", () => {
     expect(ids(pendingGrowth(GROWTH, DELETED_M2, AUTHOR))).toEqual(["m3", "m1"])
   })
@@ -83,10 +101,7 @@ describe("withdrawnGrowth", () => {
   })
 
   it("puts an edited measurement back as it was, in its place", () => {
-    const measuredAt = at("2026-10-07", 8)
-    const payload = { actionId: ACTION_ID, version: 1, measuredAt, weightG: 3150, lengthCm: null, headCm: null }
-    const action = { kind: "editMeasurement", id: "m1", payload } as const
-    expect(withdrawnGrowth(pendingGrowth(GROWTH, action, AUTHOR), action, GROWTH)).toEqual(GROWTH)
+    expect(withdrawnGrowth(pendingGrowth(GROWTH, EDITED_M1, AUTHOR), EDITED_M1, GROWTH)).toEqual(GROWTH)
   })
 
   it("puts a deleted measurement back in its place", () => {
@@ -97,5 +112,10 @@ describe("withdrawnGrowth", () => {
     const newer = { ...measurement("m2", at("2026-09-15", 10), { weightG: 3650 }), version: 2 }
     const refetched = { measurements: MEASUREMENTS.map((stored) => (stored.id === "m2" ? newer : stored)) }
     expect(withdrawnGrowth(refetched, DELETED_M2, GROWTH)).toBe(refetched)
+  })
+
+  it("keeps off the list a measurement deleted while its edit was failing", () => {
+    const refetched = { measurements: MEASUREMENTS.filter(({ id }) => id !== "m1") }
+    expect(withdrawnGrowth(refetched, EDITED_M1, GROWTH)).toBe(refetched)
   })
 })

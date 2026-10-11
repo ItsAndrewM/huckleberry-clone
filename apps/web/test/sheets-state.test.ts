@@ -14,6 +14,7 @@ import {
   sendingState,
 } from "../src/sheets/sheets-state.ts"
 import { TOAST_MS } from "../src/sheets/undo.ts"
+import { measurement } from "./growth-fixtures.ts"
 import { diaperAt, feedAt, NOW } from "./today-fixtures.ts"
 
 const ACTION_ID = "4b1c2a5e-8f3d-4c6b-9a7e-2d1f0e3c5b6a"
@@ -167,22 +168,7 @@ describe("sending", () => {
 
 describe("a saved measurement", () => {
   it("offers no Undo, since its card edits or deletes it", () => {
-    const saved = {
-      measurement: {
-        id: "measurement-1",
-        measuredAt: NOW,
-        weightG: 4300,
-        lengthCm: null,
-        headCm: null,
-        version: 1,
-        createdBy: "caregiver-andrew",
-        createdAt: NOW,
-        updatedBy: "caregiver-andrew",
-        updatedAt: NOW,
-        deletedAt: null,
-      },
-      changed: [],
-    }
+    const saved = { measurement: measurement("measurement-1", NOW, { weightG: 4300 }), changed: [] }
     expect(savedState(CLOSED, MEASURED, saved, NOW).toast).toBeNull()
   })
 })

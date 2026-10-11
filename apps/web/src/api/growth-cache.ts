@@ -12,6 +12,8 @@ const withMeasurement = (growth: Growth, measurement: Measurement): Growth => ({
   ),
 })
 
+const measurementIn = (growth: Growth, id: string) => growth.measurements.find((measurement) => measurement.id === id)
+
 const edited = (
   measurement: Measurement,
   { measuredAt, weightG, lengthCm, headCm }: MeasurementEdit,
@@ -23,11 +25,11 @@ export const pendingGrowth = (growth: Growth, action: MeasurementAction, author:
     case "logMeasurement":
       return withMeasurement(growth, pendingMeasurement(action.payload, author))
     case "editMeasurement": {
-      const current = growth.measurements.find(({ id }) => id === action.id)
+      const current = measurementIn(growth, action.id)
       return current === undefined ? growth : withMeasurement(growth, edited(current, action.payload, author))
     }
     case "deleteMeasurement":
-      return without(growth, action.id)
+      return measurementIn(growth, action.id) === undefined ? growth : without(growth, action.id)
   }
 }
 
@@ -36,12 +38,12 @@ export const savedGrowth = (growth: Growth, { measurement }: SavedMeasurement, a
   return measurement.deletedAt === null ? withMeasurement(settled, measurement) : without(settled, measurement.id)
 }
 
-const measurementIn = (growth: Growth, id: string) => growth.measurements.find((measurement) => measurement.id === id)
-
 export const withdrawnGrowth = (growth: Growth, action: MeasurementAction, before: Growth): Growth => {
   if (action.kind === "logMeasurement") return without(growth, pendingId(action.payload.actionId))
   const previous = measurementIn(before, action.id)
+  if (previous === undefined) return growth
   const current = measurementIn(growth, action.id)
-  if (previous === undefined || (current !== undefined && current.version !== previous.version)) return growth
-  return withMeasurement(growth, previous)
+  const newerChangeOwnsIt =
+    current === undefined ? action.kind === "editMeasurement" : current.version !== previous.version
+  return newerChangeOwnsIt ? growth : withMeasurement(growth, previous)
 }
