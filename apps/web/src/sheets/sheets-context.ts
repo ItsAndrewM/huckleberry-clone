@@ -5,12 +5,13 @@ import type { Toast } from "./undo.ts"
 
 export interface Sheets {
   readonly open: SheetKind | null
+  readonly editing: string | null
   readonly opened: number
   readonly held: ReadonlyArray<Failed>
   readonly asking: boolean
   readonly busy: Sending | null
   readonly toast: Toast | null
-  readonly show: (sheet: SheetKind) => void
+  readonly show: (sheet: SheetKind, editing?: string) => void
   readonly close: () => void
   readonly keep: () => void
   readonly discard: (failed: Failed) => void

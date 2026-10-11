@@ -13,6 +13,7 @@ import { afterFailures, BOTTLE_HELD, DIAPER, DIAPER_HELD, diaper, held, start } 
 
 const sheetsOf = (state: SheetsState): Sheets => ({
   ...state,
+  editing: null,
   busy: null,
   show: () => {},
   close: () => {},

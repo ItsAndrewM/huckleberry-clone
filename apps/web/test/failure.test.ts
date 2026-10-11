@@ -1,8 +1,17 @@
-import { DiaperConflict, FeedConflict, InvalidInput, NotFound, ServiceUnavailable, Unauthorized } from "@bt/contracts"
+import {
+  DiaperConflict,
+  FeedConflict,
+  InvalidInput,
+  MeasurementConflict,
+  NotFound,
+  ServiceUnavailable,
+  Unauthorized,
+} from "@bt/contracts"
 import { describe, expect, it } from "vitest"
 import { AuthRequired, Offline } from "../src/api/errors.ts"
 import { StaleDraft } from "../src/sheets/drafts.ts"
 import { failureNote, type Household } from "../src/sheets/failure.ts"
+import { measurement } from "./growth-fixtures.ts"
 import { ANDREW, diaperAt, EMILY, feedAt, MINUTE, NOW, ZONE } from "./today-fixtures.ts"
 
 const HOUSEHOLD: Household = {
@@ -92,5 +101,29 @@ describe("failureNote", () => {
       message: expect.stringMatching(/^This wasn't saved before you signed in, Fri 9:30\sAM\. Save it now\?$/u),
       retry: "Save now",
     })
+  })
+
+  it("says who changed or deleted a measurement a moment ago", () => {
+    const current = { ...measurement("m1", NOW, { weightG: 4300 }), updatedBy: EMILY }
+    expect(message(new MeasurementConflict({ code: "STALE_VERSION", current }))).toBe(
+      "Emily changed this measurement a moment ago.",
+    )
+    expect(message(new MeasurementConflict({ code: "STALE_VERSION", current: { ...current, deletedAt: NOW } }))).toBe(
+      "Emily deleted this measurement a moment ago.",
+    )
+    expect(message(new MeasurementConflict({ code: "ACTION_REPLAY_MISMATCH", current }))).toBe(
+      "This was already saved.",
+    )
+  })
+
+  it("asks to check the measurements when the household refuses one of them", () => {
+    const refused = new InvalidInput({ fieldErrors: [{ path: "weightG", issue: "invalid" }] })
+    expect(message(refused)).toBe("Check the measurements, then try again.")
+  })
+
+  it("says a measurement changed, and that Growth is up to date, when the household no longer has it", () => {
+    expect(failureNote(new NotFound(), HOUSEHOLD, { sheet: "measurement" }).message).toBe(
+      "This measurement has changed since it opened. Growth is up to date now.",
+    )
   })
 })

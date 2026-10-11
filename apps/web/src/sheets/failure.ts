@@ -5,12 +5,14 @@ import {
   FeedConflict,
   type FieldIssue,
   InvalidInput,
+  MeasurementConflict,
   NotFound,
   Unauthorized,
 } from "@bt/contracts"
 import { AuthRequired, Offline } from "../api/errors.ts"
 import { clockTime, dayClockTime } from "../clock-time.ts"
 import { StaleDraft } from "./drafts.ts"
+import type { SheetKind } from "./sending.ts"
 
 export interface Note {
   readonly message: string
@@ -52,9 +54,15 @@ const fieldMessage = (issue: FieldIssue, household: Household): string | null =>
   }
 }
 
+const METRICS = new Set(["weightG", "lengthCm", "headCm"])
+
 const fieldNote = (error: InvalidInput, household: Household): Note => {
   const messages = error.fieldErrors.map(({ issue }) => fieldMessage(issue, household))
-  return note(messages.find((message) => message !== null) ?? "Check the times and amounts, then try again.")
+  const measured = error.fieldErrors.some(({ path }) => METRICS.has(path))
+  const otherwise = measured
+    ? "Check the measurements, then try again."
+    : "Check the times and amounts, then try again."
+  return note(messages.find((message) => message !== null) ?? otherwise)
 }
 
 const feedNote = (error: FeedConflict, household: Household): Note => {
@@ -78,9 +86,16 @@ const diaperNote = (error: DiaperConflict, household: Household): Note =>
     ? note(`${nameOf(household, error.current.updatedBy)} changed this diaper a moment ago.`)
     : note("This was already saved.")
 
+const measurementNote = ({ code, current }: MeasurementConflict, household: Household): Note => {
+  if (code === "ACTION_REPLAY_MISMATCH") return note("This was already saved.")
+  const changed = current.deletedAt === null ? "changed" : "deleted"
+  return note(`${nameOf(household, current.updatedBy)} ${changed} this measurement a moment ago.`)
+}
+
 const conflictNote = (error: Error, household: Household): Note | null => {
   if (error instanceof FeedConflict) return feedNote(error, household)
   if (error instanceof DiaperConflict) return diaperNote(error, household)
+  if (error instanceof MeasurementConflict) return measurementNote(error, household)
   return null
 }
 
@@ -89,7 +104,17 @@ const dayTimeOf = ({ locale, timeZone }: Household, instant: number) => dayClock
 const staleNote = (error: StaleDraft, household: Household): Note =>
   note(`This wasn't saved before you signed in, ${dayTimeOf(household, error.createdAt)}. Save it now?`, "Save now")
 
-export const failureNote = (error: Error, household: Household): Note => {
+const GONE = "This has changed since it opened. Today is up to date now."
+
+const MEASUREMENT_GONE = "This measurement has changed since it opened. Growth is up to date now."
+
+export interface NoteOptions {
+  readonly sheet?: SheetKind
+}
+
+const goneNote = (sheet: SheetKind | undefined): Note => note(sheet === "measurement" ? MEASUREMENT_GONE : GONE)
+
+export const failureNote = (error: Error, household: Household, { sheet }: NoteOptions = {}): Note => {
   if (error instanceof Offline)
     return note("No connection. This is kept here: try again once you're back online.", TRY_AGAIN)
   if (error instanceof AuthRequired || error instanceof Unauthorized) {
@@ -97,6 +122,6 @@ export const failureNote = (error: Error, household: Household): Note => {
   }
   if (error instanceof StaleDraft) return staleNote(error, household)
   if (error instanceof InvalidInput) return fieldNote(error, household)
-  if (error instanceof NotFound) return note("This has changed since it opened. Today is up to date now.")
+  if (error instanceof NotFound) return goneNote(sheet)
   return conflictNote(error, household) ?? note("Not saved.", TRY_AGAIN)
 }
