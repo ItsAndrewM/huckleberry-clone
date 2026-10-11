@@ -95,7 +95,7 @@ describe("the household's HTTP routes", () => {
   it.each([
     ["a caregiver's answer", "andrew@example.test"],
     ["a refusal", "stranger@example.test"],
-  ])("mark %s no-store, and log nothing", async (_label, email) => {
+  ])("mark %s no-store, and log no error", async (_label, email) => {
     const consoleError = vi.spyOn(console, "error").mockImplementation(() => undefined)
     const response = await get(await seededHousehold(), "/api/me", email)
     expect(response.headers.get("cache-control")).toBe("no-store")
@@ -110,7 +110,8 @@ describe("the household's HTTP routes", () => {
     const consoleError = vi.spyOn(console, "error").mockImplementation(() => undefined)
     const response = await get(household, "/api/me", "andrew@example.test")
     expect(response.status).toBe(500)
-    expect(consoleError).toHaveBeenCalledOnce()
+    expect(consoleError).toHaveBeenCalledWith(expect.any(Error))
+    expect(consoleError).toHaveBeenCalledWith(expect.objectContaining({ event: "defect", route: "GET /api/me" }))
   })
 
   it("logs a defect it can't handle, and still answers 500 no-store", async () => {
@@ -122,7 +123,7 @@ describe("the household's HTTP routes", () => {
     const response = await get(household, "/api/me", "andrew@example.test")
     expect(response.status).toBe(500)
     expect(response.headers.get("cache-control")).toBe("no-store")
-    expect(consoleError).toHaveBeenCalledOnce()
+    expect(consoleError).toHaveBeenCalledTimes(2)
     expect(consoleError).toHaveBeenCalledWith(expect.any(Error))
   })
 })

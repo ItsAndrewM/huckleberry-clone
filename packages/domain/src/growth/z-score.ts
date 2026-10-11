@@ -5,7 +5,7 @@ const LAST_SD_ON_THE_CURVE = 3
 const boxCoxZ = ({ L, M, S }: Lms, value: number): number =>
   L === 0 ? Math.log(value / M) / S : ((value / M) ** L - 1) / (L * S)
 
-const valueAtZ = ({ L, M, S }: Lms, z: number): number =>
+export const valueAtZ = ({ L, M, S }: Lms, z: number): number =>
   L === 0 ? M * Math.exp(S * z) : M * (1 + L * S * z) ** (1 / L)
 
 export const zScoreLMS = (value: number, lms: Lms): number => {

@@ -23,6 +23,7 @@ import { errorResponse } from "./error-response.ts"
 import { feedHandlers } from "./feed-handlers.ts"
 import { growthHandlers } from "./growth-handlers.ts"
 import { householdHandlers } from "./household-handlers.ts"
+import { logRefusal, routeOf } from "./logs.ts"
 import { mutations, type Saved } from "./mutations.ts"
 import type { Broadcast } from "./sockets.ts"
 
@@ -37,7 +38,10 @@ export const authorization = (sql: SqlStorage) =>
     Effect.gen(function* () {
       const request = yield* HttpServerRequest.HttpServerRequest
       const caregiver = activeCaregiver(sql, request.headers["x-bt-email"])
-      if (caregiver === undefined) return yield* new Unauthorized()
+      if (caregiver === undefined) {
+        logRefusal(routeOf(request.method, request.originalUrl), "not-a-caregiver")
+        return yield* new Unauthorized()
+      }
       return yield* Effect.provideService(handler, CurrentCaregiver, caregiver)
     }),
   )

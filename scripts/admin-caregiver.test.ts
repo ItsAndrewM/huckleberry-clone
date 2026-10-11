@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { caregiverFromArgs } from "./admin-caregiver.ts"
+import { caregiverFromArgs, emailChangeFromArgs } from "./admin-caregiver.ts"
 import { adminRequest } from "./admin-seed.ts"
 
 const ENV = {
@@ -32,5 +32,30 @@ describe("pnpm admin caregiver:disable and caregiver:enable", () => {
     expect(request.redirect).toBe("manual")
     expect(request.headers.get("cf-access-client-id")).toBe("bt-admin.access")
     expect(await request.json()).toEqual({ email: "emily@example.test" })
+  })
+})
+
+describe("pnpm admin caregiver:set-email", () => {
+  it("takes the current email, then the new one, each trimmed and lowercased", () => {
+    expect(emailChangeFromArgs([" Emily@Example.test ", "Emily.New@Example.TEST"])).toEqual({
+      email: "emily@example.test",
+      newEmail: "emily.new@example.test",
+    })
+  })
+
+  it.each([
+    ["no emails", []],
+    ["only one email", ["emily@example.test"]],
+    ["a blank new email", ["emily@example.test", " "]],
+    ["three emails", ["emily@example.test", "emily.new@example.test", "andrew@example.test"]],
+  ])("stops at %s", (_label, args) => {
+    expect(() => emailChangeFromArgs(args)).toThrow("Give the caregiver's current email, then the new one")
+  })
+
+  it("posts both emails to the admin route", async () => {
+    const change = emailChangeFromArgs(["emily@example.test", "emily.new@example.test"])
+    const request = adminRequest(ENV, "/api/admin/caregiver/set-email", change)
+    expect(request.url).toBe("https://bt.example.test/api/admin/caregiver/set-email")
+    expect(await request.json()).toEqual({ email: "emily@example.test", newEmail: "emily.new@example.test" })
   })
 })

@@ -1,6 +1,7 @@
 import { parseArgs } from "node:util"
 import type { HouseholdSeed } from "../apps/worker/src/seed.ts"
-import type { CaregiverJson } from "./admin-caregiver.ts"
+import type { CaregiverJson, EmailChangeJson } from "./admin-caregiver.ts"
+import type { RestoreJson } from "./admin-pitr.ts"
 
 type SeedJson = (typeof HouseholdSeed)["Encoded"]
 
@@ -69,7 +70,9 @@ const adminUrl = (env: AdminEnv, path: string) => {
   return url
 }
 
-export const adminRequest = (env: AdminEnv, path: `/api/admin/${string}`, body: SeedJson | CaregiverJson): Request =>
+export type AdminBody = SeedJson | CaregiverJson | EmailChangeJson | RestoreJson
+
+export const adminRequest = (env: AdminEnv, path: `/api/admin/${string}`, body?: AdminBody): Request =>
   new Request(adminUrl(env, path), {
     method: "POST",
     redirect: "manual",
@@ -78,5 +81,5 @@ export const adminRequest = (env: AdminEnv, path: `/api/admin/${string}`, body: 
       "cf-access-client-secret": fromEnv(env, "CF_ACCESS_CLIENT_SECRET"),
       "content-type": "application/json",
     },
-    body: JSON.stringify(body),
+    body: JSON.stringify(body ?? {}),
   })
