@@ -1,4 +1,5 @@
-import { BabyIcon, RulerIcon, WeightIcon } from "lucide-react"
+import { BabyIcon, ChevronRightIcon, RulerIcon, WeightIcon } from "lucide-react"
+import { Button } from "../../components/ui/button.tsx"
 import type { CardCell, MeasurementCard } from "./cards.ts"
 
 const ICONS = {
@@ -28,13 +29,30 @@ const Cell = ({ cell: { info, value, percentile } }: { readonly cell: CardCell }
   )
 }
 
-export const MeasurementCardView = ({ card }: { readonly card: MeasurementCard }) => (
-  <li className="flex flex-col gap-3 rounded-xl border bg-card p-4">
+interface MeasurementCardViewProps {
+  readonly card: MeasurementCard
+  readonly onEdit: (id: string) => void
+}
+
+export const MeasurementCardView = ({ card, onEdit }: MeasurementCardViewProps) => (
+  <li className="relative flex flex-col gap-3 rounded-xl border bg-card p-4">
     <div className="flex min-h-11 items-center justify-between gap-3">
       <h3 className="text-sm font-medium">
         {card.measuredOn} · {card.age}
       </h3>
-      {card.saving ? <span className="text-sm text-muted-foreground">Saving…</span> : null}
+      {card.saving ? (
+        <span className="text-sm text-muted-foreground">Saving…</span>
+      ) : (
+        <Button
+          variant="ghost"
+          size="icon-lg"
+          aria-label={`Edit the measurement from ${card.measuredOn}`}
+          className="-mr-2 after:absolute after:inset-0"
+          onClick={() => onEdit(card.id)}
+        >
+          <ChevronRightIcon aria-hidden="true" />
+        </Button>
+      )}
     </div>
     <dl className="grid grid-cols-3 gap-2">
       {card.cells.map((cell) => (
