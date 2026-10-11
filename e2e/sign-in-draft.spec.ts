@@ -79,3 +79,39 @@ test("asks before saving a draft that waited past 12 hours, then saves it under 
   expect(sent[0]?.actionId).not.toBe(OLD_ACTION_ID)
   expect(sent[0]).toMatchObject({ occurredAt: NOW - 13 * HOUR, dirty: true })
 })
+
+test("says so when the phone can't keep the entry through signing in, and signs in anyway when asked", async ({
+  page,
+  context,
+  baseURL,
+}) => {
+  await page.addInitScript(() => {
+    Storage.prototype.setItem = () => {
+      throw new DOMException("The quota has been exceeded.", "QuotaExceededError")
+    }
+  })
+  const { played } = await playHousehold(page, todayWith())
+  let signedOut = true
+  const sent = await recordDiapers(page, played, () => signedOut)
+  const signIns: string[] = []
+  page.on("request", (request) => {
+    if (new URL(request.url()).pathname === "/api/login") signIns.push(request.url())
+  })
+  await openToday(page)
+  await context.addCookies([{ name: SIGNED_OUT_COOKIE, value: "1", url: baseURL ?? "" }])
+  await page.getByRole("region", { name: "Log", exact: true }).getByRole("button", { name: "Diaper" }).click()
+  const sheet = page.getByRole("dialog", { name: "Diaper" })
+  await sheet.getByRole("button", { name: "Pee" }).click()
+  await expect(sheet.getByRole("alert")).toContainText("Your sign-in has expired")
+  await sheet.getByRole("link", { name: "Sign in", exact: true }).click()
+  await expect(sheet.getByRole("alert")).toHaveText(
+    /^This phone can't keep the entry while you sign in\. Sign in, then log it again\.Sign in anyway$/u,
+  )
+  expect(signIns).toEqual([])
+  signedOut = false
+  await sheet.getByRole("link", { name: "Sign in anyway" }).click()
+  await expect.poll(() => signIns).toHaveLength(1)
+  await expect(sheet).toBeHidden()
+  await expect(page.getByText("Nothing logged in the last 24 hours.")).toBeVisible()
+  expect(sent).toHaveLength(1)
+})

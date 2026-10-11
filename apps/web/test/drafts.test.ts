@@ -52,6 +52,13 @@ describe("sign-in drafts", () => {
     expect(takeDraft(blocked, "/")).toBeNull()
   })
 
+  it("says whether the browser kept the draft, so a refusal can be told to the parent", () => {
+    const { storage } = memoryStorage()
+    expect(stashDraft(() => storage, DRAFT)).toBe(true)
+    expect(stashDraft(blocked, DRAFT)).toBe(false)
+    expect(stashDraft(() => ({ ...storage, setItem: blocked }), DRAFT)).toBe(false)
+  })
+
   it("re-sends a draft for 12 hours, half the household's receipt retention", () => {
     expect(isFresh(DRAFT, AT + DRAFT_RETRY_MS - 1)).toBe(true)
     expect(isFresh(DRAFT, AT + DRAFT_RETRY_MS)).toBe(false)

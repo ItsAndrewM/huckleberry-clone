@@ -7,9 +7,9 @@ import { BottleForm } from "./bottle-form.tsx"
 const BottleContent = () => {
   const { data: me } = useMe()
   const { data: today } = useToday()
-  if (me === undefined) return null
+  if (me === undefined || today === undefined) return null
   const zone = me.household.timeZone
-  const active = today?.activeFeed ?? null
+  const active = today.activeFeed
   return (
     <>
       {active === null ? null : (
@@ -17,7 +17,7 @@ const BottleContent = () => {
           Adds to the feed that started at {clockOf(active.startedAt, zone)}.
         </DrawerDescription>
       )}
-      <BottleForm prefill={today?.prefill} active={active} unit={me.household.units.volume} zone={zone} />
+      <BottleForm prefill={today.prefill} active={active} unit={me.household.units.volume} zone={zone} />
     </>
   )
 }

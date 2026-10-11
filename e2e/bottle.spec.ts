@@ -12,6 +12,8 @@ import {
 
 const ACTION_ID = expect.stringMatching(/^[0-9a-f-]{36}$/u)
 const LAST_BOTTLE = { lastBottle: { breastMilkMl: 40, formulaMl: 20 }, lastSide: null }
+const HOUR = 3_600_000
+const OLD_ACTION_ID = "00000000-0000-4000-8000-000000000000"
 
 test.use({ timezoneId: "Europe/London" })
 
@@ -147,4 +149,49 @@ test("says Saving… on the feed while a bottle added to it is on its way, and h
   answered.open()
   await expect(second.getByRole("button", { name: "Save" })).toBeEnabled()
   await expect(page.getByText("Saving…")).toHaveCount(0)
+})
+
+test("holds a draft's reopened Bottle sheet until Today loads, so its Save tops up the running feed", async ({
+  page,
+}) => {
+  const { andrew } = await caregiversOf(page)
+  const running = runningFeed(andrew.id, NOW - 10 * MINUTE, "left", 3)
+  const kept = NOW - 13 * HOUR
+  const draft = {
+    route: "/",
+    sending: {
+      sheet: "bottle",
+      action: {
+        kind: "addBottle",
+        id: "feed-1",
+        payload: { actionId: OLD_ACTION_ID, version: 3, occurredAt: kept, breastMilkMl: 40, formulaMl: 20 },
+      },
+    },
+    createdAt: kept,
+  }
+  await page.addInitScript((stored) => sessionStorage.setItem("bt.draft", stored), JSON.stringify(draft))
+  const { played, answer } = await playHousehold(page, todayWith(running, LAST_BOTTLE))
+  await answer("**/api/feeds/feed-1/bottle", feedSaved({ ...running, version: 4 }, 200))
+  const loaded = gate()
+  const held = await holdRequests(page, "**/api/today", () => loaded.opened)
+  await muteLiveUpdates(page)
+  await page.clock.setFixedTime(NOW)
+  await page.goto("/")
+  await expect(page.getByText("Robin")).toBeVisible()
+  await expect.poll(() => held.length).toBeGreaterThan(0)
+  const sheet = page.getByRole("dialog", { name: "Bottle" })
+  await expect(sheet).toBeVisible()
+  await expect(sheet.getByRole("button", { name: "Save" })).toHaveCount(0)
+  loaded.open()
+  await expect(sheet.getByText(/^Adds to the feed that started at 9:20\sAM\.$/u)).toBeVisible()
+  await sheet.getByRole("button", { name: "Save", exact: true }).click()
+  await expect
+    .poll(() => played.sent)
+    .toEqual([
+      {
+        method: "POST",
+        path: "/api/feeds/feed-1/bottle",
+        body: { actionId: ACTION_ID, version: 3, occurredAt: kept, breastMilkMl: 40, formulaMl: 20 },
+      },
+    ])
 })

@@ -11,7 +11,10 @@ export type Draft = typeof Draft.Type
 const decodeDraft = Schema.decodeUnknownOption(Schema.fromJsonString(Draft))
 
 export const stashDraft = (openStorage: () => BrowserStorage, draft: Draft) =>
-  attempt(() => openStorage().setItem(DRAFT_KEY, JSON.stringify(draft)), undefined)
+  attempt(() => {
+    openStorage().setItem(DRAFT_KEY, JSON.stringify(draft))
+    return true
+  }, false)
 
 export const takeDraft = (openStorage: () => BrowserStorage, route: string): Draft | null => {
   const stored = attempt(() => openStorage().getItem(DRAFT_KEY), null)
