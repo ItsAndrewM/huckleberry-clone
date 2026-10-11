@@ -1,8 +1,6 @@
 import type { Side } from "@bt/contracts"
 import { ToggleGroup, ToggleGroupItem } from "../../components/ui/toggle-group.tsx"
-import { SIDE_NAMES } from "./nursing-state.ts"
-
-const SIDES = ["left", "right"] as const satisfies ReadonlyArray<Side>
+import { SIDE_NAMES, SIDES } from "../../sides.ts"
 
 interface FirstSideProps {
   readonly side: Side

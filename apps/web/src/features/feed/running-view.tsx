@@ -3,9 +3,10 @@ import { Button } from "../../components/ui/button.tsx"
 import { FailureNote } from "../../sheets/failure-note.tsx"
 import { useSheets } from "../../sheets/sheets-context.ts"
 import { tapTime } from "../../sheets/tap-time.ts"
+import { OTHER_SIDE, SIDE_NAMES } from "../../sides.ts"
 import { useNow } from "../../timer/use-now.ts"
 import { FeedTimer } from "./feed-timer.tsx"
-import { controlsWait, OTHER_SIDE, SIDE_NAMES, timedAction } from "./nursing-state.ts"
+import { controlsWait, timedAction } from "./nursing-state.ts"
 
 interface RunningViewProps {
   readonly feed: Feed

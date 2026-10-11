@@ -1,6 +1,6 @@
 import type { Side } from "@bt/contracts"
 import { Button } from "../../components/ui/button.tsx"
-import { SIDE_NAMES } from "./nursing-state.ts"
+import { SIDE_NAMES, SIDES } from "../../sides.ts"
 
 interface SidePickerProps {
   readonly label: string
@@ -8,8 +8,6 @@ interface SidePickerProps {
   readonly disabled: boolean
   readonly onPick: (side: Side) => void
 }
-
-const SIDES = ["left", "right"] as const satisfies ReadonlyArray<Side>
 
 export const SidePicker = ({ label, lastSide, disabled, onPick }: SidePickerProps) => (
   <fieldset className="flex flex-col gap-2">

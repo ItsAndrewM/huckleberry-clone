@@ -9,10 +9,6 @@ export type NursingState =
   | { readonly kind: "running"; readonly feed: Feed; readonly segment: NursingSegment }
   | { readonly kind: "paused"; readonly feed: Feed; readonly lastSide: Side | null }
 
-export const OTHER_SIDE = { left: "right", right: "left" } as const satisfies Record<Side, Side>
-
-export const SIDE_NAMES = { left: "Left", right: "Right" } as const satisfies Record<Side, string>
-
 const lastSideOf = (feed: Feed): Side | null =>
   feed.segments.toSorted((a, b) => a.startedAt - b.startedAt).at(-1)?.side ?? null
 

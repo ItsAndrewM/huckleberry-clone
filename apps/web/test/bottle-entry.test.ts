@@ -68,6 +68,16 @@ describe("a bottle timed against the feed that's running or paused", () => {
     expect(bottleAction(ACTION_ID, AMOUNTS, occurredAt, active)).toMatchObject({ kind: "addBottle", id: "feed-1" })
   })
 
+  it("tops up the running feed with a bottle picked in its start minute, at the start's instant", () => {
+    const feed = feedAt(active.startedAt + 27_000, { id: "feed-1", status: "active", version: 3 })
+    expect(toppedUpFeed(feed, active.startedAt)).toBe(feed)
+    expect(bottleAction(ACTION_ID, AMOUNTS, active.startedAt, feed)).toEqual({
+      kind: "addBottle",
+      id: "feed-1",
+      payload: { actionId: ACTION_ID, version: 3, occurredAt: feed.startedAt, ...AMOUNTS },
+    })
+  })
+
   it("is its own feed with no feed running", () => {
     expect(toppedUpFeed(null, NOW)).toBeNull()
   })
