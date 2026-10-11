@@ -34,6 +34,26 @@ const openBottle = async (page: Page) => {
   return page.getByRole("dialog", { name: "Bottle" })
 }
 
+const gate = () => {
+  let open = () => {}
+  const opened = new Promise<void>((resolve) => {
+    open = resolve
+  })
+  return { open, opened }
+}
+
+const holdRequests = async (page: Page, pattern: string, until: () => Promise<void>) => {
+  const held: string[] = []
+  await page.route(pattern, async (route) => {
+    held.push(route.request().url())
+    await until()
+    await route.fallback()
+  })
+  return held
+}
+
+const muteLiveUpdates = (page: Page) => page.routeWebSocket(/\/api\/ws$/, () => {})
+
 test("saves the last bottle again in two taps", async ({ page }) => {
   const { andrew } = await caregiversOf(page)
   const { played, answer } = await playHousehold(page, todayWith(null, LAST_BOTTLE))
@@ -99,4 +119,32 @@ test("adds the bottle to the feed that's running, with that feed's version", asy
         body: { actionId: ACTION_ID, version: 3, occurredAt: NOW, breastMilkMl: 40, formulaMl: 20 },
       },
     ])
+})
+
+test("says Saving… on the feed while a bottle added to it is on its way, and holds the next Save until it lands", async ({
+  page,
+}) => {
+  const { andrew } = await caregiversOf(page)
+  const running = runningFeed(andrew.id, NOW - 10 * MINUTE, "left", 3)
+  const portion = { id: "portion-1", occurredAt: NOW, breastMilkMl: 40, formulaMl: 20 }
+  const topped = { ...running, version: 4, portions: [portion] }
+  const saved = feedSaved(topped, 200)
+  const { played, answer } = await playHousehold(page, todayWith(running, LAST_BOTTLE))
+  await answer("**/api/feeds/feed-1/bottle", () => {
+    played.today = todayWith(topped, LAST_BOTTLE)
+    return saved()
+  })
+  const answered = gate()
+  const held = await holdRequests(page, "**/api/feeds/feed-1/bottle", () => answered.opened)
+  await muteLiveUpdates(page)
+  await openToday(page)
+  const first = await openBottle(page)
+  await first.getByRole("button", { name: "Save" }).click()
+  await expect.poll(() => held.length).toBe(1)
+  await expect(page.getByText("Saving…")).toBeVisible()
+  const second = await openBottle(page)
+  await expect(second.getByRole("button", { name: "Save" })).toBeDisabled()
+  answered.open()
+  await expect(second.getByRole("button", { name: "Save" })).toBeEnabled()
+  await expect(page.getByText("Saving…")).toHaveCount(0)
 })
