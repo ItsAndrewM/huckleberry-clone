@@ -117,7 +117,7 @@ Workers Logs lives in the dashboard: Workers & Pages, then `baby-tracker`, then 
 | `refused` with `reason: "foreign-origin"` | `route` | A `/api/ws` upgrade came from another origin, or with none, and got 403. The `Origin` isn't logged, because the caller writes it |
 | `refused` with `reason: "not-json"` | `route` | A write wasn't `application/json`, and got 415. The app always sends JSON, so this is another page trying to write |
 | `keys-unavailable` | `route`, `cause` | Cloudflare's Access signing keys were out of reach. The app got 503 and retries |
-| `household-unavailable` | `route`, `cause` | The household couldn't be reached, or a restore didn't restart it. The app got 503 |
+| `household-unavailable` | `route`, `cause` | The household couldn't be reached, an admin command failed, or a restore didn't restart it. The app or `pnpm admin` got 503 |
 | `defect` | `route`, `caregiverId`, `actionId` | The household answered 500. The error and its stack are on the line next to it |
 
 What each `reason` means:

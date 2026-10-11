@@ -28,7 +28,7 @@ Run these from the main checkout, which holds `.admin-token.env`.
 ## When a restore answers 503
 
 - **With `{"scheduled":"…","undo":"…"}`:** the restore is scheduled, but the household didn't confirm a restart, so it may apply at the next restart instead. Keep that `undo`: it's the state from before the restore. Check in the app whether the data is back. If it isn't, run the same `pitr:restore` command again to restart the household now. Keep the first `undo`, not the one the retry answers: if the first restore applied before the retry, the retry's `undo` points at the restored state.
-- **With `{"_tag":"ServiceUnavailable"}` only:** the household couldn't be reached. Run the same command again.
+- **With `{"_tag":"ServiceUnavailable"}` only:** the restore failed, for any reason: the household couldn't be reached, or the restore call itself failed. It may still have been scheduled. Before you run the same command again, check in the app whether the data is already back, and read the `household-unavailable` log line, whose `cause` says what failed (see "Logs" in `docs/runbooks/access.md`). If the data is back, don't run it again: the new `undo` would point at the restored state.
 
 ## The drill
 
