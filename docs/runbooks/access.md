@@ -56,6 +56,8 @@ Do this once, right after the M1.16 prep PR merges. It needs about 45 minutes, t
    3. Run `pnpm admin pitr:restore <B1>`. Expect `200 {"restoredTo":"<B1>","undo":"…"}`. Both phones lose their live connection for a moment and reconnect.
    4. Settings on both phones shows mL again. That proves the restore.
    5. Run `pnpm admin pitr:restore <undo>`. Settings shows fl oz again, which proves the undo. Set the unit you want.
+
+   `docs/runbooks/restore.md` records how the first drill went, and how to run it again.
 7. **Run the phone checks** below on both phones, and record the results in the PR or issue for the deploy.
 
 ## Phone checks
@@ -89,13 +91,8 @@ Run these on each iPhone:
 ## When a deploy goes wrong
 
 - **Code only** (the app misbehaves, but the data is right): roll back to the previous version with `pnpm --filter @bt/web exec wrangler rollback --config ../worker/wrangler.jsonc`. That config pins the account and names the Worker. Older code runs against a newer schema, because migrations only add.
-- **Data too:** find the bookmark taken before that deploy in `deploys.log`. Run `pnpm admin pitr:restore <bookmark>`. It answers with an `undo` bookmark, so keep that until you're sure. Without a bookmark, `pnpm admin pitr:restore --at 2026-10-10T18:00:00Z` rewinds to a time instead (it needs a zone, and must be within the last 30 days).
+- **Data too:** find the bookmark taken before that deploy in `deploys.log`, and restore it as `docs/runbooks/restore.md` says. That runbook also covers a restore to a time and a restore that answers 503.
 - **Both:** roll back the code first, then restore the data. The order matters: a restore restarts the household under whatever code is deployed, and the household applies the code's missing migrations at every start. Restoring under the bad code would run its migration again over the restored data. After the rollback, the older code starts on the newer schema (it skips ledger entries it doesn't know), and the restore then takes the data and the migration ledger back to before that deploy.
-- **A restore answers 503:**
-  - **With `{"scheduled":"…","undo":"…"}`:** the restore is scheduled, but the household didn't confirm a restart, so it may apply at the next restart instead. Keep that `undo` bookmark: it's the state from before the restore. Check in the app whether the data is back. If it isn't, run the same `pitr:restore` command again to restart the household now. Keep the first `undo`, not the one the retry answers: if the first restore applied before the retry, the retry's `undo` points at the restored state.
-  - **With `{"_tag":"ServiceUnavailable"}` only:** the household couldn't be reached. Run the same command again.
-
-A restore rewinds everything in the household, including caregivers. Every phone's socket drops and reconnects, and a caregiver the restore disabled is refused at that point.
 
 ## Caregivers
 
