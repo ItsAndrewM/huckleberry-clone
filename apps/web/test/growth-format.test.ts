@@ -38,11 +38,11 @@ describe("formatPercentile", () => {
 describe("formatAge", () => {
   it.each([
     [0, 0, "Birth"],
-    [0, 1, "1 d"],
-    [0, 14, "14 d"],
-    [1, 0, "1 mo"],
-    [1, 5, "1 mo 5 d"],
-    [23, 30, "23 mo 30 d"],
+    [0, 1, "1\u00a0d"],
+    [0, 14, "14\u00a0d"],
+    [1, 0, "1\u00a0mo"],
+    [1, 5, "1\u00a0mo 5\u00a0d"],
+    [23, 30, "23\u00a0mo 30\u00a0d"],
   ])("shows %i months and %i days as %s", (months, days, shown) => {
     expect(formatAge({ months, days })).toBe(shown)
   })
@@ -54,22 +54,22 @@ describe("formatAge", () => {
 
 describe("formatMeasurement", () => {
   it.each([
-    ["kg", 4300, "4.30 kg"],
-    ["kg", 3456.7, "3.46 kg"],
-    ["g", 4300, "4300 g"],
-    ["g", 3200.4, "3200 g"],
-    ["lb_oz", 4300, "9 lb 7.7 oz"],
-    ["lb_oz", 3600, "7 lb 15.0 oz"],
-    ["lb_oz", 3200, "7 lb 0.9 oz"],
+    ["kg", 4300, "4.30\u00a0kg"],
+    ["kg", 3456.7, "3.46\u00a0kg"],
+    ["g", 4300, "4300\u00a0g"],
+    ["g", 3200.4, "3200\u00a0g"],
+    ["lb_oz", 4300, "9\u00a0lb 7.7\u00a0oz"],
+    ["lb_oz", 3600, "7\u00a0lb 15.0\u00a0oz"],
+    ["lb_oz", 3200, "7\u00a0lb 0.9\u00a0oz"],
   ] as const)("shows a weight in %s: %f g as %s", (weight, grams, shown) => {
     expect(formatMeasurement("weightForAge", grams, { ...UNITS, weight })).toBe(shown)
   })
 
   it.each([
-    ["lengthForAge", "cm", 54.5, "54.5 cm"],
-    ["lengthForAge", "in", 54.5, "21.5 in"],
-    ["headCircumferenceForAge", "cm", 34, "34.0 cm"],
-    ["headCircumferenceForAge", "in", 36.8, "14.5 in"],
+    ["lengthForAge", "cm", 54.5, "54.5\u00a0cm"],
+    ["lengthForAge", "in", 54.5, "21.5\u00a0in"],
+    ["headCircumferenceForAge", "cm", 34, "34.0\u00a0cm"],
+    ["headCircumferenceForAge", "in", 36.8, "14.5\u00a0in"],
   ] as const)("shows %s in %s: %f cm as %s", (metric, length, cm, shown) => {
     expect(formatMeasurement(metric, cm, { ...UNITS, length })).toBe(shown)
   })
