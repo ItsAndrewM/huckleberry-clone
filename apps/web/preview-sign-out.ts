@@ -5,7 +5,7 @@ export const SIGNED_OUT_COOKIE = "bt-preview-signed-out"
 export const ACCESS_EXPIRED_COOKIE = "bt-preview-access-expired"
 const ACCESS_LOGIN = "https://access.example.test/cdn-cgi/access/login"
 
-const hasCookie = (cookies: string | undefined, name: string) => cookies?.includes(`${name}=1`) ?? false
+export const hasCookie = (cookies: string | undefined, name: string) => cookies?.includes(`${name}=1`) ?? false
 
 const sendToAccess = (response: ServerResponse) => {
   response.writeHead(302, { location: ACCESS_LOGIN, "cache-control": "no-store" })

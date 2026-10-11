@@ -1,12 +1,13 @@
 import { fetchBuild, type Shell } from "./build-files.ts"
 import { routeOf } from "./routes.ts"
-import { assetResponse, cacheName, pageResponse, type SavedCopy, staleCaches } from "./shell-cache.ts"
+import { assetResponse, cacheName, pageResponse, type SavedCopy, staleCaches, type Wait } from "./shell-cache.ts"
 
 declare const self: ServiceWorkerGlobalScope
 declare const SHELL: Shell
 
 const current = cacheName(SHELL.version)
 const network = (request: Request) => fetch(request)
+const wait: Wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
 const fetchFile = (url: string) => fetch(url, { cache: "no-cache", redirect: "error" })
 const saved: SavedCopy = { match: (request, options) => caches.match(request, { ...options, cacheName: current }) }
 const reportUnreadableCopy = (failure: Error) =>
@@ -41,7 +42,7 @@ self.addEventListener("fetch", (event) => {
   if (route === "network") return
   const answer =
     route === "page"
-      ? pageResponse(event.request, network, saved)
+      ? pageResponse(event.request, network, saved, wait)
       : assetResponse(event.request, network, saved, reportUnreadableCopy)
   event.respondWith(answer)
 })

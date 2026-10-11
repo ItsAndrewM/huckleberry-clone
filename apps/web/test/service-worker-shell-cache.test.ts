@@ -1,8 +1,35 @@
 import { describe, expect, it } from "vitest"
-import { assetResponse, cacheName, pageResponse, SHELL_URL, staleCaches } from "../src/service-worker/shell-cache.ts"
+import {
+  assetResponse,
+  cacheName,
+  NETWORK_GRACE_MS,
+  pageResponse,
+  SHELL_URL,
+  staleCaches,
+} from "../src/service-worker/shell-cache.ts"
 
 const ORIGIN = "https://baby.example.test"
 const offline = () => Promise.reject(new TypeError("Failed to fetch"))
+const withinGrace = () => new Promise<void>(() => undefined)
+const neverAnswering = () => new Promise<Response>(() => undefined)
+
+const graceOver = () => {
+  const waits: number[] = []
+  const wait = (ms: number) => {
+    waits.push(ms)
+    return Promise.resolve()
+  }
+  return { wait, waits }
+}
+
+const answeringLater = () => {
+  let answer: (response: Response) => void = () => undefined
+  const network = () =>
+    new Promise<Response>((resolve) => {
+      answer = resolve
+    })
+  return { network, answer: (response: Response) => answer(response) }
+}
 
 const savedCopy = (files: ReadonlyMap<string, Response>) => {
   const lookups: Array<{ path: string; options: CacheQueryOptions | undefined }> = []
@@ -46,19 +73,47 @@ describe("pageResponse", () => {
     ["a server error", new Response("busy", { status: 503 })],
   ])("passes on %s from the network, untouched", async (_, answer) => {
     const saved = savedCopy(new Map())
-    expect(await pageResponse(page, answering(answer), saved)).toBe(answer)
+    expect(await pageResponse(page, answering(answer), saved, withinGrace)).toBe(answer)
     expect(saved.lookups).toEqual([])
   })
 
   it("opens the saved shell when the network can't be reached", async () => {
     const shell = new Response("<saved shell>")
     const saved = savedCopy(new Map([[SHELL_URL, shell]]))
-    expect(await pageResponse(page, offline, saved)).toBe(shell)
+    expect(await pageResponse(page, offline, saved, withinGrace)).toBe(shell)
     expect(saved.lookups).toEqual([{ path: "/", options: { ignoreVary: true } }])
   })
 
   it("fails as the network did when nothing is saved yet", async () => {
-    await expect(pageResponse(page, offline, savedCopy(new Map()))).rejects.toThrow("Failed to fetch")
+    await expect(pageResponse(page, offline, savedCopy(new Map()), withinGrace)).rejects.toThrow("Failed to fetch")
+  })
+})
+
+describe("pageResponse on a network that's slow to answer", () => {
+  const page = new Request(`${ORIGIN}/`)
+
+  it("opens the saved shell once the network has taken longer than about 3 s", async () => {
+    const shell = new Response("<saved shell>")
+    const { wait, waits } = graceOver()
+    expect(await pageResponse(page, neverAnswering, savedCopy(new Map([[SHELL_URL, shell]])), wait)).toBe(shell)
+    expect(waits).toEqual([NETWORK_GRACE_MS])
+    expect(NETWORK_GRACE_MS).toBe(3_000)
+  })
+
+  it("keeps waiting for the network when nothing is saved yet", async () => {
+    const { network, answer } = answeringLater()
+    const response = pageResponse(page, network, savedCopy(new Map()), graceOver().wait)
+    const fetched = new Response("<html>")
+    answer(fetched)
+    expect(await response).toBe(fetched)
+  })
+
+  it("keeps waiting for the network when the saved copy can't be read", async () => {
+    const { network, answer } = answeringLater()
+    const response = pageResponse(page, network, unreadable, graceOver().wait)
+    const fetched = new Response("<html>")
+    answer(fetched)
+    expect(await response).toBe(fetched)
   })
 })
 
@@ -92,6 +147,6 @@ describe("assetResponse", () => {
 describe("pageResponse with a saved copy that can't be read", () => {
   it("still opens the page from the network, since it never reads the saved copy first", async () => {
     const fetched = new Response("<html>")
-    expect(await pageResponse(new Request(`${ORIGIN}/`), answering(fetched), unreadable)).toBe(fetched)
+    expect(await pageResponse(new Request(`${ORIGIN}/`), answering(fetched), unreadable, withinGrace)).toBe(fetched)
   })
 })
