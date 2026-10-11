@@ -1,4 +1,5 @@
 import { ToggleGroup, ToggleGroupItem } from "../components/ui/toggle-group.tsx"
+import { clockOf } from "./clock.ts"
 import { ambiguity, type Pick, type When } from "./when.ts"
 
 interface AmbiguityChoiceProps {
@@ -11,9 +12,6 @@ const PICKS = [
   { value: "earlier", label: "first" },
   { value: "later", label: "second" },
 ] as const satisfies ReadonlyArray<{ value: Exclude<Pick, null>; label: string }>
-
-const clockOf = (instant: number, zone: string) =>
-  new Intl.DateTimeFormat(undefined, { hour: "numeric", minute: "2-digit", timeZone: zone }).format(instant)
 
 export const AmbiguityChoice = ({ when, zone, onChange }: AmbiguityChoiceProps) => {
   const twice = ambiguity(when, zone)
