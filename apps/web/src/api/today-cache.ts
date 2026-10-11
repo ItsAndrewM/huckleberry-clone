@@ -1,61 +1,8 @@
-import type { Feed, RecentEntry, Today, Totals } from "@bt/contracts"
-import { type DiaperChange, roundTo, type StartedFeed, totalsIn, zonedDayBounds } from "@bt/domain"
+import type { Feed, RecentEntry, Today } from "@bt/contracts"
 import type { Action } from "./actions.ts"
-import { type Author, pendingDiaper, pendingFeed, pendingId, startedFeed, withBottle } from "./pending.ts"
+import { isPending, pendingDiaper, pendingFeed, pendingId, startedFeed, withBottle } from "./pending.ts"
 import type { Saved } from "./send.ts"
-
-export interface Pending extends Author {
-  readonly zone: string
-}
-
-const idOf = (entry: RecentEntry) => (entry.kind === "feed" ? entry.feed.id : entry.diaper.id)
-
-const timeOf = (entry: RecentEntry) => (entry.kind === "feed" ? entry.feed.startedAt : entry.diaper.occurredAt)
-
-const without = (recent: ReadonlyArray<RecentEntry>, id: string) => recent.filter((entry) => idOf(entry) !== id)
-
-const withEntry = (recent: ReadonlyArray<RecentEntry>, entry: RecentEntry) =>
-  [...without(recent, idOf(entry)), entry].toSorted((a, b) => timeOf(b) - timeOf(a))
-
-const later = (current: Feed | null, feed: Feed) =>
-  current === null || current.id === feed.id || feed.startedAt >= current.startedAt ? feed : current
-
-const shifted = (today: Today, pending: Pending, before: Change, after: Change): Totals => {
-  const day = zonedDayBounds(today.date, pending.zone)
-  const added = totalsIn(day, after.feeds, after.diapers, pending.now)
-  const removed = totalsIn(day, before.feeds, before.diapers, pending.now)
-  const sum = (key: keyof Totals) => roundTo(today.totals[key] + added[key] - removed[key], 1)
-  return {
-    feedsStarted: sum("feedsStarted"),
-    leftSeconds: sum("leftSeconds"),
-    rightSeconds: sum("rightSeconds"),
-    nursingSeconds: sum("nursingSeconds"),
-    breastMilkMl: sum("breastMilkMl"),
-    formulaMl: sum("formulaMl"),
-    bottleMl: sum("bottleMl"),
-    diapers: sum("diapers"),
-    wetDiapers: sum("wetDiapers"),
-    dirtyDiapers: sum("dirtyDiapers"),
-  }
-}
-
-interface Change {
-  readonly feeds: ReadonlyArray<StartedFeed>
-  readonly diapers: ReadonlyArray<DiaperChange>
-}
-
-const NOTHING: Change = { feeds: [], diapers: [] }
-
-const withFeed = (today: Today, pending: Pending, feed: Feed, before: Feed | null): Today => ({
-  ...today,
-  totals: shifted(today, pending, before === null ? NOTHING : { feeds: [before], diapers: [] }, {
-    feeds: [feed],
-    diapers: [],
-  }),
-  activeFeed: feed.status === "active" ? feed : today.activeFeed,
-  lastFeed: later(today.lastFeed, feed),
-  recent: withEntry(today.recent, { kind: "feed", feed }),
-})
+import { idOf, later, NOTHING, type Pending, shifted, without, withEntry, withFeed } from "./today-change.ts"
 
 export const pendingToday = (today: Today, action: Action, pending: Pending): Today => {
   switch (action.kind) {
@@ -73,6 +20,54 @@ export const pendingToday = (today: Today, action: Action, pending: Pending): To
       if (active?.id !== action.id) return today
       return withFeed(today, pending, withBottle(active, action.payload), active)
     }
+    default:
+      return today
+  }
+}
+
+const entryOf = (today: Today, id: string) => today.recent.find((entry) => idOf(entry) === id)
+
+const settled = (feed: Feed | null) => (feed === null || isPending(feed.id) ? null : feed)
+
+const latestFeed = (recent: ReadonlyArray<RecentEntry>, before: Feed | null) =>
+  recent.reduce((latest, entry) => (entry.kind === "feed" ? later(latest, entry.feed) : latest), settled(before))
+
+const withoutDiaper = (today: Today, pending: Pending, id: string): Today => {
+  const entry = entryOf(today, id)
+  if (entry?.kind !== "diaper") return today
+  const totals = shifted(today, pending, { feeds: [], diapers: [entry.diaper] }, NOTHING)
+  return { ...today, totals, recent: without(today.recent, id) }
+}
+
+const withoutFeed = (today: Today, pending: Pending, id: string, before: Today): Today => {
+  const entry = entryOf(today, id)
+  if (entry?.kind !== "feed") return today
+  const recent = without(today.recent, id)
+  return {
+    ...today,
+    totals: shifted(today, pending, { feeds: [entry.feed], diapers: [] }, NOTHING),
+    activeFeed: today.activeFeed?.id === id ? before.activeFeed : today.activeFeed,
+    lastFeed: today.lastFeed?.id === id ? latestFeed(recent, before.lastFeed) : today.lastFeed,
+    recent,
+  }
+}
+
+const withoutBottle = (today: Today, pending: Pending, feedId: string, portionId: string): Today => {
+  const active = today.activeFeed
+  if (active?.id !== feedId || !active.portions.some(({ id }) => id === portionId)) return today
+  const portions = active.portions.filter(({ id }) => id !== portionId)
+  return withFeed(today, pending, { ...active, portions }, active)
+}
+
+export const withdrawnToday = (today: Today, action: Action, pending: Pending, before: Today): Today => {
+  switch (action.kind) {
+    case "logDiaper":
+      return withoutDiaper(today, pending, pendingId(action.payload.actionId))
+    case "logFeed":
+    case "startFeed":
+      return withoutFeed(today, pending, pendingId(action.payload.actionId), before)
+    case "addBottle":
+      return withoutBottle(today, pending, action.id, pendingId(action.payload.actionId))
     default:
       return today
   }

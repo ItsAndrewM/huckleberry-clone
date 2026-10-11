@@ -154,6 +154,7 @@ test("offers to delete a feed that stopping at its start would leave empty", asy
       [STARTED, true],
     ])
   expect(new Set(played.sent.map(({ body }) => body.actionId)).size).toBe(2)
+  await expect(sheet).toBeHidden()
 })
 
 test("says who already started a feed, and shows theirs", async ({ page }) => {

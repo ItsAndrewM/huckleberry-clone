@@ -1,8 +1,9 @@
 import { cn } from "cn"
 import type { ReactNode } from "react"
 import { Drawer, DrawerContent, DrawerDescription, DrawerHeader, DrawerTitle } from "../components/ui/drawer.tsx"
+import { DiscardPrompt } from "./discard-prompt.tsx"
 import type { SheetKind } from "./sending.ts"
-import { useSheets } from "./sheets-context.ts"
+import { failedFor, useSheets } from "./sheets-context.ts"
 
 const SIZES_TO_CONTENT_ON_REOPEN = "*:data-[slot=drawer-content]:basis-auto"
 
@@ -15,6 +16,8 @@ interface SheetProps {
 
 export const Sheet = ({ sheet, title, description, children }: SheetProps) => {
   const sheets = useSheets()
+  const failed = failedFor(sheets, sheet)
+  const asking = sheets.asking && sheets.open === sheet && failed !== null
   return (
     <Drawer
       open={sheets.open === sheet}
@@ -27,7 +30,8 @@ export const Sheet = ({ sheet, title, description, children }: SheetProps) => {
             <DrawerTitle className="text-xl font-semibold tracking-tight">{title}</DrawerTitle>
             {description === undefined ? null : <DrawerDescription>{description}</DrawerDescription>}
           </DrawerHeader>
-          {children}
+          {asking ? <DiscardPrompt failed={failed} /> : null}
+          <div className={asking ? "hidden" : "contents"}>{children}</div>
         </div>
       </DrawerContent>
     </Drawer>

@@ -24,19 +24,21 @@ export const FinishView = ({ feed, segment, zone, onBack }: FinishViewProps) => 
   const now = useNow()
   const emptied = emptiedBy(failed)
   if (emptied !== null) {
+    const deleteFeed = () => {
+      sheets.discard(emptied.failed)
+      sheets.send({ sheet: "nursing", action: finishAction(emptied.current, emptied.stoppedAt, true) })
+    }
+    const keepFeed = () => {
+      sheets.discard(emptied.failed)
+      onBack()
+    }
     return (
       <div role="alert" className="flex flex-col gap-3">
         <p className="text-base">Stopping at the start leaves nothing in this feed. Delete it?</p>
-        <Button
-          variant="destructive"
-          size="lg"
-          onClick={() =>
-            sheets.send({ sheet: "nursing", action: finishAction(emptied.current, emptied.stoppedAt, true) })
-          }
-        >
+        <Button variant="destructive" size="lg" onClick={deleteFeed}>
           Delete feed
         </Button>
-        <Button variant="ghost" size="lg" onClick={onBack}>
+        <Button variant="ghost" size="lg" onClick={keepFeed}>
           Keep it
         </Button>
       </div>

@@ -175,3 +175,64 @@ export const openToday = async (page: Page) => {
   await page.goto("/")
   await page.getByText("Totals").waitFor()
 }
+
+export const quickAction = (page: Page, name: string) =>
+  page.getByRole("region", { name: "Log", exact: true }).getByRole("button", { name })
+
+export const gate = () => {
+  let open = () => {}
+  const opened = new Promise<void>((resolve) => {
+    open = resolve
+  })
+  return { open, opened }
+}
+
+export const holdRequests = async (page: Page, pattern: string, until: () => Promise<void>) => {
+  const held: string[] = []
+  await page.route(pattern, async (route) => {
+    held.push(route.request().url())
+    await until()
+    await route.fallback()
+  })
+  return held
+}
+
+export const muteLiveUpdates = (page: Page) => page.routeWebSocket(/\/api\/ws$/u, () => {})
+
+export const savedBy = (by: string) => ({
+  version: 1,
+  createdBy: by,
+  createdAt: NOW,
+  updatedBy: by,
+  updatedAt: NOW,
+  deletedAt: null,
+})
+
+export const savedDiaper = (by: string) => (body: Body) => ({
+  diaper: {
+    id: `diaper-${body.actionId}`,
+    occurredAt: body.occurredAt ?? NOW,
+    wet: body.wet ?? true,
+    dirty: body.dirty ?? false,
+    ...savedBy(by),
+  },
+  changed: [["today"]],
+})
+
+interface LostSaves {
+  readonly lost: number
+  readonly until: Promise<void>
+  readonly answer: (body: Body) => object
+}
+
+export const loseSaves = async (page: Page, pattern: string, { lost, until, answer }: LostSaves) => {
+  const bodies: Body[] = []
+  await page.route(pattern, async (route) => {
+    const { body } = sentOf(route.request())
+    bodies.push(body)
+    if (bodies.length > lost) return route.fulfill({ status: 201, json: answer(body) })
+    await until
+    return route.abort("internetdisconnected")
+  })
+  return bodies
+}

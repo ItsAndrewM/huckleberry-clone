@@ -26,15 +26,7 @@ const NursingContent = () => {
       return <PausedView feed={state.feed} lastSide={state.lastSide} />
     case "running":
       return finishing ? (
-        <FinishView
-          feed={state.feed}
-          segment={state.segment}
-          zone={zone}
-          onBack={() => {
-            setFinishing(false)
-            sheets.show("nursing")
-          }}
-        />
+        <FinishView feed={state.feed} segment={state.segment} zone={zone} onBack={() => setFinishing(false)} />
       ) : (
         <RunningView feed={state.feed} segment={state.segment} onFinish={() => setFinishing(true)} />
       )

@@ -77,8 +77,9 @@ describe("sentStop", () => {
 })
 
 describe("emptiedBy", () => {
-  it("hands back the household's copy and the stop time sent when a finish would leave the feed empty", () => {
-    expect(emptiedBy(failedWith(FINISH, EMPTY))).toEqual({ current: HOUSEHOLD_COPY, stoppedAt: STOPPED_AT })
+  it("hands back the failed finish, the household's copy and the stop time sent when a finish would leave the feed empty", () => {
+    const failed = failedWith(FINISH, EMPTY)
+    expect(emptiedBy(failed)).toEqual({ failed, current: HOUSEHOLD_COPY, stoppedAt: STOPPED_AT })
   })
 
   it("stays quiet for a finish that failed for another reason", () => {

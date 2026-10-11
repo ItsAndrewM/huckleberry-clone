@@ -23,6 +23,11 @@ const DIAPER: Sending = {
   action: { kind: "logDiaper", payload: { actionId: ACTION_ID, occurredAt: NOW, wet: true, dirty: false } },
 }
 
+const OTHER_DIAPER: Sending = {
+  sheet: "diaper",
+  action: { kind: "logDiaper", payload: { actionId: RENEWED, occurredAt: NOW - 60_000, wet: false, dirty: true } },
+}
+
 const SWITCH: Sending = {
   sheet: "nursing",
   action: { kind: "switchSide", id: "feed-1", payload: { actionId: ACTION_ID, version: 3, occurredAt: NOW } },
@@ -135,9 +140,9 @@ describe("sending", () => {
 })
 
 describe("a failed send", () => {
-  it("reopens its sheet with the reason", () => {
+  it("reopens its sheet with the reason, holding the entry", () => {
     const failed = { sending: DIAPER, error: new Offline() }
-    expect(failedState(CLOSED, failed, NOW)).toEqual({ open: "diaper", failed, toast: null })
+    expect(failedState(CLOSED, failed, NOW)).toEqual({ ...CLOSED, open: "diaper", held: [failed] })
   })
 
   it("says so in a toast when it was an undo", () => {
@@ -200,19 +205,20 @@ describe("a draft back from signing in", () => {
     expect(restoredState(null, NOW, RENEWED)).toEqual(CLOSED)
   })
 
-  it("asks before saving a draft past the retry window, with a new actionId", () => {
+  it("asks before saving a draft past the retry window, with a new actionId, holding it like any failed entry", () => {
     const state = restoredState(draft, NOW + DRAFT_RETRY_MS, RENEWED)
     expect(state.open).toBe("diaper")
-    expect(state.failed?.error).toEqual(new StaleDraft({ createdAt: NOW }))
-    expect(state.failed?.sending.action.payload.actionId).toBe(RENEWED)
+    expect(state.held).toHaveLength(1)
+    expect(state.held[0]?.error).toEqual(new StaleDraft({ createdAt: NOW }))
+    expect(state.held[0]?.sending.action.payload.actionId).toBe(RENEWED)
   })
 })
 
 describe("a conflict", () => {
-  it("reopens the running feed's sheet with the household's copy", () => {
+  it("shows in the running feed's open sheet with the household's copy", () => {
     const current = feedAt(NOW, { id: "feed-1", version: 4 })
     const failed = { sending: SWITCH, error: new FeedConflict({ code: "STALE_VERSION", current }) }
-    expect(failedState({ ...CLOSED, open: "nursing" }, failed, NOW)).toMatchObject({ open: "nursing", failed })
+    expect(failedState({ ...CLOSED, open: "nursing" }, failed, NOW)).toMatchObject({ open: "nursing", held: [failed] })
   })
 })
 
@@ -273,18 +279,19 @@ describe("what a send clears", () => {
     { kind: "deleteDiaper", sending: UNDO_DIAPER },
     { kind: "deleteFeed", sending: UNDO_FEED },
     { kind: "deletePortion", sending: UNDO_PORTION },
-  ])("an Undo send ($kind) clears the toast and any failure", ({ sending }) => {
+  ])("an Undo send ($kind) clears the toast, and keeps another entry held", ({ sending }) => {
     const { toast } = savedState(CLOSED, DIAPER, { diaper: diaperAt(NOW, { id: "diaper-1" }), changed: [] }, NOW)
-    const failed = { sending: DIAPER, error: new Offline() }
-    expect(sendingState({ ...CLOSED, toast, failed }, sending, true)).toMatchObject({ toast: null, failed: null })
+    const failed = { sending: OTHER_DIAPER, error: new Offline() }
+    const state = sendingState({ ...CLOSED, open: "diaper", toast, held: [failed] }, sending, true)
+    expect(state).toMatchObject({ toast: null, held: [failed] })
   })
 
-  it("a create keeps a toast that is still showing, and clears the failure", () => {
+  it("a create keeps a toast that is still showing, and its own entry is no longer held", () => {
     const earlier = savedState(CLOSED, DIAPER, { diaper: diaperAt(NOW, { id: "diaper-1" }), changed: [] }, NOW)
-    const failed = { sending: BOTTLE_FEED, error: new Offline() }
-    const state = sendingState({ ...earlier, failed }, DIAPER, true)
+    const failed = { sending: DIAPER, error: new Offline() }
+    const state = sendingState({ ...earlier, open: "diaper", held: [failed] }, DIAPER, true)
     expect(state.toast).toBe(earlier.toast)
-    expect(state.failed).toBeNull()
+    expect(state.held).toEqual([])
   })
 })
 
@@ -298,7 +305,7 @@ describe("a failed create", () => {
   it("keeps a toast that is still showing", () => {
     const earlier = savedState(CLOSED, DIAPER, { diaper: diaperAt(NOW, { id: "diaper-1" }), changed: [] }, NOW)
     const state = failedState(earlier, { sending: BOTTLE_FEED, error: new Offline() }, NOW + 1_000)
-    expect(state).toMatchObject({ open: "bottle", failed: { sending: BOTTLE_FEED } })
+    expect(state).toMatchObject({ open: "bottle", held: [{ sending: BOTTLE_FEED }] })
     expect(state.toast).toBe(earlier.toast)
   })
 })

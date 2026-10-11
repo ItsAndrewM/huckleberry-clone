@@ -21,7 +21,9 @@ export const sentStop = (failed: Failed | null, zone: string): When => {
 export const emptiedBy = (failed: Failed | null) => {
   const action = failed?.sending.action
   if (!(failed?.error instanceof FeedConflict) || failed.error.code !== "FEED_EMPTY") return null
-  return action?.kind === "finishFeed" ? { current: failed.error.current, stoppedAt: action.payload.occurredAt } : null
+  return action?.kind === "finishFeed"
+    ? { failed, current: failed.error.current, stoppedAt: action.payload.occurredAt }
+    : null
 }
 
 export const finishingAfter = (failed: Failed | null): boolean => failed?.sending.action.kind === "finishFeed"

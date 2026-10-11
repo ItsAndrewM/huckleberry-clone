@@ -3,7 +3,17 @@ import { useConnectivity } from "../api/hooks.ts"
 import type { Draft } from "./drafts.ts"
 import type { Sending } from "./sending.ts"
 import { type Sheets, SheetsContext } from "./sheets-context.ts"
-import { expiredState, failedState, restoredState, savedState, sendingState } from "./sheets-state.ts"
+import {
+  discardedState,
+  dismissedState,
+  expiredState,
+  failedState,
+  keptState,
+  restoredState,
+  savedState,
+  sendingState,
+  shownState,
+} from "./sheets-state.ts"
 import { TOAST_MS } from "./undo.ts"
 import { useResumedDraft } from "./use-resumed-draft.ts"
 import { useSend } from "./use-send.ts"
@@ -38,8 +48,10 @@ export const SheetsProvider = ({ draft, children }: SheetsProviderProps) => {
   const sheets: Sheets = {
     ...state,
     busy: mutation.isPending ? (mutation.variables ?? null) : null,
-    show: (sheet) => setState((current) => ({ ...current, open: sheet, failed: null })),
-    close: () => setState((current) => ({ ...current, open: null, failed: null })),
+    show: (sheet) => setState((current) => shownState(current, sheet)),
+    close: () => setState(dismissedState),
+    keep: () => setState(keptState),
+    discard: (failed) => setState((current) => discardedState(current, failed)),
     send,
   }
   return <SheetsContext value={sheets}>{children}</SheetsContext>

@@ -1,14 +1,18 @@
 import { createContext, use } from "react"
 import type { Failed, Sending, SheetKind } from "./sending.ts"
+import { heldFor } from "./sheets-state.ts"
 import type { Toast } from "./undo.ts"
 
 export interface Sheets {
   readonly open: SheetKind | null
-  readonly failed: Failed | null
+  readonly held: ReadonlyArray<Failed>
+  readonly asking: boolean
   readonly busy: Sending | null
   readonly toast: Toast | null
   readonly show: (sheet: SheetKind) => void
   readonly close: () => void
+  readonly keep: () => void
+  readonly discard: (failed: Failed) => void
   readonly send: (sending: Sending) => void
 }
 
@@ -20,5 +24,4 @@ export const useSheets = () => {
   return sheets
 }
 
-export const failedFor = (sheets: Sheets, sheet: SheetKind) =>
-  sheets.failed?.sending.sheet === sheet ? sheets.failed : null
+export const failedFor = (sheets: Sheets, sheet: SheetKind) => heldFor(sheets.held, sheet)
