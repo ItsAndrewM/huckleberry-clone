@@ -85,14 +85,45 @@ test.describe("Growth, with the household's answers played by the test", () => {
     await expect(axisTitle(page)).toHaveText("Weight (kg)")
   })
 
+  test("shows each metric's newest value, percentile and date on its tile, with weight charted first", async ({
+    page,
+  }) => {
+    await playGrowth(page, MEASUREMENTS)
+    await openGrowth(page)
+    const tiles = page.getByRole("group", { name: "Measurement" }).getByRole("button")
+    await expect(tiles).toHaveCount(3)
+    await expect(tiles.nth(0)).toHaveAccessibleName("Weight: 4.30 kg, 47th, Oct 6, 2026")
+    await expect(tiles.nth(1)).toHaveAccessibleName("Length: 54.5 cm, 55th, Oct 6, 2026")
+    await expect(tiles.nth(2)).toHaveAccessibleName("Head: 36.8 cm, 48th, Oct 6, 2026")
+    await expect(tiles.nth(0)).toHaveAttribute("aria-pressed", "true")
+  })
+
+  test("lists every measurement on a card, newest first, saying which metric wasn't measured", async ({ page }) => {
+    await playGrowth(page, MEASUREMENTS)
+    await openGrowth(page)
+    const cards = page.getByRole("region", { name: "Measurements" }).getByRole("listitem")
+    await expect(cards.getByRole("heading", { level: 3 })).toHaveText([
+      "Oct 6, 2026 · 1 mo 5 d",
+      "Sep 15, 2026 · 14 d",
+      "Sep 1, 2026 · Birth",
+    ])
+    await expect(cards.nth(1).getByRole("definition")).toHaveText([
+      "3.60 kg",
+      "52nd",
+      "—Not measured",
+      "35.1 cm",
+      "46th",
+    ])
+  })
+
   test("switches to length and head circumference, each with its own measurements", async ({ page }) => {
     await playGrowth(page, MEASUREMENTS)
     await openGrowth(page)
-    await page.getByRole("button", { name: "Length" }).click()
+    await page.getByRole("button", { name: /^Length:/u }).click()
     await expect(chart(page)).toHaveAccessibleName("Length-for-age, girls, birth to 6 months")
     await expect(herPoints(page)).toHaveCount(2)
     await expect(axisTitle(page)).toHaveText("Length (cm)")
-    await page.getByRole("button", { name: "Head" }).click()
+    await page.getByRole("button", { name: /^Head:/u }).click()
     await expect(chart(page)).toHaveAccessibleName("Head circumference-for-age, girls, birth to 6 months")
     await expect(herPoints(page)).toHaveCount(3)
   })

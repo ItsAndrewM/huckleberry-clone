@@ -2,9 +2,12 @@ import type { Measurement, Me } from "@bt/contracts"
 import { ageInDays, localDateOf } from "@bt/domain"
 import { useMemo } from "react"
 import { useMinute } from "../../timer/use-now.ts"
+import { latestTiles, measurementCards } from "./cards.ts"
 import { ageWindowFor, axisLabel, axisUnitOf, curvesFor, growthRows } from "./chart-model.ts"
 import { plottedRows } from "./growth-chart-definition.ts"
 import type { GrowthMetricInfo } from "./metrics.ts"
+
+const NOTHING_SAVING = () => false
 
 export const useGrowthView = (me: Me, measurements: ReadonlyArray<Measurement>, info: GrowthMetricInfo) => {
   const now = useMinute()
@@ -17,6 +20,8 @@ export const useGrowthView = (me: Me, measurements: ReadonlyArray<Measurement>, 
       curves === "unavailable"
         ? null
         : { ageWindow, axisLabel: axisLabel(info, unit), curves, plotted: plottedRows(rows) }
-    return { rows, chart }
+    const tiles = latestTiles(measurements, me)
+    const cards = measurementCards(measurements, me, NOTHING_SAVING)
+    return { rows, chart, tiles, cards }
   }, [me, measurements, info, ageWindow])
 }
