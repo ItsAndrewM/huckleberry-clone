@@ -324,14 +324,30 @@ test.describe("Today, with the household's answers played by the test", () => {
     }
   })
 
-  test("keeps the quick actions waiting while Today can't be loaded", async ({ page }) => {
+  test("keeps the quick actions waiting while Today can't be loaded, and says why", async ({ page }) => {
     await playToday(page, todayWith({}))
     await page.route("**/api/today", (route) => route.fulfill({ status: 404 }))
     await openToday(page)
     await expect(page.getByText("Today couldn't be loaded.")).toBeVisible()
-    for (const action of await page.getByRole("region", { name: "Log", exact: true }).getByRole("button").all()) {
+    const log = page.getByRole("region", { name: "Log", exact: true })
+    await expect(log.getByText("Logging opens once Today loads.")).toBeVisible()
+    for (const action of await log.getByRole("button").all()) {
       await expect(action).toBeDisabled()
+      await expect(action).toHaveAccessibleDescription("Logging opens once Today loads.")
     }
+  })
+
+  test("drops the reason once Today has loaded", async ({ page }) => {
+    await playToday(page, todayWith({}))
+    let refusing = true
+    await page.route("**/api/today", (route) => (refusing ? route.fulfill({ status: 404 }) : route.fallback()))
+    await openToday(page)
+    const log = page.getByRole("region", { name: "Log", exact: true })
+    await expect(log.getByText("Logging opens once Today loads.")).toBeVisible()
+    refusing = false
+    await page.getByRole("button", { name: "Try again" }).click()
+    await expect(log.getByText("Logging opens once Today loads.")).toBeHidden()
+    await expect(log.getByRole("button", { name: "Diaper" })).toBeEnabled()
   })
 
   test("keeps the last of a long recent list clear of the quick actions", async ({ page }) => {
