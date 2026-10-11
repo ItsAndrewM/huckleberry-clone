@@ -1,12 +1,14 @@
 import { MAX_SEGMENT_MS, type NewFeed, type Side } from "@bt/contracts"
+import { FUTURE_TOLERANCE_MS } from "@bt/domain"
 import type { Failed } from "../../sheets/sending.ts"
-import { type When, whenAt } from "../../sheets/when.ts"
+import { resolveWhen, type When, whenAt } from "../../sheets/when.ts"
 import type { Amounts } from "./bottle-entry.ts"
 import { OTHER_SIDE } from "./nursing-state.ts"
 
 export const MINUTE_MS = 60_000
 export const MAX_SIDE_MINUTES = MAX_SEGMENT_MS / MINUTE_MS
 const EARLIER_MS = 30 * MINUTE_MS
+const WHOLE_NUMBER = /^\d+$/u
 
 export interface PastFeed extends Amounts {
   readonly first: Side
@@ -20,6 +22,13 @@ export interface PastFeedSession extends PastFeed {
 
 const isMinutes = (minutes: number | null): minutes is number =>
   minutes !== null && Number.isInteger(minutes) && minutes >= 0 && minutes <= MAX_SIDE_MINUTES
+
+export const minutesFromText = (text: string): number | null => {
+  const typed = text.trim()
+  if (typed === "") return 0
+  const minutes = WHOLE_NUMBER.test(typed) ? Number(typed) : null
+  return isMinutes(minutes) ? minutes : null
+}
 
 export const isComplete = ({ minutes, breastMilkMl, formulaMl }: PastFeed) =>
   isMinutes(minutes.left) &&
@@ -41,6 +50,21 @@ export const pastFeedEntry = (actionId: string, startedAt: number, feed: PastFee
   const portions = milk.breastMilkMl + milk.formulaMl > 0 ? [{ occurredAt: end, ...milk }] : []
   return { actionId, segments, portions }
 }
+
+export const latestInstant = (startedAt: number, { minutes }: PastFeed) =>
+  startedAt + ((minutes.left ?? 0) + (minutes.right ?? 0)) * MINUTE_MS
+
+export const endsInFuture = (latest: number, now: number) => latest > now + FUTURE_TOLERANCE_MS
+
+export const futureEnd = (feed: PastFeed, when: When, zone: string, now: number): number | null => {
+  const start = resolveWhen(when, zone, now)
+  if (!start.ok) return null
+  const latest = latestInstant(start.instant, feed)
+  return endsInFuture(latest, now) ? latest : null
+}
+
+export const canSavePastFeed = (feed: PastFeed, when: When, zone: string, now: number) =>
+  isComplete(feed) && resolveWhen(when, zone, now).ok && futureEnd(feed, when, zone, now) === null
 
 const minutesOn = (entry: NewFeed, side: Side) =>
   entry.segments

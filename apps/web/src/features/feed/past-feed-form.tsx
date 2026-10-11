@@ -1,6 +1,7 @@
 import type { VolumeUnit } from "@bt/contracts"
 import { useState } from "react"
 import { Button } from "../../components/ui/button.tsx"
+import { clockOf } from "../../sheets/clock.ts"
 import { FailureNote } from "../../sheets/failure-note.tsx"
 import { failedFor, useSheets } from "../../sheets/sheets-context.ts"
 import { tapTime } from "../../sheets/tap-time.ts"
@@ -10,7 +11,7 @@ import { useNow } from "../../timer/use-now.ts"
 import { AmountField } from "./amount-field.tsx"
 import { FirstSide } from "./first-side.tsx"
 import { MinutesField } from "./minutes-field.tsx"
-import { isComplete, pastFeedEntry, pastFeedSession } from "./past-feed.ts"
+import { canSavePastFeed, futureEnd, pastFeedEntry, pastFeedSession } from "./past-feed.ts"
 
 interface PastFeedFormProps {
   readonly unit: VolumeUnit
@@ -28,14 +29,17 @@ export const PastFeedForm = ({ unit, zone }: PastFeedFormProps) => {
     breastMilkMl: session.breastMilkMl,
     formulaMl: session.formulaMl,
   }))
+  const endsAt = futureEnd(feed, when, zone, now)
   const save = () => {
-    const resolved = resolveWhen(when, zone, tapTime())
-    if (!resolved.ok || !isComplete(feed)) return
+    const at = tapTime()
+    const resolved = resolveWhen(when, zone, at)
+    if (!resolved.ok || !canSavePastFeed(feed, when, zone, at)) return
     const payload = pastFeedEntry(session.actionId, resolved.instant, feed)
     sheets.send({ sheet: "pastFeed", action: { kind: "logFeed", payload } })
   }
   return (
     <>
+      <FailureNote sheet="pastFeed" />
       <WhenField label="Started" when={when} onChange={setWhen} zone={zone} now={now} />
       <FirstSide side={feed.first} onChange={(first) => setFeed({ ...feed, first })} />
       <MinutesField
@@ -60,15 +64,12 @@ export const PastFeedForm = ({ unit, zone }: PastFeedFormProps) => {
         unit={unit}
         onChange={(formulaMl) => setFeed({ ...feed, formulaMl })}
       />
-      <Button
-        size="lg"
-        className="h-14 text-lg"
-        disabled={!isComplete(feed) || !resolveWhen(when, zone, now).ok}
-        onClick={save}
-      >
+      {endsAt === null ? null : (
+        <p className="text-sm text-destructive">That would end at {clockOf(endsAt, zone)}, in the future.</p>
+      )}
+      <Button size="lg" className="h-14 text-lg" disabled={!canSavePastFeed(feed, when, zone, now)} onClick={save}>
         Save
       </Button>
-      <FailureNote sheet="pastFeed" />
     </>
   )
 }

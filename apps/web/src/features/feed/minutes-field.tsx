@@ -1,16 +1,11 @@
 import { useId, useState } from "react"
 import { Input } from "../../components/ui/input.tsx"
-import { MAX_SIDE_MINUTES } from "./past-feed.ts"
+import { minutesFromText } from "./past-feed.ts"
 
 interface MinutesFieldProps {
   readonly label: string
   readonly minutes: number | null
   readonly onChange: (minutes: number | null) => void
-}
-
-const parsedMinutes = (text: string): number | null => {
-  const minutes = text.trim() === "" ? 0 : Number(text)
-  return Number.isInteger(minutes) && minutes >= 0 && minutes <= MAX_SIDE_MINUTES ? minutes : null
 }
 
 export const MinutesField = ({ label, minutes, onChange }: MinutesFieldProps) => {
@@ -30,7 +25,7 @@ export const MinutesField = ({ label, minutes, onChange }: MinutesFieldProps) =>
           aria-invalid={minutes === null}
           onChange={(event) => {
             setText(event.target.value)
-            onChange(parsedMinutes(event.target.value))
+            onChange(minutesFromText(event.target.value))
           }}
         />
         <span className="w-9 text-sm text-muted-foreground">min</span>

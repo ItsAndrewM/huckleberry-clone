@@ -59,6 +59,7 @@ test("says which feed a past feed overlaps, and keeps what was entered", async (
   await sheet.getByRole("button", { name: "Save" }).click()
   const reopened = page.getByRole("dialog", { name: "Past feed" })
   await expect(reopened.getByRole("alert")).toHaveText(/^This overlaps the feed at 7:55\sAM–8:10\sAM\.$/u)
+  await expect(reopened.getByRole("alert")).toBeInViewport()
   await expect(reopened.getByRole("textbox", { name: "Left" })).toHaveValue("15")
   await expect(reopened.getByLabel("Started")).toHaveValue("2026-10-09T08:00")
 })
