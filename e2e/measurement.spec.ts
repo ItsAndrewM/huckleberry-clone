@@ -1,4 +1,5 @@
 import { expect, type Page, test } from "@playwright/test"
+import { gate, holdRequests } from "./played-household.ts"
 
 const NOW = Date.UTC(2026, 9, 9, 16, 30)
 const BIRTH_DATE = "2026-09-01"
@@ -68,6 +69,8 @@ interface Units {
   readonly length: "cm" | "in"
 }
 
+const GROWTH = /\/api\/growth(\/[^/]+)?$/u
+
 const playGrowth = async (page: Page, measurements: ReadonlyArray<Measurement>, units: Units) => {
   const me = await (await page.request.get("/api/me")).json()
   const household = { ...me.household, timeZone: "America/Vancouver", units: { volume: "ml", ...units } }
@@ -75,10 +78,15 @@ const playGrowth = async (page: Page, measurements: ReadonlyArray<Measurement>, 
   await page.route("**/api/me", (route) => route.fulfill({ json: { ...me, household, child } }))
   const sent: Sent[] = []
   const played = { measurements, sent, caregivers: me.household.caregivers }
+  await page.route(GROWTH, (route) =>
+    route.request().method() === "GET"
+      ? route.fulfill({ json: { measurements: played.measurements } })
+      : route.fallback(),
+  )
   const answer = (status: number, json: Saved | Refused, after = played.measurements) =>
-    page.route(/\/api\/growth(\/[^/]+)?$/u, (route) => {
+    page.route(GROWTH, (route) => {
       const request = route.request()
-      if (request.method() === "GET") return route.fulfill({ json: { measurements: played.measurements } })
+      if (request.method() === "GET") return route.fallback()
       played.sent.push({
         method: request.method(),
         path: new URL(request.url()).pathname,
@@ -168,16 +176,33 @@ test("edits a measurement from its card, sending what wasn't touched back unchan
 })
 
 test("opens a measurement from anywhere on its card", async ({ page }) => {
-  const { answer } = await playGrowth(page, STORED, { weight: "kg", length: "cm" })
-  await answer(200, saved(EARLIER))
+  await playGrowth(page, STORED, { weight: "kg", length: "cm" })
   await openGrowth(page)
-  await page
-    .getByRole("listitem")
-    .filter({ hasText: "Sep 15, 2026" })
-    .click({ position: { x: 60, y: 100 } })
+  await page.getByRole("listitem").filter({ hasText: "Sep 15, 2026" }).locator("dl").click({ force: true })
   const sheet = page.getByRole("dialog", { name: "Edit measurement" })
   await expect(sheet.getByRole("textbox", { name: "Weight" })).toHaveValue("3.6")
   await expect(sheet.getByRole("textbox", { name: "Head circumference" })).toHaveValue("35.1")
+})
+
+test("shows Saving… on the card until the household answers", async ({ page }) => {
+  const { answer } = await playGrowth(page, STORED, { weight: "kg", length: "cm" })
+  const edited = { ...NEWEST, version: 2, lengthCm: 55 }
+  await answer(200, saved(edited), [edited, EARLIER])
+  const answered = gate()
+  const held = await holdRequests(page, "**/api/growth/m3", () => answered.opened)
+  await openGrowth(page)
+  await page.getByRole("button", { name: "Edit the measurement from Oct 6, 2026" }).click()
+  const sheet = page.getByRole("dialog", { name: "Edit measurement" })
+  await sheet.getByRole("textbox", { name: "Length" }).fill("55")
+  await sheet.getByRole("button", { name: "Save" }).click()
+  await expect.poll(() => held.length).toBe(1)
+  const card = page.getByRole("listitem").filter({ hasText: "Oct 6, 2026" })
+  const chevron = card.getByRole("button", { name: "Edit the measurement from Oct 6, 2026" })
+  await expect(card).toContainText("Saving…")
+  await expect(chevron).toHaveCount(0)
+  answered.open()
+  await expect(chevron).toBeVisible()
+  await expect(card).not.toContainText("Saving…")
 })
 
 test("asks before deleting a measurement whose every value is cleared", async ({ page }) => {
@@ -220,8 +245,7 @@ test("deletes a measurement only once the parent confirms", async ({ page }) => 
 test("keeps the focus in the field being typed in, though the delete was asked and every value cleared", async ({
   page,
 }) => {
-  const { answer } = await playGrowth(page, STORED, { weight: "kg", length: "cm" })
-  await answer(200, saved(NEWEST))
+  await playGrowth(page, STORED, { weight: "kg", length: "cm" })
   await openGrowth(page)
   await page.getByRole("button", { name: "Edit the measurement from Oct 6, 2026" }).click()
   const sheet = page.getByRole("dialog", { name: "Edit measurement" })
@@ -276,9 +300,17 @@ test("refuses a number out of range, and points at the unit", async ({ page }) =
   await openGrowth(page)
   await page.getByRole("button", { name: "Add measurement" }).click()
   const sheet = page.getByRole("dialog", { name: "Add measurement" })
-  await sheet.getByRole("textbox", { name: "Weight" }).fill("4325")
-  await expect(sheet.getByText("Out of range. Check the number and its unit.")).toBeVisible()
+  const reason = "Out of range. Check the number and its unit."
+  const weight = sheet.getByRole("textbox", { name: "Weight" })
+  await weight.fill("4325")
+  await expect(sheet.getByText(reason)).toBeVisible()
+  await expect(weight).toHaveAccessibleDescription(reason)
   await expect(sheet.getByRole("button", { name: "Save" })).toBeDisabled()
+  await sheet.getByRole("combobox", { name: "Weight unit" }).selectOption("lb_oz")
+  for (const name of ["Pounds", "Ounces"]) {
+    await expect(sheet.getByRole("textbox", { name })).toHaveAccessibleDescription(reason)
+  }
   await sheet.getByRole("combobox", { name: "Weight unit" }).selectOption("g")
   await expect(sheet.getByRole("button", { name: "Save" })).toBeEnabled()
+  await expect(weight).toHaveAccessibleDescription("")
 })

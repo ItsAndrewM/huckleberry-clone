@@ -1,3 +1,4 @@
+import { useId } from "react"
 import { Input } from "../../components/ui/input.tsx"
 import { NativeSelect, NativeSelectOption } from "../../components/ui/native-select.tsx"
 import type { UnitChoice } from "./entry-text.ts"
@@ -14,17 +15,18 @@ interface EntryFieldProps<Unit extends EntryUnit> {
 interface NumberProps {
   readonly label: string
   readonly value: string
-  readonly invalid: boolean
+  readonly describedBy: string | undefined
   readonly onChange: (value: string) => void
 }
 
-const NumberInput = ({ label, value, invalid, onChange }: NumberProps) => (
+const NumberInput = ({ label, value, describedBy, onChange }: NumberProps) => (
   <Input
     aria-label={label}
     inputMode="decimal"
     className="tabular-nums"
     value={value}
-    aria-invalid={invalid}
+    aria-invalid={describedBy !== undefined}
+    aria-describedby={describedBy}
     onChange={(event) => onChange(event.target.value)}
   />
 )
@@ -36,7 +38,8 @@ export const EntryField = <Unit extends EntryUnit>({
   message,
   onChange,
 }: EntryFieldProps<Unit>) => {
-  const invalid = message !== null
+  const messageId = useId()
+  const describedBy = message === null ? undefined : messageId
   const pick = (value: string) => {
     const choice = units.find(({ unit }) => unit === value)
     if (choice !== undefined) onChange(withUnit(entry, choice.unit))
@@ -50,14 +53,14 @@ export const EntryField = <Unit extends EntryUnit>({
             <NumberInput
               label="Pounds"
               value={entry.text}
-              invalid={invalid}
+              describedBy={describedBy}
               onChange={(text) => onChange({ ...entry, text })}
             />
             <span className="text-sm text-muted-foreground">lb</span>
             <NumberInput
               label="Ounces"
               value={entry.ounces}
-              invalid={invalid}
+              describedBy={describedBy}
               onChange={(ounces) => onChange({ ...entry, ounces })}
             />
             <span className="text-sm text-muted-foreground">oz</span>
@@ -66,7 +69,7 @@ export const EntryField = <Unit extends EntryUnit>({
           <NumberInput
             label={label}
             value={entry.text}
-            invalid={invalid}
+            describedBy={describedBy}
             onChange={(text) => onChange({ ...entry, text })}
           />
         )}
@@ -83,7 +86,11 @@ export const EntryField = <Unit extends EntryUnit>({
           ))}
         </NativeSelect>
       </div>
-      {message === null ? null : <p className="text-sm text-destructive">{message}</p>}
+      {message === null ? null : (
+        <p id={messageId} className="text-sm text-destructive">
+          {message}
+        </p>
+      )}
     </fieldset>
   )
 }
