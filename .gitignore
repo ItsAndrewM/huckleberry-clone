@@ -4,6 +4,7 @@ dist
 .dev.vars*
 .env*
 .admin-token.env
+deploys.log
 coverage
 playwright-report
 test-results
