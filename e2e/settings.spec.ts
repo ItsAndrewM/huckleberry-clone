@@ -144,7 +144,7 @@ test.describe("Settings, with the household's answers played by the test", () =>
     await page.goto("/settings")
     await page.getByLabel("Name").fill("Robin Rae")
     await page.getByRole("button", { name: "Save" }).click()
-    await expect(page.getByText("Saved")).toBeVisible()
+    await expect(page.getByText("Saved", { exact: true })).toBeVisible()
     await expect(page.getByRole("button", { name: "Save" })).toBeDisabled()
     expect(sentBodies(played)).toEqual([
       { actionId: expect.any(String), version, name: "Robin Rae", birthDate, sex, gestationalAgeDays },
@@ -172,11 +172,11 @@ test.describe("Settings, with the household's answers played by the test", () =>
     await page.goto("/settings")
     await page.getByLabel("Name").fill("Robin Rae")
     await page.getByRole("button", { name: "Save" }).click()
-    await expect(page.getByText("Saved")).toBeVisible()
+    await expect(page.getByText("Saved", { exact: true })).toBeVisible()
     await page.getByLabel("Name").fill("Robin Ray")
     await otherPhoneSaves({ name: "Robbie" }, played)
     await expect(page.getByLabel("Name")).toHaveValue("Robbie")
-    await expect(page.getByText("Saved")).toBeHidden()
+    await expect(page.getByText("Saved", { exact: true })).toBeHidden()
   })
 
   test("drops a refusal once the other phone's save has replaced what it was about", async ({ page }) => {
@@ -208,6 +208,20 @@ test("loads the household's settings on Try again after they couldn't be loaded"
   refusing = false
   await page.getByRole("button", { name: "Try again" }).click()
   await expect(page.getByText("Andrew (local)")).toBeVisible()
+})
+
+test("says no offline copy is saved while the phone has none", async ({ page }) => {
+  await page.goto("/settings")
+  await expect(page.getByText("Not saved yet.")).toBeVisible()
+})
+
+test("says when the phone's offline copy is an older version", async ({ page }) => {
+  await page.goto("/settings")
+  await expect(page.getByText("Not saved yet.")).toBeVisible()
+  await page.evaluate("caches.open('bt-shell-0123456789abcdef')")
+  await expect(page.getByText("An older version. It updates while the app is open online.")).toBeVisible({
+    timeout: 10_000,
+  })
 })
 
 test("shows who is signed in", async ({ page }) => {

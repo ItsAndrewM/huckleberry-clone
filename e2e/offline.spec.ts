@@ -49,6 +49,12 @@ test("opens its saved copy on a slow network even when the session has expired, 
   await expect(page.getByRole("alert").filter({ hasText: "Sign in to continue" })).toBeVisible()
 })
 
+test("says in Settings that this phone's offline copy is saved for this version", async ({ page }) => {
+  await openWithSavedCopy(page)
+  await page.getByRole("navigation", { name: "Main" }).getByRole("link", { name: "Settings" }).click()
+  await expect(page.getByText("Saved for this version.")).toBeVisible()
+})
+
 test("opens any tab's address from its saved copy while offline", async ({ page, context }) => {
   await openWithSavedCopy(page)
   await goOfflineLikeAPhone(page, context)
