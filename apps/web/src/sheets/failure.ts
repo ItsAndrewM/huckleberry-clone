@@ -9,6 +9,7 @@ import {
   Unauthorized,
 } from "@bt/contracts"
 import { AuthRequired, Offline } from "../api/errors.ts"
+import { clockTime } from "../clock-time.ts"
 
 export interface Note {
   readonly message: string
@@ -30,8 +31,7 @@ const note = (message: string, retry: string | null = null): Note => ({ message,
 const nameOf = ({ caregivers }: Household, id: string) =>
   caregivers.find((caregiver) => caregiver.id === id)?.displayName ?? "The other phone"
 
-const timeOf = ({ locale, timeZone }: Household, instant: number) =>
-  new Intl.DateTimeFormat(locale, { hour: "numeric", minute: "2-digit", timeZone }).format(instant)
+const timeOf = ({ locale, timeZone }: Household, instant: number) => clockTime(instant, timeZone, locale)
 
 const spanOf = (household: Household, feed: Feed) =>
   `${timeOf(household, feed.startedAt)}–${feed.endedAt === null ? "now" : timeOf(household, feed.endedAt)}`

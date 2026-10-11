@@ -1,8 +1,8 @@
 import type { Diaper, Feed, RecentEntry } from "@bt/contracts"
+import { clockTime } from "../../clock-time.ts"
 import type { Display } from "./display.ts"
 import { feedParts, feedTitle } from "./feed-parts.ts"
 import { runningSide } from "./feed-status.ts"
-import { clockTime } from "./format.ts"
 
 export type RowKind = "nursing" | "bottle" | "diaper"
 
