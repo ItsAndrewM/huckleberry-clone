@@ -31,7 +31,9 @@ export const Sheet = ({ sheet, title, description, children }: SheetProps) => {
             {description === undefined ? null : <DrawerDescription>{description}</DrawerDescription>}
           </DrawerHeader>
           {asking ? <DiscardPrompt failed={failed} /> : null}
-          <div className={asking ? "hidden" : "contents"}>{children}</div>
+          <div key={sheets.opened} className={asking ? "hidden" : "contents"}>
+            {children}
+          </div>
         </div>
       </DrawerContent>
     </Drawer>

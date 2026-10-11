@@ -142,7 +142,7 @@ describe("sending", () => {
 describe("a failed send", () => {
   it("reopens its sheet with the reason, holding the entry", () => {
     const failed = { sending: DIAPER, error: new Offline() }
-    expect(failedState(CLOSED, failed, NOW)).toEqual({ ...CLOSED, open: "diaper", held: [failed] })
+    expect(failedState(CLOSED, failed, NOW)).toEqual({ ...CLOSED, open: "diaper", opened: 1, held: [failed] })
   })
 
   it("says so in a toast when it was an undo", () => {

@@ -7,13 +7,14 @@ import { TOAST_MS, type Toast, toastFor } from "./undo.ts"
 
 export interface SheetsState {
   readonly open: SheetKind | null
+  readonly opened: number
   readonly held: ReadonlyArray<Failed>
   readonly asking: boolean
   readonly keptOpen: string | null
   readonly toast: Toast | null
 }
 
-export const CLOSED: SheetsState = { open: null, held: [], asking: false, keptOpen: null, toast: null }
+export const CLOSED: SheetsState = { open: null, opened: 0, held: [], asking: false, keptOpen: null, toast: null }
 
 const UNDOES = new Set<Action["kind"]>(["deleteDiaper", "deleteFeed", "deletePortion"])
 
@@ -28,6 +29,7 @@ export const heldFor = (held: ReadonlyArray<Failed>, sheet: SheetKind) =>
 const opening = (state: SheetsState, sheet: SheetKind | null): SheetsState => ({
   ...state,
   open: sheet,
+  opened: sheet === null ? state.opened : state.opened + 1,
   asking: false,
   keptOpen: null,
 })
