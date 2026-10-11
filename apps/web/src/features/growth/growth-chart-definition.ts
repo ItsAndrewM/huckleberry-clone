@@ -32,6 +32,11 @@ export const plottedRows = (rows: ReadonlyArray<GrowthRow>): ReadonlyArray<Plott
 export const pointSummary = ({ measuredOn, age, value, percentile }: GrowthRow) =>
   [measuredOn, age, value, percentile].join(" · ")
 
+const CURVES_NAMED = "WHO's 3rd, 15th, 50th, 85th and 97th percentile curves"
+
+export const chartDescription = (count: number) =>
+  `${count} ${count === 1 ? "measurement" : "measurements"} over ${CURVES_NAMED}.`
+
 const curveMark = ({ percentile, points }: Curve) => {
   const median = percentile === 50
   return decorative(
@@ -41,7 +46,7 @@ const curveMark = ({ percentile, points }: Curve) => {
       y: "value",
       stroke: CURVE_PAINT,
       strokeWidth: median ? 1.5 : 1,
-      strokeOpacity: median ? 0.9 : 0.55,
+      strokeOpacity: median ? 0.9 : 0.7,
     }),
   )
 }

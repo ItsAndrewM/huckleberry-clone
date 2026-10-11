@@ -1,7 +1,12 @@
 import { createChartScene, renderChartSvg } from "@tanstack/charts"
 import { describe, expect, it } from "vitest"
 import { ageWindowFor, axisLabel, curvesFor, growthRows } from "../src/features/growth/chart-model.ts"
-import { growthChartDefinition, plottedRows, pointSummary } from "../src/features/growth/growth-chart-definition.ts"
+import {
+  chartDescription,
+  growthChartDefinition,
+  plottedRows,
+  pointSummary,
+} from "../src/features/growth/growth-chart-definition.ts"
 import { GROWTH_METRICS } from "../src/features/growth/metrics.ts"
 import { at, LOCALE, MEASUREMENTS, measurement, meWith } from "./growth-fixtures.ts"
 
@@ -32,6 +37,16 @@ describe("pointSummary", () => {
   it("reads a point as its date, age, value and percentile", () => {
     const [newest] = weightRows()
     expect(newest === undefined ? "" : pointSummary(newest)).toBe("Oct 6, 2026 · 1 mo 5 d · 4.30 kg · 47th")
+  })
+})
+
+describe("chartDescription", () => {
+  it.each([
+    [0, "0 measurements over WHO's 3rd, 15th, 50th, 85th and 97th percentile curves."],
+    [1, "1 measurement over WHO's 3rd, 15th, 50th, 85th and 97th percentile curves."],
+    [3, "3 measurements over WHO's 3rd, 15th, 50th, 85th and 97th percentile curves."],
+  ])("tells a screen reader how many measurements the chart holds, singular for one: %i", (count, description) => {
+    expect(chartDescription(count)).toBe(description)
   })
 })
 
