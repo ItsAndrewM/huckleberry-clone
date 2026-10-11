@@ -1,6 +1,7 @@
 import type { Measurement, Me } from "@bt/contracts"
 import { useState } from "react"
 import { GrowthFigure } from "./growth-figure.tsx"
+import { GrowthTable } from "./growth-table.tsx"
 import { MetricSwitch } from "./metric-switch.tsx"
 import { GROWTH_METRICS, type GrowthMetricInfo } from "./metrics.ts"
 import { useGrowthView } from "./use-growth-view.ts"
@@ -19,7 +20,9 @@ export const GrowthView = ({ me, measurements }: GrowthViewProps) => {
       <GrowthFigure info={info} chart={chart} />
       {rows.length === 0 ? (
         <p className="text-sm text-muted-foreground">{`No ${info.name.toLowerCase()} measurements yet`}</p>
-      ) : null}
+      ) : (
+        <GrowthTable info={info} rows={rows} />
+      )}
     </>
   )
 }

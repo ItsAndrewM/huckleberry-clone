@@ -62,6 +62,7 @@ const curveLabels = (page: Page) => page.locator('g[data-ts-key="curve-labels"] 
 const monthTicks = (page: Page) => page.locator('text[data-ts-key^="x-tick-label"]')
 const axisTitle = (page: Page) => page.locator('text[data-ts-key="y-label"]')
 const tooltip = (page: Page) => page.locator(".ts-chart-tooltip")
+const tableRow = (page: Page, index: number) => page.getByRole("table").getByRole("row").nth(index).getByRole("cell")
 
 const tapPoint = async (page: Page, index: number) => {
   const box = await herPoints(page).nth(index).boundingBox()
@@ -125,6 +126,34 @@ test.describe("Growth, with the household's answers played by the test", () => {
     await expect(tooltip(page)).toBeHidden()
   })
 
+  test("lists her weights in a table, newest first", async ({ page }) => {
+    await playGrowth(page, MEASUREMENTS)
+    await openGrowth(page)
+    await page.getByText("Show as a table").click()
+    await expect(page.getByRole("table", { name: "Weight, newest first" })).toBeVisible()
+    await expect(tableRow(page, 1)).toHaveText(["Oct 6, 2026", "1 mo 5 d", "4.30 kg", "47th"])
+    await expect(tableRow(page, 2)).toHaveText(["Sep 15, 2026", "14 d", "3.60 kg", "52nd"])
+    await expect(tableRow(page, 3)).toHaveText(["Sep 1, 2026", "Birth", "3.20 kg", "47th"])
+  })
+
+  test("plots pounds and lists pounds and ounces when the household weighs in lb & oz", async ({ page }) => {
+    await playGrowth(page, MEASUREMENTS, { weight: "lb_oz" })
+    await openGrowth(page)
+    await expect(axisTitle(page)).toHaveText("Weight (lb)")
+    await page.getByText("Show as a table").click()
+    await expect(tableRow(page, 1)).toHaveText(["Oct 6, 2026", "1 mo 5 d", "9 lb 7.7 oz", "47th"])
+  })
+
+  test("lists a measurement from after day 730 without plotting it or giving a percentile", async ({ page }) => {
+    const late = measurement("late", at("2026-10-06", 10), { weightG: 12_500 })
+    const earlier = measurement("earlier", at("2026-08-01", 10), { weightG: 12_000 })
+    await playGrowth(page, [late, earlier], { birthDate: "2024-09-01" })
+    await openGrowth(page)
+    await expect(herPoints(page)).toHaveCount(1)
+    await page.getByText("Show as a table").click()
+    await expect(tableRow(page, 1)).toHaveText(["Oct 6, 2026", "25 mo 5 d", "12.50 kg", "Percentile unavailable"])
+  })
+
   for (const { birthDate, months, ticks } of [
     { birthDate: "2026-03-01", months: 12, ticks: ["0", "2", "4", "6", "8", "10", "12"] },
     { birthDate: "2025-06-01", months: 24, ticks: ["0", "3", "6", "9", "12", "15", "18", "21", "24"] },
@@ -138,21 +167,24 @@ test.describe("Growth, with the household's answers played by the test", () => {
     })
   }
 
-  test("shows WHO's curves before her first weight", async ({ page }) => {
+  test("shows WHO's curves before her first weight, with no table", async ({ page }) => {
     await playGrowth(page, [])
     await openGrowth(page)
     await expect(curveLabels(page)).toHaveText(["3rd", "15th", "50th", "85th", "97th"])
     await expect(herPoints(page)).toHaveCount(0)
     await expect(page.getByText("No weight measurements yet")).toBeVisible()
+    await expect(page.getByText("Show as a table")).toHaveCount(0)
   })
 
-  test("says there are no curves for a boy", async ({ page }) => {
+  test("says there are no curves for a boy, and lists his weights without percentiles", async ({ page }) => {
     await playGrowth(page, MEASUREMENTS, { sex: "male" })
     await openGrowth(page)
     await expect(
       page.getByText("WHO's curves here are for girls, so there are no curves or percentiles to show."),
     ).toBeVisible()
     await expect(chart(page)).toHaveCount(0)
+    await page.getByText("Show as a table").click()
+    await expect(tableRow(page, 1)).toHaveText(["Oct 6, 2026", "1 mo 5 d", "4.30 kg", "Percentile unavailable"])
   })
 
   test("draws the curves in the muted ink and her points in the accent, in light and in dark", async ({ page }) => {
