@@ -68,12 +68,13 @@ const untouched = (entry: Entry<EntryUnit>) => {
   return entry.text === text && entry.ounces === ounces
 }
 
-const DECIMAL = /^(?:\d+\.?\d*|\.\d+)$/u
+const DECIMAL = /^(?:\d+(?:\.\d*)?|\.\d+)$/u
 
 const typed = (text: string) => {
   const trimmed = text.trim()
   if (trimmed === "") return 0
-  return DECIMAL.test(trimmed) ? Number(trimmed) : null
+  const value = Number(trimmed)
+  return DECIMAL.test(trimmed) && Number.isFinite(value) ? value : null
 }
 
 const parsedPoundsOunces = ({ text, ounces }: Entry<EntryUnit>): Reading => {
