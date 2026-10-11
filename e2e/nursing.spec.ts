@@ -279,6 +279,31 @@ test("redoes a switch that the other phone's change didn't undo, under the same 
   expect(redo).toEqual({ ...first, version: 3 })
 })
 
+test("offers no redo when the other phone had already switched to the side tapped for", async ({ page }) => {
+  const { andrew, emily } = await caregiversOf(page)
+  const mine = runningFeed(andrew.id, STARTED, "left", 2)
+  const { played, answer } = await playHousehold(page, todayWith(mine))
+  const theirs = {
+    ...mine,
+    version: 3,
+    updatedBy: emily.id,
+    segments: [
+      { id: "segment-1", side: "left" as const, startedAt: STARTED, endedAt: NOW - MINUTE },
+      { id: "segment-2", side: "right" as const, startedAt: NOW - MINUTE, endedAt: null },
+    ],
+  }
+  await answer("**/api/feeds/feed-1/switch", () => {
+    played.today = todayWith(theirs)
+    return { status: 409, json: { _tag: "Conflict", code: "STALE_VERSION", current: theirs } }
+  })
+  await openToday(page)
+  await (await openNursing(page)).getByRole("button", { name: "Switch to Right" }).click()
+  const sheet = page.getByRole("dialog", { name: "Nursing" })
+  await expect(sheet.getByText("Right side")).toBeVisible()
+  await expect(sheet.getByRole("alert").getByRole("button")).toHaveText(["OK"])
+  expect(played.sent).toHaveLength(1)
+})
+
 test("offers your side on the feed the other phone started, without starting a second feed", async ({ page }) => {
   const { emily } = await caregiversOf(page)
   const theirs = runningFeed(emily.id, NOW - 5 * MINUTE, "right")

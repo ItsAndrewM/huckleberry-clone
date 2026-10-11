@@ -1,7 +1,8 @@
 import { DiaperConflict, type Feed, FeedConflict, InvalidInput } from "@bt/contracts"
 import { describe, expect, it } from "vitest"
 import { Offline } from "../src/api/errors.ts"
-import { offersOk, recoveryOf, settlesWithoutAsking } from "../src/sheets/recovery.ts"
+import { settlesWithoutAsking } from "../src/sheets/held.ts"
+import { offersOk, recoveryOf } from "../src/sheets/recovery.ts"
 import type { Failed, Sending } from "../src/sheets/sending.ts"
 import { diaperAt, feedAt, MINUTE, NOW } from "./today-fixtures.ts"
 
@@ -38,7 +39,18 @@ const SWITCHED_EARLIER = theirs({
   segments: [segment("left", STARTED, NOW - 5 * MINUTE), segment("right", NOW - 5 * MINUTE, null)],
 })
 
-const SWITCH: Sending = { sheet: "nursing", action: { kind: "switchSide", id: "feed-1", payload: MINE } }
+const SWITCH: Sending = { sheet: "nursing", action: { kind: "switchSide", id: "feed-1", to: "right", payload: MINE } }
+
+const JOINING: Sending = { sheet: "nursing", action: { kind: "switchSide", id: "feed-1", to: "left", payload: MINE } }
+
+const EDIT_DIAPER: Sending = {
+  sheet: "diaper",
+  action: {
+    kind: "editDiaper",
+    id: "diaper-1",
+    payload: { actionId: ACTION_ID, version: 2, occurredAt: NOW, wet: false, dirty: true },
+  },
+}
 
 const PAUSE: Sending = { sheet: "nursing", action: { kind: "pauseFeed", id: "feed-1", payload: MINE } }
 
@@ -102,7 +114,7 @@ describe("a redo after the other phone's change", () => {
     expect(recovery?.label).toBe("Switch anyway")
     expect(recovery?.sendingAt(TAP)).toEqual({
       sheet: "nursing",
-      action: { kind: "switchSide", id: "feed-1", payload: { ...MINE, version: 3 } },
+      action: { kind: "switchSide", id: "feed-1", to: "right", payload: { ...MINE, version: 3 } },
     })
   })
 
@@ -124,6 +136,8 @@ describe("a redo after the other phone's change", () => {
 
   it.each([
     { case: "a switch after theirs", sending: SWITCH, current: SWITCHED_AFTER_TAP },
+    { case: "a switch to the side theirs had already reached, unseen", sending: SWITCH, current: SWITCHED_EARLIER },
+    { case: "a join's switch that meets the feed already on its side", sending: JOINING, current: theirs() },
     { case: "a pause after their switch", sending: PAUSE, current: SWITCHED_AFTER_TAP },
     { case: "a switch on a paused feed", sending: SWITCH, current: PAUSED },
     { case: "a pause on a paused feed", sending: PAUSE, current: PAUSED },
@@ -150,7 +164,12 @@ describe("a start that meets the other phone's feed", () => {
     expect(recovery?.label).toBe("Switch to Left")
     expect(recovery?.sendingAt(TAP)).toEqual({
       sheet: "nursing",
-      action: { kind: "switchSide", id: "feed-1", payload: { actionId: FRESH, version: 3, occurredAt: TAP.at } },
+      action: {
+        kind: "switchSide",
+        id: "feed-1",
+        to: "left",
+        payload: { actionId: FRESH, version: 3, occurredAt: TAP.at },
+      },
     })
   })
 
@@ -244,22 +263,34 @@ describe("failures with no way on", () => {
 
 describe("OK", () => {
   it.each([
-    new FeedConflict({ code: "STALE_VERSION", current: theirs() }),
-    new FeedConflict({ code: "FEED_ALREADY_ACTIVE", current: theirs() }),
-    new FeedConflict({ code: "ACTION_REPLAY_MISMATCH", current: SAVED_BOTTLE }),
-    new DiaperConflict({ code: "STALE_VERSION", current: SAVED_DIAPER }),
-    new DiaperConflict({ code: "ACTION_REPLAY_MISMATCH", current: SAVED_DIAPER }),
-  ])("settles $code by accepting the household's copy", (error) => {
-    expect(offersOk(error)).toBe(true)
+    feedConflict(SWITCH, "STALE_VERSION", theirs()),
+    feedConflict(start("left"), "FEED_ALREADY_ACTIVE", theirs()),
+    feedConflict(BOTTLE_FEED, "ACTION_REPLAY_MISMATCH", SAVED_BOTTLE),
+    { sending: EDIT_DIAPER, error: new DiaperConflict({ code: "STALE_VERSION", current: SAVED_DIAPER }) },
+    { sending: DIAPER, error: new DiaperConflict({ code: "ACTION_REPLAY_MISMATCH", current: SAVED_DIAPER }) },
+  ])("settles $error.code on $sending.action.kind by accepting the household's copy", (failed) => {
+    expect(offersOk(failed)).toBe(true)
+  })
+
+  it("isn't offered for a bottle top-up the other phone's change refused, since it can still be saved", () => {
+    const completed = theirs({ status: "completed" })
+    expect(offersOk(feedConflict(SWITCH, "STALE_VERSION", completed))).toBe(true)
+    expect(offersOk(feedConflict(addBottle(NOW), "STALE_VERSION", completed))).toBe(false)
   })
 
   it.each([
-    { case: "an overlap", error: new FeedConflict({ code: "SEGMENT_OVERLAP", current: theirs() }) },
-    { case: "an empty feed", error: new FeedConflict({ code: "FEED_EMPTY", current: PAUSED }) },
-    { case: "no connection", error: new Offline() },
-    { case: "a field error", error: new InvalidInput({ fieldErrors: [{ path: "occurredAt", issue: "in_future" }] }) },
-  ])("isn't offered for $case", ({ error }) => {
-    expect(offersOk(error)).toBe(false)
+    { case: "an overlap", failed: feedConflict(PAST_FEED, "SEGMENT_OVERLAP", theirs()) },
+    { case: "an empty feed", failed: feedConflict(finish(NOW), "FEED_EMPTY", PAUSED) },
+    { case: "no connection", failed: { sending: DIAPER, error: new Offline() } },
+    {
+      case: "a field error",
+      failed: {
+        sending: DIAPER,
+        error: new InvalidInput({ fieldErrors: [{ path: "occurredAt", issue: "in_future" }] }),
+      },
+    },
+  ])("isn't offered for $case", ({ failed }) => {
+    expect(offersOk(failed)).toBe(false)
   })
 })
 

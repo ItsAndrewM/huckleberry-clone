@@ -145,8 +145,8 @@ const CLOSING = {
   finishFeed: { sending: FINISH, closes: true, entry: false },
   deleteFeed: { sending: UNDO_FEED, closes: false, entry: false },
   deletePortion: { sending: UNDO_PORTION, closes: false, entry: false },
-  editDiaper: { sending: EDIT_DIAPER, closes: true, entry: false },
-  editPortion: { sending: EDIT_PORTION, closes: true, entry: false },
+  editDiaper: { sending: EDIT_DIAPER, closes: false, entry: false },
+  editPortion: { sending: EDIT_PORTION, closes: false, entry: false },
 } satisfies Record<Action["kind"], { readonly sending: Sending; readonly closes: boolean; readonly entry: boolean }>
 
 describe("sending", () => {

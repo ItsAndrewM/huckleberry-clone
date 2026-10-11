@@ -6,6 +6,7 @@ import {
   FeedStart,
   NewDiaper,
   NewFeed,
+  Side,
   TimedAction,
   VersionedAction,
   VersionedPortion,
@@ -18,6 +19,13 @@ const onRecord = <const Kind extends string, Payload extends Schema.Top>(kind: K
 const created = <const Kind extends string, Payload extends Schema.Top>(kind: Kind, payload: Payload) =>
   Schema.Struct({ kind: Schema.Literal(kind), payload })
 
+const switching = Schema.Struct({
+  kind: Schema.Literal("switchSide"),
+  id: Schema.String,
+  to: Schema.optionalKey(Side),
+  payload: TimedAction,
+})
+
 export const DiaperAction = Schema.Union([
   created("logDiaper", NewDiaper),
   onRecord("editDiaper", DiaperEdit),
@@ -28,7 +36,7 @@ export type DiaperAction = typeof DiaperAction.Type
 export const FeedAction = Schema.Union([
   created("logFeed", NewFeed),
   created("startFeed", FeedStart),
-  onRecord("switchSide", TimedAction),
+  switching,
   onRecord("pauseFeed", TimedAction),
   onRecord("resumeFeed", FeedResume),
   onRecord("addBottle", VersionedPortion),

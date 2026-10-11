@@ -21,6 +21,7 @@ const runningSince = (feed: Feed, at: number) => {
 const fits = (action: Action, feed: Feed) => {
   switch (action.kind) {
     case "switchSide":
+      return runningSince(feed, action.payload.occurredAt) && openSideOf(feed)?.side !== action.to
     case "pauseFeed":
       return runningSince(feed, action.payload.occurredAt)
     case "resumeFeed":
@@ -68,7 +69,7 @@ export const joined = ({ action }: Sending, feed: Feed): Recovery | null => {
     label: `Switch to ${SIDE_NAMES[side]}`,
     sendingAt: ({ at, actionId }) => ({
       sheet: "nursing",
-      action: { kind: "switchSide", id, payload: { actionId, version, occurredAt: at } },
+      action: { kind: "switchSide", id, to: side, payload: { actionId, version, occurredAt: at } },
     }),
   }
 }

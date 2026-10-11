@@ -7,7 +7,7 @@ import { tapTime } from "./tap-time.ts"
 export const RecoveryButtons = ({ failed }: { readonly failed: Failed }) => {
   const sheets = useSheets()
   const recovery = recoveryOf(failed)
-  const ok = offersOk(failed.error)
+  const ok = offersOk(failed)
   if (recovery === null && !ok) return null
   return (
     <div className="flex gap-2">
