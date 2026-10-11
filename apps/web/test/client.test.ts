@@ -54,7 +54,7 @@ describe("connectApi", () => {
     expect(requests.map((request) => [request.method, request.url, request.redirect, request.credentials])).toEqual([
       ["GET", `${ORIGIN}/api/me`, "manual", "same-origin"],
     ])
-    expect(signals).toEqual(["reached"])
+    expect(signals).toEqual(["answered"])
   })
 
   it("reads Access's redirect to its sign-in page, an opaque redirect, as AuthRequired", async () => {

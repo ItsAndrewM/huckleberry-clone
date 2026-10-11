@@ -44,13 +44,13 @@ export const startLive = ({ open, onChanged, onStale, report, random = Math.rand
   const opens = (current: LiveSocket) => {
     attempt = 0
     awaitingPong = false
-    report("online")
+    report("heard")
     if (lost) onStale()
     heartbeat = setInterval(() => beat(current), HEARTBEAT_MS)
   }
 
   const hears = (data: string) => {
-    report("online")
+    report("heard")
     if (data === HEARTBEAT.pong) {
       awaitingPong = false
       return

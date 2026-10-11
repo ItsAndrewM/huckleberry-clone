@@ -95,22 +95,22 @@ describe("changedKeys", () => {
 })
 
 describe("startLive", () => {
-  it("opens one socket at once, and treats its opening as the network being up, not as proof of a session", () => {
+  it("opens one socket at once, and treats its opening as hearing from the household, not as proof of a session", () => {
     const { sockets, latest, signals, stale } = live()
     latest().opens()
     expect(sockets).toHaveLength(1)
-    expect(signals).toEqual(["online"])
+    expect(signals).toEqual(["heard"])
     expect(stale()).toBe(0)
   })
 
-  it("treats every message it hears from the household, a pong or a change, as the network being up", () => {
+  it("reports every message it hears from the household, a pong or a change, as hearing from it", () => {
     const { latest, signals } = live()
     latest().opens()
     vi.advanceTimersByTime(HEARTBEAT_MS)
     latest().hears(HEARTBEAT.pong)
-    expect(signals).toEqual(["online", "online"])
+    expect(signals).toEqual(["heard", "heard"])
     latest().hears(JSON.stringify({ changed: [["today"]] }))
-    expect(signals).toEqual(["online", "online", "online"])
+    expect(signals).toEqual(["heard", "heard", "heard"])
   })
 
   it("passes on the keys a changed message names", () => {
@@ -178,7 +178,7 @@ describe("startLive", () => {
     latest().closes(CAREGIVER_DISABLED.code)
     vi.advanceTimersByTime(10 * 30_000)
     expect(sockets).toHaveLength(1)
-    expect(signals).toEqual(["online", "signed-out"])
+    expect(signals).toEqual(["heard", "signed-out"])
   })
 
   it("reconnects at once when woken while waiting to retry, and ignores a wake while connected", () => {
@@ -245,7 +245,7 @@ describe("startLive", () => {
     vi.advanceTimersByTime(FIRST_RETRY_AT_MOST)
     expect(sockets).toHaveLength(2)
     latest().opens()
-    expect(signals).toEqual(["online"])
+    expect(signals).toEqual(["heard"])
     expect(stale()).toBe(1)
   })
 })

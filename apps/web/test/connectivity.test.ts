@@ -16,8 +16,12 @@ describe("createConnectivity", () => {
   it.each<[ReadonlyArray<Signal>, Connectivity]>([
     [["unreachable"], "offline"],
     [["unreachable", "reached"], "online"],
+    [["unreachable", "answered"], "online"],
+    [["unreachable", "heard"], "online"],
     [["signed-out"], "auth-required"],
     [["signed-out", "reached"], "online"],
+    [["signed-out", "answered"], "online"],
+    [["signed-out", "heard"], "auth-required"],
     [["offline"], "offline"],
     [["offline", "online"], "online"],
     [["signed-out", "online"], "auth-required"],
@@ -42,6 +46,27 @@ describe("createConnectivity", () => {
     unsubscribe()
     store.report("reached")
     expect(heard).toEqual(["offline", "auth-required"])
+  })
+})
+
+describe("lastHeard", () => {
+  it("knows nothing until the household answers a request or speaks on the live connection", () => {
+    const store = createConnectivity(true, () => 1_000)
+    for (const signal of ["online", "reached", "signed-out", "unreachable", "offline"] as const) store.report(signal)
+    expect(store.lastHeard()).toBeNull()
+  })
+
+  it("is when the household last answered a request or spoke on the live connection, kept while offline", () => {
+    let now = 1_000
+    const store = createConnectivity(true, () => now)
+    store.report("answered")
+    now = 2_000
+    store.report("heard")
+    now = 3_000
+    store.report("reached")
+    store.report("online")
+    store.report("unreachable")
+    expect(store.lastHeard()).toBe(2_000)
   })
 })
 
