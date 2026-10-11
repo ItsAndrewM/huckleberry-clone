@@ -5,9 +5,12 @@
   "account_id": "6624f09210327baade61004af0d9be84",
   "main": "src/index.ts",
   "compatibility_date": "2026-10-06",
-  "workers_dev": true,
-  // The workers.dev hostname is the only entry point, and the one the Access app covers (M1.16).
+  // The only way in is the hostname the "Baby tracker" Access app covers: no workers.dev, no preview URLs.
+  "routes": [{ "pattern": "baby.andamonium.dev", "custom_domain": true }],
+  "workers_dev": false,
   "preview_urls": false,
+  // Keeps the app's own log lines only. Cloudflare's per-request records would store the Access JWT and the email.
+  "observability": { "enabled": true, "logs": { "invocation_logs": false } },
   "assets": {
     // No `directory`: @cloudflare/vite-plugin points it at apps/web's client build.
     "not_found_handling": "single-page-application",
@@ -20,10 +23,9 @@
   "vars": {
     // The Access JWT's issuer, compared exactly: an https origin with no trailing slash.
     "ACCESS_TEAM_DOMAIN": "https://misty-wildflower-0505.cloudflareaccess.com",
-    // M1.16 fills these in from the production Access app and the admin service token.
-    // Until then every JWT is refused and /api/admin/* admits nobody.
-    "ACCESS_AUD": "",
-    "ADMIN_SERVICE_TOKEN_CN": "",
+    // The "Baby tracker" Access app's AUD tag, and its admin service token's Client ID (docs/runbooks/access.md).
+    "ACCESS_AUD": "941d341f1c2f5665493d828a1babe3c49eee9f1e9db0b6f1e0c450297817a65b",
+    "ADMIN_SERVICE_TOKEN_CN": "028c076d56931d34ae295be519927e01.access",
   },
   // `vite dev` and `vite preview` sign every request in as this identity; deploys ignore it.
   "access": {
@@ -36,6 +38,8 @@
   // seeded on start for the access.dev identity. Deploys use the top level, which has no LOCAL_HOUSEHOLD.
   "env": {
     "local": {
+      // Routes are inherited, and a stray deploy of this environment would take the Custom Domain from production.
+      "routes": [],
       "vars": {
         "ACCESS_TEAM_DOMAIN": "https://misty-wildflower-0505.cloudflareaccess.com",
         "ACCESS_AUD": "",

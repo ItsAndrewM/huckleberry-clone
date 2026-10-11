@@ -77,17 +77,20 @@ describe("a caller vouched for by an Access JWT", () => {
   })
 
   it.each([
-    ["another app's audience", { audience: "another-app" }],
-    ["another team's issuer", { issuer: "https://evil.cloudflareaccess.com" }],
-    ["an expired token", { expiresIn: "-1m" }],
-    ["a key that isn't in the team's key set", { keyId: "k2" }],
-  ])("is unauthenticated for %s", async (_label, options) => {
-    expect(await viaJwt(await sign({ email: "andrew@example.test" }, options))).toEqual({ kind: "unauthenticated" })
+    ["another app's audience", { audience: "another-app" }, "wrong-audience"],
+    ["another team's issuer", { issuer: "https://evil.cloudflareaccess.com" }, "wrong-issuer"],
+    ["an expired token", { expiresIn: "-1m" }, "expired"],
+    ["a key that isn't in the team's key set", { keyId: "k2" }, "unknown-key"],
+  ])("is unauthenticated for %s, and says which check refused it", async (_label, options, reason) => {
+    expect(await viaJwt(await sign({ email: "andrew@example.test" }, options))).toEqual({
+      kind: "unauthenticated",
+      reason,
+    })
   })
 
   it("is unauthenticated for an unsigned token", async () => {
     const unsigned = new UnsecuredJWT({ email: "andrew@example.test" }).setIssuer(TEAM).setAudience(AUD).encode()
-    expect(await viaJwt(unsigned)).toEqual({ kind: "unauthenticated" })
+    expect(await viaJwt(unsigned)).toEqual({ kind: "unauthenticated", reason: "wrong-algorithm" })
   })
 
   it("is unauthenticated for a token signed with a shared secret instead of the team's key", async () => {
@@ -97,7 +100,7 @@ describe("a caller vouched for by an Access JWT", () => {
       .setAudience(AUD)
       .setExpirationTime("1h")
       .sign(new TextEncoder().encode("a secret anyone could pick"))
-    expect(await viaJwt(hs256)).toEqual({ kind: "unauthenticated" })
+    expect(await viaJwt(hs256)).toEqual({ kind: "unauthenticated", reason: "wrong-algorithm" })
   })
 
   it("is unauthenticated for a token whose payload was swapped after signing", async () => {
@@ -106,7 +109,25 @@ describe("a caller vouched for by an Access JWT", () => {
       .replaceAll("=", "")
       .replaceAll("+", "-")
       .replaceAll("/", "_")
-    expect(await viaJwt(`${header}.${payload}.${signature}`)).toEqual({ kind: "unauthenticated" })
+    expect(await viaJwt(`${header}.${payload}.${signature}`)).toEqual({
+      kind: "unauthenticated",
+      reason: "bad-signature",
+    })
+  })
+
+  it("is unauthenticated for a token that isn't a JWT at all", async () => {
+    expect(await viaJwt("not a token")).toEqual({ kind: "unauthenticated", reason: "malformed" })
+  })
+
+  it("is unauthenticated for a token that isn't valid yet", async () => {
+    const early = await new SignJWT({ email: "andrew@example.test" })
+      .setProtectedHeader({ alg: "RS256", kid: "k1" })
+      .setIssuer(TEAM)
+      .setAudience(AUD)
+      .setNotBefore("1h")
+      .setExpirationTime("2h")
+      .sign(privateKey)
+    expect(await viaJwt(early)).toEqual({ kind: "unauthenticated", reason: "invalid-claims" })
   })
 
   it.each([
@@ -114,12 +135,13 @@ describe("a caller vouched for by an Access JWT", () => {
     ["an empty email", { email: "" }],
     ["an email that isn't a string", { email: 42 }],
   ])("is unauthenticated for a valid token carrying %s", async (_label, claims) => {
-    expect(await viaJwt(await sign(claims))).toEqual({ kind: "unauthenticated" })
+    expect(await viaJwt(await sign(claims))).toEqual({ kind: "unauthenticated", reason: "no-identity" })
   })
 
   it("is unauthenticated when the request carries no token", async () => {
     expect(await callerOf(new Request("https://bt.example.test/api/me"), undefined, SETTINGS, () => keys)).toEqual({
       kind: "unauthenticated",
+      reason: "no-token",
     })
   })
 })
@@ -133,9 +155,10 @@ describe("Access settings that can't verify a token", () => {
     ["the team domain has a trailing slash", { ACCESS_TEAM_DOMAIN: `${TEAM}/`, ACCESS_AUD: AUD }],
     ["the team domain isn't a URL", { ACCESS_TEAM_DOMAIN: "bt-test", ACCESS_AUD: AUD }],
   ])("refuse every token when %s, rather than skip that check", async (_label, settings) => {
+    const refused = { kind: "unauthenticated", reason: "access-unconfigured" }
     const anotherApp = await sign({ email: "andrew@example.test" }, { audience: "another-app" })
-    expect(await viaJwt(anotherApp, settings)).toEqual({ kind: "unauthenticated" })
-    expect(await viaJwt(await sign({ email: "andrew@example.test" }), settings)).toEqual({ kind: "unauthenticated" })
+    expect(await viaJwt(anotherApp, settings)).toEqual(refused)
+    expect(await viaJwt(await sign({ email: "andrew@example.test" }), settings)).toEqual(refused)
   })
 
   it("refuse a token issued under a plain-HTTP team domain, whose key set anyone on the path could swap", async () => {
@@ -143,6 +166,7 @@ describe("Access settings that can't verify a token", () => {
     const forged = await sign({ email: "andrew@example.test" }, { issuer: plainHttpTeam })
     expect(await viaJwt(forged, { ACCESS_TEAM_DOMAIN: plainHttpTeam, ACCESS_AUD: AUD })).toEqual({
       kind: "unauthenticated",
+      reason: "access-unconfigured",
     })
   })
 })
@@ -158,7 +182,10 @@ describe("Cloudflare's signing keys out of reach", () => {
   ])("makes the caller keys-unavailable, not unauthenticated, when %s", async (_label, failure) => {
     const token = await sign({ email: "andrew@example.test" })
     const unreachable = () => () => Promise.reject(failure)
-    expect(await callerOf(carrying(token), undefined, SETTINGS, unreachable)).toEqual({ kind: "keys-unavailable" })
+    expect(await callerOf(carrying(token), undefined, SETTINGS, unreachable)).toEqual({
+      kind: "keys-unavailable",
+      cause: failure.message,
+    })
   })
 })
 
@@ -183,6 +210,6 @@ describe("a caller vouched for by ctx.access (vite dev and vite preview)", () =>
       {},
       () => keys,
     )
-    expect(caller).toEqual({ kind: "unauthenticated" })
+    expect(caller).toEqual({ kind: "unauthenticated", reason: "no-identity" })
   })
 })

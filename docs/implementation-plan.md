@@ -13,9 +13,9 @@ These either fill gaps in the spec or pick between options it leaves open. Each 
 | D1 | **All API routes live under `/api/*`.** WebSocket at `/api/ws`. | The spec's API paths (`/today`, `/days/:date`) collide with the obvious SPA routes. A prefix also lets Static Assets serve the SPA and send only `/api/*` to the Worker first (`run_worker_first: ["/api/*"]`). |
 | D2 | **Every mutation runs as one synchronous function inside `ctx.storage.transactionSync()`.** Effect `http-api` handles decoding, encoding and errors at the edge; the core reads, checks invariants, and writes without any `await`. | The invariants in §3 rely on the Durable Object serializing writes. A synchronous transaction cannot interleave with another request, whatever the HTTP layer does with promises. It also keeps the core testable without Effect. The spike confirms `@effect/sql-sqlite-do` does not get in the way. If it does, fall back to `ctx.storage.sql` with a thin typed helper. |
 | D3 | **Feed components (segments, portions) are versioned through their parent feed.** Any change to a segment or portion increments `feeds.version`. `PATCH /segments/:id` and `/portions/:id` take the feed's version. | §8 gives `nursing_segments` and `bottle_portions` no `version` column, but §3 requires every edit to be version-checked. AC 13 (two phones switch side at the same moment) also needs one version for the whole feed. A per-component version would let two segment edits race against the session-bound recompute. |
-| D4 | **Add `source` (`app` / `import`) and `source_ref` to every tracking table, with a partial unique index on `(source, source_ref) WHERE source = 'import'`.** | §10 requires idempotent re-import "with source row id", but §8 has no column for it. |
+| D4 | **Add `source` (`app` / `import`) and `source_ref` to every tracking table, with a partial unique index on `(source, source_ref) WHERE source = 'import'`.** M2 was dropped (10 Oct 2026), so every row is `source = 'app'`. The tables through `0006-growth` keep the columns, so a raw-row export stays uniform. Tables added later may leave them out. | §10 requires idempotent re-import "with source row id", but §8 has no column for it. |
 | D5 | **The Durable Object resolves identity.** The Worker verifies the Access JWT in `Cf-Access-Jwt-Assertion` with `jose`: RS256 only, issuer = the team domain, audience = the app's AUD tag, keys from `<team>/cdn-cgi/access/certs`. It uses `ctx.access` instead when the runtime provides it, which `vite dev`, `vite preview` and `wrangler dev` do through `access.dev`. It then deletes any client-sent `x-bt-*` headers, sets `x-bt-email` from the verified identity, and forwards to the single household DO (`getByName("household")`). The DO looks up `caregivers` by email and checks `active` on every request. | §8 puts `caregivers` in the DO, so the Worker cannot map email to caregiver without a round trip. Doing the lookup in the DO keeps the per-request `active` check (AC 10) in one place. The JWT check is needed because Workers with Static Assets never receive `ctx.access`: the assets router does not forward it (Cloudflare docs; confirmed in the spike). |
-| D6 | **Disable a caregiver with an admin script, not UI.** `pnpm admin caregiver:disable <email>` sends an HTTPS request to `/api/admin/*` with a Cloudflare Access service token kept on Andrew's machine. The Worker accepts `/api/admin/*` only when the verified JWT's `common_name` equals that service token's Client ID, never a caregiver identity, and forwards it to a DO admin RPC method. Service-token JWTs carry the Client ID as `common_name` and an empty `sub` (confirmed in S5). On disable, the DO closes that caregiver's tagged sockets with code 4401 (confirmed in the spike). `pnpm admin caregiver:enable <email>` undoes a disable (decided 9 Oct 2026): the seed runs once, so nothing else could. | The spec requires the capability but describes no UI. With two users, an admin screen is not worth building. |
+| D6 | **Disable a caregiver with an admin script, not UI.** `pnpm admin caregiver:disable <email>` sends an HTTPS request to `/api/admin/*` with a Cloudflare Access service token kept on Andrew's machine. The Worker accepts `/api/admin/*` only when the verified JWT's `common_name` equals that service token's Client ID, never a caregiver identity, and forwards it to a DO admin RPC method. Service-token JWTs carry the Client ID as `common_name` and an empty `sub` (confirmed in S5). On disable, the DO closes that caregiver's tagged sockets with code 4401 (confirmed in the spike). `pnpm admin caregiver:enable <email>` undoes a disable (decided 9 Oct 2026): the seed runs once, so nothing else could. `pnpm admin caregiver:set-email <current> <new>` moves a caregiver to another email, keeping their id and entries, for a mistyped seed or a new Google account (decided 10 Oct 2026). | The spec requires the capability but describes no UI. With two users, an admin screen is not worth building. |
 | D7 | **`today` and `last24h` are invalidated by every mutation.** For other periods the server works out the affected keys with `affectedPeriods(oldInterval, newInterval, tz)` from `packages/domain`. | This is always correct and cheap at this data volume. Working out exactly when Today is affected is error-prone and saves nothing. |
 | D8 | **`supplement_logs.local_date` is recomputed for every row in the same transaction as a household timezone change.** Editing `occurred_at` also recomputes it. | `local_date` is stored, so a timezone correction would otherwise leave the duplicate check and daily status using stale dates. |
 | D9 | **No two non-deleted nursing segments may overlap, across all feeds** (one child, one breast-at-a-time). Overlap with sleep, diapers, and so on is allowed. | §3 says to "reject overlapping segments" without saying in what scope. |
@@ -36,7 +36,7 @@ apps/
     src/theme/         System, Light or Dark, kept per phone
     src/components/ui/ shadcn components on Base UI
     src/timer/         the one-second clock (useNow, M1.11); timer UI primitives (M1.12)
-    src/features/      today, feed, sleep, diaper, supplement, growth, history, trends, settings, import
+    src/features/      today, feed, sleep, diaper, supplement, growth, history, trends, settings
     src/service-worker/ service worker (assets only): its routes, saved copy and registration (M1.14)
   worker/
     src/index.ts       Worker entry: Access check, header hygiene, forward to DO
@@ -49,8 +49,9 @@ packages/
     data/who/          WHO's girls' expanded tables (days 0–730), lms-girls.json and MANIFEST.json (source URL, dataset id, sha256); pnpm who:tables rebuilds them (M4.1)
   contracts/           Effect Schema request/response/error types, query-key definitions
 e2e/                   Playwright specs
-scripts/               Node tooling and its tests, and pnpm admin (seed the household; disable and enable caregivers)
-docs/                  spec, this plan, runbooks (restore drill, Access setup)
+scripts/               Node tooling and its tests; pnpm admin (seed the household; disable, enable and re-email caregivers;
+                       PITR bookmarks and restores) and pnpm release (M1.16)
+docs/                  spec, this plan, runbooks (production, Access and deploys in runbooks/access.md; restore drill)
 ```
 
 `packages/domain` imports nothing else from the workspace. `packages/contracts` may import `domain`, whose predicates its schemas call. `apps/web` and `apps/worker` import both.
@@ -157,20 +158,13 @@ Goal: both parents use it daily. Covers AC 1–5, 10, 11, 13, 14, 20 (nursing ha
 | M1.13 409 UX: "Emily changed this a moment ago" with Reload / Reapply; active-feed conflict prompt (§3 nursing) | S | |
 | M1.14 Service worker (assets only; precache build output; network-only for `/api/*`), manifest, icons | S | Access gates the shell and `/sw.js` (S4), so the service worker installs and updates only while signed in. It saves `/` and the build's `assets/`, tries the network first for pages, and stays out of `/api/*`, so Sign in and every household call reach the network. An install whose files don't all arrive as this build's fails, so the previous copy stays. Offline E2E: the app and any tab's address open from the saved copy. AC 11's full flow moved to M1.12, which builds the forms (decided 9 Oct 2026) |
 | M1.15 Settings minimum: child profile, household timezone, units, signed-in account | S | Units are one household setting: mL or fl oz, kg, g or lb & oz, and cm or in (decided 9 Oct 2026). `PATCH /api/household` and `PATCH /api/child` edit the two records, each versioned, and `GET /api/me` carries both whole. A birth date can't be after today or after the earliest entry. A save that meets the other phone's newer copy reapplies its own change once. Changing the timezone runs D8 |
-| M1.16 Deploy: production Access app (self-hosted on the app hostname, not worker-level), Google IdP (or OTP per S1), allowlist policy, admin service-token policy, 730 h app and global session, `preview_urls: false`; install on both phones | S | Runbook in `docs/runbooks/access.md` |
+| M1.16 Deploy: production Access app (self-hosted on the app hostname, not worker-level), Google IdP (or OTP per S1), allowlist policy, admin service-token policy, 730 h app and global session, `preview_urls: false`; install on both phones | M | Runbook in `docs/runbooks/access.md`. **Hostname:** production is https://baby.andamonium.dev, a Custom Domain with workers.dev and preview URLs off (decided 10 Oct 2026). **Access:** Claude created the "Baby tracker" Access app through the API (Google only, 730 h, `SameSite=Lax`), and Andrew created the admin service token. **Prep PR, before any deploy:** `pnpm release` (a clean `main` with green CI, a fresh build whose config passes `release-checks`, a PITR bookmark, then the deploy, logged to `deploys.log`), `pnpm admin pitr:restore`, `caregiver:set-email`, an exact-Origin check on `/api/ws`, and logs that say why a request was refused or failed but never hold a token or an email. Workers Logs keeps those, with per-request records off. **Order:** the first deploy follows that PR, with M1.11's Today and ahead of M1.12 and M1.13. Its phone checks and a first restore drill run on the still-empty household |
 
-**Exit:** both phones are in daily use for about a week. Bugs found in that week are fixed before M3 work starts (M2 can run alongside).
+**Exit:** both phones are in daily use for about a week. Bugs found in that week are fixed before M3 work starts.
 
-### M2 — CSV import
+### M2 — CSV import (dropped)
 
-Blocked on getting the source app's name and a sample export (§13, open). If no sample is available when M1 ships, start M3 and come back to this.
-
-| Task | Size | Notes |
-|---|---|---|
-| M2.1 Obtain a sample; write `docs/import-mapping.md` (column → record type, units, timezone of source timestamps) | S | Confirm with Andrew and Emily before coding |
-| M2.2 `POST /api/import` → parse, map, and validate per row → preview (counts per type, row errors, duplicates already imported) | M | Parsing and mapping are pure functions in `domain/import/<source>.ts` with fixture-based tests |
-| M2.3 `POST /api/import/confirm` → apply in batches of N rows per `transactionSync`; `source='import'`, `source_ref=row id`; skip existing refs | M | AC 24: a second import changes nothing |
-| M2.4 Settings → Import UI: upload, preview table, confirm, result | S | |
+Dropped on 10 Oct 2026: nothing gets imported. The household starts fresh on deploy day, and the old app keeps its records. AC 24 is out of scope. M2.1 to M2.4 (mapping, preview, confirm, Settings › Import) won't be built.
 
 ### M3 — Sleep, supplements, full history editing, calendar, summaries, export
 
@@ -210,8 +204,8 @@ Covers AC 15 (restore drill), plus the accessibility pass.
 |---|---|---|
 | M5.1 Install prompt and iOS "Add to Home Screen" guidance | S | |
 | M5.2 Accessibility: focus order, keyboard operation of the calendar, labels, contrast in both themes, VoiceOver pass on iPhone | M | Run axe in Playwright on every screen |
-| M5.3 Restore drill in a separate environment: write data, take a bookmark, mutate, restore, verify; write `docs/runbooks/restore.md` | S | AC 15 |
-| M5.4 "No connection" refinements: last-updated timestamp, disabled-control reasons, retry affordances | S | |
+| M5.3 Restore drill in a separate environment: write data, take a bookmark, mutate, restore, verify; write `docs/runbooks/restore.md` | S | AC 15. M1.16 builds `pnpm admin pitr:bookmark` and `pitr:restore`, and runs a first drill on the still-empty production household |
+| M5.4 "No connection" refinements: last-updated timestamp, disabled-control reasons, retry affordances | S | On a slow network, the installed app opens its saved copy after about 3 s instead of waiting (decided 10 Oct 2026) |
 | M5.5 Bundle and performance check: month summary latency with two years of synthetic data | S | If slow, add per-period caching in the DO (§9) |
 
 ---
@@ -261,7 +255,7 @@ Spec scenarios that become named fixtures: the 15+15 min / 50+50 mL feed (AC 4),
 | 11 | M1 | Offline E2E |
 | 12, 20, 21 | M1 (nursing), M3 (sleep) | Shared lifecycle suite |
 | 15 | M3 (export), M5 (restore drill) | Runbook |
-| 24 | M2 | DO import tests |
+| 24 | Out of scope: M2 dropped (10 Oct 2026) | — |
 
 ---
 
@@ -273,12 +267,12 @@ Spec scenarios that become named fixtures: the 15+15 min / 50+50 mL feed (AC 4),
 | Effect 4 and `@effect/sql-sqlite-do` are days old | API churn, bundle size | Pin exact versions. D2 keeps Effect out of the transactional core, so swapping the HTTP layer is cheap |
 | Access on WebSocket upgrades from the installed PWA (S2) | Live updates | **Resolved in Step 0.** Works from desktop Chrome and the installed iPhone PWA with the hostname app and JWT verification. No ticket needed |
 | Static Assets and Access interaction (S4) | Assets get no `ctx.access`; the shell and `/sw.js` require sign-in | D5 verifies the JWT. The service worker installs and updates only while signed in. The installed app's cached shell opens offline (S4 pass) |
-| Import source unknown | M2 blocked | Ask now; M3 can go first |
+| Import source unknown | M2 blocked | **Resolved:** M2 dropped (10 Oct 2026). The household starts fresh |
 | WHO extreme-value handling and dataset choice | Wrong percentiles | M4.2 gate, which passes (`docs/percentiles.md`). CI runs it on every pull request |
-| Two-person, single-environment ops | A bad migration hits live data | Migrations are forward-only and tested against an export of production data in a preview DO before deploy. Take a PITR bookmark before every deploy (add to the deploy script) |
+| Two-person, single-environment ops | A bad migration hits live data | Migrations are forward-only and tested against an export of production data in a preview DO before deploy, once M3.11's export exists. `pnpm release` takes a PITR bookmark before every deploy and logs it, and `pnpm admin pitr:restore` rewinds to it (M1.16) |
 
 **Questions for Andrew and Emily before M1:**
 
-1. Which app holds the existing records, and can you send a sample export? (Blocks M2.)
+1. Which app holds the existing records, and can you send a sample export? No import: M2 is dropped (Andrew, 10 Oct 2026).
 2. Household timezone and display units (mL or oz, kg or lb+oz) to use as defaults. Units are a household setting in Settings, starting at mL, kg and cm (M1.15).
 3. Are you OK with D6 (disabling a caregiver is a command, not a screen)? Yes, with `caregiver:enable` to undo it (Andrew, 9 Oct 2026).
