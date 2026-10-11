@@ -1,4 +1,3 @@
-import { localDateTimeOf } from "@bt/domain"
 import { Button } from "../components/ui/button.tsx"
 import { Input } from "../components/ui/input.tsx"
 import { AmbiguityChoice } from "./ambiguity-choice.tsx"
@@ -46,8 +45,6 @@ export const WhenField = ({ label, when, onChange, zone, now, earliest }: WhenFi
             type="datetime-local"
             step={60}
             value={when.local}
-            max={localDateTimeOf(now, zone)}
-            min={earliest === undefined ? undefined : localDateTimeOf(earliest, zone)}
             onChange={(event) => onChange({ kind: "at", local: event.target.value, pick: null })}
           />
         </label>
