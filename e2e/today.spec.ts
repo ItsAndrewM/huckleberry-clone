@@ -228,6 +228,21 @@ test.describe("Today, with the household's answers played by the test", () => {
     await expect(page.getByText("Today couldn't be loaded.")).toBeVisible()
   })
 
+  test("asks for the new day at the household's midnight while the app stays open", async ({ page }) => {
+    const TEN_SECONDS_TO_MIDNIGHT_IN_VANCOUVER = Date.UTC(2026, 9, 10, 6, 59, 50)
+    let pastMidnight = false
+    await page.route("**/api/today", (route) =>
+      route.fulfill({ json: pastMidnight ? { ...todayWith({}), date: "2026-10-10" } : todayWith({ totals: TOTALS }) }),
+    )
+    await page.route("**/api/last24h", (route) => route.fulfill({ json: { from: NOW - DAY, totals: NO_TOTALS } }))
+    await page.clock.install({ time: TEN_SECONDS_TO_MIDNIGHT_IN_VANCOUVER })
+    await page.goto("/")
+    await expect(total(page, "Feeds started")).toContainText("6")
+    pastMidnight = true
+    await page.clock.fastForward(10_000)
+    await expect(total(page, "Feeds started")).toContainText("0")
+  })
+
   test("loads Today on Try again, once the household's details answer", async ({ page }) => {
     await playToday(page, todayWith({ totals: TOTALS }))
     let refusing = true

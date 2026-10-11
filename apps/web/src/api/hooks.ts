@@ -4,7 +4,7 @@ import { useSyncExternalStore } from "react"
 import { useApp } from "../app-context.ts"
 import { meQuery } from "./me.ts"
 import { type ChildFields, type HouseholdChange, rememberSaved, saveChild, saveHousehold } from "./settings.ts"
-import { last24hQuery, todayQuery } from "./today.ts"
+import { last24hQuery, todayQuery, untilNextDay } from "./today.ts"
 
 export const useMe = () => {
   const { api } = useApp()
@@ -13,7 +13,12 @@ export const useMe = () => {
 
 export const useToday = () => {
   const { api } = useApp()
-  return useQuery(todayQuery(api))
+  const timeZone = useMe().data?.household.timeZone
+  return useQuery({
+    ...todayQuery(api),
+    refetchInterval: ({ state: { data } }) =>
+      timeZone === undefined || data === undefined ? false : untilNextDay(data, timeZone, Date.now()),
+  })
 }
 
 export const useLast24h = () => {
