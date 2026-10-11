@@ -2,6 +2,7 @@ import { CAREGIVER_DISABLED, type Changed, ChangedMessage, HEARTBEAT, Unauthoriz
 import { Schema } from "effect"
 import { activeCaregiver } from "./core/caregivers.ts"
 import { errorResponse } from "./error-response.ts"
+import { logRefusal, routeOf } from "./logs.ts"
 
 export type Broadcast = (changed: Changed) => void
 
@@ -16,7 +17,10 @@ const upgradeRequired = () =>
 
 export const acceptSocket = (ctx: DurableObjectState, request: Request): Response => {
   const caregiver = activeCaregiver(ctx.storage.sql, request.headers.get("x-bt-email") ?? undefined)
-  if (caregiver === undefined) return errorResponse(new Unauthorized())
+  if (caregiver === undefined) {
+    logRefusal(routeOf(request.method, request.url), "not-a-caregiver")
+    return errorResponse(new Unauthorized())
+  }
   if (request.headers.get("upgrade")?.toLowerCase() !== "websocket") return upgradeRequired()
   const { 0: client, 1: server } = new WebSocketPair()
   ctx.acceptWebSocket(server, [caregiverTag(caregiver.id)])
