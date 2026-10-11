@@ -11,6 +11,16 @@ The app works out a growth percentile only from WHO's Child Growth Standards for
 
 `zScoreFor(metric, sex, ageDays, value)` and `percentileFor` run these steps. They take a measurement in the unit growth records store: grams for weight, and centimetres for length and head circumference. A weight is divided by 1,000 into WHO's kilograms.
 
+## The curves on the chart
+
+M4.5's chart draws WHO's 3rd, 15th, 50th, 85th and 97th percentiles for each day. `valueAtPercentile(metric, sex, ageDays, percentile)` works each one out from the same L, M and S:
+
+1. **z:** the percentile's point on the standard normal distribution: ±1.8807936081512509 for the 3rd and 97th, ±1.0364333894937896 for the 15th and 85th, and 0 for the 50th.
+2. **Value:** M(1 + L × S × z)^(1/L), or M × e^(S × z) when L is 0. All five curves lie inside ±3 SD, so the restricted application never applies.
+3. **Unit:** the value comes back in the unit growth records store, so a weight is multiplied by 1,000 into grams.
+
+It answers `"unavailable"` where `percentileFor` would for any value: for a boy, and for an age that isn't a whole day from 0 to 730.
+
 ## When there is no percentile
 
 `percentileFor` answers `"unavailable"`, which the app shows as "Percentile unavailable", for:
@@ -25,9 +35,11 @@ The app works out a growth percentile only from WHO's Child Growth Standards for
 | --- | --- | --- |
 | WHO's P3, P15, P50, P85 and P97, through `percentileFor` | ±0.5 percentile points | 0.042: weight, P50, day 3 |
 | WHO's SD4neg to SD4, through `zScoreFor` | ±0.002 in z | 0.0014: weight, SD3neg, day 7 |
+| WHO's P3, P15, P50, P85 and P97, drawn by `valueAtPercentile` | ±0.0005 in WHO's unit | 0.0005: length, P50, day 10 |
 
 - **±0.5 points** is the implementation plan's bar. WHO prints every P and SD value to three decimals, so its P3 read back lands near 3, not on it.
 - **±0.002 in z** is the tight check. It absorbs that rounding, yet it fails a table read one day out of step. Reading the next day's L, M and S puts z at least 0.0021 off in every SD column on days 0 to 729 (head circumference, SD4, day 723), and day 730 has no next day. Reading the previous day's does the same.
+- **±0.0005 for the curves is WHO's own rounding.** WHO prints each P value to three decimals, so a curve drawn exactly can sit half a thousandth from it, as length's P50 does on day 10: 50.8365 cm against WHO's 50.837. Drawing from the next day's L, M and S misses by at least 0.0036 (head circumference, P97, day 716), so a curve a day out of step fails. `test/growth/curve-gate.test.ts` checks every day.
 - **SD4 and SD4neg test the restricted application.** WHO's values for them are its restricted ones. Without the restriction, weight's SD4neg misses by up to 0.17 (day 728).
 
 ## Sources
