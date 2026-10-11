@@ -12,6 +12,7 @@
     "@base-ui/react": "catalog:",
     "@bt/contracts": "workspace:*",
     "@bt/domain": "workspace:*",
+    "@tanstack/charts": "catalog:",
     "@tanstack/react-query": "catalog:",
     "@tanstack/react-router": "catalog:",
     "class-variance-authority": "catalog:",
