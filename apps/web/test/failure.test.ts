@@ -15,21 +15,29 @@ const HOUSEHOLD: Household = {
   locale: "en-US",
 }
 
-const message = (error: Error) => failureNote(error, HOUSEHOLD).message.replace(/\s/gu, " ")
+const message = (error: Error) => failureNote(error, HOUSEHOLD, { held: true }).message.replace(/\s/gu, " ")
 
 describe("failureNote", () => {
-  it("keeps the entry and offers to try again when there's no connection or the household is busy", () => {
-    expect(failureNote(new Offline(), HOUSEHOLD)).toEqual({
-      message: "No connection. This is kept here: try again once you're back online.",
+  it("asks to keep the app open for a held entry with no connection, and offers to try again", () => {
+    expect(failureNote(new Offline(), HOUSEHOLD, { held: true })).toEqual({
+      message: "No connection. Keep the app open, and try again once you're back online.",
       retry: "Try again",
       signIn: false,
     })
-    expect(failureNote(new ServiceUnavailable(), HOUSEHOLD).retry).toBe("Try again")
+    expect(failureNote(new ServiceUnavailable(), HOUSEHOLD, { held: true }).retry).toBe("Try again")
+  })
+
+  it("promises nothing kept for a control with no connection, since it goes with its sheet", () => {
+    expect(failureNote(new Offline(), HOUSEHOLD, { held: false })).toEqual({
+      message: "No connection. Try again once you're back online.",
+      retry: "Try again",
+      signIn: false,
+    })
   })
 
   it("asks to sign in when Access or the household has signed the parent out", () => {
     for (const error of [new AuthRequired(), new Unauthorized()]) {
-      expect(failureNote(error, HOUSEHOLD)).toEqual({
+      expect(failureNote(error, HOUSEHOLD, { held: true })).toEqual({
         message: "Your sign-in has expired. Sign in, and this will be saved.",
         retry: null,
         signIn: true,
@@ -88,7 +96,7 @@ describe("failureNote", () => {
   })
 
   it("asks before saving a draft that waited too long, with when it was kept", () => {
-    expect(failureNote(new StaleDraft({ createdAt: NOW }), HOUSEHOLD)).toMatchObject({
+    expect(failureNote(new StaleDraft({ createdAt: NOW }), HOUSEHOLD, { held: true })).toMatchObject({
       message: expect.stringMatching(/^This wasn't saved before you signed in, Fri 9:30\sAM\. Save it now\?$/u),
       retry: "Save now",
     })
