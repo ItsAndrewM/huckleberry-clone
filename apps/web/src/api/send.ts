@@ -1,8 +1,15 @@
-import type { SavedDiaper, SavedFeed } from "@bt/contracts"
-import { type Action, type DiaperAction, type FeedAction, isDiaperAction } from "./actions.ts"
+import type { SavedDiaper, SavedFeed, SavedMeasurement } from "@bt/contracts"
+import {
+  type Action,
+  type DiaperAction,
+  type FeedAction,
+  isDiaperAction,
+  isMeasurementAction,
+  type MeasurementAction,
+} from "./actions.ts"
 import type { HouseholdApi } from "./client.ts"
 
-export type Saved = SavedDiaper | SavedFeed
+export type Saved = SavedDiaper | SavedFeed | SavedMeasurement
 
 type OnFeed = Extract<FeedAction, { readonly id: string }>
 type NewFeed = Exclude<FeedAction, OnFeed>
@@ -37,7 +44,23 @@ const sendOnFeed = (api: HouseholdApi, action: OnFeed): Promise<SavedFeed> => {
   }
 }
 
+const sendMeasurement = (api: HouseholdApi, action: MeasurementAction): Promise<SavedMeasurement> => {
+  switch (action.kind) {
+    case "logMeasurement":
+      return api.request((client) => client.growth.logMeasurement({ payload: action.payload }))
+    case "editMeasurement":
+      return api.request((client) =>
+        client.growth.editMeasurement({ params: { id: action.id }, payload: action.payload }),
+      )
+    case "deleteMeasurement":
+      return api.request((client) =>
+        client.growth.deleteMeasurement({ params: { id: action.id }, payload: action.payload }),
+      )
+  }
+}
+
 export const send = (api: HouseholdApi, action: Action): Promise<Saved> => {
+  if (isMeasurementAction(action)) return sendMeasurement(api, action)
   if (isDiaperAction(action)) return sendDiaper(api, action)
   return "id" in action ? sendOnFeed(api, action) : sendNewFeed(api, action)
 }

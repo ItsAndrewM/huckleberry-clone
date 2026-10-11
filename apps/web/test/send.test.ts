@@ -1,4 +1,4 @@
-import { FeedConflict } from "@bt/contracts"
+import { FeedConflict, MeasurementConflict } from "@bt/contracts"
 import { describe, expect, it } from "vitest"
 import type { Action } from "../src/api/actions.ts"
 import { connectApi } from "../src/api/client.ts"
@@ -27,6 +27,20 @@ const household = (status: number, body: string) => {
 }
 
 const BOTTLE = { occurredAt: NOW, breastMilkMl: 60, formulaMl: 0 }
+
+const measurementAt = (measuredAt: number) => ({
+  id: "m1",
+  measuredAt,
+  weightG: 4300,
+  lengthCm: null,
+  headCm: 36.8,
+  version: 1,
+  createdBy: "caregiver-andrew",
+  createdAt: measuredAt,
+  updatedBy: "caregiver-andrew",
+  updatedAt: measuredAt,
+  deletedAt: null,
+})
 
 const ROUTES: ReadonlyArray<readonly [Action, string, string, number]> = [
   [{ kind: "logFeed", payload: { actionId: ACTION_ID, segments: [], portions: [BOTTLE] } }, "POST", "/api/feeds", 201],
@@ -80,6 +94,36 @@ describe("send", () => {
       ["POST", `${ORIGIN}/api/diapers`],
       ["DELETE", `${ORIGIN}/api/diapers/diaper-1`],
     ])
+  })
+
+  it("logs, edits and deletes measurements at /api/growth", async () => {
+    const saved = JSON.stringify({ measurement: measurementAt(NOW), changed: [["growth"]] })
+    const values = { measuredAt: NOW, weightG: 4300, lengthCm: null, headCm: 36.8 }
+    const actions: ReadonlyArray<readonly [Action, number]> = [
+      [{ kind: "logMeasurement", payload: { actionId: ACTION_ID, ...values } }, 201],
+      [{ kind: "editMeasurement", id: "m1", payload: { actionId: ACTION_ID, version: 1, ...values } }, 200],
+      [{ kind: "deleteMeasurement", id: "m1", payload: { actionId: ACTION_ID, version: 2 } }, 200],
+    ]
+    const sent = []
+    for (const [action, status] of actions) {
+      const { api, requests } = household(status, saved)
+      await expect(send(api, action)).resolves.toMatchObject({ measurement: { id: "m1" } })
+      for (const request of requests) sent.push([request.method, request.url, await request.json()])
+    }
+    expect(sent).toEqual([
+      ["POST", `${ORIGIN}/api/growth`, actions[0]?.[0].payload],
+      ["PATCH", `${ORIGIN}/api/growth/m1`, actions[1]?.[0].payload],
+      ["DELETE", `${ORIGIN}/api/growth/m1`, actions[2]?.[0].payload],
+    ])
+  })
+
+  it("decodes the household's conflict with its copy of the measurement", async () => {
+    const current = { ...measurementAt(NOW), version: 3 }
+    const { api } = household(409, JSON.stringify({ _tag: "Conflict", code: "STALE_VERSION", current }))
+    const payload = { actionId: ACTION_ID, version: 2, measuredAt: NOW, weightG: 4300, lengthCm: null, headCm: null }
+    const failure = send(api, { kind: "editMeasurement", id: "m1", payload })
+    await expect(failure).rejects.toBeInstanceOf(MeasurementConflict)
+    await expect(failure).rejects.toMatchObject({ code: "STALE_VERSION", current: { version: 3 } })
   })
 
   it("decodes the household's conflict with its copy of the feed", async () => {

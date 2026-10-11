@@ -206,4 +206,26 @@ describe("savedToday", () => {
     const next = savedToday(started, { feed: other, changed: [] }, action)
     expect(next.activeFeed?.id).toBe(pendingId(ACTION_ID))
   })
+
+  it("leaves Today as it is when a measurement's answer comes back", () => {
+    const today = todayWith()
+    const answer = {
+      id: "m1",
+      measuredAt: NOW,
+      weightG: 4300,
+      lengthCm: null,
+      headCm: null,
+      version: 1,
+      createdBy: ANDREW,
+      createdAt: NOW,
+      updatedBy: ANDREW,
+      updatedAt: NOW,
+      deletedAt: null,
+    }
+    const action = {
+      kind: "logMeasurement" as const,
+      payload: { actionId: ACTION_ID, measuredAt: NOW, weightG: 4300, lengthCm: null, headCm: null },
+    }
+    expect(savedToday(today, { measurement: answer, changed: [] }, action)).toBe(today)
+  })
 })

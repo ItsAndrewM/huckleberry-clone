@@ -1,4 +1,13 @@
-import type { Diaper, Feed, FeedStart, NewDiaper, NewFeed, VersionedPortion } from "@bt/contracts"
+import type {
+  Diaper,
+  Feed,
+  FeedStart,
+  Measurement,
+  NewDiaper,
+  NewFeed,
+  NewMeasurement,
+  VersionedPortion,
+} from "@bt/contracts"
 import { type Instant, sessionBounds } from "@bt/domain"
 
 export interface Author {
@@ -30,6 +39,11 @@ export const pendingDiaper = ({ actionId, occurredAt, wet, dirty }: NewDiaper, a
   dirty,
   ...audit(author),
 })
+
+export const pendingMeasurement = (
+  { actionId, measuredAt, weightG, lengthCm, headCm }: NewMeasurement,
+  author: Author,
+): Measurement => ({ id: pendingId(actionId), measuredAt, weightG, lengthCm, headCm, ...audit(author) })
 
 export const pendingFeed = ({ actionId, segments, portions }: NewFeed, author: Author): Feed => {
   const id = pendingId(actionId)

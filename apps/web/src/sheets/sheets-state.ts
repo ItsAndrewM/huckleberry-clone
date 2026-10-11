@@ -19,7 +19,7 @@ export const CLOSED: SheetsState = { open: null, opened: 0, held: [], asking: fa
 
 const UNDOES = new Set<Action["kind"]>(["deleteDiaper", "deleteFeed", "deletePortion"])
 
-const NEW_ENTRIES = new Set<Action["kind"]>(["logDiaper", "logFeed", "startFeed", "addBottle"])
+const NEW_ENTRIES = new Set<Action["kind"]>(["logDiaper", "logFeed", "startFeed", "addBottle", "logMeasurement"])
 
 export const isEntry = ({ action }: Sending) => NEW_ENTRIES.has(action.kind)
 

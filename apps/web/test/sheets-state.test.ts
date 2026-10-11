@@ -115,6 +115,28 @@ const UNDO_PORTION: Sending = {
   },
 }
 
+const MEASURED: Sending = {
+  sheet: "measurement",
+  action: {
+    kind: "logMeasurement",
+    payload: { actionId: ACTION_ID, measuredAt: NOW, weightG: 4300, lengthCm: null, headCm: null },
+  },
+}
+
+const MEASUREMENT_EDITED: Sending = {
+  sheet: "measurement",
+  action: {
+    kind: "editMeasurement",
+    id: "measurement-1",
+    payload: { actionId: ACTION_ID, version: 1, measuredAt: NOW, weightG: 4300, lengthCm: 54.5, headCm: null },
+  },
+}
+
+const MEASUREMENT_DELETED: Sending = {
+  sheet: "measurement",
+  action: { kind: "deleteMeasurement", id: "measurement-1", payload: { actionId: ACTION_ID, version: 2 } },
+}
+
 const CLOSING = {
   logDiaper: { sending: DIAPER, closes: true, entry: true },
   deleteDiaper: { sending: UNDO_DIAPER, closes: false, entry: false },
@@ -127,6 +149,9 @@ const CLOSING = {
   finishFeed: { sending: FINISH, closes: true, entry: false },
   deleteFeed: { sending: UNDO_FEED, closes: false, entry: false },
   deletePortion: { sending: UNDO_PORTION, closes: false, entry: false },
+  logMeasurement: { sending: MEASURED, closes: true, entry: true },
+  editMeasurement: { sending: MEASUREMENT_EDITED, closes: true, entry: false },
+  deleteMeasurement: { sending: MEASUREMENT_DELETED, closes: true, entry: false },
 } satisfies Record<Action["kind"], { readonly sending: Sending; readonly closes: boolean; readonly entry: boolean }>
 
 describe("sending", () => {
@@ -137,6 +162,28 @@ describe("sending", () => {
   it("keeps the sheet open offline, and for a running feed's controls", () => {
     expect(sendingState({ ...CLOSED, open: "diaper" }, DIAPER, false).open).toBe("diaper")
     expect(sendingState({ ...CLOSED, open: "nursing" }, SWITCH, true).open).toBe("nursing")
+  })
+})
+
+describe("a saved measurement", () => {
+  it("offers no Undo, since its card edits or deletes it", () => {
+    const saved = {
+      measurement: {
+        id: "measurement-1",
+        measuredAt: NOW,
+        weightG: 4300,
+        lengthCm: null,
+        headCm: null,
+        version: 1,
+        createdBy: "caregiver-andrew",
+        createdAt: NOW,
+        updatedBy: "caregiver-andrew",
+        updatedAt: NOW,
+        deletedAt: null,
+      },
+      changed: [],
+    }
+    expect(savedState(CLOSED, MEASURED, saved, NOW).toast).toBeNull()
   })
 })
 
