@@ -31,6 +31,7 @@ export const PastFeedForm = ({ unit, zone }: PastFeedFormProps) => {
   }))
   const endsAt = futureEnd(feed, when, zone, now)
   const save = () => {
+    if (sheets.open !== "pastFeed") return
     const at = tapTime()
     const resolved = resolveWhen(when, zone, at)
     if (!resolved.ok || !canSavePastFeed(feed, when, zone, at)) return

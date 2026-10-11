@@ -35,7 +35,7 @@ export const FinishView = ({ feed, segment, zone, onBack }: FinishViewProps) => 
     return (
       <div role="alert" className="flex flex-col gap-3">
         <p className="text-base">Stopping at the start leaves nothing in this feed. Delete it?</p>
-        <Button variant="destructive" size="lg" onClick={deleteFeed}>
+        <Button variant="destructive" size="lg" disabled={controlsWait(sheets.busy, feed)} onClick={deleteFeed}>
           Delete feed
         </Button>
         <Button variant="ghost" size="lg" onClick={keepFeed}>

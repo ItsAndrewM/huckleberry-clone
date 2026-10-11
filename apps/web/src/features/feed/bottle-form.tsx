@@ -25,6 +25,7 @@ export const BottleForm = ({ prefill, active, unit, zone }: BottleFormProps) => 
   const now = useNow()
   const ready = canSaveBottle(amounts, active) && resolveWhen(when, zone, now).ok
   const save = () => {
+    if (sheets.open !== "bottle") return
     const resolved = resolveWhen(when, zone, tapTime())
     if (!resolved.ok || !canSaveBottle(amounts, active)) return
     sheets.send({ sheet: "bottle", action: bottleAction(session.actionId, amounts, resolved.instant, active) })

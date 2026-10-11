@@ -21,6 +21,7 @@ export const StartView = ({ lastSide, zone }: StartViewProps) => {
   const [when, setWhen] = useState(session.when)
   const now = useNow()
   const start = (side: Side) => {
+    if (sheets.open !== "nursing") return
     const resolved = resolveWhen(when, zone, tapTime())
     if (!resolved.ok) return
     const payload = { actionId: session.actionId, side, startedAt: resolved.instant }

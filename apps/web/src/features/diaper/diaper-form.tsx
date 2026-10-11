@@ -25,6 +25,7 @@ export const DiaperForm = ({ household }: { readonly household: Household }) => 
   const now = useNow()
   const ready = resolveWhen(when, zone, now).ok
   const log = ({ wet, dirty }: Choice) => {
+    if (sheets.open !== "diaper") return
     const resolved = resolveWhen(when, zone, tapTime())
     if (!resolved.ok) return
     const payload = { actionId: session.actionId, occurredAt: resolved.instant, wet, dirty }
