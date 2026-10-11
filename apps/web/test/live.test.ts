@@ -36,6 +36,7 @@ const live = () => {
   const sockets: FakeSocket[] = []
   const changed: Array<ReadonlyArray<QueryKey>> = []
   const signals: Signal[] = []
+  const order: string[] = []
   let staleCount = 0
   const connection = startLive({
     open: () => {
@@ -43,11 +44,18 @@ const live = () => {
       sockets.push(socket)
       return socket
     },
-    onChanged: (keys) => changed.push(keys),
+    onChanged: (keys) => {
+      changed.push(keys)
+      order.push("changed")
+    },
     onStale: () => {
       staleCount += 1
+      order.push("stale")
     },
-    report: (signal) => signals.push(signal),
+    report: (signal) => {
+      signals.push(signal)
+      order.push(signal)
+    },
     random: () => 1,
   })
   const latest = () => {
@@ -55,7 +63,7 @@ const live = () => {
     if (socket === undefined) throw new Error("no socket was opened")
     return socket
   }
-  return { connection, sockets, changed, signals, latest, stale: () => staleCount }
+  return { connection, sockets, changed, signals, order, latest, stale: () => staleCount }
 }
 
 beforeEach(() => {
@@ -111,6 +119,16 @@ describe("startLive", () => {
     expect(signals).toEqual(["heard", "heard"])
     latest().hears(JSON.stringify({ changed: [["today"]] }))
     expect(signals).toEqual(["heard", "heard", "heard"])
+  })
+
+  it("hands on a change, or a reconnect's refresh, before reporting it heard, so what falls behind is marked first", () => {
+    const { latest, order } = live()
+    latest().opens()
+    latest().hears(JSON.stringify({ changed: [["today"]] }))
+    latest().closes()
+    vi.advanceTimersByTime(FIRST_RETRY_AT_MOST)
+    latest().opens()
+    expect(order).toEqual(["heard", "changed", "heard", "stale", "heard"])
   })
 
   it("passes on the keys a changed message names", () => {

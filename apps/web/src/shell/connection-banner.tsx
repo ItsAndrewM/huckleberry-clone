@@ -11,14 +11,14 @@ import { phoneZone, updatedLine } from "./updated.ts"
 
 const CANT_SAVE = "Entries can't be saved or refreshed until you're back online."
 
-const OfflineBanner = ({ heardAt, zone }: { readonly heardAt: number | null; readonly zone: string }) => {
+const OfflineBanner = ({ updatedAt, zone }: { readonly updatedAt: number | null; readonly zone: string }) => {
   const now = useNow()
   return (
     <Alert className="rounded-none border-x-0 border-t-0 bg-muted px-4 text-muted-foreground">
       <WifiOffIcon aria-hidden="true" />
       <AlertTitle>No connection</AlertTitle>
       <AlertDescription>
-        {heardAt === null ? CANT_SAVE : `${CANT_SAVE} ${updatedLine(heardAt, now, zone)}`}
+        {updatedAt === null ? CANT_SAVE : `${CANT_SAVE} ${updatedLine(updatedAt, now, zone)}`}
       </AlertDescription>
     </Alert>
   )
@@ -40,17 +40,17 @@ const SignInBanner = () => {
   )
 }
 
-const useLastHeard = () => {
-  const { connectivity } = useApp()
-  return useSyncExternalStore(connectivity.subscribe, connectivity.lastHeard)
+const useUpdatedAt = () => {
+  const { freshness } = useApp()
+  return useSyncExternalStore(freshness.subscribe, freshness.updatedAt)
 }
 
 export const ConnectionBanner = () => {
   const connectivity = useConnectivity()
-  const heardAt = useLastHeard()
+  const updatedAt = useUpdatedAt()
   const { data: me } = useMe()
   if (connectivity === "offline")
-    return <OfflineBanner heardAt={heardAt} zone={me?.household.timeZone ?? phoneZone()} />
+    return <OfflineBanner updatedAt={updatedAt} zone={me?.household.timeZone ?? phoneZone()} />
   if (connectivity === "auth-required") return <SignInBanner />
   return null
 }
