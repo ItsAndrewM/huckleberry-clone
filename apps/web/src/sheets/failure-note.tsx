@@ -4,6 +4,7 @@ import { Button, buttonVariants } from "../components/ui/button.tsx"
 import { signInUrl } from "../shell/sign-in.ts"
 import { draftStorage, stashDraft } from "./drafts.ts"
 import { failureNote } from "./failure.ts"
+import { RecoveryButtons } from "./recovery-buttons.tsx"
 import type { Sending, SheetKind } from "./sending.ts"
 import { failedFor, useSheets } from "./sheets-context.ts"
 import { isEntry } from "./sheets-state.ts"
@@ -62,6 +63,7 @@ export const FailureNote = ({ sheet }: { readonly sheet: SheetKind }) => {
           {retry}
         </Button>
       )}
+      <RecoveryButtons failed={failed} />
     </div>
   )
 }

@@ -2,7 +2,7 @@ import type { Feed, Prefill } from "@bt/contracts"
 import type { FeedAction } from "../../api/actions.ts"
 import { isSaving } from "../../api/pending.ts"
 import type { Failed } from "../../sheets/sending.ts"
-import { NOW, type When, whenAt } from "../../sheets/when.ts"
+import { inStartMinute, NOW, type When, whenAt } from "../../sheets/when.ts"
 
 export interface Amounts {
   readonly breastMilkMl: number | null
@@ -41,7 +41,7 @@ export const hasMilk = ({ breastMilkMl, formulaMl }: Amounts) =>
   breastMilkMl !== null && formulaMl !== null && breastMilkMl + formulaMl > 0
 
 export const toppedUpFeed = (active: Feed | null, occurredAt: number) =>
-  active !== null && occurredAt >= active.startedAt ? active : null
+  active !== null && inStartMinute(occurredAt, active.startedAt) >= active.startedAt ? active : null
 
 export const canSaveBottle = (amounts: Amounts, toppedUp: Feed | null) =>
   hasMilk(amounts) && (toppedUp === null || !isSaving(toppedUp))
@@ -52,8 +52,9 @@ export const bottleAction = (
   occurredAt: number,
   active: Feed | null,
 ): FeedAction => {
-  const portion = { occurredAt, breastMilkMl: breastMilkMl ?? 0, formulaMl: formulaMl ?? 0 }
   const toppedUp = toppedUpFeed(active, occurredAt)
+  const at = toppedUp === null ? occurredAt : inStartMinute(occurredAt, toppedUp.startedAt)
+  const portion = { occurredAt: at, breastMilkMl: breastMilkMl ?? 0, formulaMl: formulaMl ?? 0 }
   if (toppedUp === null) return { kind: "logFeed", payload: { actionId, segments: [], portions: [portion] } }
   return { kind: "addBottle", id: toppedUp.id, payload: { actionId, version: toppedUp.version, ...portion } }
 }

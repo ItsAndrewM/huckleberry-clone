@@ -14,6 +14,11 @@ const NursingContent = () => {
   const { data: me } = useMe()
   const { data: today } = useToday()
   const [finishing, setFinishing] = useState(() => finishingAfter(failedFor(sheets, "nursing")))
+  const back = () => {
+    const held = failedFor(sheets, "nursing")
+    if (finishingAfter(held)) sheets.discard(held)
+    setFinishing(false)
+  }
   if (me === undefined || today === undefined) return null
   const zone = me.household.timeZone
   const state = nursingState(today.activeFeed)
@@ -26,7 +31,7 @@ const NursingContent = () => {
       return <PausedView feed={state.feed} lastSide={state.lastSide} />
     case "running":
       return finishing ? (
-        <FinishView feed={state.feed} segment={state.segment} zone={zone} onBack={() => setFinishing(false)} />
+        <FinishView feed={state.feed} segment={state.segment} zone={zone} onBack={back} />
       ) : (
         <RunningView feed={state.feed} segment={state.segment} onFinish={() => setFinishing(true)} />
       )

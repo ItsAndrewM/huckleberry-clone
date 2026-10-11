@@ -1,5 +1,6 @@
 import type { Feed, VersionedPortion } from "@bt/contracts"
 import type { Action } from "../api/actions.ts"
+import { Offline } from "../api/errors.ts"
 import type { Saved } from "../api/send.ts"
 import type { Sending } from "./sending.ts"
 
@@ -56,3 +57,26 @@ export const toastFor = (sending: Sending, saved: Saved, now: number): Toast | n
   const undo = undoOf(sending, saved, crypto.randomUUID())
   return { message, undo: undo === null ? null : { sheet: sending.sheet, action: undo }, until: now + TOAST_MS }
 }
+
+interface LostMessages {
+  readonly offline: string
+  readonly otherwise: string
+}
+
+const lostToast =
+  ({ offline, otherwise }: LostMessages) =>
+  (error: Error, now: number): Toast => ({
+    message: error instanceof Offline ? offline : otherwise,
+    undo: null,
+    until: now + TOAST_MS,
+  })
+
+export const undoLost = lostToast({
+  offline: "No connection, so that wasn't undone.",
+  otherwise: "That wasn't undone.",
+})
+
+export const editLost = lostToast({
+  offline: "No connection, so your changes weren't saved.",
+  otherwise: "Your changes weren't saved.",
+})

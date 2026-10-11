@@ -72,12 +72,12 @@ describe("failureNote", () => {
     )
   })
 
-  it("says a resent entry with new values was already saved", () => {
+  it("says a resent entry with new values was already saved as first entered", () => {
     expect(message(new FeedConflict({ code: "ACTION_REPLAY_MISMATCH", current: feedAt(NOW) }))).toBe(
-      "This was already saved.",
+      "This was already saved as you first entered it.",
     )
     expect(message(new DiaperConflict({ code: "ACTION_REPLAY_MISMATCH", current: diaperAt(NOW) }))).toBe(
-      "This was already saved.",
+      "This was already saved as you first entered it.",
     )
   })
 

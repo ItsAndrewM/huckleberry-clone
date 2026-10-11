@@ -7,10 +7,18 @@ export type Saved = SavedDiaper | SavedFeed
 type OnFeed = Extract<FeedAction, { readonly id: string }>
 type NewFeed = Exclude<FeedAction, OnFeed>
 
-const sendDiaper = (api: HouseholdApi, action: DiaperAction): Promise<SavedDiaper> =>
-  action.kind === "logDiaper"
-    ? api.request((client) => client.diapers.logDiaper({ payload: action.payload }))
-    : api.request((client) => client.diapers.deleteDiaper({ params: { id: action.id }, payload: action.payload }))
+const sendDiaper = (api: HouseholdApi, action: DiaperAction): Promise<SavedDiaper> => {
+  switch (action.kind) {
+    case "logDiaper":
+      return api.request((client) => client.diapers.logDiaper({ payload: action.payload }))
+    case "editDiaper":
+      return api.request((client) => client.diapers.editDiaper({ params: { id: action.id }, payload: action.payload }))
+    case "deleteDiaper":
+      return api.request((client) =>
+        client.diapers.deleteDiaper({ params: { id: action.id }, payload: action.payload }),
+      )
+  }
+}
 
 const sendNewFeed = (api: HouseholdApi, action: NewFeed): Promise<SavedFeed> =>
   action.kind === "logFeed"
@@ -34,6 +42,8 @@ const sendOnFeed = (api: HouseholdApi, action: OnFeed): Promise<SavedFeed> => {
       return api.request((client) => client.feeds.deleteFeed({ params, payload: action.payload }))
     case "deletePortion":
       return api.request((client) => client.portions.deletePortion({ params, payload: action.payload }))
+    case "editPortion":
+      return api.request((client) => client.portions.editPortion({ params, payload: action.payload }))
   }
 }
 

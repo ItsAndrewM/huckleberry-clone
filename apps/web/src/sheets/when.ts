@@ -49,6 +49,9 @@ const MINUTE_MS = 60_000
 
 const sameMinute = (a: Instant, b: Instant) => Math.floor(a / MINUTE_MS) === Math.floor(b / MINUTE_MS)
 
+export const inStartMinute = (instant: Instant, start: Instant) =>
+  instant < start && sameMinute(instant, start) ? start : instant
+
 const notBefore = (instant: Instant, earliest: Instant): Resolved => {
   if (instant >= earliest) return { ok: true, instant }
   return sameMinute(instant, earliest) ? { ok: true, instant: earliest } : issue("too_early")

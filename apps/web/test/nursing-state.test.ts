@@ -4,8 +4,9 @@ import {
   controlsWait,
   finishAction,
   nursingState,
+  pauseAction,
   resumeAction,
-  timedAction,
+  switchAction,
 } from "../src/features/feed/nursing-state.ts"
 import type { Sending } from "../src/sheets/sending.ts"
 import { feedAt, MINUTE, NOW } from "./today-fixtures.ts"
@@ -34,7 +35,7 @@ describe("nursingState", () => {
 
 describe("the running feed's actions", () => {
   it("send the tap time and the feed's version, each with a new actionId", () => {
-    const pause = timedAction("pauseFeed", { ...running, version: 4 }, NOW)
+    const pause = pauseAction({ ...running, version: 4 }, NOW)
     const resume = resumeAction({ ...running, version: 5 }, "left", NOW)
     const finish = finishAction({ ...running, version: 6 }, NOW, true)
     expect(pause).toMatchObject({ kind: "pauseFeed", id: running.id, payload: { version: 4, occurredAt: NOW } })
@@ -42,11 +43,20 @@ describe("the running feed's actions", () => {
     expect(finish).toMatchObject({ kind: "finishFeed", payload: { version: 6, occurredAt: NOW, deleteIfEmpty: true } })
     expect(new Set([pause, resume, finish].map(({ payload }) => payload.actionId)).size).toBe(3)
   })
+
+  it("records the side a switch goes to, beside what it sends", () => {
+    expect(switchAction({ ...running, version: 3 }, "right", NOW)).toEqual({
+      kind: "switchSide",
+      id: running.id,
+      to: "left",
+      payload: { actionId: expect.stringMatching(/^[0-9a-f-]{36}$/u), version: 3, occurredAt: NOW },
+    })
+  })
 })
 
 const BOTTLE_ACTION_ID = "9d2e7c40-5b1a-4e3f-8a6d-0c4b7e1f2a93"
 
-const PAUSING: Sending = { sheet: "nursing", action: timedAction("pauseFeed", running, NOW) }
+const PAUSING: Sending = { sheet: "nursing", action: pauseAction(running, NOW) }
 
 const TOPPING_UP: Sending = {
   sheet: "bottle",

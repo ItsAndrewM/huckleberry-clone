@@ -19,6 +19,7 @@ export const PausedView = ({ feed, lastSide }: PausedViewProps) => {
   const busy = controlsWait(sheets.busy, feed)
   return (
     <>
+      <FailureNote sheet="nursing" />
       <FeedTimer feed={feed} now={now} status="Paused" running={false} />
       <SidePicker
         label="Resume on"
@@ -39,7 +40,6 @@ export const PausedView = ({ feed, lastSide }: PausedViewProps) => {
           Finish
         </Button>
       </div>
-      <FailureNote sheet="nursing" />
     </>
   )
 }
