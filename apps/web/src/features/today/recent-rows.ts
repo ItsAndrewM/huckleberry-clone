@@ -1,8 +1,9 @@
 import type { Diaper, Feed, RecentEntry } from "@bt/contracts"
+import { isPending, isSaving } from "../../api/pending.ts"
+import { clockTime } from "../../clock-time.ts"
 import type { Display } from "./display.ts"
 import { feedParts, feedTitle } from "./feed-parts.ts"
 import { runningSide } from "./feed-status.ts"
-import { clockTime } from "./format.ts"
 
 export type RowKind = "nursing" | "bottle" | "diaper"
 
@@ -14,6 +15,7 @@ export interface RecentRow {
   readonly title: string
   readonly detail: ReadonlyArray<string>
   readonly by: string
+  readonly saving: boolean
 }
 
 const nameOf = ({ caregivers }: Display, id: string) =>
@@ -37,6 +39,7 @@ const feedRow = (feed: Feed, display: Display, now: number): RecentRow => ({
   title: feedTitle(feed),
   detail: [...progressOf(feed), ...feedParts(feed, display.volume, now)],
   by: nameOf(display, feed.createdBy),
+  saving: isSaving(feed),
 })
 
 const diaperRow = (diaper: Diaper, display: Display): RecentRow => ({
@@ -47,6 +50,7 @@ const diaperRow = (diaper: Diaper, display: Display): RecentRow => ({
   title: "Diaper",
   detail: [diaperDetail(diaper)],
   by: nameOf(display, diaper.createdBy),
+  saving: isPending(diaper.id),
 })
 
 export const recentRows = (recent: ReadonlyArray<RecentEntry>, display: Display, now: number) =>

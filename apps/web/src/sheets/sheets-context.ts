@@ -1,0 +1,28 @@
+import { createContext, use } from "react"
+import { heldFor } from "./held.ts"
+import type { Failed, Sending, SheetKind } from "./sending.ts"
+import type { Toast } from "./undo.ts"
+
+export interface Sheets {
+  readonly open: SheetKind | null
+  readonly opened: number
+  readonly held: ReadonlyArray<Failed>
+  readonly asking: boolean
+  readonly busy: Sending | null
+  readonly toast: Toast | null
+  readonly show: (sheet: SheetKind) => void
+  readonly close: () => void
+  readonly keep: () => void
+  readonly discard: (failed: Failed) => void
+  readonly send: (sending: Sending) => void
+}
+
+export const SheetsContext = createContext<Sheets | null>(null)
+
+export const useSheets = () => {
+  const sheets = use(SheetsContext)
+  if (sheets === null) throw new Error("useSheets runs inside <SheetsProvider>")
+  return sheets
+}
+
+export const failedFor = (sheets: Sheets, sheet: SheetKind) => heldFor(sheets.held, sheet)

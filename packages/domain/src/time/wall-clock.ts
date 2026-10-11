@@ -32,6 +32,9 @@ export const resolveLocal = (local: LocalDateTime, zone: TimeZone): LocalResolut
   return { kind: "ambiguous", earlier, later }
 }
 
+export const localDateTimeOf = (instant: Instant, zone: TimeZone): LocalDateTime =>
+  new Date(instant + offsetMsAt(zone, instant)).toISOString().slice(0, 16)
+
 export const startOfDate = (date: LocalDate, zone: TimeZone): Instant => {
   const midnight = wallMsOf(`${date}T00:00`)
   const [first] = instantsShowing(midnight, zone)

@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest"
+import { pendingId } from "../src/api/pending.ts"
 import type { Display } from "../src/features/today/display.ts"
 import { feedParts, feedTitle } from "../src/features/today/feed-parts.ts"
 import { recentRows } from "../src/features/today/recent-rows.ts"
@@ -90,6 +91,7 @@ describe("recentRows", () => {
         title: "Nursing and bottle",
         detail: ["Left 12 min", "Right 8 min", "60 mL"],
         by: "Andrew",
+        saving: false,
       },
     ])
   })
@@ -144,5 +146,35 @@ describe("recentRows", () => {
   it("names no one for a caregiver the household doesn't list", () => {
     const [row] = recentRows([{ kind: "diaper", diaper: diaperAt(TWO_TEN, { createdBy: "gone" }) }], DISPLAY, NOW)
     expect(row?.by).toBe("")
+  })
+
+  it("says a running feed is saving while a bottle added to it hasn't been answered", () => {
+    const topUp = { ...BOTTLE, id: pendingId("action-1") }
+    const running = { ...NURSED, status: "active" as const, endedAt: null }
+    const rows = recentRows(
+      [
+        { kind: "feed", feed: { ...running, portions: [topUp] } },
+        { kind: "feed", feed: { ...running, id: "settled", portions: [BOTTLE] } },
+      ],
+      DISPLAY,
+      NOW,
+    )
+    expect(rows.map(({ id, saving }) => [id, saving])).toEqual([
+      [NURSED.id, true],
+      ["settled", false],
+    ])
+  })
+
+  it("says a feed or a diaper is saving until the household gives it an id of its own", () => {
+    const rows = recentRows(
+      [
+        { kind: "feed", feed: feedAt(TWO_TEN, { id: pendingId("action-2") }) },
+        { kind: "diaper", diaper: diaperAt(TWO_TEN, { id: pendingId("action-3") }) },
+        { kind: "diaper", diaper: diaperAt(TWO_TEN) },
+      ],
+      DISPLAY,
+      NOW,
+    )
+    expect(rows.map((row) => row.saving)).toEqual([true, true, false])
   })
 })

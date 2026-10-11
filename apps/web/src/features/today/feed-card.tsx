@@ -1,9 +1,10 @@
 import type { Today } from "@bt/contracts"
 import { formatElapsed } from "@bt/domain"
+import { clockTime } from "../../clock-time.ts"
 import type { Display } from "./display.ts"
 import { feedParts } from "./feed-parts.ts"
 import { feedStatus } from "./feed-status.ts"
-import { clockTime, formatSince } from "./format.ts"
+import { formatSince } from "./format.ts"
 import { StatusCard } from "./status-card.tsx"
 
 interface FeedCardProps {
