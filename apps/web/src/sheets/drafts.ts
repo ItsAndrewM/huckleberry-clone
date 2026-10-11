@@ -1,4 +1,5 @@
 import { Data, Option, Schema } from "effect"
+import type { Action } from "../api/actions.ts"
 import { attempt, type BrowserStorage } from "../storage.ts"
 import { Sending } from "./sending.ts"
 
@@ -37,5 +38,15 @@ export const dropDraft = (openStorage: () => BrowserStorage, actionId: string) =
 export const draftStorage = () => sessionStorage
 
 export const isFresh = (draft: Draft, now: number) => now - draft.createdAt < DRAFT_RETRY_MS
+
+const withActionId = <Sent extends Action>(action: Sent, actionId: string): Sent => ({
+  ...action,
+  payload: { ...action.payload, actionId },
+})
+
+export const renewed = ({ sheet, action }: Sending, actionId: string): Sending => ({
+  sheet,
+  action: withActionId(action, actionId),
+})
 
 export class StaleDraft extends Data.TaggedError("StaleDraft")<{ readonly createdAt: number }> {}

@@ -1,7 +1,8 @@
 import type { Action } from "../api/actions.ts"
 import { Offline } from "../api/errors.ts"
 import type { Saved } from "../api/send.ts"
-import { type Draft, isFresh, StaleDraft } from "./drafts.ts"
+import { type Draft, isFresh, renewed, StaleDraft } from "./drafts.ts"
+import { actionIdOf, heldFor, withoutAction } from "./held.ts"
 import { closesOnSend, type Failed, type Sending, type SheetKind } from "./sending.ts"
 import { TOAST_MS, type Toast, toastFor } from "./undo.ts"
 
@@ -18,13 +19,12 @@ export const CLOSED: SheetsState = { open: null, opened: 0, held: [], asking: fa
 
 const UNDOES = new Set<Action["kind"]>(["deleteDiaper", "deleteFeed", "deletePortion"])
 
-const actionIdOf = ({ action }: Sending) => action.payload.actionId
+const NEW_ENTRIES = new Set<Action["kind"]>(["logDiaper", "logFeed", "startFeed", "addBottle"])
 
-const withoutEntry = (held: ReadonlyArray<Failed>, actionId: string) =>
-  held.filter(({ sending }) => actionIdOf(sending) !== actionId)
+export const isEntry = ({ action }: Sending) => NEW_ENTRIES.has(action.kind)
 
-export const heldFor = (held: ReadonlyArray<Failed>, sheet: SheetKind) =>
-  held.find(({ sending }) => sending.sheet === sheet) ?? null
+const withoutControls = (held: ReadonlyArray<Failed>, sheet: SheetKind | null) =>
+  held.filter(({ sending }) => sending.sheet !== sheet || isEntry(sending))
 
 const opening = (state: SheetsState, sheet: SheetKind | null): SheetsState => ({
   ...state,
@@ -34,32 +34,28 @@ const opening = (state: SheetsState, sheet: SheetKind | null): SheetsState => ({
   keptOpen: null,
 })
 
-const closing = (state: SheetsState) => opening(state, state.held[0]?.sending.sheet ?? null)
+const leaving = (state: SheetsState): SheetsState => ({ ...state, held: withoutControls(state.held, state.open) })
+
+const closing = (state: SheetsState) => {
+  const left = leaving(state)
+  return opening(left, left.held[0]?.sending.sheet ?? null)
+}
 
 export const shownState = (state: SheetsState, sheet: SheetKind) =>
-  state.open === sheet ? state : opening(state, sheet)
+  state.open === sheet ? state : opening(leaving(state), sheet)
 
 export const dismissedState = (state: SheetsState): SheetsState => {
   if (state.open === null) return state
-  return heldFor(state.held, state.open) === null ? closing(state) : { ...state, asking: true }
+  const shown = heldFor(state.held, state.open)
+  return shown !== null && isEntry(shown.sending) ? { ...state, asking: true } : closing(state)
 }
 
 export const keptState = (state: SheetsState): SheetsState => ({ ...state, asking: false })
 
 export const discardedState = (state: SheetsState, failed: Failed): SheetsState => {
-  const held = withoutEntry(state.held, actionIdOf(failed.sending))
+  const held = withoutAction(state.held, actionIdOf(failed.sending))
   return state.asking ? closing({ ...state, held }) : { ...state, held }
 }
-
-const withActionId = <Sent extends Action>(action: Sent, actionId: string): Sent => ({
-  ...action,
-  payload: { ...action.payload, actionId },
-})
-
-const renewed = ({ sheet, action }: Sending, actionId: string): Sending => ({
-  sheet,
-  action: withActionId(action, actionId),
-})
 
 const undoFailure = (error: Error, now: number): Toast => ({
   message: error instanceof Offline ? "No connection, so that wasn't undone." : "That wasn't undone.",
@@ -80,12 +76,10 @@ export const restoredState = (draft: Draft | null, now: number, actionId: string
   return failedState(CLOSED, failed, now)
 }
 
-export const isHeld = (state: SheetsState, sending: Sending) =>
-  state.held.some((failed) => actionIdOf(failed.sending) === actionIdOf(sending))
-
 export const sendingState = (state: SheetsState, sending: Sending, online: boolean): SheetsState => {
   const toast = UNDOES.has(sending.action.kind) ? null : state.toast
-  const sent = { ...state, held: withoutEntry(state.held, actionIdOf(sending)), toast }
+  const held = withoutControls(withoutAction(state.held, actionIdOf(sending)), sending.sheet)
+  const sent = { ...state, held, toast }
   if (!closesOnSend(sending)) return sent
   if (online) return closing(sent)
   return state.open === sending.sheet ? { ...sent, keptOpen: actionIdOf(sending) } : sent

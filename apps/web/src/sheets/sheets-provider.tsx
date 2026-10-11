@@ -1,6 +1,7 @@
 import { type ReactNode, useState } from "react"
 import { useConnectivity } from "../api/hooks.ts"
 import { type Draft, draftStorage, dropDraft } from "./drafts.ts"
+import { isHeld } from "./held.ts"
 import type { Sending } from "./sending.ts"
 import { type Sheets, SheetsContext } from "./sheets-context.ts"
 import {
@@ -8,7 +9,6 @@ import {
   dismissedState,
   expiredState,
   failedState,
-  isHeld,
   keptState,
   restoredState,
   savedState,
@@ -44,7 +44,7 @@ export const SheetsProvider = ({ draft, children }: SheetsProviderProps) => {
     },
   })
   const send = (sending: Sending) => {
-    if (isHeld(state, sending)) dropDraftOf(sending)
+    if (isHeld(state.held, sending)) dropDraftOf(sending)
     setState((current) => sendingState(current, sending, online))
     mutation.mutate(sending)
   }

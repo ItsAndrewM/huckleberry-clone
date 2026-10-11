@@ -174,7 +174,9 @@ test("says who already started a feed, and shows theirs", async ({ page }) => {
   await expect(sheet.getByText("Right side")).toBeVisible()
 })
 
-test("says who changed the running feed a moment ago, and shows it as it is now", async ({ page }) => {
+test("says who changed the running feed a moment ago, shows it as it is now, and lets that go with the next control", async ({
+  page,
+}) => {
   const { andrew, emily } = await caregiversOf(page)
   const mine = runningFeed(andrew.id, STARTED, "left", 2)
   const { played, answer } = await playHousehold(page, todayWith(mine))
@@ -188,10 +190,26 @@ test("says who changed the running feed a moment ago, and shows it as it is now"
     played.today = todayWith(theirs)
     return { status: 409, json: { _tag: "Conflict", code: "STALE_VERSION", current: theirs } }
   })
+  await answer("**/api/feeds/feed-1/resume", ({ body }) => {
+    const resumed = { side: body.side ?? "right", startedAt: body.occurredAt ?? NOW, endedAt: null }
+    const feed = { ...theirs, version: 4, segments: [...theirs.segments, { id: "segment-2", ...resumed }] }
+    played.today = todayWith(feed)
+    return { status: 200, json: { feed, changed: [["today"]] } }
+  })
   await openToday(page)
   await (await openNursing(page)).getByRole("button", { name: "Switch to Right" }).click()
   const sheet = page.getByRole("dialog", { name: "Nursing" })
   await expect(sheet.getByRole("alert")).toHaveText(`${emily.displayName} changed this feed a moment ago.`)
   await expect(sheet.getByText("Paused")).toBeVisible()
   expect(played.sent).toHaveLength(1)
+  await sheet.getByRole("button", { name: "Right", exact: true }).click()
+  await expect(sheet.getByText("Right side")).toBeVisible()
+  await expect(sheet.getByRole("alert")).toHaveCount(0)
+  await page.keyboard.press("Escape")
+  await expect(sheet).toBeHidden()
+  await expect(page.getByText("Discard this entry?")).toHaveCount(0)
+  expect(played.sent.map(({ path, body }) => [path.split("/").at(-1), body.version])).toEqual([
+    ["switch", 2],
+    ["resume", 3],
+  ])
 })

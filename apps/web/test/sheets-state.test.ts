@@ -8,6 +8,7 @@ import {
   CLOSED,
   expiredState,
   failedState,
+  isEntry,
   restoredState,
   savedState,
   sendingState,
@@ -115,18 +116,18 @@ const UNDO_PORTION: Sending = {
 }
 
 const CLOSING = {
-  logDiaper: { sending: DIAPER, closes: true },
-  deleteDiaper: { sending: UNDO_DIAPER, closes: false },
-  logFeed: { sending: BOTTLE_FEED, closes: true },
-  startFeed: { sending: STARTED, closes: true },
-  switchSide: { sending: SWITCH, closes: false },
-  pauseFeed: { sending: PAUSE, closes: false },
-  resumeFeed: { sending: RESUME, closes: false },
-  addBottle: { sending: ADD_BOTTLE, closes: true },
-  finishFeed: { sending: FINISH, closes: true },
-  deleteFeed: { sending: UNDO_FEED, closes: false },
-  deletePortion: { sending: UNDO_PORTION, closes: false },
-} satisfies Record<Action["kind"], { readonly sending: Sending; readonly closes: boolean }>
+  logDiaper: { sending: DIAPER, closes: true, entry: true },
+  deleteDiaper: { sending: UNDO_DIAPER, closes: false, entry: false },
+  logFeed: { sending: BOTTLE_FEED, closes: true, entry: true },
+  startFeed: { sending: STARTED, closes: true, entry: true },
+  switchSide: { sending: SWITCH, closes: false, entry: false },
+  pauseFeed: { sending: PAUSE, closes: false, entry: false },
+  resumeFeed: { sending: RESUME, closes: false, entry: false },
+  addBottle: { sending: ADD_BOTTLE, closes: true, entry: true },
+  finishFeed: { sending: FINISH, closes: true, entry: false },
+  deleteFeed: { sending: UNDO_FEED, closes: false, entry: false },
+  deletePortion: { sending: UNDO_PORTION, closes: false, entry: false },
+} satisfies Record<Action["kind"], { readonly sending: Sending; readonly closes: boolean; readonly entry: boolean }>
 
 describe("sending", () => {
   it("closes a sheet that creates an entry while online, so the entry shows at once", () => {
@@ -298,6 +299,12 @@ describe("what a send clears", () => {
 describe("which sends close their sheet", () => {
   it.each(Object.entries(CLOSING))("closes on send: %s", (_kind, { sending, closes }) => {
     expect(closesOnSend(sending)).toBe(closes)
+  })
+})
+
+describe("which sends are new entries, held until they're saved or discarded", () => {
+  it.each(Object.entries(CLOSING))("a new entry: %s", (_kind, { sending, entry }) => {
+    expect(isEntry(sending)).toBe(entry)
   })
 })
 
