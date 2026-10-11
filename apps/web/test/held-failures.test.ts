@@ -1,4 +1,6 @@
+import { DiaperConflict, FeedConflict } from "@bt/contracts"
 import { describe, expect, it } from "vitest"
+import type { Failed } from "../src/sheets/sending.ts"
 import { failedFor, type Sheets } from "../src/sheets/sheets-context.ts"
 import {
   CLOSED,
@@ -9,7 +11,8 @@ import {
   type SheetsState,
   shownState,
 } from "../src/sheets/sheets-state.ts"
-import { afterFailures, BOTTLE_HELD, DIAPER, DIAPER_HELD, diaper, held, start } from "./held-fixtures.ts"
+import { afterFailures, BOTTLE, BOTTLE_HELD, DIAPER, DIAPER_HELD, diaper, held, start } from "./held-fixtures.ts"
+import { diaperAt, feedAt, NOW } from "./today-fixtures.ts"
 
 const sheetsOf = (state: SheetsState): Sheets => ({
   ...state,
@@ -86,6 +89,47 @@ describe("dismissing a sheet that shows a held entry", () => {
 
   it("leaves the sheet open for an entry discarded from inside its form", () => {
     expect(discardedState(afterFailures(DIAPER_HELD), DIAPER_HELD)).toMatchObject({ open: "diaper", held: [] })
+  })
+})
+
+describe("dismissing a sheet whose entry can't be saved as it is", () => {
+  const SAVED_ALREADY: Failed = {
+    sending: DIAPER,
+    error: new DiaperConflict({ code: "ACTION_REPLAY_MISMATCH", current: diaperAt(NOW, { id: "diaper-1" }) }),
+  }
+  const THEIRS_RUNNING: Failed = {
+    sending: start("action-start"),
+    error: new FeedConflict({ code: "FEED_ALREADY_ACTIVE", current: feedAt(NOW, { id: "feed-1", status: "active" }) }),
+  }
+  const OVERLAP: Failed = {
+    sending: BOTTLE,
+    error: new FeedConflict({ code: "SEGMENT_OVERLAP", current: feedAt(NOW) }),
+  }
+
+  it.each([
+    { case: "a diaper that was already saved", failed: SAVED_ALREADY },
+    { case: "a start that met the other phone's feed", failed: THEIRS_RUNNING },
+  ])("closes without asking after $case, and lets the entry go", ({ failed }) => {
+    expect(dismissedState(afterFailures(failed))).toMatchObject({ open: null, held: [], asking: false })
+  })
+
+  it.each([
+    { case: "no connection", failed: DIAPER_HELD },
+    { case: "an overlap", failed: OVERLAP },
+  ])("still asks after $case", ({ failed }) => {
+    expect(dismissedState(afterFailures(failed))).toMatchObject({
+      open: failed.sending.sheet,
+      held: [failed],
+      asking: true,
+    })
+  })
+
+  it("opens the next held entry's sheet as it closes", () => {
+    expect(dismissedState(afterFailures(SAVED_ALREADY, BOTTLE_HELD))).toMatchObject({
+      open: "bottle",
+      held: [BOTTLE_HELD],
+      asking: false,
+    })
   })
 })
 

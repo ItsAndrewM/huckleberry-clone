@@ -3,6 +3,7 @@ import { Offline } from "../api/errors.ts"
 import type { Saved } from "../api/send.ts"
 import { type Draft, isFresh, renewed, StaleDraft } from "./drafts.ts"
 import { actionIdOf, heldFor, withoutAction } from "./held.ts"
+import { settlesWithoutAsking } from "./recovery.ts"
 import { closesOnSend, type Failed, type Sending, type SheetKind } from "./sending.ts"
 import { TOAST_MS, type Toast, toastFor } from "./undo.ts"
 
@@ -47,7 +48,11 @@ export const shownState = (state: SheetsState, sheet: SheetKind) =>
 export const dismissedState = (state: SheetsState): SheetsState => {
   if (state.open === null) return state
   const shown = heldFor(state.held, state.open)
-  return shown !== null && isEntry(shown.sending) ? { ...state, asking: true } : closing(state)
+  if (shown === null) return closing(state)
+  if (settlesWithoutAsking(shown.error)) {
+    return closing({ ...state, held: withoutAction(state.held, actionIdOf(shown.sending)) })
+  }
+  return isEntry(shown.sending) ? { ...state, asking: true } : closing(state)
 }
 
 export const keptState = (state: SheetsState): SheetsState => ({ ...state, asking: false })

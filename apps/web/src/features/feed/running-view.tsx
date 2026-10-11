@@ -22,6 +22,7 @@ export const RunningView = ({ feed, segment, onFinish }: RunningViewProps) => {
     sheets.send({ sheet: "nursing", action: timedAction(kind, feed, tapTime()) })
   return (
     <>
+      <FailureNote sheet="nursing" />
       <FeedTimer feed={feed} now={now} status={`${SIDE_NAMES[segment.side]} side`} running />
       <Button size="lg" className="h-14 text-lg" disabled={busy} onClick={() => act("switchSide")}>
         Switch to {SIDE_NAMES[OTHER_SIDE[segment.side]]}
@@ -37,7 +38,6 @@ export const RunningView = ({ feed, segment, onFinish }: RunningViewProps) => {
           Finish
         </Button>
       </div>
-      <FailureNote sheet="nursing" />
     </>
   )
 }

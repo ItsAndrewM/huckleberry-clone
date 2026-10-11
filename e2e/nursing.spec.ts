@@ -168,9 +168,11 @@ test("says who already started a feed, and shows theirs", async ({ page }) => {
   await openToday(page)
   await (await openNursing(page)).getByRole("button", { name: "Left", exact: true }).click()
   const sheet = page.getByRole("dialog", { name: "Nursing" })
-  await expect(sheet.getByRole("alert")).toHaveText(
-    new RegExp(`^${emily.displayName.replace(/[()]/gu, "\\$&")} started a feed at 9:25\\sAM\\.$`, "u"),
-  )
+  await expect(
+    sheet
+      .getByRole("alert")
+      .getByText(new RegExp(`^${emily.displayName.replace(/[()]/gu, "\\$&")} started a feed at 9:25\\sAM\\.$`, "u")),
+  ).toBeVisible()
   await expect(sheet.getByText("Right side")).toBeVisible()
 })
 
@@ -199,7 +201,8 @@ test("says who changed the running feed a moment ago, shows it as it is now, and
   await openToday(page)
   await (await openNursing(page)).getByRole("button", { name: "Switch to Right" }).click()
   const sheet = page.getByRole("dialog", { name: "Nursing" })
-  await expect(sheet.getByRole("alert")).toHaveText(`${emily.displayName} changed this feed a moment ago.`)
+  await expect(sheet.getByRole("alert").getByText(`${emily.displayName} changed this feed a moment ago.`)).toBeVisible()
+  await expect(sheet.getByRole("alert").getByRole("button")).toHaveText(["OK"])
   await expect(sheet.getByText("Paused")).toBeVisible()
   expect(played.sent).toHaveLength(1)
   await sheet.getByRole("button", { name: "Right", exact: true }).click()
@@ -212,4 +215,114 @@ test("says who changed the running feed a moment ago, shows it as it is now, and
     ["switch", 2],
     ["resume", 3],
   ])
+})
+
+test("lets OK accept the other phone's pause, keeping their feed in view", async ({ page }) => {
+  const { andrew, emily } = await caregiversOf(page)
+  const mine = runningFeed(andrew.id, STARTED, "left", 2)
+  const { played, answer } = await playHousehold(page, todayWith(mine))
+  const theirs = {
+    ...mine,
+    version: 3,
+    updatedBy: emily.id,
+    segments: [{ id: "segment-1", side: "left" as const, startedAt: STARTED, endedAt: NOW - MINUTE }],
+  }
+  await answer("**/api/feeds/feed-1/pause", () => {
+    played.today = todayWith(theirs)
+    return { status: 409, json: { _tag: "Conflict", code: "STALE_VERSION", current: theirs } }
+  })
+  await openToday(page)
+  await (await openNursing(page)).getByRole("button", { name: "Pause" }).click()
+  const sheet = page.getByRole("dialog", { name: "Nursing" })
+  const note = sheet.getByRole("alert")
+  await expect(note.getByRole("button")).toHaveText(["OK"])
+  await note.getByRole("button", { name: "OK" }).click()
+  await expect(note).toHaveCount(0)
+  await expect(sheet.getByText("Paused")).toBeVisible()
+  await page.keyboard.press("Escape")
+  await expect(sheet).toBeHidden()
+  expect(played.sent).toHaveLength(1)
+})
+
+test("redoes a switch that the other phone's change didn't undo, under the same actionId", async ({ page }) => {
+  const { andrew, emily } = await caregiversOf(page)
+  const mine = runningFeed(andrew.id, STARTED, "left", 2)
+  const { played, answer } = await playHousehold(page, todayWith(mine))
+  const theirs = {
+    ...mine,
+    version: 3,
+    updatedBy: emily.id,
+    portions: [{ id: "portion-1", occurredAt: NOW - MINUTE, breastMilkMl: 30, formulaMl: 0 }],
+  }
+  await answer("**/api/feeds/feed-1/switch", ({ body }) => {
+    if (body.version !== theirs.version) {
+      played.today = todayWith(theirs)
+      return { status: 409, json: { _tag: "Conflict", code: "STALE_VERSION", current: theirs } }
+    }
+    const at = body.occurredAt ?? NOW
+    const segments = [
+      { id: "segment-1", side: "left" as const, startedAt: STARTED, endedAt: at },
+      { id: "segment-2", side: "right" as const, startedAt: at, endedAt: null },
+    ]
+    const feed = { ...theirs, version: 4, segments }
+    played.today = todayWith(feed)
+    return { status: 200, json: { feed, changed: [["today"]] } }
+  })
+  await openToday(page)
+  await (await openNursing(page)).getByRole("button", { name: "Switch to Right" }).click()
+  const sheet = page.getByRole("dialog", { name: "Nursing" })
+  await sheet.getByRole("alert").getByRole("button", { name: "Switch anyway" }).click()
+  await expect(sheet.getByText("Right side")).toBeVisible()
+  await expect(sheet.getByRole("alert")).toHaveCount(0)
+  const [first, redo] = played.sent.map(({ body }) => body)
+  expect(first).toEqual({ actionId: ACTION_ID, version: 2, occurredAt: NOW })
+  expect(redo).toEqual({ ...first, version: 3 })
+})
+
+test("offers your side on the feed the other phone started, without starting a second feed", async ({ page }) => {
+  const { emily } = await caregiversOf(page)
+  const theirs = runningFeed(emily.id, NOW - 5 * MINUTE, "right")
+  const { played, answer } = await playHousehold(page, todayWith())
+  await answer("**/api/feeds/start", () => {
+    played.today = todayWith(theirs)
+    return { status: 409, json: { _tag: "Conflict", code: "FEED_ALREADY_ACTIVE", current: theirs } }
+  })
+  await answer("**/api/feeds/feed-1/switch", ({ body }) => {
+    const at = body.occurredAt ?? NOW
+    const segments = [
+      { id: "segment-1", side: "right" as const, startedAt: theirs.startedAt, endedAt: at },
+      { id: "segment-2", side: "left" as const, startedAt: at, endedAt: null },
+    ]
+    const feed = { ...theirs, version: 2, segments }
+    played.today = todayWith(feed)
+    return { status: 200, json: { feed, changed: [["today"]] } }
+  })
+  await openToday(page)
+  await (await openNursing(page)).getByRole("button", { name: "Left", exact: true }).click()
+  const sheet = page.getByRole("dialog", { name: "Nursing" })
+  const join = sheet.getByRole("alert").getByRole("button", { name: "Switch to Left" })
+  await expect(join).toBeVisible()
+  await page.clock.setFixedTime(NOW + MINUTE)
+  await join.click()
+  await expect(sheet.getByText("Left side")).toBeVisible()
+  await expect(sheet.getByRole("alert")).toHaveCount(0)
+  expect(played.sent.map(({ path }) => path)).toEqual(["/api/feeds/start", "/api/feeds/feed-1/switch"])
+  const [start, switched] = played.sent.map(({ body }) => body)
+  expect(switched).toEqual({ actionId: ACTION_ID, version: 1, occurredAt: NOW + MINUTE })
+  expect(switched?.actionId).not.toBe(start?.actionId)
+})
+
+test("lets Back drop a finish that wasn't saved, so the running feed shows no stale note", async ({ page }) => {
+  const { andrew } = await caregiversOf(page)
+  const { played, answer } = await playHousehold(page, todayWith(runningFeed(andrew.id, STARTED, "left", 2)))
+  await answer("**/api/feeds/feed-1/finish", () => ({ status: 500, json: {} }))
+  await openToday(page)
+  const sheet = await openNursing(page)
+  await sheet.getByRole("button", { name: "Finish" }).click()
+  await sheet.getByRole("button", { name: "Finish feed" }).click()
+  await expect(sheet.getByRole("alert")).toContainText("Not saved.")
+  await sheet.getByRole("button", { name: "Back" }).click()
+  await expect(sheet.getByText("Left side")).toBeVisible()
+  await expect(sheet.getByRole("alert")).toHaveCount(0)
+  expect(played.sent).toHaveLength(1)
 })

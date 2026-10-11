@@ -1,5 +1,14 @@
 import { expect, type Locator, type Page, test } from "@playwright/test"
-import { caregiversOf, MINUTE, NOW, openToday, playHousehold, type Sent, todayWith } from "./played-household.ts"
+import {
+  caregiversOf,
+  MINUTE,
+  NOW,
+  openToday,
+  playHousehold,
+  savedBy,
+  type Sent,
+  todayWith,
+} from "./played-household.ts"
 
 const ACTION_ID = expect.stringMatching(/^[0-9a-f-]{36}$/u)
 
@@ -166,6 +175,49 @@ test("a failed save answered while the sheet is still closing reopens it sized t
   await expect(sheet.getByRole("alert")).toContainText("Not saved.")
   await expect(sheet.getByRole("alert")).toBeInViewport({ ratio: 1 })
   await expect(sheet.getByRole("button", { name: "Try again" })).toBeInViewport({ ratio: 1 })
+})
+
+test("saves the changes to a diaper whose first save had landed, as an edit of that diaper", async ({ page }) => {
+  const { andrew } = await caregiversOf(page)
+  const household = await playHousehold(page, todayWith())
+  const first = { id: "diaper-1", occurredAt: NOW, wet: true, dirty: false, ...savedBy(andrew.id) }
+  const posted: Sent["body"][] = []
+  await page.route("**/api/diapers", (route) => {
+    posted.push(route.request().postDataJSON())
+    if (posted.length > 1) {
+      return route.fulfill({ status: 409, json: { _tag: "Conflict", code: "ACTION_REPLAY_MISMATCH", current: first } })
+    }
+    household.played.today = { ...todayWith(), recent: [{ kind: "diaper", diaper: first }] }
+    return route.abort("internetdisconnected")
+  })
+  await household.answer("**/api/diapers/diaper-1", ({ body }) => {
+    const diaper = { ...first, wet: body.wet ?? true, dirty: body.dirty ?? false, version: 2 }
+    household.played.today = { ...todayWith(), recent: [{ kind: "diaper", diaper }] }
+    return { status: 200, json: { diaper, changed: [["today"]] } }
+  })
+  await openToday(page)
+  const sheet = page.getByRole("dialog", { name: "Diaper" })
+  await quickAction(page, "Diaper").click()
+  await sheet.getByRole("button", { name: "Pee" }).click()
+  await expect(sheet.getByRole("alert")).toContainText("No connection")
+  await sheet.getByRole("button", { name: "Both" }).click()
+  const note = sheet.getByRole("alert")
+  await expect(note.getByText("This was already saved as you first entered it.")).toBeVisible()
+  await note.getByRole("button", { name: "Save my changes" }).click()
+  await expect(sheet).toBeHidden()
+  expect(posted).toEqual([
+    { actionId: ACTION_ID, occurredAt: NOW, wet: true, dirty: false },
+    { actionId: posted[0]?.actionId, occurredAt: NOW, wet: true, dirty: true },
+  ])
+  expect(household.played.sent).toEqual([
+    {
+      method: "PATCH",
+      path: "/api/diapers/diaper-1",
+      body: { actionId: ACTION_ID, version: 1, occurredAt: NOW, wet: true, dirty: true },
+    },
+  ])
+  expect(household.played.sent[0]?.body.actionId).not.toBe(posted[0]?.actionId)
+  await expect(page.getByRole("list", { name: "Last 24 hours" })).toContainText("Pee and poo")
 })
 
 test("saves a diaper to the household itself, which lists it", async ({ page }) => {

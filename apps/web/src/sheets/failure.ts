@@ -69,14 +69,14 @@ const feedNote = (error: FeedConflict, household: Household): Note => {
     case "FEED_EMPTY":
       return note("Nothing would be left in this feed.")
     case "ACTION_REPLAY_MISMATCH":
-      return note("This was already saved.")
+      return note("This was already saved as you first entered it.")
   }
 }
 
 const diaperNote = (error: DiaperConflict, household: Household): Note =>
   error.code === "STALE_VERSION"
     ? note(`${nameOf(household, error.current.updatedBy)} changed this diaper a moment ago.`)
-    : note("This was already saved.")
+    : note("This was already saved as you first entered it.")
 
 const conflictNote = (error: Error, household: Household): Note | null => {
   if (error instanceof FeedConflict) return feedNote(error, household)
