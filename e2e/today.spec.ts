@@ -311,12 +311,49 @@ test.describe("Today, with the household's answers played by the test", () => {
     await expect(total(page, "Feeds started")).toContainText("0")
   })
 
-  test("keeps the quick actions above the tabs, ready for the sheets in M1.12", async ({ page }) => {
+  test("opens each sheet from the quick actions above the tabs", async ({ page }) => {
     await playToday(page, todayWith({}))
     await openToday(page)
     const actions = page.getByRole("region", { name: "Log", exact: true }).getByRole("button")
     await expect(actions).toHaveText(["Bottle", "Nursing", "Diaper"])
-    for (const action of await actions.all()) await expect(action).toBeDisabled()
+    for (const name of ["Bottle", "Nursing", "Diaper"]) {
+      await actions.filter({ hasText: name }).click()
+      await expect(page.getByRole("dialog", { name })).toBeVisible()
+      await page.keyboard.press("Escape")
+      await expect(page.getByRole("dialog", { name })).toBeHidden()
+    }
+  })
+
+  test("keeps the quick actions waiting while Today can't be loaded", async ({ page }) => {
+    await playToday(page, todayWith({}))
+    await page.route("**/api/today", (route) => route.fulfill({ status: 404 }))
+    await openToday(page)
+    await expect(page.getByText("Today couldn't be loaded.")).toBeVisible()
+    for (const action of await page.getByRole("region", { name: "Log", exact: true }).getByRole("button").all()) {
+      await expect(action).toBeDisabled()
+    }
+  })
+
+  test("keeps the last of a long recent list clear of the quick actions", async ({ page }) => {
+    const [andrew] = await caregiversOf(page)
+    const recent = Array.from({ length: 14 }, (_, index) => ({
+      kind: "diaper",
+      diaper: {
+        id: `d${index}`,
+        occurredAt: NOW - (index + 1) * 20 * MINUTE,
+        wet: true,
+        dirty: false,
+        ...audit(NOW, andrew.id),
+      },
+    }))
+    await playToday(page, todayWith({ recent }))
+    await openToday(page)
+    const rows = page.getByRole("list", { name: "Last 24 hours" }).getByRole("listitem")
+    await expect(rows).toHaveCount(14)
+    await page.evaluate("window.scrollTo(0, document.documentElement.scrollHeight)")
+    const last = await boxOf(rows.last())
+    const bar = await boxOf(page.getByRole("region", { name: "Log", exact: true }))
+    expect(last.y + last.height).toBeLessThanOrEqual(bar.y)
   })
 
   test("fits the quick actions on a 360-pixel-wide phone, resting on the tab bar", async ({ page }) => {

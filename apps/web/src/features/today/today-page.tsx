@@ -49,7 +49,7 @@ export const TodayPage = () => {
           <TodayCards today={today} last24h={last24h} household={me.household} />
         )}
       </Page>
-      <QuickActions />
+      <QuickActions ready={today !== undefined && me !== undefined} />
     </div>
   )
 }
