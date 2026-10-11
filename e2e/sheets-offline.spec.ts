@@ -65,7 +65,7 @@ test("keeps a diaper logged offline in its sheet, and Try again saves it to the 
   await expect.poll(async () => (await diapersAt(page, occurredAt)).length).toBe(before + 1)
 })
 
-test("tries again with the same actionId, so a save that did land isn't saved twice", async ({
+test("tries again with the actionId of the attempt that failed, so the household's receipt can answer a repeat", async ({
   page,
   context,
   browserName,
@@ -94,6 +94,6 @@ test("tries again with the same actionId, so a save that did land isn't saved tw
   await context.setOffline(false)
   await sheet.getByRole("button", { name: "Try again" }).click()
   await expect(page.getByRole("list", { name: "Last 24 hours" })).toContainText("Pee")
-  expect(actionIds).toHaveLength(2)
+  await expect.poll(() => actionIds.length).toBe(2)
   expect(actionIds[1]).toBe(actionIds[0])
 })
