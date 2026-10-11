@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query"
-import { type OfflineCopy, offlineCopyOf, pageBuild } from "./offline-copy.ts"
+import { checkOfflineCopy, type OfflineCopy, pageBuild } from "./offline-copy.ts"
 import { SettingsSection } from "./settings-section.tsx"
 
 const CHECK_AGAIN_MS = 5_000
@@ -19,7 +19,7 @@ const statusOf = (copy: OfflineCopy | undefined, failed: boolean) => {
 const OfflineCopyStatus = ({ build }: { readonly build: string }) => {
   const { data, isError } = useQuery({
     queryKey: ["offline-copy", build],
-    queryFn: async () => offlineCopyOf(await caches.keys(), build),
+    queryFn: () => checkOfflineCopy(caches, build),
     refetchInterval: ({ state }) => (state.data === "saved" ? false : CHECK_AGAIN_MS),
   })
   return (

@@ -218,7 +218,9 @@ test("says no offline copy is saved while the phone has none", async ({ page }) 
 test("says when the phone's offline copy is an older version", async ({ page }) => {
   await page.goto("/settings")
   await expect(page.getByText("Not saved yet.")).toBeVisible()
-  await page.evaluate("caches.open('bt-shell-0123456789abcdef')")
+  await page.evaluate(
+    "caches.open('bt-shell-0123456789abcdef').then((cache) => cache.put('/', new Response('an older shell')))",
+  )
   await expect(page.getByText("An older version. It updates while the app is open online.")).toBeVisible({
     timeout: 10_000,
   })
