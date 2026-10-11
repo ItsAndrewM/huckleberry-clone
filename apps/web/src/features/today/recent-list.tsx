@@ -1,3 +1,4 @@
+import { isPending } from "../../api/pending.ts"
 import { Card } from "../../components/ui/card.tsx"
 import { KIND_ICONS } from "./kind-icons.ts"
 import { Parts } from "./parts.tsx"
@@ -20,7 +21,7 @@ const RecentItem = ({ row }: { readonly row: RecentRow }) => {
         <time dateTime={new Date(row.at).toISOString()} className="text-sm tabular-nums">
           {row.time}
         </time>
-        <p className="text-xs text-muted-foreground">{row.by}</p>
+        <p className="text-xs text-muted-foreground">{isPending(row.id) ? "Saving…" : row.by}</p>
       </div>
     </li>
   )
