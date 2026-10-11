@@ -2,12 +2,12 @@ import { useState } from "react"
 import { Button } from "../../components/ui/button.tsx"
 import { FailureNote } from "../../sheets/failure-note.tsx"
 import type { Household } from "../../sheets/failure.ts"
-import type { Failed } from "../../sheets/sending.ts"
 import { failedFor, useSheets } from "../../sheets/sheets-context.ts"
 import { tapTime } from "../../sheets/tap-time.ts"
 import { WhenField } from "../../sheets/when-field.tsx"
-import { NOW, resolveWhen, type When, whenAt } from "../../sheets/when.ts"
+import { resolveWhen } from "../../sheets/when.ts"
 import { useNow } from "../../timer/use-now.ts"
+import { sessionOf } from "./diaper-session.ts"
 
 const CHOICES = [
   { label: "Pee", wet: true, dirty: false },
@@ -16,17 +16,6 @@ const CHOICES = [
 ] as const
 
 type Choice = (typeof CHOICES)[number]
-
-interface Session {
-  readonly actionId: string
-  readonly when: When
-}
-
-const sessionOf = (failed: Failed | null, zone: string): Session => {
-  const action = failed?.sending.action
-  if (action?.kind !== "logDiaper") return { actionId: crypto.randomUUID(), when: NOW }
-  return { actionId: action.payload.actionId, when: whenAt(action.payload.occurredAt, zone) }
-}
 
 export const DiaperForm = ({ household }: { readonly household: Household }) => {
   const sheets = useSheets()

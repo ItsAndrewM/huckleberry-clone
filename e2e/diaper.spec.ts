@@ -17,7 +17,25 @@ const tapper = () => {
 const quickAction = (page: Page, name: string) =>
   page.getByRole("region", { name: "Log", exact: true }).getByRole("button", { name })
 
-const playDiapers = async (page: Page) => {
+const gate = () => {
+  let open = () => {}
+  const opened = new Promise<void>((resolve) => {
+    open = resolve
+  })
+  return { open, opened }
+}
+
+const holdRequests = async (page: Page, pattern: string, until: () => Promise<void>) => {
+  const held: string[] = []
+  await page.route(pattern, async (route) => {
+    held.push(route.request().url())
+    await until()
+    await route.fallback()
+  })
+  return held
+}
+
+const playDiapers = async (page: Page, failures = 0) => {
   const { andrew } = await caregiversOf(page)
   const household = await playHousehold(page, todayWith())
   const saved = ({ body }: Sent, deletedAt: number | null, version: number) => ({
@@ -32,7 +50,10 @@ const playDiapers = async (page: Page) => {
     updatedAt: NOW,
     deletedAt,
   })
+  let saves = 0
   await household.answer("**/api/diapers", (sent) => {
+    saves += 1
+    if (saves <= failures) return { status: 500, json: {} }
     const diaper = saved(sent, null, 1)
     household.played.today = { ...household.played.today, recent: [{ kind: "diaper", diaper }] }
     return { status: 201, json: { diaper, changed: [["today"], ["last24h"]] } }
@@ -100,6 +121,36 @@ test("logs a diaper at the time picked, read on the household's clock", async ({
   await expect
     .poll(() => played.sent.map(({ body }) => [body.occurredAt, body.wet, body.dirty]))
     .toEqual([[NOW - 40 * MINUTE, true, true]])
+})
+
+test("a failed save rolls Today back and reloads it, reopens the sheet, and an edited resave keeps its actionId", async ({
+  page,
+}) => {
+  const played = await playDiapers(page, 1)
+  await openToday(page)
+  const sheet = page.getByRole("dialog", { name: "Diaper" })
+  const diapers = page.locator("dl > div").filter({ hasText: "Diapers" })
+  const before = await diapers.innerText()
+  await holdRequests(page, "**/api/diapers", () => sheet.waitFor({ state: "hidden" }))
+  const reload = gate()
+  const reloads = await holdRequests(page, "**/api/today", () => reload.opened)
+  await quickAction(page, "Diaper").click()
+  await sheet.getByRole("button", { name: "Poo" }).click()
+  await expect(page.getByText("Saving…")).toBeVisible()
+  await expect(sheet.getByRole("alert")).toContainText("Not saved.")
+  await expect(sheet.getByRole("button", { name: "Try again" })).toBeVisible()
+  await expect(sheet.getByLabel("When")).toHaveValue("2026-10-09T09:30")
+  await expect(page.getByText("Saving…")).toHaveCount(0)
+  await expect.poll(() => diapers.innerText()).toBe(before)
+  await expect.poll(() => reloads.length).toBeGreaterThan(0)
+  const reloaded = page.waitForResponse((response) => new URL(response.url()).pathname === "/api/today")
+  reload.open()
+  await reloaded
+  await sheet.getByRole("button", { name: "Both" }).click()
+  await expect.poll(() => played.sent).toHaveLength(2)
+  const [first, second] = played.sent.map(({ body }) => body)
+  expect(first).toEqual({ actionId: ACTION_ID, occurredAt: NOW, wet: false, dirty: true })
+  expect(second).toEqual({ ...first, wet: true, dirty: true })
 })
 
 test("saves a diaper to the household itself, which lists it", async ({ page }) => {
