@@ -36,6 +36,7 @@ test("keeps a diaper logged after the sign-in expired, and saves it once on the 
   context,
   baseURL,
 }) => {
+  await page.setViewportSize({ width: 360, height: 640 })
   const { played } = await playHousehold(page, todayWith())
   let signedOut = true
   const sent = await recordDiapers(page, played, () => signedOut)
@@ -45,6 +46,8 @@ test("keeps a diaper logged after the sign-in expired, and saves it once on the 
   const sheet = page.getByRole("dialog", { name: "Diaper" })
   await sheet.getByRole("button", { name: "Pee" }).click()
   await expect(sheet.getByRole("alert")).toContainText("Your sign-in has expired")
+  await expect(sheet.getByRole("alert")).toBeInViewport({ ratio: 1 })
+  await expect(sheet.getByRole("link", { name: "Sign in" })).toBeInViewport({ ratio: 1 })
   signedOut = false
   await sheet.getByRole("link", { name: "Sign in" }).click()
   await expect(page).toHaveURL("/")

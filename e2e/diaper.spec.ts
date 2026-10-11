@@ -138,7 +138,9 @@ test("a failed save rolls Today back and reloads it, reopens the sheet, and an e
   await sheet.getByRole("button", { name: "Poo" }).click()
   await expect(page.getByText("Saving…")).toBeVisible()
   await expect(sheet.getByRole("alert")).toContainText("Not saved.")
+  await expect(sheet.getByRole("alert")).toBeInViewport({ ratio: 1 })
   await expect(sheet.getByRole("button", { name: "Try again" })).toBeVisible()
+  await expect(sheet.getByRole("button", { name: "Try again" })).toBeInViewport({ ratio: 1 })
   await expect(sheet.getByLabel("When")).toHaveValue("2026-10-09T09:30")
   await expect(page.getByText("Saving…")).toHaveCount(0)
   await expect.poll(() => diapers.innerText()).toBe(before)
@@ -151,6 +153,19 @@ test("a failed save rolls Today back and reloads it, reopens the sheet, and an e
   const [first, second] = played.sent.map(({ body }) => body)
   expect(first).toEqual({ actionId: ACTION_ID, occurredAt: NOW, wet: false, dirty: true })
   expect(second).toEqual({ ...first, wet: true, dirty: true })
+})
+
+test("a failed save answered while the sheet is still closing reopens it sized to its note, in view", async ({
+  page,
+}) => {
+  await playDiapers(page, 1)
+  await openToday(page)
+  const sheet = page.getByRole("dialog", { name: "Diaper" })
+  await quickAction(page, "Diaper").click()
+  await sheet.getByRole("button", { name: "Poo" }).click()
+  await expect(sheet.getByRole("alert")).toContainText("Not saved.")
+  await expect(sheet.getByRole("alert")).toBeInViewport({ ratio: 1 })
+  await expect(sheet.getByRole("button", { name: "Try again" })).toBeInViewport({ ratio: 1 })
 })
 
 test("saves a diaper to the household itself, which lists it", async ({ page }) => {
