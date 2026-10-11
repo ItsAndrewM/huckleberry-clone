@@ -1,15 +1,23 @@
 import { expect, test } from "@playwright/test"
 
 const SIGNED_OUT_COOKIE = "bt-preview-signed-out"
+const HALF_PAST_NINE_IN_VANCOUVER = Date.UTC(2026, 9, 9, 16, 30)
 
-test("shows No connection while the phone is offline, and clears it once back online", async ({ page, context }) => {
+test("shows No connection while the phone is offline, with when the app last heard from the household, and clears it once back online", async ({
+  page,
+  context,
+}) => {
+  await page.clock.setFixedTime(HALF_PAST_NINE_IN_VANCOUVER)
   const todayAnswered = Promise.all(["**/api/today", "**/api/last24h"].map((url) => page.waitForResponse(url)))
   await page.goto("/")
   await expect(page.getByText("Robin")).toBeVisible()
   await Promise.all((await todayAnswered).map((response) => response.finished()))
   await expect(page.getByText("Loading…")).toBeHidden()
+  await page.routeWebSocket(/\/api\/ws$/, (socket) => socket.close({ code: 1011, reason: "offline" }))
   await context.setOffline(true)
-  await expect(page.getByRole("alert").filter({ hasText: "No connection" })).toBeVisible()
+  const noConnection = page.getByRole("alert").filter({ hasText: "No connection" })
+  await expect(noConnection).toBeVisible()
+  await expect(noConnection).toContainText(/Updated 9:30\sAM\./)
   await context.setOffline(false)
   await expect(page.getByText("No connection")).toBeHidden()
 })

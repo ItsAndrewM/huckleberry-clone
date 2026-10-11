@@ -1,17 +1,28 @@
 import { useLocation } from "@tanstack/react-router"
 import { LogInIcon, WifiOffIcon } from "lucide-react"
-import { useConnectivity } from "../api/hooks.ts"
+import { useSyncExternalStore } from "react"
+import { useConnectivity, useMe } from "../api/hooks.ts"
+import { useApp } from "../app-context.ts"
 import { Alert, AlertAction, AlertDescription, AlertTitle } from "../components/ui/alert.tsx"
 import { buttonVariants } from "../components/ui/button.tsx"
+import { useNow } from "../timer/use-now.ts"
 import { signInUrl } from "./sign-in.ts"
+import { phoneZone, updatedLine } from "./updated.ts"
 
-const OfflineBanner = () => (
-  <Alert className="rounded-none border-x-0 border-t-0 bg-muted px-4 text-muted-foreground">
-    <WifiOffIcon aria-hidden="true" />
-    <AlertTitle>No connection</AlertTitle>
-    <AlertDescription>Entries can't be saved or refreshed until you're back online.</AlertDescription>
-  </Alert>
-)
+const CANT_SAVE = "Entries can't be saved or refreshed until you're back online."
+
+const OfflineBanner = ({ heardAt, zone }: { readonly heardAt: number | null; readonly zone: string }) => {
+  const now = useNow()
+  return (
+    <Alert className="rounded-none border-x-0 border-t-0 bg-muted px-4 text-muted-foreground">
+      <WifiOffIcon aria-hidden="true" />
+      <AlertTitle>No connection</AlertTitle>
+      <AlertDescription>
+        {heardAt === null ? CANT_SAVE : `${CANT_SAVE} ${updatedLine(heardAt, now, zone)}`}
+      </AlertDescription>
+    </Alert>
+  )
+}
 
 const SignInBanner = () => {
   const href = useLocation({ select: ({ pathname, searchStr }) => signInUrl({ pathname, search: searchStr }) })
@@ -29,9 +40,17 @@ const SignInBanner = () => {
   )
 }
 
+const useLastHeard = () => {
+  const { connectivity } = useApp()
+  return useSyncExternalStore(connectivity.subscribe, connectivity.lastHeard)
+}
+
 export const ConnectionBanner = () => {
   const connectivity = useConnectivity()
-  if (connectivity === "offline") return <OfflineBanner />
+  const heardAt = useLastHeard()
+  const { data: me } = useMe()
+  if (connectivity === "offline")
+    return <OfflineBanner heardAt={heardAt} zone={me?.household.timeZone ?? phoneZone()} />
   if (connectivity === "auth-required") return <SignInBanner />
   return null
 }
