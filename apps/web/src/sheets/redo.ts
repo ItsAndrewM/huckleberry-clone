@@ -1,4 +1,4 @@
-import type { Feed } from "@bt/contracts"
+import type { Feed, Side } from "@bt/contracts"
 import type { Action } from "../api/actions.ts"
 import { SIDE_NAMES } from "../sides.ts"
 import type { Recovery, Sending } from "./sending.ts"
@@ -18,10 +18,13 @@ const runningSince = (feed: Feed, at: number) => {
   return open !== null && open.startedAt <= at
 }
 
+const switchFits = (feed: Feed, to: Side | undefined, at: number) =>
+  to !== undefined && runningSince(feed, at) && openSideOf(feed)?.side !== to
+
 const fits = (action: Action, feed: Feed) => {
   switch (action.kind) {
     case "switchSide":
-      return runningSince(feed, action.payload.occurredAt) && openSideOf(feed)?.side !== action.to
+      return switchFits(feed, action.to, action.payload.occurredAt)
     case "pauseFeed":
       return runningSince(feed, action.payload.occurredAt)
     case "resumeFeed":

@@ -43,6 +43,8 @@ const SWITCH: Sending = { sheet: "nursing", action: { kind: "switchSide", id: "f
 
 const JOINING: Sending = { sheet: "nursing", action: { kind: "switchSide", id: "feed-1", to: "left", payload: MINE } }
 
+const UNRECORDED_SWITCH: Sending = { sheet: "nursing", action: { kind: "switchSide", id: "feed-1", payload: MINE } }
+
 const EDIT_DIAPER: Sending = {
   sheet: "diaper",
   action: {
@@ -138,6 +140,7 @@ describe("a redo after the other phone's change", () => {
     { case: "a switch after theirs", sending: SWITCH, current: SWITCHED_AFTER_TAP },
     { case: "a switch to the side theirs had already reached, unseen", sending: SWITCH, current: SWITCHED_EARLIER },
     { case: "a join's switch that meets the feed already on its side", sending: JOINING, current: theirs() },
+    { case: "a switch saved before its side was recorded", sending: UNRECORDED_SWITCH, current: theirs() },
     { case: "a pause after their switch", sending: PAUSE, current: SWITCHED_AFTER_TAP },
     { case: "a switch on a paused feed", sending: SWITCH, current: PAUSED },
     { case: "a pause on a paused feed", sending: PAUSE, current: PAUSED },
