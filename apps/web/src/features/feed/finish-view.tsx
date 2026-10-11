@@ -1,13 +1,13 @@
-import { type Feed, FeedConflict, type NursingSegment } from "@bt/contracts"
+import type { Feed, NursingSegment } from "@bt/contracts"
 import { useState } from "react"
 import { Button } from "../../components/ui/button.tsx"
 import { FailureNote } from "../../sheets/failure-note.tsx"
-import type { Failed } from "../../sheets/sending.ts"
 import { failedFor, useSheets } from "../../sheets/sheets-context.ts"
 import { tapTime } from "../../sheets/tap-time.ts"
 import { WhenField } from "../../sheets/when-field.tsx"
-import { NOW, resolveWhen, type When, whenAt } from "../../sheets/when.ts"
+import { resolveWhen } from "../../sheets/when.ts"
 import { useNow } from "../../timer/use-now.ts"
+import { emptiedBy, sentStop } from "./nursing-session.ts"
 import { controlsWait, finishAction } from "./nursing-state.ts"
 
 interface FinishViewProps {
@@ -15,17 +15,6 @@ interface FinishViewProps {
   readonly segment: NursingSegment
   readonly zone: string
   readonly onBack: () => void
-}
-
-const sentStop = (failed: Failed | null, zone: string): When => {
-  const action = failed?.sending.action
-  return action?.kind === "finishFeed" ? whenAt(action.payload.occurredAt, zone) : NOW
-}
-
-const emptiedBy = (failed: Failed | null) => {
-  const action = failed?.sending.action
-  if (!(failed?.error instanceof FeedConflict) || failed.error.code !== "FEED_EMPTY") return null
-  return action?.kind === "finishFeed" ? { current: failed.error.current, stoppedAt: action.payload.occurredAt } : null
 }
 
 export const FinishView = ({ feed, segment, zone, onBack }: FinishViewProps) => {

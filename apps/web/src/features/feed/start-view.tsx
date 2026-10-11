@@ -1,24 +1,13 @@
 import type { Side } from "@bt/contracts"
 import { useState } from "react"
 import { FailureNote } from "../../sheets/failure-note.tsx"
-import type { Failed } from "../../sheets/sending.ts"
 import { failedFor, useSheets } from "../../sheets/sheets-context.ts"
 import { tapTime } from "../../sheets/tap-time.ts"
 import { WhenField } from "../../sheets/when-field.tsx"
-import { NOW, resolveWhen, type When, whenAt } from "../../sheets/when.ts"
+import { resolveWhen } from "../../sheets/when.ts"
 import { useNow } from "../../timer/use-now.ts"
+import { startSession } from "./nursing-session.ts"
 import { SidePicker } from "./side-picker.tsx"
-
-interface StartSession {
-  readonly actionId: string
-  readonly when: When
-}
-
-const startSession = (failed: Failed | null, zone: string): StartSession => {
-  const action = failed?.sending.action
-  if (action?.kind !== "startFeed") return { actionId: crypto.randomUUID(), when: NOW }
-  return { actionId: action.payload.actionId, when: whenAt(action.payload.startedAt, zone) }
-}
 
 interface StartViewProps {
   readonly lastSide: Side | null

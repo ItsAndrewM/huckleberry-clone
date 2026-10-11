@@ -3,6 +3,7 @@ import { useMe, useToday } from "../../api/hooks.ts"
 import { Sheet } from "../../sheets/sheet.tsx"
 import { failedFor, useSheets } from "../../sheets/sheets-context.ts"
 import { FinishView } from "./finish-view.tsx"
+import { finishingAfter } from "./nursing-session.ts"
 import { nursingState } from "./nursing-state.ts"
 import { PausedView } from "./paused-view.tsx"
 import { RunningView } from "./running-view.tsx"
@@ -12,7 +13,7 @@ const NursingContent = () => {
   const sheets = useSheets()
   const { data: me } = useMe()
   const { data: today } = useToday()
-  const [finishing, setFinishing] = useState(() => failedFor(sheets, "nursing")?.sending.action.kind === "finishFeed")
+  const [finishing, setFinishing] = useState(() => finishingAfter(failedFor(sheets, "nursing")))
   if (me === undefined || today === undefined) return null
   const zone = me.household.timeZone
   const state = nursingState(today.activeFeed)
