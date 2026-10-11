@@ -201,4 +201,15 @@ test.describe("Growth, with the household's answers played by the test", () => {
     await expect(median).toHaveCSS("stroke", "oklch(0.71 0.014 75)")
     await expect(herPoints(page).first()).toHaveCSS("fill", "oklch(0.77 0.075 290)")
   })
+
+  test("loads Growth on Try again, once the household's measurements answer", async ({ page }) => {
+    await playGrowth(page, MEASUREMENTS)
+    let refusing = true
+    await page.route("**/api/growth", (route) => (refusing ? route.fulfill({ status: 404 }) : route.fallback()))
+    await openGrowth(page)
+    await expect(page.getByText("Growth couldn't be loaded.")).toBeVisible()
+    refusing = false
+    await page.getByRole("button", { name: "Try again" }).click()
+    await expect(herPoints(page)).toHaveCount(3)
+  })
 })

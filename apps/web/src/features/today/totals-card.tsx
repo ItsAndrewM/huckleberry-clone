@@ -1,20 +1,27 @@
 import type { Totals, VolumeUnit } from "@bt/contracts"
 import { useState } from "react"
+import type { Retry } from "../../api/retry.ts"
 import { Card, CardAction, CardContent, CardHeader, CardTitle } from "../../components/ui/card.tsx"
+import { NotLoaded } from "../../shell/not-loaded.tsx"
 import { Parts } from "./parts.tsx"
 import { type Period, PeriodSwitch } from "./period-switch.tsx"
 import { totalsRows } from "./totals-rows.ts"
 
+export interface Last24h {
+  readonly totals: Totals | undefined
+  readonly failed: boolean
+  readonly retry: Retry
+}
+
 interface TotalsCardProps {
   readonly today: Totals
-  readonly last24h: Totals | undefined
-  readonly last24hFailed: boolean
+  readonly last24h: Last24h
   readonly volume: VolumeUnit
 }
 
-export const TotalsCard = ({ today, last24h, last24hFailed, volume }: TotalsCardProps) => {
+export const TotalsCard = ({ today, last24h, volume }: TotalsCardProps) => {
   const [period, setPeriod] = useState<Period>("today")
-  const totals = period === "today" ? today : last24h
+  const totals = period === "today" ? today : last24h.totals
   return (
     <Card>
       <CardHeader className="items-center">
@@ -25,9 +32,7 @@ export const TotalsCard = ({ today, last24h, last24hFailed, volume }: TotalsCard
       </CardHeader>
       <CardContent>
         {totals === undefined ? (
-          <output className="text-muted-foreground">
-            {last24hFailed ? "The last 24 hours couldn't be loaded." : "Loading…"}
-          </output>
+          <NotLoaded failed={last24h.failed} message="The last 24 hours couldn't be loaded." retry={last24h.retry} />
         ) : (
           <dl className="flex flex-col divide-y">
             {totalsRows(totals, volume).map(({ label, value, detail }) => (

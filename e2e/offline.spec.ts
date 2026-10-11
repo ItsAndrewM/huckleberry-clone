@@ -3,6 +3,9 @@ import { type BrowserContext, expect, type Page, test } from "@playwright/test"
 test.use({ serviceWorkers: "allow" })
 
 const ACCESS_EXPIRED_COOKIE = "bt-preview-access-expired"
+const SIGNED_OUT_COOKIE = "bt-preview-signed-out"
+const SLOW_PAGES_COOKIE = "bt-preview-slow-pages"
+const SLOW_PAGE_MS = 15_000
 
 const openWithSavedCopy = async (page: Page) => {
   await page.goto("/")
@@ -21,6 +24,37 @@ test("opens from its saved copy while offline, and says there's no connection", 
   await page.reload()
   await expect(page.getByRole("heading", { name: "Today", level: 1 })).toBeVisible()
   await expect(page.getByRole("alert").filter({ hasText: "No connection" })).toBeVisible()
+})
+
+test("opens its saved copy after about 3 s when the network is slow to answer", async ({ page, context, baseURL }) => {
+  await openWithSavedCopy(page)
+  await context.addCookies([{ name: SLOW_PAGES_COOKIE, value: "1", url: baseURL ?? "" }])
+  const started = Date.now()
+  await page.reload()
+  await expect(page.getByText("Robin")).toBeVisible()
+  expect(Date.now() - started).toBeLessThan(SLOW_PAGE_MS / 2)
+})
+
+test("opens its saved copy on a slow network even when the session has expired, and asks to sign in", async ({
+  page,
+  context,
+  baseURL,
+}) => {
+  await openWithSavedCopy(page)
+  await context.addCookies([
+    { name: SLOW_PAGES_COOKIE, value: "1", url: baseURL ?? "" },
+    { name: SIGNED_OUT_COOKIE, value: "1", url: baseURL ?? "" },
+  ])
+  const started = Date.now()
+  await page.reload()
+  await expect(page.getByRole("alert").filter({ hasText: "Sign in to continue" })).toBeVisible()
+  expect(Date.now() - started).toBeLessThan(SLOW_PAGE_MS / 2)
+})
+
+test("says in Settings that this phone's offline copy is saved for this version", async ({ page }) => {
+  await openWithSavedCopy(page)
+  await page.getByRole("navigation", { name: "Main" }).getByRole("link", { name: "Settings" }).click()
+  await expect(page.getByText("Saved for this version.")).toBeVisible()
 })
 
 test("opens any tab's address from its saved copy while offline", async ({ page, context }) => {

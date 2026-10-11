@@ -89,9 +89,20 @@ const dayTimeOf = ({ locale, timeZone }: Household, instant: number) => dayClock
 const staleNote = (error: StaleDraft, household: Household): Note =>
   note(`This wasn't saved before you signed in, ${dayTimeOf(household, error.createdAt)}. Save it now?`, "Save now")
 
-export const failureNote = (error: Error, household: Household): Note => {
-  if (error instanceof Offline)
-    return note("No connection. This is kept here: try again once you're back online.", TRY_AGAIN)
+export interface NoteOptions {
+  readonly held: boolean
+}
+
+const offlineNote = (held: boolean): Note =>
+  note(
+    held
+      ? "No connection. Keep the app open, and try again once you're back online."
+      : "No connection. Try again once you're back online.",
+    TRY_AGAIN,
+  )
+
+export const failureNote = (error: Error, household: Household, { held }: NoteOptions): Note => {
+  if (error instanceof Offline) return offlineNote(held)
   if (error instanceof AuthRequired || error instanceof Unauthorized) {
     return { message: "Your sign-in has expired. Sign in, and this will be saved.", retry: null, signIn: true }
   }

@@ -6,6 +6,14 @@
     "types": ["vite/client"],
     "paths": { "@/*": ["./src/*"] }
   },
-  "include": ["src", "test", "preview-sign-out.ts", "service-worker-build.ts", "vite.config.ts", "vitest.config.ts"],
+  "include": [
+    "src",
+    "test",
+    "preview-sign-out.ts",
+    "preview-slow-pages.ts",
+    "service-worker-build.ts",
+    "vite.config.ts",
+    "vitest.config.ts"
+  ],
   "exclude": ["src/service-worker/sw.ts"]
 }

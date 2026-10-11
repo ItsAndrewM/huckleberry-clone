@@ -6,6 +6,7 @@ import { draftStorage, stashDraft } from "./drafts.ts"
 import { failureNote } from "./failure.ts"
 import type { Sending, SheetKind } from "./sending.ts"
 import { failedFor, useSheets } from "./sheets-context.ts"
+import { isEntry } from "./sheets-state.ts"
 import { useHousehold } from "./use-household.ts"
 
 const CANT_KEEP = "This phone can't keep the entry while you sign in. Sign in, then log it again."
@@ -52,7 +53,7 @@ export const FailureNote = ({ sheet }: { readonly sheet: SheetKind }) => {
   const household = useHousehold()
   const failed = failedFor(sheets, sheet)
   if (failed === null || household === null) return null
-  const { message, retry, signIn } = failureNote(failed.error, household)
+  const { message, retry, signIn } = failureNote(failed.error, household, { held: isEntry(failed.sending) })
   return (
     <div role="alert" className="flex flex-col gap-3 rounded-lg bg-destructive/10 p-3 text-sm text-destructive">
       {signIn ? <SignInNote message={message} sending={failed.sending} /> : <p>{message}</p>}

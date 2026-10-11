@@ -1,7 +1,30 @@
-import { expect, test, type WebSocketRoute } from "@playwright/test"
+import { expect, type Page, test, type WebSocketRoute } from "@playwright/test"
 
 const HEARTBEAT_MS = 30_000
 const FIRST_RETRY_AT_MOST = 1_000
+const MINUTE = 60_000
+const NINE_THIRTY_IN_VANCOUVER = Date.UTC(2026, 9, 9, 16, 30)
+
+let sockets: WebSocketRoute[] = []
+
+const socket = (index: number) => {
+  const found = sockets[index]
+  if (found === undefined) throw new Error(`socket ${index} was never opened`)
+  return found
+}
+
+const openWithSocketPlayed = async (page: Page) => {
+  sockets = []
+  await page.routeWebSocket(/\/api\/ws$/, (played) => {
+    sockets.push(played)
+  })
+  const todayAnswered = Promise.all(["**/api/today", "**/api/last24h"].map((url) => page.waitForResponse(url)))
+  await page.goto("/")
+  await expect(page.getByText("Robin")).toBeVisible()
+  await Promise.all((await todayAnswered).map((response) => response.finished()))
+  await expect(page.getByText("Loading…")).toBeHidden()
+  await expect.poll(() => sockets.length).toBe(1)
+}
 
 test("opens a socket to the household as the signed-in caregiver, and the household answers its heartbeat", async ({
   page,
@@ -22,27 +45,10 @@ test("opens a socket to the household as the signed-in caregiver, and the househ
 })
 
 test.describe("with the household's socket played by the test", () => {
-  let sockets: WebSocketRoute[]
-
   test.beforeEach(async ({ page }) => {
-    sockets = []
     await page.clock.install()
-    await page.routeWebSocket(/\/api\/ws$/, (socket) => {
-      sockets.push(socket)
-    })
-    const todayAnswered = Promise.all(["**/api/today", "**/api/last24h"].map((url) => page.waitForResponse(url)))
-    await page.goto("/")
-    await expect(page.getByText("Robin")).toBeVisible()
-    await Promise.all((await todayAnswered).map((response) => response.finished()))
-    await expect(page.getByText("Loading…")).toBeHidden()
-    await expect.poll(() => sockets.length).toBe(1)
+    await openWithSocketPlayed(page)
   })
-
-  const socket = (index: number) => {
-    const found = sockets[index]
-    if (found === undefined) throw new Error(`socket ${index} was never opened`)
-    return found
-  }
 
   test("refetches what a changed message names", async ({ page }) => {
     const refetch = page.waitForRequest("**/api/me")
@@ -119,5 +125,32 @@ test.describe("with the household's socket played by the test", () => {
     await socket(0).close({ code: 1011, reason: "restarting" })
     await page.evaluate('window.dispatchEvent(new Event("online"))')
     await expect.poll(() => sockets.length).toBe(2)
+  })
+})
+
+test.describe("Updated, with the household's socket played by the test", () => {
+  test.use({ timezoneId: "Europe/London" })
+
+  test.beforeEach(async ({ page }) => {
+    await page.clock.install({ time: NINE_THIRTY_IN_VANCOUVER })
+    await openWithSocketPlayed(page)
+  })
+
+  test("stays at the last answer when a change the household announces can't be fetched", async ({ page }) => {
+    await page.route("**/api/today", (route) => route.abort())
+    await page.clock.setSystemTime(NINE_THIRTY_IN_VANCOUVER + 12 * MINUTE)
+    socket(0).send(JSON.stringify({ changed: [["today"]] }))
+    await expect(page.getByRole("alert").filter({ hasText: "No connection" })).toContainText(/Updated 9:30\sAM\./)
+  })
+
+  test("stays at the last answer before the socket dropped when nothing can be fetched once it's back", async ({
+    page,
+  }) => {
+    await page.route("**/api/**", (route) => route.abort())
+    await socket(0).close({ code: 1011, reason: "restarting" })
+    await page.clock.setSystemTime(NINE_THIRTY_IN_VANCOUVER + 20 * MINUTE)
+    await page.clock.runFor(FIRST_RETRY_AT_MOST)
+    await expect.poll(() => sockets.length).toBe(2)
+    await expect(page.getByRole("alert").filter({ hasText: "No connection" })).toContainText(/Updated 9:30\sAM\./)
   })
 })

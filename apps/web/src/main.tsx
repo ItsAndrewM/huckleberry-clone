@@ -4,6 +4,7 @@ import { StrictMode } from "react"
 import { createRoot } from "react-dom/client"
 import { connectApi } from "./api/client.ts"
 import { createConnectivity, followBrowser } from "./api/connectivity.ts"
+import { trackFreshness } from "./api/freshness.ts"
 import { startLive } from "./api/live-connection.ts"
 import { socketUrl } from "./api/live.ts"
 import { createQueryClient } from "./api/query-client.ts"
@@ -20,6 +21,7 @@ const connectivity = createConnectivity(navigator.onLine)
 followBrowser(connectivity, window)
 const api = connectApi({ report: connectivity.report })
 const queryClient = createQueryClient()
+const freshness = trackFreshness(queryClient.getQueryCache(), connectivity)
 const draft = takeDraft(() => sessionStorage, `${window.location.pathname}${window.location.search}`)
 const live = startLive({
   open: () => new WebSocket(socketUrl(window.location)),
@@ -34,7 +36,7 @@ if (import.meta.env.PROD) window.addEventListener("load", () => void registerSer
 
 createRoot(root).render(
   <StrictMode>
-    <AppContext value={{ api, connectivity, draft }}>
+    <AppContext value={{ api, connectivity, freshness, draft }}>
       <QueryClientProvider client={queryClient}>
         <RouterProvider router={router} />
       </QueryClientProvider>
