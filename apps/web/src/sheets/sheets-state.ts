@@ -80,6 +80,9 @@ export const restoredState = (draft: Draft | null, now: number, actionId: string
   return failedState(CLOSED, failed, now)
 }
 
+export const isHeld = (state: SheetsState, sending: Sending) =>
+  state.held.some((failed) => actionIdOf(failed.sending) === actionIdOf(sending))
+
 export const sendingState = (state: SheetsState, sending: Sending, online: boolean): SheetsState => {
   const toast = UNDOES.has(sending.action.kind) ? null : state.toast
   const sent = { ...state, held: withoutEntry(state.held, actionIdOf(sending)), toast }

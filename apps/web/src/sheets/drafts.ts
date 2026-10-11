@@ -16,12 +16,25 @@ export const stashDraft = (openStorage: () => BrowserStorage, draft: Draft) =>
     return true
   }, false)
 
-export const takeDraft = (openStorage: () => BrowserStorage, route: string): Draft | null => {
+const storedDraft = (openStorage: () => BrowserStorage) => {
   const stored = attempt(() => openStorage().getItem(DRAFT_KEY), null)
-  attempt(() => openStorage().removeItem(DRAFT_KEY), undefined)
-  if (stored === null) return null
-  return Option.getOrNull(Option.filter(decodeDraft(stored), (draft) => draft.route === route))
+  return stored === null ? Option.none() : decodeDraft(stored)
 }
+
+const removeDraft = (openStorage: () => BrowserStorage) => attempt(() => openStorage().removeItem(DRAFT_KEY), undefined)
+
+export const takeDraft = (openStorage: () => BrowserStorage, route: string): Draft | null => {
+  const stored = storedDraft(openStorage)
+  removeDraft(openStorage)
+  return Option.getOrNull(Option.filter(stored, (draft) => draft.route === route))
+}
+
+export const dropDraft = (openStorage: () => BrowserStorage, actionId: string) => {
+  const ofEntry = Option.exists(storedDraft(openStorage), ({ sending }) => sending.action.payload.actionId === actionId)
+  if (ofEntry) removeDraft(openStorage)
+}
+
+export const draftStorage = () => sessionStorage
 
 export const isFresh = (draft: Draft, now: number) => now - draft.createdAt < DRAFT_RETRY_MS
 

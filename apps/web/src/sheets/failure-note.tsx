@@ -2,15 +2,13 @@ import { useLocation } from "@tanstack/react-router"
 import { useState } from "react"
 import { Button, buttonVariants } from "../components/ui/button.tsx"
 import { signInUrl } from "../shell/sign-in.ts"
-import { stashDraft } from "./drafts.ts"
+import { draftStorage, stashDraft } from "./drafts.ts"
 import { failureNote } from "./failure.ts"
 import type { Sending, SheetKind } from "./sending.ts"
 import { failedFor, useSheets } from "./sheets-context.ts"
 import { useHousehold } from "./use-household.ts"
 
 const CANT_KEEP = "This phone can't keep the entry while you sign in. Sign in, then log it again."
-
-const browserStorage = () => sessionStorage
 
 interface SignInNoteProps {
   readonly message: string
@@ -37,7 +35,7 @@ const SignInNote = ({ message, sending }: SignInNoteProps) => {
       <a
         href={href}
         onClick={(event) => {
-          if (stashDraft(browserStorage, { route, sending, createdAt: Date.now() })) return
+          if (stashDraft(draftStorage, { route, sending, createdAt: Date.now() })) return
           event.preventDefault()
           setRefused(true)
         }}

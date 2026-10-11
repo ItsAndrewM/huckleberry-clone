@@ -1,6 +1,6 @@
 import { type ReactNode, useState } from "react"
 import { useConnectivity } from "../api/hooks.ts"
-import type { Draft } from "./drafts.ts"
+import { type Draft, draftStorage, dropDraft } from "./drafts.ts"
 import type { Sending } from "./sending.ts"
 import { type Sheets, SheetsContext } from "./sheets-context.ts"
 import {
@@ -8,6 +8,7 @@ import {
   dismissedState,
   expiredState,
   failedState,
+  isHeld,
   keptState,
   restoredState,
   savedState,
@@ -22,6 +23,8 @@ interface SheetsProviderProps {
   readonly draft: Draft | null
   readonly children: ReactNode
 }
+
+const dropDraftOf = ({ action }: Sending) => dropDraft(draftStorage, action.payload.actionId)
 
 export const SheetsProvider = ({ draft, children }: SheetsProviderProps) => {
   const [state, setState] = useState(() => restoredState(draft, Date.now(), crypto.randomUUID()))
@@ -41,6 +44,7 @@ export const SheetsProvider = ({ draft, children }: SheetsProviderProps) => {
     },
   })
   const send = (sending: Sending) => {
+    if (isHeld(state, sending)) dropDraftOf(sending)
     setState((current) => sendingState(current, sending, online))
     mutation.mutate(sending)
   }
@@ -51,7 +55,10 @@ export const SheetsProvider = ({ draft, children }: SheetsProviderProps) => {
     show: (sheet) => setState((current) => shownState(current, sheet)),
     close: () => setState(dismissedState),
     keep: () => setState(keptState),
-    discard: (failed) => setState((current) => discardedState(current, failed)),
+    discard: (failed) => {
+      dropDraftOf(failed.sending)
+      setState((current) => discardedState(current, failed))
+    },
     send,
   }
   return <SheetsContext value={sheets}>{children}</SheetsContext>
