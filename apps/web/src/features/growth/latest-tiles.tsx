@@ -34,7 +34,7 @@ export const LatestTiles = ({ tiles, info, onChange }: LatestTilesProps) => {
       value={[info.metric]}
       onValueChange={choose}
       variant="outline"
-      className="grid w-full grid-cols-3 gap-2"
+      className="grid w-full grid-cols-3 items-stretch gap-2"
     >
       {tiles.map((tile) => (
         <ToggleGroupItem
