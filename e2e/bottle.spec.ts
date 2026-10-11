@@ -151,7 +151,7 @@ test("says Saving… on the feed while a bottle added to it is on its way, and h
   await expect(page.getByText("Saving…")).toHaveCount(0)
 })
 
-test("holds a draft's reopened Bottle sheet until Today loads, so its Save tops up the running feed", async ({
+test("holds a draft's reopened Bottle sheet until Today loads, then logs a bottle from before the running feed as its own feed", async ({
   page,
 }) => {
   const { andrew } = await caregiversOf(page)
@@ -171,7 +171,7 @@ test("holds a draft's reopened Bottle sheet until Today loads, so its Save tops 
   }
   await page.addInitScript((stored) => sessionStorage.setItem("bt.draft", stored), JSON.stringify(draft))
   const { played, answer } = await playHousehold(page, todayWith(running, LAST_BOTTLE))
-  await answer("**/api/feeds/feed-1/bottle", feedSaved({ ...running, version: 4 }, 200))
+  await answer("**/api/feeds", feedSaved(bottleFeed(andrew.id), 201))
   const loaded = gate()
   const held = await holdRequests(page, "**/api/today", () => loaded.opened)
   await muteLiveUpdates(page)
@@ -183,15 +183,20 @@ test("holds a draft's reopened Bottle sheet until Today loads, so its Save tops 
   await expect(sheet).toBeVisible()
   await expect(sheet.getByRole("button", { name: "Save" })).toHaveCount(0)
   loaded.open()
-  await expect(sheet.getByText(/^Adds to the feed that started at 9:20\sAM\.$/u)).toBeVisible()
+  await expect(sheet.getByRole("button", { name: "Save", exact: true })).toBeVisible()
+  await expect(sheet.getByText(/^Adds to the feed/u)).toHaveCount(0)
   await sheet.getByRole("button", { name: "Save", exact: true }).click()
   await expect
     .poll(() => played.sent)
     .toEqual([
       {
         method: "POST",
-        path: "/api/feeds/feed-1/bottle",
-        body: { actionId: ACTION_ID, version: 3, occurredAt: kept, breastMilkMl: 40, formulaMl: 20 },
+        path: "/api/feeds",
+        body: {
+          actionId: ACTION_ID,
+          segments: [],
+          portions: [{ occurredAt: kept, breastMilkMl: 40, formulaMl: 20 }],
+        },
       },
     ])
 })

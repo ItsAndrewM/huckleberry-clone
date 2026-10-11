@@ -40,8 +40,11 @@ export const bottleSession = (failed: Failed | null, prefill: Prefill | undefine
 export const hasMilk = ({ breastMilkMl, formulaMl }: Amounts) =>
   breastMilkMl !== null && formulaMl !== null && breastMilkMl + formulaMl > 0
 
-export const canSaveBottle = (amounts: Amounts, active: Feed | null) =>
-  hasMilk(amounts) && (active === null || !isSaving(active))
+export const toppedUpFeed = (active: Feed | null, occurredAt: number) =>
+  active !== null && occurredAt >= active.startedAt ? active : null
+
+export const canSaveBottle = (amounts: Amounts, toppedUp: Feed | null) =>
+  hasMilk(amounts) && (toppedUp === null || !isSaving(toppedUp))
 
 export const bottleAction = (
   actionId: string,
@@ -50,6 +53,7 @@ export const bottleAction = (
   active: Feed | null,
 ): FeedAction => {
   const portion = { occurredAt, breastMilkMl: breastMilkMl ?? 0, formulaMl: formulaMl ?? 0 }
-  if (active === null) return { kind: "logFeed", payload: { actionId, segments: [], portions: [portion] } }
-  return { kind: "addBottle", id: active.id, payload: { actionId, version: active.version, ...portion } }
+  const toppedUp = toppedUpFeed(active, occurredAt)
+  if (toppedUp === null) return { kind: "logFeed", payload: { actionId, segments: [], portions: [portion] } }
+  return { kind: "addBottle", id: toppedUp.id, payload: { actionId, version: toppedUp.version, ...portion } }
 }

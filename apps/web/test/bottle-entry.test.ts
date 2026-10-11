@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest"
 import { pendingId } from "../src/api/pending.ts"
-import { bottleAction, bottleSession, canSaveBottle, hasMilk } from "../src/features/feed/bottle-entry.ts"
-import { feedAt, NOW, ZONE } from "./today-fixtures.ts"
+import { bottleAction, bottleSession, canSaveBottle, hasMilk, toppedUpFeed } from "../src/features/feed/bottle-entry.ts"
+import { feedAt, MINUTE, NOW, ZONE } from "./today-fixtures.ts"
 
 const ACTION_ID = "4b1c2a5e-8f3d-4c6b-9a7e-2d1f0e3c5b6a"
 const AMOUNTS = { breastMilkMl: 59.1, formulaMl: 0 }
@@ -45,6 +45,31 @@ describe("bottleAction", () => {
       id: "feed-1",
       payload: { actionId: ACTION_ID, version: 3, occurredAt: NOW, ...AMOUNTS },
     })
+  })
+})
+
+describe("a bottle timed against the feed that's running or paused", () => {
+  const active = feedAt(NOW - 10 * MINUTE, { id: "feed-1", status: "active", version: 3 })
+
+  it("is its own feed a minute before that feed started, so the feed's start stays put", () => {
+    const occurredAt = active.startedAt - MINUTE
+    expect(toppedUpFeed(active, occurredAt)).toBeNull()
+    expect(bottleAction(ACTION_ID, AMOUNTS, occurredAt, active)).toEqual({
+      kind: "logFeed",
+      payload: { actionId: ACTION_ID, segments: [], portions: [{ occurredAt, ...AMOUNTS }] },
+    })
+  })
+
+  it.each([
+    { label: "exactly when it started", occurredAt: active.startedAt },
+    { label: "after it started", occurredAt: active.startedAt + MINUTE },
+  ])("tops the feed up $label", ({ occurredAt }) => {
+    expect(toppedUpFeed(active, occurredAt)).toBe(active)
+    expect(bottleAction(ACTION_ID, AMOUNTS, occurredAt, active)).toMatchObject({ kind: "addBottle", id: "feed-1" })
+  })
+
+  it("is its own feed with no feed running", () => {
+    expect(toppedUpFeed(null, NOW)).toBeNull()
   })
 })
 
