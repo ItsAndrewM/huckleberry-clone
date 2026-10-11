@@ -63,6 +63,9 @@ const monthTicks = (page: Page) => page.locator('text[data-ts-key^="x-tick-label
 const axisTitle = (page: Page) => page.locator('text[data-ts-key="y-label"]')
 const tooltip = (page: Page) => page.locator(".ts-chart-tooltip")
 const tableRow = (page: Page, index: number) => page.getByRole("table").getByRole("row").nth(index).locator("th, td")
+const tiles = (page: Page) => page.getByRole("group", { name: "Measurement" }).getByRole("button")
+const tileTexts = (page: Page, index: number) => tiles(page).nth(index).locator("span")
+const measurementsRegion = (page: Page) => page.getByRole("region", { name: "Measurements" })
 
 const tapPoint = async (page: Page, index: number) => {
   const box = await herPoints(page).nth(index).boundingBox()
@@ -85,17 +88,19 @@ test.describe("Growth, with the household's answers played by the test", () => {
     await expect(axisTitle(page)).toHaveText("Weight (kg)")
   })
 
-  test("shows each metric's newest value, percentile and date on its tile, with weight charted first", async ({
+  test("shows each metric's newest value, percentile and date on its tile and in its name, with weight charted first", async ({
     page,
   }) => {
     await playGrowth(page, MEASUREMENTS)
     await openGrowth(page)
-    const tiles = page.getByRole("group", { name: "Measurement" }).getByRole("button")
-    await expect(tiles).toHaveCount(3)
-    await expect(tiles.nth(0)).toHaveAccessibleName("Weight: 4.30 kg, 47th, Oct 6, 2026")
-    await expect(tiles.nth(1)).toHaveAccessibleName("Length: 54.5 cm, 55th, Oct 6, 2026")
-    await expect(tiles.nth(2)).toHaveAccessibleName("Head: 36.8 cm, 48th, Oct 6, 2026")
-    await expect(tiles.nth(0)).toHaveAttribute("aria-pressed", "true")
+    await expect(tiles(page)).toHaveCount(3)
+    await expect(tileTexts(page, 0)).toHaveText(["Weight", "4.30 kg", "47th", "Oct 6, 2026"])
+    await expect(tileTexts(page, 1)).toHaveText(["Length", "54.5 cm", "55th", "Oct 6, 2026"])
+    await expect(tileTexts(page, 2)).toHaveText(["Head", "36.8 cm", "48th", "Oct 6, 2026"])
+    await expect(tiles(page).nth(0)).toHaveAccessibleName("Weight: 4.30 kg, 47th, Oct 6, 2026")
+    await expect(tiles(page).nth(1)).toHaveAccessibleName("Length: 54.5 cm, 55th, Oct 6, 2026")
+    await expect(tiles(page).nth(2)).toHaveAccessibleName("Head: 36.8 cm, 48th, Oct 6, 2026")
+    await expect(tiles(page).nth(0)).toHaveAttribute("aria-pressed", "true")
   })
 
   test("lists every measurement on a card, newest first, saying which metric wasn't measured", async ({ page }) => {
@@ -202,22 +207,39 @@ test.describe("Growth, with the household's answers played by the test", () => {
     })
   }
 
-  test("shows WHO's curves before her first weight, with no table", async ({ page }) => {
+  test("shows WHO's curves before her first weight, with None yet on each tile and no table or cards", async ({
+    page,
+  }) => {
     await playGrowth(page, [])
     await openGrowth(page)
     await expect(curveLabels(page)).toHaveText(["3rd", "15th", "50th", "85th", "97th"])
     await expect(herPoints(page)).toHaveCount(0)
+    await expect(tileTexts(page, 0)).toHaveText(["Weight", "None yet"])
+    await expect(tileTexts(page, 1)).toHaveText(["Length", "None yet"])
+    await expect(tileTexts(page, 2)).toHaveText(["Head", "None yet"])
     await expect(page.getByText("No weight measurements yet")).toBeVisible()
     await expect(page.getByText("Show as a table")).toHaveCount(0)
+    await expect(measurementsRegion(page)).toHaveCount(0)
   })
 
-  test("says there are no curves for a boy, and lists his weights without percentiles", async ({ page }) => {
+  test("says there are no curves for a boy, and gives his weight tile, newest card and table no percentile", async ({
+    page,
+  }) => {
     await playGrowth(page, MEASUREMENTS, { sex: "male" })
     await openGrowth(page)
     await expect(
       page.getByText("WHO's curves here are for girls, so there are no curves or percentiles to show."),
     ).toBeVisible()
     await expect(chart(page)).toHaveCount(0)
+    await expect(tileTexts(page, 0)).toHaveText(["Weight", "4.30 kg", "Percentile unavailable", "Oct 6, 2026"])
+    await expect(measurementsRegion(page).getByRole("listitem").first().getByRole("definition")).toHaveText([
+      "4.30 kg",
+      "Percentile unavailable",
+      "54.5 cm",
+      "Percentile unavailable",
+      "36.8 cm",
+      "Percentile unavailable",
+    ])
     await page.getByText("Show as a table").click()
     await expect(tableRow(page, 1)).toHaveText(["Oct 6, 2026", "1 mo 5 d", "4.30 kg", "Percentile unavailable"])
   })

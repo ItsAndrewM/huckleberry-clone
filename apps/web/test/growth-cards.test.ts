@@ -4,7 +4,7 @@ import { at, LOCALE, MEASUREMENTS, measurement, meWith } from "./growth-fixtures
 
 const ME = meWith()
 const latest = (measurements = MEASUREMENTS) =>
-  latestTiles(measurements, ME, LOCALE).map(({ info, latest }) => [info.label, latest?.value, latest?.measuredOn])
+  latestTiles(measurements, ME, LOCALE).map(({ info, latest: row }) => [info.label, row?.value, row?.measuredOn])
 
 describe("latestTiles", () => {
   it("gives each metric its newest value, with its percentile and date", () => {
@@ -37,6 +37,22 @@ describe("latestTiles", () => {
       ["Head", undefined, undefined],
     ])
   })
+
+  it("says the percentile is unavailable when the curves can't give one, on the tile and in its name", () => {
+    const [weight] = latestTiles(MEASUREMENTS, meWith({ child: { sex: "male" } }), LOCALE)
+    expect(weight).toMatchObject({
+      latest: { value: "4.30\u00a0kg", percentile: "Percentile unavailable", measuredOn: "Oct 6, 2026" },
+      name: "Weight: 4.30\u00a0kg, Percentile unavailable, Oct 6, 2026",
+    })
+  })
+
+  it("has a tile for each metric before the first measurement, with none yet", () => {
+    expect(latestTiles([], ME, LOCALE)).toMatchObject([
+      { info: { label: "Weight" }, latest: null, name: "Weight: none yet" },
+      { info: { label: "Length" }, latest: null, name: "Length: none yet" },
+      { info: { label: "Head" }, latest: null, name: "Head: none yet" },
+    ])
+  })
 })
 
 describe("measurementCards", () => {
@@ -56,7 +72,7 @@ describe("measurementCards", () => {
     expect(middle?.cells.map(({ value, percentile }) => [value, percentile])).toEqual([
       ["3.60\u00a0kg", "52nd"],
       [null, null],
-      ["35.1\u00a0cm", expect.stringMatching(/^\d+(st|nd|rd|th)$/u)],
+      ["35.1\u00a0cm", "46th"],
     ])
   })
 
