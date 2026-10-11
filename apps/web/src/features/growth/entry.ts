@@ -42,6 +42,7 @@ export const LIMITS = {
 
 const RECORDED_PER_UNIT = { kg: 1000, g: 1, cm: 1, in: CM_PER_INCH } as const
 const SHOWN_DECIMALS = { kg: 3, g: 0, cm: 1, in: 2 } as const
+const CONVERTED_DECIMALS = 6
 
 const shown = (base: number | null, unit: EntryUnit) => {
   if (base === null) return { text: "", ounces: "" }
@@ -60,6 +61,8 @@ export const entryOf = <Unit extends EntryUnit>(base: number | null, unit: Unit)
 const EMPTY: Reading = { kind: "empty" }
 
 const valued = (value: number | null): Reading => (value === null ? EMPTY : { kind: "value", value })
+
+const converted = (value: number): Reading => valued(roundTo(value, CONVERTED_DECIMALS))
 
 const invalid = (issue: EntryIssue): Reading => ({ kind: "invalid", issue })
 
@@ -81,7 +84,7 @@ const parsedPoundsOunces = ({ text, ounces }: Entry<EntryUnit>): Reading => {
   const pounds = typed(text)
   const extra = typed(ounces)
   if (pounds === null || extra === null) return invalid("not_a_number")
-  return validateOuncePart(extra) === null ? valued(gramsFromPoundsOunces(pounds, extra)) : invalid("ounces")
+  return validateOuncePart(extra) === null ? converted(gramsFromPoundsOunces(pounds, extra)) : invalid("ounces")
 }
 
 const parsed = (entry: Entry<EntryUnit>): Reading => {
@@ -89,7 +92,7 @@ const parsed = (entry: Entry<EntryUnit>): Reading => {
   if (entry.text.trim() === "" && entry.ounces.trim() === "") return EMPTY
   if (entry.unit === "lb_oz") return parsedPoundsOunces(entry)
   const value = typed(entry.text)
-  return value === null ? invalid("not_a_number") : valued(value * RECORDED_PER_UNIT[entry.unit])
+  return value === null ? invalid("not_a_number") : converted(value * RECORDED_PER_UNIT[entry.unit])
 }
 
 export const readingOf = (entry: Entry<EntryUnit>, { min, max }: Limits): Reading => {
