@@ -275,7 +275,7 @@ test.describe("Today, with the household's answers played by the test", () => {
     await openToday(page)
     const actions = page.getByRole("region", { name: "Log", exact: true }).getByRole("button")
     await expect(actions).toHaveText(["Bottle", "Nursing", "Diaper"])
-    for (const name of ["Diaper"]) {
+    for (const name of ["Bottle", "Diaper"]) {
       await actions.filter({ hasText: name }).click()
       await expect(page.getByRole("dialog", { name })).toBeVisible()
       await page.keyboard.press("Escape")
