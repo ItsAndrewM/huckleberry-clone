@@ -62,7 +62,7 @@ const curveLabels = (page: Page) => page.locator('g[data-ts-key="curve-labels"] 
 const monthTicks = (page: Page) => page.locator('text[data-ts-key^="x-tick-label"]')
 const axisTitle = (page: Page) => page.locator('text[data-ts-key="y-label"]')
 const tooltip = (page: Page) => page.locator(".ts-chart-tooltip")
-const tableRow = (page: Page, index: number) => page.getByRole("table").getByRole("row").nth(index).getByRole("cell")
+const tableRow = (page: Page, index: number) => page.getByRole("table").getByRole("row").nth(index).locator("th, td")
 
 const tapPoint = async (page: Page, index: number) => {
   const box = await herPoints(page).nth(index).boundingBox()
@@ -130,7 +130,11 @@ test.describe("Growth, with the household's answers played by the test", () => {
     await playGrowth(page, MEASUREMENTS)
     await openGrowth(page)
     await page.getByText("Show as a table").click()
-    await expect(page.getByRole("table", { name: "Weight, newest first" })).toBeVisible()
+    const table = page.getByRole("table", { name: "Weight, newest first" })
+    await expect(table).toBeVisible()
+    await expect(table.getByRole("columnheader")).toHaveText(["Date", "Age", "Weight", "Percentile"])
+    await expect(table.getByRole("row")).toHaveCount(4)
+    await expect(table.getByRole("rowheader")).toHaveText(["Oct 6, 2026", "Sep 15, 2026", "Sep 1, 2026"])
     await expect(tableRow(page, 1)).toHaveText(["Oct 6, 2026", "1 mo 5 d", "4.30 kg", "47th"])
     await expect(tableRow(page, 2)).toHaveText(["Sep 15, 2026", "14 d", "3.60 kg", "52nd"])
     await expect(tableRow(page, 3)).toHaveText(["Sep 1, 2026", "Birth", "3.20 kg", "47th"])

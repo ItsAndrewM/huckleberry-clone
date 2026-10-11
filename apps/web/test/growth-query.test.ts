@@ -22,10 +22,12 @@ const householdAnswering = (body: Schema.Json) => {
 }
 
 describe("growthQuery", () => {
-  it("asks the household for its live measurements, newest first", async () => {
+  it("asks the household for its live measurements, under the key the socket's refresh names", async () => {
     const growth = { measurements: MEASUREMENTS }
     const { api, asked } = householdAnswering(growth)
-    await expect(new QueryClient().fetchQuery(growthQuery(api))).resolves.toEqual(growth)
+    const query = growthQuery(api)
+    await expect(new QueryClient().fetchQuery(query)).resolves.toEqual(growth)
     expect(asked).toEqual(["GET /api/growth"])
+    expect(query.queryKey).toEqual(["growth"])
   })
 })

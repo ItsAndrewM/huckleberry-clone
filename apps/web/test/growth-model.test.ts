@@ -1,3 +1,4 @@
+import { CURVE_PERCENTILES, type CurvePercentile, valueAtPercentile } from "@bt/domain"
 import { describe, expect, it } from "vitest"
 import {
   ageWindowFor,
@@ -73,6 +74,18 @@ describe("axisUnitOf and inAxisUnit", () => {
 describe("curvesFor", () => {
   const sixMonths = ageWindowFor(0)
 
+  const girlsWeightCurves = () => {
+    const curves = curvesFor("weightForAge", "female", sixMonths, "kg")
+    if (curves === "unavailable") throw new Error("A girl's weight curves should be drawn")
+    return curves
+  }
+
+  const girlsWeightKg = (day: number, percentile: CurvePercentile) => {
+    const grams = valueAtPercentile("weightForAge", "female", day, percentile)
+    if (grams === "unavailable") throw new Error(`WHO has a girl's weight at percentile ${percentile} on day ${day}`)
+    return grams / 1000
+  }
+
   it("draws the 3rd to 97th curves for each day of the window, labelled at their ends", () => {
     const curves = curvesFor("weightForAge", "female", sixMonths, "kg")
     if (curves === "unavailable") throw new Error("A girl's weight curves should be drawn")
@@ -87,6 +100,17 @@ describe("curvesFor", () => {
     expect(median[0]?.months).toBe(0)
     expect(median[0]?.value).toBeCloseTo(3232.2 / 453.59237, 12)
     expect(median.at(-1)?.months).toBeCloseTo(182 / DAYS_PER_MONTH, 12)
+  })
+
+  it("draws each curve at its own percentile, in kg, on the window's first and last days", () => {
+    const days = [0, 182]
+    const drawn = girlsWeightCurves().map(({ points }) => days.map((day) => points[day]?.value))
+    expect(drawn).toEqual(CURVE_PERCENTILES.map((percentile) => days.map((day) => girlsWeightKg(day, percentile))))
+  })
+
+  it("starts the curves at WHO's birth weights, rising from the 3rd's 2.440 kg to the 97th's 4.166 kg", () => {
+    const atBirth = girlsWeightCurves().map(({ points }) => points[0]?.value.toFixed(3))
+    expect(atBirth).toEqual(["2.440", "2.779", "3.232", "3.729", "4.166"])
   })
 
   it("draws 2 years of days for a 2-year window", () => {
@@ -162,7 +186,16 @@ describe("growthRows", () => {
     expect(row).toMatchObject({ age, percentile: "Percentile unavailable", point: null })
   })
 
-  it("gives a boy's measurements no percentile, but still plots them", () => {
+  it("plots a measurement on day 730, WHO's last day, with its percentile", () => {
+    const [row] = growthRows([measurement("m", at("2028-08-31", 10), { weightG: 12_000 })], WEIGHT, meWith(), LOCALE)
+    expect(row).toMatchObject({
+      age: "23 mo 30 d",
+      percentile: "64th",
+      point: { months: 730 / DAYS_PER_MONTH, value: 12 },
+    })
+  })
+
+  it("keeps a boy's values and reads Percentile unavailable on his rows, as the page draws no chart for him", () => {
     const [row] = growthRows(MEASUREMENTS, WEIGHT, meWith({ child: { sex: "male" } }), LOCALE)
     expect(row?.percentile).toBe("Percentile unavailable")
     expect(row?.point).toEqual({ months: 35 / DAYS_PER_MONTH, value: 4.3 })

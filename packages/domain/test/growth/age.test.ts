@@ -73,6 +73,16 @@ describe("ageInMonthsAndDays", () => {
     },
   )
 
+  it.each([
+    { measuredOn: "2028-02-28", age: "28 days", months: 0, days: 28 },
+    { measuredOn: "2028-02-29", age: "1 month", months: 1, days: 0 },
+  ])(
+    "counts a 31 January birth's month on 29 February in a leap year: $measuredOn is $age",
+    ({ measuredOn, months, days }) => {
+      expect(ageInMonthsAndDays(measuredOn, "2028-01-31")).toEqual({ months, days })
+    },
+  )
+
   it("turns a 29 February birth a year old on 28 February", () => {
     expect(ageInMonthsAndDays("2029-02-28", "2028-02-29")).toEqual({ months: 12, days: 0 })
   })

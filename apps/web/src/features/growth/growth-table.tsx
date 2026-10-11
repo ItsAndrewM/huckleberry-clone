@@ -32,7 +32,9 @@ export const GrowthTable = ({ info, rows }: GrowthTableProps) => (
       <tbody>
         {rows.map((row) => (
           <tr key={row.id} className="border-t">
-            <td className="py-2 pr-3">{row.measuredOn}</td>
+            <th scope="row" className="py-2 pr-3 font-normal">
+              {row.measuredOn}
+            </th>
             <td className="py-2 pr-3">{row.age}</td>
             <td className="py-2 pr-3">{row.value}</td>
             <td className="py-2">{row.percentile}</td>
