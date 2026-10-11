@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest"
-import { bottleAction, bottleSession, hasMilk } from "../src/features/feed/bottle-entry.ts"
+import { pendingId } from "../src/api/pending.ts"
+import { bottleAction, bottleSession, canSaveBottle, hasMilk } from "../src/features/feed/bottle-entry.ts"
 import { feedAt, NOW, ZONE } from "./today-fixtures.ts"
 
 const ACTION_ID = "4b1c2a5e-8f3d-4c6b-9a7e-2d1f0e3c5b6a"
@@ -52,5 +53,30 @@ describe("hasMilk", () => {
     expect(hasMilk(AMOUNTS)).toBe(true)
     expect(hasMilk({ breastMilkMl: 0, formulaMl: 0 })).toBe(false)
     expect(hasMilk({ breastMilkMl: null, formulaMl: 30 })).toBe(false)
+  })
+})
+
+describe("canSaveBottle", () => {
+  const running = feedAt(NOW - 600_000, { id: "feed-1", status: "active", version: 3 })
+
+  it("needs some milk", () => {
+    expect(canSaveBottle({ breastMilkMl: 0, formulaMl: 0 }, null)).toBe(false)
+  })
+
+  it("saves a bottle on its own when no feed is running", () => {
+    expect(canSaveBottle(AMOUNTS, null)).toBe(true)
+  })
+
+  it("tops up a running feed", () => {
+    expect(canSaveBottle(AMOUNTS, running)).toBe(true)
+  })
+
+  it("waits while a bottle added to the feed hasn't been answered, since the feed's version is stale", () => {
+    const topUp = { id: pendingId("action-2"), occurredAt: NOW, ...AMOUNTS }
+    expect(canSaveBottle(AMOUNTS, { ...running, portions: [topUp] })).toBe(false)
+  })
+
+  it("waits while the feed itself hasn't been answered", () => {
+    expect(canSaveBottle(AMOUNTS, { ...running, id: pendingId("action-1") })).toBe(false)
   })
 })

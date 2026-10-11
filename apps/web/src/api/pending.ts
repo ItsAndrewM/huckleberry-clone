@@ -12,6 +12,8 @@ export const pendingId = (actionId: string) => `${PENDING}${actionId}`
 
 export const isPending = (id: string) => id.startsWith(PENDING)
 
+export const isSaving = (feed: Feed) => isPending(feed.id) || feed.portions.some(({ id }) => isPending(id))
+
 const audit = ({ by, now }: Author) => ({
   version: 1,
   createdBy: by,

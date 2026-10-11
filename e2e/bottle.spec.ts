@@ -13,6 +13,8 @@ import {
 const ACTION_ID = expect.stringMatching(/^[0-9a-f-]{36}$/u)
 const LAST_BOTTLE = { lastBottle: { breastMilkMl: 40, formulaMl: 20 }, lastSide: null }
 
+test.use({ timezoneId: "Europe/London" })
+
 const feedSaved = (feed: FeedAnswer, status: number) => () => ({
   status,
   json: { feed, changed: [["today"], ["last24h"]] },
@@ -60,7 +62,7 @@ test("in fl oz, shows the last bottle rounded, sends it back unchanged, and step
       json: { ...me, household: { ...me.household, units: { ...me.household.units, volume: "fl_oz" } } },
     }),
   )
-  const prefill = { lastBottle: { breastMilkMl: 59.1, formulaMl: 0 }, lastSide: null }
+  const prefill = { lastBottle: { breastMilkMl: 60, formulaMl: 0 }, lastSide: null }
   const { played, answer } = await playHousehold(page, todayWith(null, prefill))
   await answer("**/api/feeds", feedSaved(bottleFeed(andrew.id), 201))
   await openToday(page)
@@ -74,7 +76,7 @@ test("in fl oz, shows the last bottle rounded, sends it back unchanged, and step
   await expect
     .poll(() => played.sent.map(({ body }) => JSON.stringify(body.portions)))
     .toEqual([
-      JSON.stringify([{ occurredAt: NOW, breastMilkMl: 59.1, formulaMl: 0 }]),
+      JSON.stringify([{ occurredAt: NOW, breastMilkMl: 60, formulaMl: 0 }]),
       JSON.stringify([{ occurredAt: NOW, breastMilkMl: 73.9, formulaMl: 0 }]),
     ])
 })

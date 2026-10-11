@@ -1,5 +1,6 @@
 import type { Feed, Prefill } from "@bt/contracts"
 import type { FeedAction } from "../../api/actions.ts"
+import { isSaving } from "../../api/pending.ts"
 import type { Failed } from "../../sheets/sending.ts"
 import { NOW, type When, whenAt } from "../../sheets/when.ts"
 
@@ -38,6 +39,9 @@ export const bottleSession = (failed: Failed | null, prefill: Prefill | undefine
 
 export const hasMilk = ({ breastMilkMl, formulaMl }: Amounts) =>
   breastMilkMl !== null && formulaMl !== null && breastMilkMl + formulaMl > 0
+
+export const canSaveBottle = (amounts: Amounts, active: Feed | null) =>
+  hasMilk(amounts) && (active === null || !isSaving(active))
 
 export const bottleAction = (
   actionId: string,
