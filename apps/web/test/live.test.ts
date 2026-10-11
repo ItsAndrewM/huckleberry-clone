@@ -36,6 +36,7 @@ const live = () => {
   const sockets: FakeSocket[] = []
   const changed: Array<ReadonlyArray<QueryKey>> = []
   const signals: Signal[] = []
+  const order: string[] = []
   let staleCount = 0
   const connection = startLive({
     open: () => {
@@ -43,11 +44,18 @@ const live = () => {
       sockets.push(socket)
       return socket
     },
-    onChanged: (keys) => changed.push(keys),
+    onChanged: (keys) => {
+      changed.push(keys)
+      order.push("changed")
+    },
     onStale: () => {
       staleCount += 1
+      order.push("stale")
     },
-    report: (signal) => signals.push(signal),
+    report: (signal) => {
+      signals.push(signal)
+      order.push(signal)
+    },
     random: () => 1,
   })
   const latest = () => {
@@ -55,7 +63,7 @@ const live = () => {
     if (socket === undefined) throw new Error("no socket was opened")
     return socket
   }
-  return { connection, sockets, changed, signals, latest, stale: () => staleCount }
+  return { connection, sockets, changed, signals, order, latest, stale: () => staleCount }
 }
 
 beforeEach(() => {
@@ -95,22 +103,32 @@ describe("changedKeys", () => {
 })
 
 describe("startLive", () => {
-  it("opens one socket at once, and treats its opening as the network being up, not as proof of a session", () => {
+  it("opens one socket at once, and treats its opening as hearing from the household, not as proof of a session", () => {
     const { sockets, latest, signals, stale } = live()
     latest().opens()
     expect(sockets).toHaveLength(1)
-    expect(signals).toEqual(["online"])
+    expect(signals).toEqual(["heard"])
     expect(stale()).toBe(0)
   })
 
-  it("treats every message it hears from the household, a pong or a change, as the network being up", () => {
+  it("reports every message it hears from the household, a pong or a change, as hearing from it", () => {
     const { latest, signals } = live()
     latest().opens()
     vi.advanceTimersByTime(HEARTBEAT_MS)
     latest().hears(HEARTBEAT.pong)
-    expect(signals).toEqual(["online", "online"])
+    expect(signals).toEqual(["heard", "heard"])
     latest().hears(JSON.stringify({ changed: [["today"]] }))
-    expect(signals).toEqual(["online", "online", "online"])
+    expect(signals).toEqual(["heard", "heard", "heard"])
+  })
+
+  it("hands on a change, or a reconnect's refresh, before reporting it heard, so what falls behind is marked first", () => {
+    const { latest, order } = live()
+    latest().opens()
+    latest().hears(JSON.stringify({ changed: [["today"]] }))
+    latest().closes()
+    vi.advanceTimersByTime(FIRST_RETRY_AT_MOST)
+    latest().opens()
+    expect(order).toEqual(["heard", "changed", "heard", "stale", "heard"])
   })
 
   it("passes on the keys a changed message names", () => {
@@ -178,7 +196,7 @@ describe("startLive", () => {
     latest().closes(CAREGIVER_DISABLED.code)
     vi.advanceTimersByTime(10 * 30_000)
     expect(sockets).toHaveLength(1)
-    expect(signals).toEqual(["online", "signed-out"])
+    expect(signals).toEqual(["heard", "signed-out"])
   })
 
   it("reconnects at once when woken while waiting to retry, and ignores a wake while connected", () => {
@@ -245,7 +263,7 @@ describe("startLive", () => {
     vi.advanceTimersByTime(FIRST_RETRY_AT_MOST)
     expect(sockets).toHaveLength(2)
     latest().opens()
-    expect(signals).toEqual(["online"])
+    expect(signals).toEqual(["heard"])
     expect(stale()).toBe(1)
   })
 })

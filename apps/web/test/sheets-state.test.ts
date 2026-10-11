@@ -116,6 +116,24 @@ const UNDO_PORTION: Sending = {
   },
 }
 
+const EDIT_DIAPER: Sending = {
+  sheet: "diaper",
+  action: {
+    kind: "editDiaper",
+    id: "diaper-1",
+    payload: { actionId: RENEWED, version: 2, occurredAt: NOW, wet: false, dirty: true },
+  },
+}
+
+const EDIT_PORTION: Sending = {
+  sheet: "bottle",
+  action: {
+    kind: "editPortion",
+    id: "portion-9",
+    payload: { actionId: RENEWED, version: 2, occurredAt: NOW, breastMilkMl: 90, formulaMl: 0 },
+  },
+}
+
 const MEASURED: Sending = {
   sheet: "measurement",
   action: {
@@ -150,6 +168,8 @@ const CLOSING = {
   finishFeed: { sending: FINISH, closes: true, entry: false },
   deleteFeed: { sending: UNDO_FEED, closes: false, entry: false },
   deletePortion: { sending: UNDO_PORTION, closes: false, entry: false },
+  editDiaper: { sending: EDIT_DIAPER, closes: false, entry: false },
+  editPortion: { sending: EDIT_PORTION, closes: false, entry: false },
   logMeasurement: { sending: MEASURED, closes: true, entry: true },
   editMeasurement: { sending: MEASUREMENT_EDITED, closes: true, entry: false },
   deleteMeasurement: { sending: MEASUREMENT_DELETED, closes: true, entry: false },

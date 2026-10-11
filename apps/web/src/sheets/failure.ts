@@ -77,17 +77,17 @@ const feedNote = (error: FeedConflict, household: Household): Note => {
     case "FEED_EMPTY":
       return note("Nothing would be left in this feed.")
     case "ACTION_REPLAY_MISMATCH":
-      return note("This was already saved.")
+      return note("This was already saved as you first entered it.")
   }
 }
 
 const diaperNote = (error: DiaperConflict, household: Household): Note =>
   error.code === "STALE_VERSION"
     ? note(`${nameOf(household, error.current.updatedBy)} changed this diaper a moment ago.`)
-    : note("This was already saved.")
+    : note("This was already saved as you first entered it.")
 
 const measurementNote = ({ code, current }: MeasurementConflict, household: Household): Note => {
-  if (code === "ACTION_REPLAY_MISMATCH") return note("This was already saved.")
+  if (code === "ACTION_REPLAY_MISMATCH") return note("This was already saved as you first entered it.")
   const changed = current.deletedAt === null ? "changed" : "deleted"
   return note(`${nameOf(household, current.updatedBy)} ${changed} this measurement a moment ago.`)
 }
@@ -109,14 +109,22 @@ const GONE = "This has changed since it opened. Today is up to date now."
 const MEASUREMENT_GONE = "This measurement has changed since it opened. Growth is up to date now."
 
 export interface NoteOptions {
+  readonly held: boolean
   readonly sheet?: SheetKind
 }
 
+const offlineNote = (held: boolean): Note =>
+  note(
+    held
+      ? "No connection. Keep the app open, and try again once you're back online."
+      : "No connection. Try again once you're back online.",
+    TRY_AGAIN,
+  )
+
 const goneNote = (sheet: SheetKind | undefined): Note => note(sheet === "measurement" ? MEASUREMENT_GONE : GONE)
 
-export const failureNote = (error: Error, household: Household, { sheet }: NoteOptions = {}): Note => {
-  if (error instanceof Offline)
-    return note("No connection. This is kept here: try again once you're back online.", TRY_AGAIN)
+export const failureNote = (error: Error, household: Household, { held, sheet }: NoteOptions): Note => {
+  if (error instanceof Offline) return offlineNote(held)
   if (error instanceof AuthRequired || error instanceof Unauthorized) {
     return { message: "Your sign-in has expired. Sign in, and this will be saved.", retry: null, signIn: true }
   }

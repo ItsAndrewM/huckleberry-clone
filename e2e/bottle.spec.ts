@@ -123,6 +123,51 @@ test("adds the bottle to the feed that's running, with that feed's version", asy
     ])
 })
 
+test("saves the changes to a bottle whose first save had landed, as an edit of its portion", async ({ page }) => {
+  const { andrew } = await caregiversOf(page)
+  const household = await playHousehold(page, todayWith(null, LAST_BOTTLE))
+  const first = bottleFeed(andrew.id)
+  const posted: Array<string | undefined> = []
+  await page.route("**/api/feeds", (route) => {
+    posted.push(route.request().postDataJSON().actionId)
+    if (posted.length > 1) {
+      return route.fulfill({ status: 409, json: { _tag: "Conflict", code: "ACTION_REPLAY_MISMATCH", current: first } })
+    }
+    household.played.today = { ...todayWith(null, LAST_BOTTLE), recent: [{ kind: "feed", feed: first }] }
+    return route.abort("internetdisconnected")
+  })
+  await household.answer("**/api/portions/portion-1", ({ body }) => {
+    const portion = {
+      id: "portion-1",
+      occurredAt: NOW,
+      breastMilkMl: body.breastMilkMl ?? 0,
+      formulaMl: body.formulaMl ?? 0,
+    }
+    const feed = { ...first, version: 2, portions: [portion] }
+    household.played.today = { ...todayWith(null, LAST_BOTTLE), recent: [{ kind: "feed", feed }] }
+    return { status: 200, json: { feed, changed: [["today"]] } }
+  })
+  await openToday(page)
+  const sheet = await openBottle(page)
+  await sheet.getByRole("button", { name: "Save", exact: true }).click()
+  await expect(sheet.getByRole("alert")).toContainText("No connection")
+  await sheet.getByRole("button", { name: "More breast milk" }).click()
+  await sheet.getByRole("button", { name: "Save", exact: true }).click()
+  const note = sheet.getByRole("alert")
+  await expect(note.getByText("This was already saved as you first entered it.")).toBeVisible()
+  await note.getByRole("button", { name: "Save my changes" }).click()
+  await expect(sheet).toBeHidden()
+  expect(posted).toEqual([ACTION_ID, posted[0]])
+  expect(household.played.sent).toEqual([
+    {
+      method: "PATCH",
+      path: "/api/portions/portion-1",
+      body: { actionId: ACTION_ID, version: 1, occurredAt: NOW, breastMilkMl: 50, formulaMl: 20 },
+    },
+  ])
+  expect(household.played.sent[0]?.body.actionId).not.toBe(posted[0])
+})
+
 test("says Saving… on the feed while a bottle added to it is on its way, and holds the next Save until it lands", async ({
   page,
 }) => {

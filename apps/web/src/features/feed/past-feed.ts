@@ -2,8 +2,8 @@ import { MAX_SEGMENT_MS, type NewFeed, type Side } from "@bt/contracts"
 import { FUTURE_TOLERANCE_MS } from "@bt/domain"
 import type { Failed } from "../../sheets/sending.ts"
 import { resolveWhen, type When, whenAt } from "../../sheets/when.ts"
+import { OTHER_SIDE } from "../../sides.ts"
 import type { Amounts } from "./bottle-entry.ts"
-import { OTHER_SIDE } from "./nursing-state.ts"
 
 export const MINUTE_MS = 60_000
 export const MAX_SIDE_MINUTES = MAX_SEGMENT_MS / MINUTE_MS

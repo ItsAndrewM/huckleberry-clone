@@ -228,6 +228,47 @@ test.describe("Today, with the household's answers played by the test", () => {
     await expect(page.getByText("Today couldn't be loaded.")).toBeVisible()
   })
 
+  test("asks for the new day at the household's midnight while the app stays open", async ({ page }) => {
+    const TEN_SECONDS_TO_MIDNIGHT_IN_VANCOUVER = Date.UTC(2026, 9, 10, 6, 59, 50)
+    let pastMidnight = false
+    await page.route("**/api/today", (route) =>
+      route.fulfill({ json: pastMidnight ? { ...todayWith({}), date: "2026-10-10" } : todayWith({ totals: TOTALS }) }),
+    )
+    await page.route("**/api/last24h", (route) => route.fulfill({ json: { from: NOW - DAY, totals: NO_TOTALS } }))
+    await page.clock.install({ time: TEN_SECONDS_TO_MIDNIGHT_IN_VANCOUVER })
+    await page.goto("/")
+    await expect(total(page, "Feeds started")).toContainText("6")
+    pastMidnight = true
+    await page.clock.fastForward(10_000)
+    await expect(total(page, "Feeds started")).toContainText("0")
+  })
+
+  test("loads Today on Try again, once the household's details answer", async ({ page }) => {
+    await playToday(page, todayWith({ totals: TOTALS }))
+    let refusing = true
+    await page.route("**/api/me", (route) => (refusing ? route.fulfill({ status: 404 }) : route.continue()))
+    await openToday(page)
+    await expect(page.getByText("Today couldn't be loaded.")).toBeVisible()
+    refusing = false
+    await page.getByRole("button", { name: "Try again" }).click()
+    await expect(total(page, "Feeds started")).toContainText("6")
+    await expect(page.getByRole("button", { name: "Try again" })).toBeHidden()
+  })
+
+  test("loads the last 24 hours on Try again", async ({ page }) => {
+    await playToday(page, todayWith({ totals: TOTALS }))
+    let refusing = true
+    await page.route("**/api/last24h", (route) =>
+      refusing ? route.abort() : route.fulfill({ json: { from: NOW - DAY, totals: { ...TOTALS, diapers: 7 } } }),
+    )
+    await openToday(page)
+    await page.getByRole("button", { name: "Last 24 h" }).click()
+    await expect(page.getByText("The last 24 hours couldn't be loaded.")).toBeVisible()
+    refusing = false
+    await page.getByRole("button", { name: "Try again" }).click()
+    await expect(total(page, "Diapers")).toContainText("7")
+  })
+
   test("lists the last 24 hours with who logged each, leaving out kinds this app doesn't know yet", async ({
     page,
   }) => {
@@ -283,14 +324,30 @@ test.describe("Today, with the household's answers played by the test", () => {
     }
   })
 
-  test("keeps the quick actions waiting while Today can't be loaded", async ({ page }) => {
+  test("keeps the quick actions waiting while Today can't be loaded, and says why", async ({ page }) => {
     await playToday(page, todayWith({}))
     await page.route("**/api/today", (route) => route.fulfill({ status: 404 }))
     await openToday(page)
     await expect(page.getByText("Today couldn't be loaded.")).toBeVisible()
-    for (const action of await page.getByRole("region", { name: "Log", exact: true }).getByRole("button").all()) {
+    const log = page.getByRole("region", { name: "Log", exact: true })
+    await expect(log.getByText("Logging opens once Today loads.")).toBeVisible()
+    for (const action of await log.getByRole("button").all()) {
       await expect(action).toBeDisabled()
+      await expect(action).toHaveAccessibleDescription("Logging opens once Today loads.")
     }
+  })
+
+  test("drops the reason once Today has loaded", async ({ page }) => {
+    await playToday(page, todayWith({}))
+    let refusing = true
+    await page.route("**/api/today", (route) => (refusing ? route.fulfill({ status: 404 }) : route.fallback()))
+    await openToday(page)
+    const log = page.getByRole("region", { name: "Log", exact: true })
+    await expect(log.getByText("Logging opens once Today loads.")).toBeVisible()
+    refusing = false
+    await page.getByRole("button", { name: "Try again" }).click()
+    await expect(log.getByText("Logging opens once Today loads.")).toBeHidden()
+    await expect(log.getByRole("button", { name: "Diaper" })).toBeEnabled()
   })
 
   test("keeps the last of a long recent list clear of the quick actions", async ({ page }) => {

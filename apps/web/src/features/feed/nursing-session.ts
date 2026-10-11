@@ -26,4 +26,4 @@ export const emptiedBy = (failed: Failed | null) => {
     : null
 }
 
-export const finishingAfter = (failed: Failed | null): boolean => failed?.sending.action.kind === "finishFeed"
+export const finishingAfter = (failed: Failed | null): failed is Failed => failed?.sending.action.kind === "finishFeed"

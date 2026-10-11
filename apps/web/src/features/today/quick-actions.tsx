@@ -1,4 +1,5 @@
 import type { LucideIcon } from "lucide-react"
+import { useId } from "react"
 import { Button } from "../../components/ui/button.tsx"
 import type { SheetKind } from "../../sheets/sending.ts"
 import { useSheets } from "../../sheets/sheets-context.ts"
@@ -12,22 +13,31 @@ const ACTIONS = [
 
 export const QuickActions = ({ ready }: { readonly ready: boolean }) => {
   const sheets = useSheets()
+  const waitsId = useId()
   return (
     <div className="fixed inset-x-0 bottom-[calc(3.5rem+env(safe-area-inset-bottom))] border-t bg-background/95 backdrop-blur-sm">
-      <section aria-label="Log" className="mx-auto flex max-w-lg gap-2 px-4 py-2">
-        {ACTIONS.map(({ label, sheet, Icon }) => (
-          <Button
-            key={label}
-            variant="secondary"
-            size="lg"
-            className="h-12 flex-1 gap-1.5 px-2"
-            disabled={!ready}
-            onClick={() => sheets.show(sheet)}
-          >
-            <Icon aria-hidden="true" />
-            {label}
-          </Button>
-        ))}
+      <section aria-label="Log" className="mx-auto flex max-w-lg flex-col gap-1.5 px-4 py-2">
+        {ready ? null : (
+          <p id={waitsId} className="text-center text-sm text-muted-foreground">
+            Logging opens once Today loads.
+          </p>
+        )}
+        <div className="flex gap-2">
+          {ACTIONS.map(({ label, sheet, Icon }) => (
+            <Button
+              key={label}
+              variant="secondary"
+              size="lg"
+              className="h-12 flex-1 gap-1.5 px-2"
+              disabled={!ready}
+              aria-describedby={ready ? undefined : waitsId}
+              onClick={() => sheets.show(sheet)}
+            >
+              <Icon aria-hidden="true" />
+              {label}
+            </Button>
+          ))}
+        </div>
       </section>
     </div>
   )

@@ -1,6 +1,7 @@
 import type { Today } from "@bt/contracts"
 import { formatElapsed } from "@bt/domain"
 import { clockTime } from "../../clock-time.ts"
+import { SIDE_NAMES } from "../../sides.ts"
 import type { Display } from "./display.ts"
 import { feedParts } from "./feed-parts.ts"
 import { feedStatus } from "./feed-status.ts"
@@ -12,8 +13,6 @@ interface FeedCardProps {
   readonly display: Display
   readonly now: number
 }
-
-const SIDES = { left: "Left", right: "Right" } as const
 
 const LiveDot = () => <span aria-hidden="true" className="size-2 rounded-full bg-primary motion-safe:animate-pulse" />
 
@@ -27,7 +26,7 @@ export const FeedCard = ({ today, display, now }: FeedCardProps) => {
           label={
             <>
               <LiveDot />
-              Feeding now · {SIDES[status.side]} side
+              Feeding now · {SIDE_NAMES[status.side]} side
             </>
           }
           value={formatElapsed(status.nursingSeconds)}

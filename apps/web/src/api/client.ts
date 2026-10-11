@@ -26,7 +26,7 @@ export const connectApi = ({ report, baseUrl, fetch }: ApiOptions) => {
     const program = HttpApiClient.make(Api, { baseUrl }).pipe(
       Effect.flatMap(call),
       Effect.mapError(classify),
-      Effect.tap(() => reportSignal("reached")),
+      Effect.tap(() => reportSignal("answered")),
       Effect.tapError((error) => reportSignal(signalOf(error))),
       Effect.provide(FetchHttpClient.layer),
       Effect.provideService(FetchHttpClient.RequestInit, REQUEST_INIT),
