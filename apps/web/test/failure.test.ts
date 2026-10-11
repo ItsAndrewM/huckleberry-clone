@@ -1,6 +1,7 @@
 import { DiaperConflict, FeedConflict, InvalidInput, NotFound, ServiceUnavailable, Unauthorized } from "@bt/contracts"
 import { describe, expect, it } from "vitest"
 import { AuthRequired, Offline } from "../src/api/errors.ts"
+import { StaleDraft } from "../src/sheets/drafts.ts"
 import { failureNote, type Household } from "../src/sheets/failure.ts"
 import { ANDREW, diaperAt, EMILY, feedAt, MINUTE, NOW, ZONE } from "./today-fixtures.ts"
 
@@ -84,5 +85,12 @@ describe("failureNote", () => {
 
   it("says the running feed changed when the household no longer has it as it was", () => {
     expect(message(new NotFound())).toBe("This has changed since it opened. Today is up to date now.")
+  })
+
+  it("asks before saving a draft that waited too long, with when it was kept", () => {
+    expect(failureNote(new StaleDraft({ createdAt: NOW }), HOUSEHOLD)).toMatchObject({
+      message: expect.stringMatching(/^This wasn't saved before you signed in, Fri 9:30\sAM\. Save it now\?$/u),
+      retry: "Save now",
+    })
   })
 })

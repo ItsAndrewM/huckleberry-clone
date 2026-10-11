@@ -1,13 +1,20 @@
 import { type ReactNode, useState } from "react"
 import { useConnectivity } from "../api/hooks.ts"
+import type { Draft } from "./drafts.ts"
 import type { Sending } from "./sending.ts"
 import { type Sheets, SheetsContext } from "./sheets-context.ts"
-import { CLOSED, expiredState, failedState, savedState, sendingState } from "./sheets-state.ts"
+import { expiredState, failedState, restoredState, savedState, sendingState } from "./sheets-state.ts"
 import { TOAST_MS } from "./undo.ts"
+import { useResumedDraft } from "./use-resumed-draft.ts"
 import { useSend } from "./use-send.ts"
 
-export const SheetsProvider = ({ children }: { readonly children: ReactNode }) => {
-  const [state, setState] = useState(CLOSED)
+interface SheetsProviderProps {
+  readonly draft: Draft | null
+  readonly children: ReactNode
+}
+
+export const SheetsProvider = ({ draft, children }: SheetsProviderProps) => {
+  const [state, setState] = useState(() => restoredState(draft, Date.now(), crypto.randomUUID()))
   const online = useConnectivity() === "online"
   const sweepAfter = (shownAt: number) =>
     setTimeout(() => setState((current) => expiredState(current, shownAt + TOAST_MS)), TOAST_MS)
@@ -27,6 +34,7 @@ export const SheetsProvider = ({ children }: { readonly children: ReactNode }) =
     setState((current) => sendingState(current, sending, online))
     mutation.mutate(sending)
   }
+  useResumedDraft(draft, send)
   const sheets: Sheets = {
     ...state,
     busy: mutation.isPending ? (mutation.variables ?? null) : null,

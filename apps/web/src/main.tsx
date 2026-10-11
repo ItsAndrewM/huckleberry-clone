@@ -9,6 +9,7 @@ import { socketUrl } from "./api/live.ts"
 import { createQueryClient } from "./api/query-client.ts"
 import { AppContext } from "./app-context.ts"
 import { registerServiceWorker } from "./service-worker/register.ts"
+import { takeDraft } from "./sheets/drafts.ts"
 import { router } from "./shell/router.tsx"
 import "./index.css"
 
@@ -19,6 +20,7 @@ const connectivity = createConnectivity(navigator.onLine)
 followBrowser(connectivity, window)
 const api = connectApi({ report: connectivity.report })
 const queryClient = createQueryClient()
+const draft = takeDraft(() => sessionStorage, `${window.location.pathname}${window.location.search}`)
 const live = startLive({
   open: () => new WebSocket(socketUrl(window.location)),
   onChanged: (keys) => {
@@ -32,7 +34,7 @@ if (import.meta.env.PROD) window.addEventListener("load", () => void registerSer
 
 createRoot(root).render(
   <StrictMode>
-    <AppContext value={{ api, connectivity }}>
+    <AppContext value={{ api, connectivity, draft }}>
       <QueryClientProvider client={queryClient}>
         <RouterProvider router={router} />
       </QueryClientProvider>

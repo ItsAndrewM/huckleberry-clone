@@ -9,7 +9,8 @@ import {
   Unauthorized,
 } from "@bt/contracts"
 import { AuthRequired, Offline } from "../api/errors.ts"
-import { clockTime } from "../clock-time.ts"
+import { clockTime, dayClockTime } from "../clock-time.ts"
+import { StaleDraft } from "./drafts.ts"
 
 export interface Note {
   readonly message: string
@@ -83,12 +84,18 @@ const conflictNote = (error: Error, household: Household): Note | null => {
   return null
 }
 
+const dayTimeOf = ({ locale, timeZone }: Household, instant: number) => dayClockTime(instant, timeZone, locale)
+
+const staleNote = (error: StaleDraft, household: Household): Note =>
+  note(`This wasn't saved before you signed in, ${dayTimeOf(household, error.createdAt)}. Save it now?`, "Save now")
+
 export const failureNote = (error: Error, household: Household): Note => {
   if (error instanceof Offline)
     return note("No connection. This is kept here: try again once you're back online.", TRY_AGAIN)
   if (error instanceof AuthRequired || error instanceof Unauthorized) {
     return { message: "Your sign-in has expired. Sign in, and this will be saved.", retry: null, signIn: true }
   }
+  if (error instanceof StaleDraft) return staleNote(error, household)
   if (error instanceof InvalidInput) return fieldNote(error, household)
   if (error instanceof NotFound) return note("This has changed since it opened. Today is up to date now.")
   return conflictNote(error, household) ?? note("Not saved.", TRY_AGAIN)

@@ -2,12 +2,21 @@ import { FeedConflict } from "@bt/contracts"
 import { describe, expect, it } from "vitest"
 import type { Action } from "../src/api/actions.ts"
 import { Offline } from "../src/api/errors.ts"
+import { DRAFT_RETRY_MS, StaleDraft } from "../src/sheets/drafts.ts"
 import { closesOnSend, type Sending } from "../src/sheets/sending.ts"
-import { CLOSED, expiredState, failedState, savedState, sendingState } from "../src/sheets/sheets-state.ts"
+import {
+  CLOSED,
+  expiredState,
+  failedState,
+  restoredState,
+  savedState,
+  sendingState,
+} from "../src/sheets/sheets-state.ts"
 import { TOAST_MS } from "../src/sheets/undo.ts"
 import { diaperAt, feedAt, NOW } from "./today-fixtures.ts"
 
 const ACTION_ID = "4b1c2a5e-8f3d-4c6b-9a7e-2d1f0e3c5b6a"
+const RENEWED = "9d2e1f3c-5b4a-4e6d-8c7b-1a0f2e3d4c5b"
 
 const DIAPER: Sending = {
   sheet: "diaper",
@@ -180,6 +189,22 @@ describe("a saved entry", () => {
   it("has nothing to undo for a running feed's controls", () => {
     const feed = feedAt(NOW, { id: "feed-1", version: 4 })
     expect(savedState(CLOSED, SWITCH, { feed, changed: [] }, NOW).toast).toBeNull()
+  })
+})
+
+describe("a draft back from signing in", () => {
+  const draft = { route: "/", sending: DIAPER, createdAt: NOW }
+
+  it("leaves a fresh draft to be re-sent as it was", () => {
+    expect(restoredState(draft, NOW + 1000, RENEWED)).toEqual(CLOSED)
+    expect(restoredState(null, NOW, RENEWED)).toEqual(CLOSED)
+  })
+
+  it("asks before saving a draft past the retry window, with a new actionId", () => {
+    const state = restoredState(draft, NOW + DRAFT_RETRY_MS, RENEWED)
+    expect(state.open).toBe("diaper")
+    expect(state.failed?.error).toEqual(new StaleDraft({ createdAt: NOW }))
+    expect(state.failed?.sending.action.payload.actionId).toBe(RENEWED)
   })
 })
 

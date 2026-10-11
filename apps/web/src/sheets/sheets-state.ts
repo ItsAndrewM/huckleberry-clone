@@ -1,6 +1,7 @@
 import type { Action } from "../api/actions.ts"
 import { Offline } from "../api/errors.ts"
 import type { Saved } from "../api/send.ts"
+import { type Draft, isFresh, StaleDraft } from "./drafts.ts"
 import { closesOnSend, type Failed, type Sending, type SheetKind } from "./sending.ts"
 import { TOAST_MS, type Toast, toastFor } from "./undo.ts"
 
@@ -13,6 +14,22 @@ export interface SheetsState {
 export const CLOSED: SheetsState = { open: null, failed: null, toast: null }
 
 const UNDOES = new Set<Action["kind"]>(["deleteDiaper", "deleteFeed", "deletePortion"])
+
+const withActionId = <Sent extends Action>(action: Sent, actionId: string): Sent => ({
+  ...action,
+  payload: { ...action.payload, actionId },
+})
+
+const renewed = ({ sheet, action }: Sending, actionId: string): Sending => ({
+  sheet,
+  action: withActionId(action, actionId),
+})
+
+export const restoredState = (draft: Draft | null, now: number, actionId: string): SheetsState => {
+  if (draft === null || isFresh(draft, now)) return CLOSED
+  const failed = { sending: renewed(draft.sending, actionId), error: new StaleDraft({ createdAt: draft.createdAt }) }
+  return { open: draft.sending.sheet, failed, toast: null }
+}
 
 export const sendingState = (state: SheetsState, sending: Sending, online: boolean): SheetsState => ({
   ...state,
