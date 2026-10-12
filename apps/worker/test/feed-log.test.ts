@@ -1,7 +1,15 @@
 import { describe, expect, it } from "vitest"
 import { logFeed } from "../src/core/feeds/log.ts"
 import { createFeed } from "../src/core/feeds/store.ts"
-import { bottle, newFeed, rowCount, segment } from "./feed-fixtures.ts"
+import {
+  bottle,
+  CHANGED_SUNDAY_AND_MONDAY,
+  newFeed,
+  PAST_FEED_WITH_ITS_BOTTLE_AT_MIDNIGHT,
+  rowCount,
+  segment,
+  WEDNESDAY_OCT_14_NOON,
+} from "./feed-fixtures.ts"
 import {
   ANDREW,
   BIRTH_DATE_BEGINS,
@@ -68,6 +76,13 @@ describe("logging a completed feed", () => {
       ],
     })
     expect(sources).toEqual(Array(5).fill({ source: "app", source_ref: null }))
+  })
+
+  it("names Monday's day and week when a past feed from Sunday night puts its bottle at midnight, as its last side ends", async () => {
+    const result = await inHousehold((sql) =>
+      logFeed(stampOf(sql, ANDREW.email, WEDNESDAY_OCT_14_NOON), PAST_FEED_WITH_ITS_BOTTLE_AT_MIDNIGHT)(sql),
+    )
+    expect(result.ok && result.changed).toEqual(CHANGED_SUNDAY_AND_MONDAY)
   })
 
   it("saves a bottle on its own as a feed that starts and ends at the bottle (AC 3: 40 + 20 mL)", async () => {
