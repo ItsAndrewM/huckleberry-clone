@@ -2,7 +2,7 @@ import { expect, type Page, test } from "@playwright/test"
 import { DAY, diaper, emptyDay, local, NO_TOTALS, openHistory, playHistory } from "./played-day.ts"
 
 const HOUR_PX = 60
-const WAITS_FOR_TODAY = "Logging opens once Today loads."
+const BOTTLE_WAITS = "Bottle opens once Today loads."
 
 const OPENS_WITHOUT_TODAY = [
   { choice: "Nursing", sheet: "Past feed", field: "Started" },
@@ -64,7 +64,7 @@ test("opens Nursing at the slot as a past feed, and Bottle there too", async ({ 
   await expect(pastFeed).toBeHidden()
   await tapHour(page, "4 AM", 50)
   const menu = page.getByRole("dialog", { name: "Log at 4:45 AM" })
-  await expect(menu.getByText(WAITS_FOR_TODAY)).toBeHidden()
+  await expect(menu.getByText(BOTTLE_WAITS)).toBeHidden()
   await menu.getByRole("button", { name: "Bottle" }).click()
   await expect(page.getByRole("dialog", { name: "Bottle" }).getByLabel("When")).toHaveValue("2026-10-09T04:45")
 })
@@ -77,10 +77,10 @@ test("keeps Bottle waiting while Today can't be loaded, and says why, while the 
   await openHistory(page)
   await tapHour(page, "2 AM", 20)
   const menu = page.getByRole("dialog", { name: "Log at 2:15 AM" })
-  await expect(menu.getByText(WAITS_FOR_TODAY)).toBeVisible()
+  await expect(menu.getByText(BOTTLE_WAITS)).toBeVisible()
   const bottle = menu.getByRole("button", { name: "Bottle" })
   await expect(bottle).toBeDisabled()
-  await expect(bottle).toHaveAccessibleDescription(WAITS_FOR_TODAY)
+  await expect(bottle).toHaveAccessibleDescription(BOTTLE_WAITS)
   await page.keyboard.press("Escape")
   await expect(menu).toBeHidden()
   for (const { choice, sheet, field } of OPENS_WITHOUT_TODAY) {

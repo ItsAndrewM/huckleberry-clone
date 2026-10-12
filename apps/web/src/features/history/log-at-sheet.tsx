@@ -4,8 +4,10 @@ import { clockTime } from "../../clock-time.ts"
 import { Button } from "../../components/ui/button.tsx"
 import { Sheet } from "../../sheets/sheet.tsx"
 import { type TimedSheet, useSheets } from "../../sheets/sheets-context.ts"
-import { useTodayLoaded, WAITS_FOR_TODAY } from "../../sheets/use-today-loaded.ts"
+import { useTodayLoaded } from "../../sheets/use-today-loaded.ts"
 import { KIND_ICONS } from "../today/kind-icons.ts"
+
+const BOTTLE_WAITS = "Bottle opens once Today loads."
 
 const CHOICES = [
   { label: "Bottle", sheet: "bottle", Icon: KIND_ICONS.bottle, needsToday: true },
@@ -22,7 +24,7 @@ const LogAtChoices = ({ at }: { readonly at: number | null }) => {
     <div className="flex flex-col gap-2">
       {todayLoaded ? null : (
         <p id={waitsId} className="text-sm text-muted-foreground">
-          {WAITS_FOR_TODAY}
+          {BOTTLE_WAITS}
         </p>
       )}
       <div className="grid grid-cols-2 gap-2">
