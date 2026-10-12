@@ -136,9 +136,12 @@ export const editDiaper =
 
 const setDeletedAt =
   (stamp: Stamp, id: string, action: VersionedAction, deletedAt: Instant | null) =>
-  (sql: SqlStorage): CoreResult<Diaper, NotFound | DiaperConflict> => {
+  (sql: SqlStorage): CoreResult<Diaper, NotFound | InvalidInput | DiaperConflict> => {
     const found = diaperFor(sql, id, action.version, deletedAt === null ? "deleted" : "live")
     if (!found.ok) return found
+    const calendar = calendarOf(sql)
+    const invalid = deletedAt === null ? invalidTime(calendar, found.row.occurred_at, stamp.now) : null
+    if (invalid !== null) return { ok: false, error: invalid }
     const row = sql
       .exec<DiaperRow>(
         `UPDATE diapers SET deleted_at = ?, version = version + 1, updated_by = ?, updated_at = ?
@@ -152,7 +155,7 @@ const setDeletedAt =
     return {
       ok: true,
       response: diaperOf(row),
-      changed: [...changedKeys(calendarOf(sql), moment(row.occurred_at), null), queryKeys.deleted],
+      changed: [...changedKeys(calendar, moment(row.occurred_at), null), queryKeys.deleted],
     }
   }
 

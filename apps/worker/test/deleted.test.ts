@@ -1,7 +1,7 @@
 import { Deleted, SavedDiaper } from "@bt/contracts"
 import { Schema } from "effect"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
-import { ANDREW, EMILY, minutesAgo, NOW, seededHousehold } from "./fixtures.ts"
+import { ANDREW, EMILY, minutesAgo, NOW, SEED, SEP_3_BEGINS, seededHousehold } from "./fixtures.ts"
 import { get, type Household, sendJson } from "./requests.ts"
 
 const decodeDeleted = Schema.decodeUnknownSync(Schema.toCodecJson(Deleted))
@@ -52,6 +52,21 @@ describe("GET /api/deleted", () => {
     })
     expect(restoring.status).toBe(200)
     expect((await okDeleted(household)).diapers).toEqual([])
+  })
+
+  it("keeps a diaper from before her birth date on the list, and answers its restore with 400 before_birth", async () => {
+    const household = await seededHousehold()
+    const logging = { actionId: crypto.randomUUID(), occurredAt: SEP_3_BEGINS, wet: true, dirty: false }
+    const logged = decodeSavedDiaper((await sendJson(household, "POST", "/api/diapers", logging)).body).diaper
+    await sendJson(household, "DELETE", `/api/diapers/${logged.id}`, { actionId: crypto.randomUUID(), version: 1 })
+    const moving = { actionId: crypto.randomUUID(), version: 1, ...SEED.child, birthDate: "2026-09-04" }
+    expect((await sendJson(household, "PATCH", "/api/child", moving)).status).toBe(200)
+    const restoring = { actionId: crypto.randomUUID(), version: 2 }
+    expect(await sendJson(household, "POST", `/api/diapers/${logged.id}/restore`, restoring)).toEqual({
+      status: 400,
+      body: { _tag: "InvalidInput", fieldErrors: [{ path: "occurredAt", issue: "before_birth" }] },
+    })
+    expect((await okDeleted(household)).diapers.map(({ id }) => id)).toEqual([logged.id])
   })
 
   it("refuses a stranger with 401", async () => {
