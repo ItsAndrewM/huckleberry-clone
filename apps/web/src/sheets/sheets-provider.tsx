@@ -1,6 +1,5 @@
 import { type ReactNode, useState } from "react"
 import { useConnectivity } from "../api/hooks.ts"
-import type { Draft } from "./drafts.ts"
 import type { Restored } from "./restored.ts"
 import type { Sending } from "./sending.ts"
 import { type Sheets, SheetsContext } from "./sheets-context.ts"
@@ -24,15 +23,14 @@ import { useResumedDraft } from "./use-resumed-draft.ts"
 import { useSend } from "./use-send.ts"
 
 interface SheetsProviderProps {
-  readonly draft: Draft | null
   readonly restored: Restored
   readonly children: ReactNode
 }
 
-export const SheetsProvider = ({ draft, restored, children }: SheetsProviderProps) => {
+export const SheetsProvider = ({ restored, children }: SheetsProviderProps) => {
   const [state, setState] = useState(() => restoredState(restored.held))
   const [editing, setEditing] = useState<string | null>(null)
-  const kept = useKeptEntries(restored.kept)
+  const kept = useKeptEntries(restored)
   const online = useConnectivity() === "online"
   useHeldDrafts(state.held)
   useReopenWhenReady(state, () => setState(reopenedState))
@@ -57,7 +55,7 @@ export const SheetsProvider = ({ draft, restored, children }: SheetsProviderProp
     setState((current) => sendingState(current, sending, online))
     mutation.mutate(sending)
   }
-  useResumedDraft(draft, send)
+  useResumedDraft(restored.resend, send)
   const sheets: Sheets = {
     ...state,
     editing,

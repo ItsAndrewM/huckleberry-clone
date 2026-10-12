@@ -39,7 +39,7 @@ if (import.meta.env.PROD) window.addEventListener("load", () => void registerSer
 
 createRoot(root).render(
   <StrictMode>
-    <AppContext value={{ api, connectivity, freshness, draft, restored: kept }}>
+    <AppContext value={{ api, connectivity, freshness, restored: kept }}>
       <QueryClientProvider client={queryClient}>
         <RouterProvider router={router} />
       </QueryClientProvider>

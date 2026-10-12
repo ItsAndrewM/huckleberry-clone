@@ -4,11 +4,13 @@ import {
   gate,
   holdRequests,
   loseSaves,
+  MINUTE,
   muteLiveUpdates,
   NOW,
   openToday,
   playHousehold,
   quickAction,
+  runningFeed,
   savedDiaper,
   todayWith,
 } from "./played-household.ts"
@@ -23,6 +25,7 @@ const keptDiaper = (keptAt: number) => [
       action: { kind: "logDiaper", payload: { actionId: KEPT_ACTION_ID, occurredAt: keptAt, wet: false, dirty: true } },
     },
     keptAt,
+    idSince: keptAt,
     failed: true,
   },
 ]
@@ -128,6 +131,26 @@ test("lets a kept entry go for good once it's discarded", async ({ page }) => {
   await page.getByText("Totals").waitFor()
   await expect(sheet).toBeHidden()
   expect(sent).toHaveLength(1)
+})
+
+test("lets a start go for good once it meets the other phone's running feed", async ({ page }) => {
+  const { emily } = await caregiversOf(page)
+  const theirs = runningFeed(emily.id, NOW - 5 * MINUTE, "right")
+  const { played, answer } = await playHousehold(page, todayWith())
+  await answer("**/api/feeds/start", () => {
+    played.today = todayWith(theirs)
+    return { status: 409, json: { _tag: "Conflict", code: "FEED_ALREADY_ACTIVE", current: theirs } }
+  })
+  await muteLiveUpdates(page)
+  await openToday(page)
+  await quickAction(page, "Nursing").click()
+  const sheet = page.getByRole("dialog", { name: "Nursing" })
+  await sheet.getByRole("button", { name: "Left", exact: true }).click()
+  await expect(sheet.getByRole("alert")).toContainText("started a feed at")
+  expect(await page.evaluate(() => localStorage.getItem("bt.kept"))).toBeNull()
+  await page.reload()
+  await page.getByText("Totals").waitFor()
+  await expect(sheet).toBeHidden()
 })
 
 test("waits for Today to load before asking about a kept diaper", async ({ page }) => {
