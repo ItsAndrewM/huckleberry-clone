@@ -6,6 +6,10 @@ declare global {
   }
 }
 
-export const thisPhone = homeScreenOf(navigator.standalone, matchMedia("(display-mode: standalone)").matches)
+export const thisPhone = homeScreenOf(
+  navigator.standalone,
+  matchMedia("(display-mode: standalone)").matches,
+  navigator.maxTouchPoints,
+)
 
 export const phoneStorage = () => localStorage

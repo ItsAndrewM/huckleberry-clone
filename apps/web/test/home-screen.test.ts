@@ -23,23 +23,32 @@ const blocked = (): BrowserStorage => {
   throw new DOMException("The operation is insecure.", "SecurityError")
 }
 
+const IPHONE_TOUCH_POINTS = 5
+const NO_TOUCH = 0
+
 describe("homeScreenOf", () => {
   it("knows nothing about a Home Screen where the browser has no standalone flag, as on desktop or Android", () => {
-    expect(homeScreenOf(undefined, false)).toBe("elsewhere")
-    expect(homeScreenOf(undefined, true)).toBe("elsewhere")
+    expect(homeScreenOf(undefined, false, NO_TOUCH)).toBe("elsewhere")
+    expect(homeScreenOf(undefined, true, NO_TOUCH)).toBe("elsewhere")
+    expect(homeScreenOf(undefined, false, IPHONE_TOUCH_POINTS)).toBe("elsewhere")
+  })
+
+  it("leaves out a Mac, whose Safari has the standalone flag too, since it has no touch screen", () => {
+    expect(homeScreenOf(false, false, NO_TOUCH)).toBe("elsewhere")
+    expect(homeScreenOf(true, true, NO_TOUCH)).toBe("elsewhere")
   })
 
   it("calls an iPhone app opened from the Home Screen installed", () => {
-    expect(homeScreenOf(true, false)).toBe("installed")
-    expect(homeScreenOf(true, true)).toBe("installed")
+    expect(homeScreenOf(true, false, IPHONE_TOUCH_POINTS)).toBe("installed")
+    expect(homeScreenOf(true, true, IPHONE_TOUCH_POINTS)).toBe("installed")
   })
 
   it("trusts the display mode too, in case a WebKit reports standalone late", () => {
-    expect(homeScreenOf(false, true)).toBe("installed")
+    expect(homeScreenOf(false, true, IPHONE_TOUCH_POINTS)).toBe("installed")
   })
 
   it("calls everything else on an iPhone a browser tab", () => {
-    expect(homeScreenOf(false, false)).toBe("browser-tab")
+    expect(homeScreenOf(false, false, IPHONE_TOUCH_POINTS)).toBe("browser-tab")
   })
 })
 

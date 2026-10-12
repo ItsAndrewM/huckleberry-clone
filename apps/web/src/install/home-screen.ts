@@ -5,8 +5,12 @@ export type HomeScreen = "installed" | "browser-tab" | "elsewhere"
 export const INSTALL_CARD_KEY = "bt.install-card"
 const DISMISSED = "dismissed"
 
-export const homeScreenOf = (standalone: boolean | undefined, displayedStandalone: boolean): HomeScreen => {
-  if (standalone === undefined) return "elsewhere"
+export const homeScreenOf = (
+  standalone: boolean | undefined,
+  displayedStandalone: boolean,
+  touchPoints: number,
+): HomeScreen => {
+  if (standalone === undefined || touchPoints === 0) return "elsewhere"
   return standalone || displayedStandalone ? "installed" : "browser-tab"
 }
 
