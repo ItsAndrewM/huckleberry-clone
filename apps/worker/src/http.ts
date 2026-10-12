@@ -19,6 +19,7 @@ import { activeCaregiver } from "./core/caregivers.ts"
 import { deleteDiaper, editDiaper, logDiaper, restoreDiaper } from "./core/diapers.ts"
 import { meOf } from "./core/household.ts"
 import { last24hOf, todayOf } from "./core/today.ts"
+import { deletedHandlers } from "./deleted-handlers.ts"
 import { errorResponse } from "./error-response.ts"
 import { exportHandlers } from "./export-handlers.ts"
 import { feedHandlers } from "./feed-handlers.ts"
@@ -110,6 +111,7 @@ export const householdApi = (storage: DurableObjectStorage, broadcast: Broadcast
     growthHandlers(storage, broadcast),
     exportHandlers(storage.sql),
     periodHandlers(storage.sql),
+    deletedHandlers(storage.sql),
   )
   return HttpRouter.toWebHandler(
     Layer.mergeAll(

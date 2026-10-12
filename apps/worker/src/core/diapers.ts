@@ -64,6 +64,12 @@ export const liveDiapersIn = (sql: SqlStorage, period: Interval): Diaper[] =>
     .toArray()
     .map(diaperOf)
 
+export const deletedDiapersSince = (sql: SqlStorage, since: Instant): Diaper[] =>
+  sql
+    .exec<DiaperRow>(`SELECT ${COLUMNS} FROM diapers WHERE deleted_at >= ? ORDER BY deleted_at DESC, rowid DESC`, since)
+    .toArray()
+    .map(diaperOf)
+
 const moment = (at: Instant | null) => (at === null ? null : { start: at, end: at })
 
 const invalidTime = (calendar: Calendar, occurredAt: Instant, now: Instant): InvalidInput | null => {

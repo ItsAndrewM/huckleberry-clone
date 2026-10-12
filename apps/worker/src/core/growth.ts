@@ -69,6 +69,15 @@ export const liveMeasurementsIn = (sql: SqlStorage, period: Interval): Measureme
     .toArray()
     .map(measurementOf)
 
+export const deletedMeasurementsSince = (sql: SqlStorage, since: Instant): Measurement[] =>
+  sql
+    .exec<MeasurementRow>(
+      `SELECT ${COLUMNS} FROM growth_measurements WHERE deleted_at >= ? ORDER BY deleted_at DESC, rowid DESC`,
+      since,
+    )
+    .toArray()
+    .map(measurementOf)
+
 const moment = (at: Instant | null) => (at === null ? null : { start: at, end: at })
 
 const changedFrom = (calendar: Calendar, before: Instant | null, after: Instant | null): Changed => [

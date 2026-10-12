@@ -1,5 +1,6 @@
 import { Context } from "effect"
 import { HttpApi, HttpApiMiddleware, OpenApi } from "effect/http-api"
+import { DeletedGroup } from "./deleted.ts"
 import { DiapersGroup } from "./diapers.ts"
 import { InvalidInput, Unauthorized } from "./errors.ts"
 import { ExportGroup } from "./export.ts"
@@ -33,6 +34,7 @@ export class Api extends HttpApi.make("baby-tracker")
   .add(GrowthGroup)
   .add(ExportGroup)
   .add(PeriodsGroup)
+  .add(DeletedGroup)
   .prefix("/api")
   .middleware(InvalidInputs)
   .middleware(Authorization)
