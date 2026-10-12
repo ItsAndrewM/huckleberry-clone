@@ -51,13 +51,12 @@ const stopUnless = (problems: string[]): void => {
 
 refuseUnknownFlags(process.argv.slice(2))
 
-output("git", ["fetch", "--quiet", "origin", "+refs/heads/main:refs/remotes/origin/main"])
 const head = output("git", ["rev-parse", "HEAD"])
 stopUnless(
   checkoutProblems({
     clean: output("git", ["status", "--porcelain"]) === "",
     head,
-    originMain: output("git", ["rev-parse", "origin/main"]),
+    originMain: output("gh", ["api", "repos/{owner}/{repo}/commits/main", "--jq", ".sha"]),
   }),
 )
 stopUnless(

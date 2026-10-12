@@ -24,7 +24,11 @@ describe("the deploy workflow", () => {
 
   it("fails, rather than skipping green, when it can't read main's head", () => {
     expect(deploy).toContain("shell: bash")
-    expect(deploy).toContain("git ls-remote --exit-code origin refs/heads/main")
+    expect(deploy).toContain(`gh api "repos/\${GITHUB_REPOSITORY}/commits/main" --jq .sha`)
+  })
+
+  it("keeps the job's token out of the checkout's git config, where the install and the build could read it", () => {
+    expect(deploy).toContain("persist-credentials: false")
   })
 
   it("hands the Cloudflare token to the release step alone, after the install", () => {

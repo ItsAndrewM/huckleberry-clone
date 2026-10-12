@@ -35,7 +35,7 @@ Never paste the secret into a chat, an issue or a commit. The Client ID isn't se
 
 ## The deploy token
 
-CI deploys with a Cloudflare API token that can edit the `baby-tracker` Worker and nothing else. It never expires (Andrew's choice, 12 October 2026). GitHub keeps it as the repo secret `CLOUDFLARE_API_TOKEN`. Only the deploy job's last step gets it, and inside `pnpm release` only Wrangler's processes do. The install, the build, git and gh run without it in their environment. The whole job is the real boundary, since code that runs earlier in the job could still reach that step. That's why the job pins its one third-party action to a commit.
+CI deploys with a Cloudflare API token that can edit the `baby-tracker` Worker and nothing else. It never expires (Andrew's choice, 12 October 2026). GitHub keeps it as the repo secret `CLOUDFLARE_API_TOKEN`. Only the deploy job's last step gets it, and inside `pnpm release` only Wrangler's processes do. The install, the build, git and gh run without it in their environment. The checkout keeps no GitHub credential in git's config either (`persist-credentials: false`). The whole job is the real boundary, since code that runs earlier in the job could still reach that step. That's why the job pins its one third-party action to a commit.
 
 To create it, or replace one that might have leaked:
 
@@ -108,12 +108,15 @@ Every push to `main` deploys itself once CI passes (M5.7):
 5. Open the app online on each phone once, so its offline copy moves to the new build. After a deploy whose PR says "device checklist after deploy", run the device checklist in `docs/implementation-plan.md` §6 too.
 
 - **The record:** `pnpm --filter @bt/web exec wrangler deployments list --config ../worker/wrangler.jsonc` shows the 10 most recent deploys with their messages, whether CI or your Mac ran them. For an older deploy, open its Deploy run (`gh run list --workflow deploy.yml`). Its summary and its log (`gh run view <run id> --log`) hold the restore point, and GitHub keeps them 90 days. `deploys.log` in the main checkout stopped growing with M5.7. Its bookmarks still restore until PITR ages them out, from about 10 November 2026.
-- **A failed deploy:** GitHub emails a failed run to the person it's attributed to, normally whoever merged. Production stays on the previous version: a failed upload puts nothing live, and a failed `versions deploy` leaves its uploaded version unused. Re-run the failed job from the run's page, or deploy by hand.
+- **A failed deploy:** GitHub emails a failed run to the person it's attributed to, normally whoever merged.
+  - A failed upload leaves production on the previous version.
+  - A failed `versions deploy` usually does too, but one that timed out may have gone through. So before you re-run the job, deploy by hand or roll back, check what's live with `pnpm --filter @bt/web exec wrangler deployments status --config ../worker/wrangler.jsonc`.
+  - Re-run the failed job from the run's page, or deploy by hand.
 - **Re-running CI:** on `main`, re-run only the newest commit's CI. CI runs on `main` share one queue that cancels a run still going, so re-running an older commit's CI can cancel the newest one's, and then nothing deploys main's head. If main's head shows a cancelled CI, re-run it, or deploy by hand.
 - **What CI can't deploy:** a commit that adds, renames or deletes a Durable Object class (a new `migrations` entry in `apps/worker/wrangler.jsonc`). For that, `wrangler versions upload` refuses with "pending Durable Object migration". Deploy such a commit by hand:
   1. Pause deploys (below), and merge it.
-  2. From an up-to-date `main`, with no `CLOUDFLARE_ENV` set, run `pnpm build`. Note the current UTC second as its restore point.
-  3. Run `pnpm --filter @bt/web exec wrangler deploy --config dist/baby_tracker/wrangler.json`.
+  2. From an up-to-date `main`, with no `CLOUDFLARE_ENV` set, run `pnpm build`. Note the current UTC second as its restore point, like `2026-10-12T15:49:59Z`.
+  3. Run `pnpm --filter @bt/web exec wrangler deploy --config dist/baby_tracker/wrangler.json --tag <full commit> --message "<first 7 of the commit> restore point <that second> local"`. Deployment history then holds its restore point like any other deploy's.
   4. Enable deploys again.
 
   Its PR should say so.
