@@ -8,6 +8,7 @@ import {
   stashDraft,
   takeDraft,
 } from "../src/sheets/drafts.ts"
+import { blocked, memoryStorage } from "./memory-storage.ts"
 
 const ACTION_ID = "4b1c2a5e-8f3d-4c6b-9a7e-2d1f0e3c5b6a"
 const OTHER_ACTION_ID = "9d2e1f3c-5b4a-4e6d-8c7b-1a0f2e3d4c5b"
@@ -20,22 +21,6 @@ const DRAFT: Draft = {
     action: { kind: "logDiaper", payload: { actionId: ACTION_ID, occurredAt: AT, wet: true, dirty: false } },
   },
   createdAt: AT,
-}
-
-const memoryStorage = () => {
-  const items = new Map<string, string>()
-  return {
-    items,
-    storage: {
-      getItem: (key: string) => items.get(key) ?? null,
-      setItem: (key: string, value: string) => void items.set(key, value),
-      removeItem: (key: string) => void items.delete(key),
-    },
-  }
-}
-
-const blocked = () => {
-  throw new DOMException("The operation is insecure.", "SecurityError")
 }
 
 describe("sign-in drafts", () => {
