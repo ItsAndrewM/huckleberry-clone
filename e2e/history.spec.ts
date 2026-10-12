@@ -1,0 +1,85 @@
+import { expect, test } from "@playwright/test"
+import { DAY, dayHeading, emptyDay, local, measurement, NO_TOTALS, openHistory, playHistory } from "./played-day.ts"
+
+const YESTERDAY = "2026-10-08"
+
+test("opens on the household's today, steps back a day and forward again, and never past today", async ({ page }) => {
+  await playHistory(page, [emptyDay(DAY), emptyDay(YESTERDAY)])
+  await openHistory(page)
+  const days = page.getByRole("navigation", { name: "Days" })
+  await expect(dayHeading(page)).toHaveText("Fri, Oct 9")
+  await expect(days.getByText("Today", { exact: true })).toBeVisible()
+  await expect(days.getByRole("link", { name: "Next day" })).toHaveCount(0)
+  await days.getByRole("link", { name: "Previous day" }).click()
+  await expect(dayHeading(page)).toHaveText("Thu, Oct 8")
+  await expect(page).toHaveURL(/\/history\?date=2026-10-08$/u)
+  await days.getByRole("link", { name: "Next day" }).click()
+  await expect(dayHeading(page)).toHaveText("Fri, Oct 9")
+  await expect(page).toHaveURL(/\/history$/u)
+})
+
+test("goes back to today from an earlier day", async ({ page }) => {
+  await playHistory(page, [emptyDay(DAY), emptyDay(YESTERDAY)])
+  await openHistory(page, `?date=${YESTERDAY}`)
+  await expect(dayHeading(page)).toHaveText("Thu, Oct 8")
+  await page.getByRole("link", { name: "Back to today" }).click()
+  await expect(dayHeading(page)).toHaveText("Fri, Oct 9")
+})
+
+test("shows today for an address naming a later day or no real day", async ({ page }) => {
+  await playHistory(page, [emptyDay(DAY)])
+  await openHistory(page, "?date=2026-10-12")
+  await expect(dayHeading(page)).toHaveText("Fri, Oct 9")
+  await page.goto("/history?date=2026-02-30")
+  await expect(dayHeading(page)).toHaveText("Fri, Oct 9")
+})
+
+test("stops stepping back at her birth date", async ({ page }) => {
+  await playHistory(page, [emptyDay("2026-09-01")])
+  await openHistory(page, "?date=2026-09-01")
+  await expect(dayHeading(page)).toHaveText("Tue, Sep 1")
+  await expect(page.getByRole("link", { name: "Previous day" })).toHaveCount(0)
+})
+
+test("words the day's totals as Today's card does", async ({ page }) => {
+  const totals = {
+    ...NO_TOTALS,
+    feedsStarted: 7,
+    nursingSeconds: 6720,
+    bottleMl: 540,
+    diapers: 8,
+    wetDiapers: 6,
+    dirtyDiapers: 3,
+  }
+  await playHistory(page, [{ ...emptyDay(DAY), totals }])
+  await openHistory(page)
+  const day = page.getByRole("region", { name: "This day" })
+  await expect(day).toContainText(/7 feeds started\s·\s1 h 52 min nursing\s·\s540 mL in bottles/u)
+  await expect(day).toContainText(/8 diapers\s·\s6 pee\s·\s3 poo/u)
+})
+
+test("says so when nothing was logged that day", async ({ page }) => {
+  await playHistory(page, [emptyDay(DAY)])
+  await openHistory(page)
+  await expect(page.getByRole("region", { name: "This day" })).toHaveText("Nothing logged.")
+})
+
+test("opens a measurement from the growth strip in its edit sheet", async ({ page }) => {
+  const taken = measurement("m1", local("08:00"), 4210, 55, 37.5, "caregiver-andrew")
+  await playHistory(page, [{ ...emptyDay(DAY), measurements: [taken] }])
+  await page.route("**/api/growth", (route) => route.fulfill({ json: { measurements: [taken] } }))
+  await openHistory(page)
+  await page.getByRole("button", { name: "Edit the measurement from 8:00 AM" }).click()
+  const sheet = page.getByRole("dialog", { name: "Edit measurement" })
+  await expect(sheet).toBeVisible()
+  await expect(sheet.getByLabel("Weight", { exact: true })).toHaveValue("4.21")
+})
+
+test("moves to the new day at the household's midnight while it shows today", async ({ page }) => {
+  await playHistory(page, [emptyDay(DAY), emptyDay("2026-10-10")])
+  await page.clock.install({ time: local("23:58") })
+  await page.goto("/history")
+  await expect(dayHeading(page)).toHaveText("Fri, Oct 9")
+  await page.clock.fastForward("03:00")
+  await expect(dayHeading(page)).toHaveText("Sat, Oct 10")
+})
