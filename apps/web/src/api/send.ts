@@ -24,6 +24,10 @@ const sendDiaper = (api: HouseholdApi, action: DiaperAction): Promise<SavedDiape
       return api.request((client) =>
         client.diapers.deleteDiaper({ params: { id: action.id }, payload: action.payload }),
       )
+    case "restoreDiaper":
+      return api.request((client) =>
+        client.diapers.restoreDiaper({ params: { id: action.id }, payload: action.payload }),
+      )
   }
 }
 
@@ -51,6 +55,8 @@ const sendOnFeed = (api: HouseholdApi, action: OnFeed): Promise<SavedFeed> => {
       return api.request((client) => client.portions.deletePortion({ params, payload: action.payload }))
     case "editPortion":
       return api.request((client) => client.portions.editPortion({ params, payload: action.payload }))
+    case "restoreFeed":
+      return api.request((client) => client.feeds.restoreFeed({ params, payload: action.payload }))
   }
 }
 
@@ -65,6 +71,10 @@ const sendMeasurement = (api: HouseholdApi, action: MeasurementAction): Promise<
     case "deleteMeasurement":
       return api.request((client) =>
         client.growth.deleteMeasurement({ params: { id: action.id }, payload: action.payload }),
+      )
+    case "restoreMeasurement":
+      return api.request((client) =>
+        client.growth.restoreMeasurement({ params: { id: action.id }, payload: action.payload }),
       )
   }
 }

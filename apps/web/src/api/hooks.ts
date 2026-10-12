@@ -2,6 +2,7 @@ import type { Child, Household, IsoWeek, YearMonth } from "@bt/contracts"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { useSyncExternalStore } from "react"
 import { useApp } from "../app-context.ts"
+import { deletedQuery } from "./deleted.ts"
 import { growthQuery } from "./growth.ts"
 import { meQuery } from "./me.ts"
 import { monthQuery } from "./month.ts"
@@ -42,6 +43,11 @@ export const useMonth = (month: YearMonth) => {
 export const useGrowth = () => {
   const { api } = useApp()
   return useQuery(growthQuery(api))
+}
+
+export const useDeleted = () => {
+  const { api } = useApp()
+  return useQuery(deletedQuery(api))
 }
 
 export const useConnectivity = () => {
