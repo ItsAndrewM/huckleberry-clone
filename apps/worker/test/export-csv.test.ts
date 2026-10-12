@@ -3,8 +3,9 @@ import { runInDurableObject } from "cloudflare:test"
 import { describe, expect, it } from "vitest"
 import { deleteDiaper, logDiaper } from "../src/core/diapers.ts"
 import { householdCsvOf } from "../src/core/export-csv.ts"
+import { exportedTables } from "../src/core/export.ts"
 import { deletePortion } from "../src/core/feeds/components.ts"
-import { startFeed } from "../src/core/feeds/lifecycle.ts"
+import { pauseFeed, startFeed } from "../src/core/feeds/lifecycle.ts"
 import { logFeed } from "../src/core/feeds/log.ts"
 import { deleteMeasurement, logMeasurement } from "../src/core/growth.ts"
 import type { HouseholdSeed } from "../src/seed.ts"
@@ -43,7 +44,14 @@ const linesOf = (csv: string) => csv.split("\r\n")
 const inSeeded = async <R>(seed: HouseholdSeed, run: (sql: SqlStorage) => R) =>
   runInDurableObject(await seededHousehold(seed), (_instance, state) => run(state.storage.sql))
 
+const ON_THE_SHEET = ["bottle_portions", "diapers", "feeds", "growth_measurements", "nursing_segments"]
+const NOT_ENTRIES = ["caregivers", "child", "household"]
+
 describe("householdCsvOf", () => {
+  it("covers every table that holds entries, so a kind a later migration adds can't be left off the sheet quietly", async () => {
+    expect(await inHousehold((sql) => exportedTables(sql))).toEqual([...ON_THE_SHEET, ...NOT_ENTRIES].toSorted())
+  })
+
   it("answers only the header for a household with nothing logged", async () => {
     expect(await inHousehold((sql) => householdCsvOf(sql, NOW))).toBe(`${HEADER}\r\n`)
   })
@@ -88,6 +96,18 @@ describe("householdCsvOf", () => {
     expect(linesOf(csv)[1]).toBe("Feed,2026-10-08 11:39,,0,20.5,,,,,,,,Andrew")
   })
 
+  it("leaves a paused feed's End blank too, since it can still resume", async () => {
+    const csv = await inHousehold((sql) => {
+      const started = saved(
+        startFeed(stampOf(sql), { actionId: ACTION_ID, side: "left", startedAt: minutesAgo(20) })(sql),
+      )
+      const pause = { actionId: crypto.randomUUID(), version: started.version, occurredAt: minutesAgo(5) }
+      saved(pauseFeed(stampOf(sql), started.id, pause)(sql))
+      return householdCsvOf(sql, NOW)
+    })
+    expect(linesOf(csv)[1]).toBe("Feed,2026-10-08 11:40,,15,0,,,,,,,,Andrew")
+  })
+
   it("leaves out deleted entries, and the deleted parts of a feed", async () => {
     const csv = await inHousehold((sql) => {
       const diaper = diapered(sql, minutesAgo(60))
@@ -112,6 +132,8 @@ describe("householdCsvOf", () => {
       { email: "b@example.test", displayName: "Smith, Em" },
       { email: "c@example.test", displayName: "-1" },
       { email: "d@example.test", displayName: "Two\nLines" },
+      { email: "e@example.test", displayName: "+1 555 0100" },
+      { email: "f@example.test", displayName: "@home" },
     ]
     const csv = await inSeeded({ ...SEED, caregivers }, (sql) => {
       caregivers.forEach(({ email }, index) => diapered(sql, minutesAgo(60 - index), email))
@@ -123,6 +145,8 @@ describe("householdCsvOf", () => {
       '"Smith, Em"',
       "'-1",
       '"Two\nLines"',
+      "'+1 555 0100",
+      "'@home",
       undefined,
     ])
   })

@@ -53,7 +53,7 @@ const feedLine = (feed: Feed, { zone, names, now }: Context): Line => {
     cells: {
       Kind: "Feed",
       Start: timeOf(feed.startedAt, zone),
-      End: feed.endedAt === null ? "" : timeOf(feed.endedAt, zone),
+      End: feed.status === "active" || feed.endedAt === null ? "" : timeOf(feed.endedAt, zone),
       "Left (min)": nursed ? minutesOf(summary.leftSeconds) : "",
       "Right (min)": nursed ? minutesOf(summary.rightSeconds) : "",
       "Breast milk (mL)": bottled ? String(summary.breastMilkMl) : "",
