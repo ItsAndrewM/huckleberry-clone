@@ -1,10 +1,12 @@
 import { describe, expect, it } from "vitest"
 import {
   assetResponse,
+  type BuildFile,
   cacheName,
   NETWORK_GRACE_MS,
   pageResponse,
   SHELL_URL,
+  saveBuild,
   staleCaches,
 } from "../src/service-worker/shell-cache.ts"
 
@@ -148,5 +150,52 @@ describe("pageResponse with a saved copy that can't be read", () => {
   it("still opens the page from the network, since it never reads the saved copy first", async () => {
     const fetched = new Response("<html>")
     expect(await pageResponse(new Request(`${ORIGIN}/`), answering(fetched), unreadable, withinGrace)).toBe(fetched)
+  })
+})
+
+describe("saveBuild", () => {
+  const SCRIPT_URL = "/assets/index-CSxg7yjE.js"
+  const STYLES_URL = "/assets/index-DDaxv4bF.css"
+  const FILES: readonly BuildFile[] = [
+    [SHELL_URL, new Response("<html>")],
+    [SCRIPT_URL, new Response("script")],
+    [STYLES_URL, new Response("styles")],
+  ]
+  const urlOf = (request: RequestInfo | URL) => (request instanceof Request ? request.url : request.toString())
+  const settled = () => new Promise((resolve) => setTimeout(resolve, 0))
+
+  const heldCache = () => {
+    const puts: string[] = []
+    const held = new Map<string, () => void>()
+    const put = (request: RequestInfo | URL) => {
+      puts.push(urlOf(request))
+      return new Promise<void>((resolve) => held.set(urlOf(request), resolve))
+    }
+    return { cache: { put }, puts, settle: (url: string) => held.get(url)?.() }
+  }
+
+  it("saves the page last, once every other file is in, so a saved page means a whole copy", async () => {
+    const { cache, puts, settle } = heldCache()
+    const saving = saveBuild(cache, FILES)
+    expect(puts).toEqual([SCRIPT_URL, STYLES_URL])
+    settle(SCRIPT_URL)
+    await settled()
+    expect(puts).toEqual([SCRIPT_URL, STYLES_URL])
+    settle(STYLES_URL)
+    await settled()
+    expect(puts).toEqual([SCRIPT_URL, STYLES_URL, SHELL_URL])
+    settle(SHELL_URL)
+    await saving
+  })
+
+  it("never saves the page when another file can't be saved, as on a full phone", async () => {
+    const full = new DOMException("The quota has been exceeded.", "QuotaExceededError")
+    const puts: string[] = []
+    const put = (request: RequestInfo | URL) => {
+      puts.push(urlOf(request))
+      return urlOf(request) === STYLES_URL ? Promise.reject(full) : Promise.resolve()
+    }
+    await expect(saveBuild({ put }, FILES)).rejects.toBe(full)
+    expect(puts).not.toContain(SHELL_URL)
   })
 })
