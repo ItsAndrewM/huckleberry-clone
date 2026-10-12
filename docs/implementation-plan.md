@@ -184,7 +184,7 @@ Covers AC 6, 7, 12, 15 (export half), 16–20, 22, 23.
 | M3.8 Calendar Week view: 7 columns, sticky headers, horizontal scroll, minimum column width; filters, period navigation, date picker | M | |
 | M3.9 History list view (accessible equivalent) with the same actions | S | |
 | M3.10 Trends: Day/Week/Month charts (TanStack Charts, which M4.5 adds; decided 10 Oct 2026), separate minutes and mL scales, numeric summaries next to each chart, "No entries" vs zero, partial-period labelling, averages with their denominator | M | |
-| M3.11 Export: `/api/export.json` (schema version, raw rows, audit) and `/api/export.csv` (events + growth tables) | S | |
+| M3.11 Export: `/api/export.json` (schema version, raw rows, audit) and `/api/export.csv` (events + growth tables) | S | Built ahead of the rest of M3, during M1's week of use, since it only reads (decided 12 Oct 2026). The JSON is every table as stored, with the migrations applied: every row and column, deleted rows and audit included, and the receipts and Cloudflare's own tables left out. A table a later migration adds joins it by itself. **Decided 12 Oct 2026:** Settings › Export shares either file through the share sheet, or downloads it where the browser can't share files, and `pnpm admin export <file>` saves the JSON on Andrew's Mac through `POST /api/admin/export`. The CSV is one sheet with a row per live feed, diaper and measurement, oldest first, at the household's local time, in mL, g and cm; each new kind joins it with its task. `pnpm release` saves the JSON to `exports/` before its bookmark, and stops if it can't. `--skip-export` skips that, as the first release with M3.11 must, since the Worker it replaces has no export route |
 
 ### M4 — Growth and percentiles
 
