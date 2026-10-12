@@ -48,7 +48,13 @@ export const navigationOf = (period: TrendsPeriod, today: LocalDate, birthDate: 
   current: searchFor(periodOf(period.view, today), today),
 })
 
-export const viewSearch = (view: TrendsView, from: TrendsPeriod, today: LocalDate, picked: LocalDate | null) => {
+export const viewSearch = (
+  view: TrendsView,
+  from: TrendsPeriod,
+  today: LocalDate,
+  birthDate: LocalDate,
+  picked: LocalDate | null,
+) => {
   const anchor = picked ?? (holds(from, today) ? today : firstDateOf(from))
-  return searchFor(periodOf(view, anchor), today)
+  return searchFor(periodOf(view, clamp(anchor, birthDate, today)), today)
 }
