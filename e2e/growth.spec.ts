@@ -94,9 +94,9 @@ test.describe("Growth, with the household's answers played by the test", () => {
     await playGrowth(page, MEASUREMENTS)
     await openGrowth(page)
     await expect(tiles(page)).toHaveCount(3)
-    await expect(tileTexts(page, 0)).toHaveText(["Weight", "4.30 kg", "47th", "Oct 6, 2026"])
-    await expect(tileTexts(page, 1)).toHaveText(["Length", "54.5 cm", "55th", "Oct 6, 2026"])
-    await expect(tileTexts(page, 2)).toHaveText(["Head", "36.8 cm", "48th", "Oct 6, 2026"])
+    await expect(tileTexts(page, 0)).toHaveText(["Weight", "4.30 kg", "47th", "Oct 6, 2026"], { useInnerText: true })
+    await expect(tileTexts(page, 1)).toHaveText(["Length", "54.5 cm", "55th", "Oct 6, 2026"], { useInnerText: true })
+    await expect(tileTexts(page, 2)).toHaveText(["Head", "36.8 cm", "48th", "Oct 6, 2026"], { useInnerText: true })
     await expect(tiles(page).nth(0)).toHaveAccessibleName("Weight: 4.30 kg, 47th, Oct 6, 2026")
     await expect(tiles(page).nth(1)).toHaveAccessibleName("Length: 54.5 cm, 55th, Oct 6, 2026")
     await expect(tiles(page).nth(2)).toHaveAccessibleName("Head: 36.8 cm, 48th, Oct 6, 2026")
@@ -106,7 +106,7 @@ test.describe("Growth, with the household's answers played by the test", () => {
   test("lists every measurement on a card, newest first, saying which metric wasn't measured", async ({ page }) => {
     await playGrowth(page, MEASUREMENTS)
     await openGrowth(page)
-    const cards = page.getByRole("region", { name: "Measurements" }).getByRole("listitem")
+    const cards = measurementsRegion(page).getByRole("listitem")
     await expect(cards.getByRole("heading", { level: 3 })).toHaveText([
       "Oct 6, 2026 · 1 mo 5 d",
       "Sep 15, 2026 · 14 d",
@@ -214,9 +214,9 @@ test.describe("Growth, with the household's answers played by the test", () => {
     await openGrowth(page)
     await expect(curveLabels(page)).toHaveText(["3rd", "15th", "50th", "85th", "97th"])
     await expect(herPoints(page)).toHaveCount(0)
-    await expect(tileTexts(page, 0)).toHaveText(["Weight", "None yet"])
-    await expect(tileTexts(page, 1)).toHaveText(["Length", "None yet"])
-    await expect(tileTexts(page, 2)).toHaveText(["Head", "None yet"])
+    await expect(tileTexts(page, 0)).toHaveText(["Weight", "None yet"], { useInnerText: true })
+    await expect(tileTexts(page, 1)).toHaveText(["Length", "None yet"], { useInnerText: true })
+    await expect(tileTexts(page, 2)).toHaveText(["Head", "None yet"], { useInnerText: true })
     await expect(page.getByText("No weight measurements yet")).toBeVisible()
     await expect(page.getByText("Show as a table")).toHaveCount(0)
     await expect(measurementsRegion(page)).toHaveCount(0)
@@ -231,7 +231,9 @@ test.describe("Growth, with the household's answers played by the test", () => {
       page.getByText("WHO's curves here are for girls, so there are no curves or percentiles to show."),
     ).toBeVisible()
     await expect(chart(page)).toHaveCount(0)
-    await expect(tileTexts(page, 0)).toHaveText(["Weight", "4.30 kg", "Percentile unavailable", "Oct 6, 2026"])
+    await expect(tileTexts(page, 0)).toHaveText(["Weight", "4.30 kg", "Percentile unavailable", "Oct 6, 2026"], {
+      useInnerText: true,
+    })
     await expect(measurementsRegion(page).getByRole("listitem").first().getByRole("definition")).toHaveText([
       "4.30 kg",
       "Percentile unavailable",
@@ -261,8 +263,12 @@ test.describe("Growth, with the household's answers played by the test", () => {
     await page.route("**/api/growth", (route) => (refusing ? route.fulfill({ status: 404 }) : route.fallback()))
     await openGrowth(page)
     await expect(page.getByText("Growth couldn't be loaded.")).toBeVisible()
+    const add = page.getByRole("button", { name: "Add measurement" })
+    await expect(add).toBeDisabled()
+    await expect(add).toHaveAccessibleDescription("Adding opens once Growth loads.")
     refusing = false
     await page.getByRole("button", { name: "Try again" }).click()
     await expect(herPoints(page)).toHaveCount(3)
+    await expect(add).toBeEnabled()
   })
 })
