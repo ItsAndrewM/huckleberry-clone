@@ -1,6 +1,6 @@
 import { queryKeys, type Today } from "@bt/contracts"
-import { QueryClient } from "@tanstack/react-query"
-import { describe, expect, it } from "vitest"
+import { QueryClient, QueryObserver } from "@tanstack/react-query"
+import { describe, expect, it, vi } from "vitest"
 import type { Action } from "../src/api/actions.ts"
 import { pendIn, rollBack, settle } from "../src/api/optimistic.ts"
 import { pendingId } from "../src/api/pending.ts"
@@ -175,5 +175,28 @@ describe("a send before the first load", () => {
     expect(queryClient.getQueryState(queryKeys.growth)?.fetchStatus).toBe("fetching")
     growth.answer()
     await expect(growth.loaded).resolves.toEqual({ measurements: MEASUREMENTS })
+  })
+
+  it("loads Today again when a save lands during its first load, so the save shows", async () => {
+    const queryClient = new QueryClient()
+    queryClient.setQueryData(queryKeys.me, meWith())
+    const answers: Array<(today: Today) => void> = []
+    const observer = new QueryObserver<Today>(queryClient, {
+      queryKey: queryKeys.today,
+      queryFn: () =>
+        new Promise<Today>((resolve) => {
+          answers.push(resolve)
+        }),
+    })
+    const stop = observer.subscribe(() => {})
+    await vi.waitFor(() => expect(answers).toHaveLength(1))
+    const diaper = diaperAt(NOW, { id: "diaper-1" })
+    settle(queryClient, { diaper, changed: [queryKeys.today] }, DIAPER)
+    answers[0]?.(todayWith())
+    await vi.waitFor(() => expect(answers).toHaveLength(2))
+    const withTheSave = { ...todayWith(), recent: [{ kind: "diaper" as const, diaper }] }
+    answers[1]?.(withTheSave)
+    await vi.waitFor(() => expect(queryClient.getQueryData(queryKeys.today)).toEqual(withTheSave))
+    stop()
   })
 })
