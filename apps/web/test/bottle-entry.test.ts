@@ -9,11 +9,20 @@ const AMOUNTS = { breastMilkMl: 59.1, formulaMl: 0 }
 describe("bottleSession", () => {
   it("starts from the household's last bottle, at Now", () => {
     const prefill = { lastBottle: AMOUNTS, lastSide: null }
-    expect(bottleSession(null, prefill, ZONE)).toMatchObject({ ...AMOUNTS, when: { kind: "now" } })
+    expect(bottleSession(null, prefill, ZONE, null)).toMatchObject({ ...AMOUNTS, when: { kind: "now" } })
+  })
+
+  it("starts at the time it was opened at, from History's empty slot", () => {
+    const opened = Date.UTC(2026, 9, 9, 9, 15)
+    expect(bottleSession(null, undefined, ZONE, opened).when).toEqual({
+      kind: "at",
+      local: "2026-10-09T02:15",
+      pick: null,
+    })
   })
 
   it("starts empty when no bottle has been logged yet", () => {
-    expect(bottleSession(null, undefined, ZONE)).toMatchObject({ breastMilkMl: 0, formulaMl: 0 })
+    expect(bottleSession(null, undefined, ZONE, null)).toMatchObject({ breastMilkMl: 0, formulaMl: 0 })
   })
 
   it("reopens a bottle that wasn't saved with its amounts, time and actionId", () => {
@@ -22,7 +31,7 @@ describe("bottleSession", () => {
       sending: { sheet: "bottle" as const, action: { kind: "addBottle" as const, id: "feed-1", payload } },
       error: new Error(),
     }
-    expect(bottleSession(failed, undefined, ZONE)).toEqual({
+    expect(bottleSession(failed, undefined, ZONE, null)).toEqual({
       actionId: ACTION_ID,
       ...AMOUNTS,
       when: { kind: "at", local: "2026-10-09T09:00", pick: null },

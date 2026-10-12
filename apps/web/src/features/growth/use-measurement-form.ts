@@ -18,7 +18,7 @@ export const useMeasurementForm = (me: Me, editing: Measurement | null) => {
   const sheets = useSheets()
   const zone = me.household.timeZone
   const [session] = useState(() =>
-    measurementSession(failedFor(sheets, "measurement"), editing, me.household.units, zone),
+    measurementSession(failedFor(sheets, "measurement"), editing, me.household.units, zone, sheets.at),
   )
   const [form, setForm] = useState(session.form)
   const now = useNow()

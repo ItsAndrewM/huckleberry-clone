@@ -30,9 +30,11 @@ import { diaperAt, feedAt, NOW } from "./today-fixtures.ts"
 const sheetsOf = (state: SheetsState): Sheets => ({
   ...state,
   editing: null,
+  at: null,
   keeping: true,
   busy: null,
   show: () => {},
+  showAt: () => {},
   close: () => {},
   keep: () => {},
   discard: () => {},

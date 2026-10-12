@@ -30,6 +30,7 @@ interface SheetsProviderProps {
 export const SheetsProvider = ({ restored, children }: SheetsProviderProps) => {
   const [state, setState] = useState(() => restoredState(restored.held))
   const [editing, setEditing] = useState<string | null>(null)
+  const [at, setAt] = useState<number | null>(null)
   const kept = useKeptEntries(restored)
   const online = useConnectivity() === "online"
   useHeldDrafts(state.held)
@@ -59,10 +60,17 @@ export const SheetsProvider = ({ restored, children }: SheetsProviderProps) => {
   const sheets: Sheets = {
     ...state,
     editing,
+    at,
     keeping: kept.keeping,
     busy: mutation.isPending ? (mutation.variables ?? null) : null,
     show: (sheet, record) => {
       setEditing(record ?? null)
+      setAt(null)
+      setState((current) => shownState(current, sheet))
+    },
+    showAt: (sheet, time) => {
+      setEditing(null)
+      setAt(time)
       setState((current) => shownState(current, sheet))
     },
     close: () => setState(dismissedState),

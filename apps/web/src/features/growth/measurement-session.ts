@@ -65,12 +65,18 @@ export const measurementSession = (
   editing: Measurement | null,
   units: Units,
   zone: string,
+  at: number | null,
 ): MeasurementSession => {
   const action = failed?.sending.action
   const sent = action !== undefined && isMeasurementAction(action) ? sentSession(action, units, zone) : null
   if (sent !== null) return sent
   if (editing !== null) return editSession(editing, units, zone)
-  return { actionId: crypto.randomUUID(), target: null, measuredAt: null, form: formOf(NO_VALUES, units, NOW) }
+  return {
+    actionId: crypto.randomUUID(),
+    target: null,
+    measuredAt: null,
+    form: formOf(NO_VALUES, units, at === null ? NOW : whenAt(at, zone)),
+  }
 }
 
 export const readingsOf = (form: MeasurementForm): Readings => ({

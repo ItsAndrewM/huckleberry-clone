@@ -71,9 +71,9 @@ const minutesOn = (entry: NewFeed, side: Side) =>
     .filter((segment) => segment.side === side)
     .reduce((total, segment) => total + (segment.endedAt - segment.startedAt) / MINUTE_MS, 0)
 
-const freshSession = (now: number, zone: string): PastFeedSession => ({
+const freshSession = (startedAt: number, zone: string): PastFeedSession => ({
   actionId: crypto.randomUUID(),
-  when: whenAt(now - EARLIER_MS, zone),
+  when: whenAt(startedAt, zone),
   first: "left",
   minutes: { left: 0, right: 0 },
   breastMilkMl: 0,
@@ -94,7 +94,12 @@ const sentSession = (entry: NewFeed, zone: string): PastFeedSession => {
   }
 }
 
-export const pastFeedSession = (failed: Failed | null, now: number, zone: string): PastFeedSession => {
+export const pastFeedSession = (
+  failed: Failed | null,
+  now: number,
+  zone: string,
+  at: number | null,
+): PastFeedSession => {
   const action = failed?.sending.action
-  return action?.kind === "logFeed" ? sentSession(action.payload, zone) : freshSession(now, zone)
+  return action?.kind === "logFeed" ? sentSession(action.payload, zone) : freshSession(at ?? now - EARLIER_MS, zone)
 }
