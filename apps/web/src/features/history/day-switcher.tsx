@@ -36,7 +36,7 @@ export const DaySwitcher = ({ navigation }: { readonly navigation: DayNavigation
           to="/history"
           search={{}}
           activeOptions={{ exact: true }}
-          className="inline-flex min-h-11 items-center text-xs font-medium text-primary underline-offset-4 hover:underline"
+          className="-my-3.5 inline-flex min-h-11 items-center text-xs font-medium text-primary underline-offset-4 hover:underline"
         >
           Back to today
         </Link>

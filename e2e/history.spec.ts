@@ -42,6 +42,20 @@ test("makes Back to today a 44 px target", async ({ page }) => {
   expect((await backToToday.boundingBox())?.height).toBeGreaterThanOrEqual(44)
 })
 
+test("starts the day at the same height on an earlier day as on today", async ({ page }) => {
+  await playHistory(page, [emptyDay(DAY), emptyDay(YESTERDAY)])
+  await openHistory(page, `?date=${YESTERDAY}`)
+  const day = page.getByRole("region", { name: "This day" })
+  await expect(day).toBeVisible()
+  const earlier = (await day.boundingBox())?.y
+  await page.getByRole("link", { name: "Next day" }).click()
+  await expect(dayHeading(page)).toHaveText("Fri, Oct 9")
+  await expect(day).toBeVisible()
+  const today = (await day.boundingBox())?.y
+  expect(earlier).toBeDefined()
+  expect(today).toBe(earlier)
+})
+
 test("shows today for an address naming a later day or no real day", async ({ page }) => {
   await playHistory(page, [emptyDay(DAY)])
   await openHistory(page, "?date=2026-10-12")

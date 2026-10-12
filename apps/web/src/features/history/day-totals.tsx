@@ -13,19 +13,19 @@ export const DayTotals = ({ day, me }: DayTotalsProps) => {
   const sheets = useSheets()
   const lines = totalsLines(day.totals, me.household.units.volume)
   const growth = growthItems(day.measurements, me.household.units, me.household.timeZone)
+  const nothingLogged = lines.length === 0 && growth.length === 0
   return (
     <section aria-label="This day" className="flex flex-col gap-2">
-      <div className="text-sm tabular-nums text-muted-foreground">
-        {lines.length === 0 && growth.length === 0 ? (
-          <p>Nothing logged.</p>
-        ) : (
-          lines.map((parts) => (
+      {nothingLogged ? <p className="text-sm text-muted-foreground">Nothing logged.</p> : null}
+      {lines.length === 0 ? null : (
+        <div className="text-sm tabular-nums text-muted-foreground">
+          {lines.map((parts) => (
             <p key={parts.join()}>
               <Parts parts={parts} />
             </p>
-          ))
-        )}
-      </div>
+          ))}
+        </div>
+      )}
       {growth.map(({ id, time, values, name }) => (
         <button
           key={id}
