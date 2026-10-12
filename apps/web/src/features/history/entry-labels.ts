@@ -51,7 +51,8 @@ export const entryName = (entry: Entry, display: Display, now: number) => {
   if (entry.kind === "diaper") return `Diaper at ${time(entry.diaper.occurredAt)}: ${diaperText(entry.diaper)}`
   const { feed } = entry
   const details = [...progressOf(feed), ...feedParts(feed, display.volume, now)]
-  return `${feedTitle(feed)} at ${time(feed.startedAt)}: ${details.join(", ")}`
+  const name = `${feedTitle(feed)} at ${time(feed.startedAt)}`
+  return details.length === 0 ? name : `${name}: ${details.join(", ")}`
 }
 
 export const clusterName = (count: number, first: number, display: Display) =>

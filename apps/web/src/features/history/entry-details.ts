@@ -1,4 +1,4 @@
-import type { Feed } from "@bt/contracts"
+import type { Feed, NursingSegment } from "@bt/contracts"
 import { feedSummary, sessionBounds } from "@bt/domain"
 import type { Display } from "../today/display.ts"
 import { feedTitle } from "../today/feed-parts.ts"
@@ -33,12 +33,14 @@ const byOf = ({ caregivers }: Display, id: string) => {
   return name === undefined ? "" : `Logged by ${name}`
 }
 
+const sideMs = ({ startedAt, endedAt }: NursingSegment, now: number) => (endedAt ?? now) - startedAt
+
 const pausedSeconds = (feed: Feed, now: number) => {
-  const span = sessionBounds(feed)
-  if (span === null || feed.segments.length === 0) return 0
-  const nursed = feedSummary(feed, now).nursingSeconds
+  if (feed.segments.length === 0) return 0
+  const firstSide = Math.min(...feed.segments.map(({ startedAt }) => startedAt))
   const lastSide = Math.max(...feed.segments.map(({ endedAt }) => endedAt ?? now))
-  return Math.max(0, Math.floor((lastSide - span.startedAt) / MS_PER_SECOND) - nursed)
+  const nursedMs = feed.segments.reduce((sum, segment) => sum + sideMs(segment, now), 0)
+  return Math.max(0, Math.floor((lastSide - firstSide - nursedMs) / MS_PER_SECOND))
 }
 
 const statusOf = (feed: Feed) => {

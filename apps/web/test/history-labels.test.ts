@@ -65,6 +65,15 @@ describe("what a screen reader hears for an entry", () => {
     )
   })
 
+  it("names a nursing feed with nothing to report without a trailing colon", () => {
+    const instant = {
+      ...NURSED,
+      endedAt: local("01:05"),
+      segments: [{ id: "zero-0", side: "left" as const, startedAt: local("01:05"), endedAt: local("01:05") }],
+    }
+    expect(entryName({ kind: "feed", feed: instant }, DISPLAY, NOW_ON_DAY)).toBe("Nursing at 1:05 AM")
+  })
+
   it("counts the entries gathered in one marker, from the first one's time", () => {
     expect(clusterName(2, PEE.occurredAt, DISPLAY)).toBe("2 entries from 2:10 AM")
   })

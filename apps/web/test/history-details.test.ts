@@ -20,6 +20,26 @@ describe("entryDetails", () => {
     expect(feed(NURSED).lines).toEqual(["Left 14 min · Right 9 min"])
   })
 
+  it("shows no pause for a switch that lands between whole seconds", () => {
+    const switched = {
+      ...NURSED,
+      endedAt: local("01:28") + 1800,
+      segments: [
+        { id: "ms-0", side: "left" as const, startedAt: local("01:05"), endedAt: local("01:19") + 900 },
+        { id: "ms-1", side: "right" as const, startedAt: local("01:19") + 900, endedAt: local("01:28") + 1800 },
+      ],
+    }
+    expect(feed(switched).lines).toEqual(["Left 14 min · Right 9 min"])
+  })
+
+  it("doesn't count a bottle given before the first side as a pause", () => {
+    const bottleFirst = {
+      ...NURSED,
+      portions: [{ id: "early", occurredAt: local("00:55"), breastMilkMl: 60, formulaMl: 0 }],
+    }
+    expect(feed(bottleFirst).lines).toEqual(["Left 14 min · Right 9 min", "Bottle 60 mL breast milk"])
+  })
+
   it("gives a bottle on its own its time and what was in it", () => {
     expect(feed(BOTTLE)).toMatchObject({
       title: "Bottle",
