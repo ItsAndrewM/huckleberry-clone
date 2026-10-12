@@ -37,6 +37,7 @@ describe("the API the household serves", () => {
       "DELETE /api/growth/:id",
       "POST /api/growth/:id/restore",
       "GET /api/export.json",
+      "GET /api/export.csv",
     ])
   })
 

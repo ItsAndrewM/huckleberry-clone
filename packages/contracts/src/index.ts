@@ -28,7 +28,7 @@ export {
   TimedAction,
   VersionedPortion,
 } from "./feeds.ts"
-export { ExportCell, ExportGroup, ExportRow, HouseholdExport, householdExportFrom } from "./export.ts"
+export { ExportCell, ExportCsv, ExportGroup, ExportRow, HouseholdExport, householdExportFrom } from "./export.ts"
 export {
   Conflict,
   ConflictCode,

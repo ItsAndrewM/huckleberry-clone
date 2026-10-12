@@ -119,6 +119,25 @@ describe("GET /api/export.json", () => {
   })
 })
 
+describe("GET /api/export.csv", () => {
+  it("answers 200, no-store, as UTF-8 CSV, header first", async () => {
+    const household = await seededHousehold()
+    await diaperAt(household, NOW - HOUR_MS)
+    const response = await get(household, "/api/export.csv", ANDREW.email)
+    expect(response.status).toBe(200)
+    expect(response.headers.get("cache-control")).toBe("no-store")
+    expect(response.headers.get("content-type")).toBe("text/csv; charset=utf-8")
+    const [header, diaper] = (await response.text()).split("\r\n")
+    expect(header?.startsWith("Kind,Start,End,")).toBe(true)
+    expect(diaper).toBe("Diaper,2026-10-08 11:00,,,,,,yes,,,,,Andrew")
+  })
+
+  it("is refused to someone who isn't a caregiver", async () => {
+    const response = await get(await seededHousehold(), "/api/export.csv", "stranger@example.test")
+    expect(response.status).toBe(401)
+  })
+})
+
 describe("an action id from a save", () => {
   it("never reaches the export, since receipts aren't exported", async () => {
     const household = await seededHousehold()

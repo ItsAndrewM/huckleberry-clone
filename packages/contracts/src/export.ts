@@ -1,5 +1,5 @@
 import { Option, Schema } from "effect"
-import { HttpApiEndpoint, HttpApiGroup } from "effect/http-api"
+import { HttpApiEndpoint, HttpApiGroup, HttpApiSchema } from "effect/http-api"
 import { Instant } from "./time.ts"
 
 export const ExportCell = Schema.NullOr(Schema.Union([Schema.String, Schema.Finite]))
@@ -21,6 +21,8 @@ const decodeExportJson = Schema.decodeUnknownOption(Schema.fromJsonString(Househ
 
 export const householdExportFrom = (json: string): HouseholdExport | null => Option.getOrNull(decodeExportJson(json))
 
-export class ExportGroup extends HttpApiGroup.make("export").add(
-  HttpApiEndpoint.get("exportJson", "/export.json", { success: HouseholdExport }),
-) {}
+export const ExportCsv = Schema.String.pipe(HttpApiSchema.asText({ contentType: "text/csv; charset=utf-8" }))
+
+export class ExportGroup extends HttpApiGroup.make("export")
+  .add(HttpApiEndpoint.get("exportJson", "/export.json", { success: HouseholdExport }))
+  .add(HttpApiEndpoint.get("exportCsv", "/export.csv", { success: ExportCsv })) {}
