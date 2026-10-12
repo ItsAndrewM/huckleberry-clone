@@ -1,5 +1,8 @@
+import { type HourRow, slotIn } from "@bt/domain"
 import { cn } from "cn"
 import { LayersIcon } from "lucide-react"
+import { useSheets } from "../../sheets/sheets-context.ts"
+import { tapTime } from "../../sheets/tap-time.ts"
 import type { Display } from "../today/display.ts"
 import { KIND_ICONS } from "../today/kind-icons.ts"
 import { anchorOf, type DayModel } from "./day-model.ts"
@@ -22,7 +25,12 @@ const MARKER_ICONS = { bottle: KIND_ICONS.bottle, diaper: KIND_ICONS.diaper, sev
 const scrollIntoMiddle = (node: HTMLDivElement | null) => node?.scrollIntoView({ block: "center" })
 
 export const DayGrid = ({ model, display, now, onOpen }: DayGridProps) => {
+  const sheets = useSheets()
   const { grid } = model
+  const logAt = (row: HourRow, fraction: number) => {
+    const slot = slotIn(row, fraction, tapTime())
+    if (slot !== null) sheets.showAt("logAt", slot)
+  }
   return (
     <section
       aria-label="The day by hour"
@@ -56,7 +64,7 @@ export const DayGrid = ({ model, display, now, onOpen }: DayGridProps) => {
           />
         ))}
       </div>
-      <HourRows rows={grid.hours} display={display} />
+      <HourRows rows={grid.hours} display={display} now={now} onTap={logAt} />
       {grid.now === null ? null : (
         <>
           <div

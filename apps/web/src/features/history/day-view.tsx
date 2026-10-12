@@ -6,6 +6,7 @@ import { DayGrid } from "./day-grid.tsx"
 import { dayModel, entriesIn, isLiveFeed } from "./day-model.ts"
 import { DayTotals } from "./day-totals.tsx"
 import { DetailsSheet } from "./details-sheet.tsx"
+import { LogAtSheet } from "./log-at-sheet.tsx"
 
 interface DayViewProps {
   readonly day: DayPeriod
@@ -34,6 +35,7 @@ export const DayView = ({ day, me, now }: DayViewProps) => {
       {detailsLeftFromAnotherDay ? null : (
         <DetailsSheet entries={entriesIn(model, shown ?? [])} display={display} now={now} />
       )}
+      <LogAtSheet zone={display.timeZone} />
     </>
   )
 }

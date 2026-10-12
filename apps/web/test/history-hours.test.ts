@@ -1,8 +1,8 @@
 import { type HourRow, layoutDay } from "@bt/domain"
 import { describe, expect, it } from "vitest"
 import { SCALE } from "../src/features/history/day-model.ts"
-import { atStep, inLane, stepsTall } from "../src/features/history/grid-classes.ts"
-import { hourLabels } from "../src/features/history/hour-labels.ts"
+import { atStep, inLane, stepsTall, tapFraction } from "../src/features/history/grid-classes.ts"
+import { hourLabels, hourNames } from "../src/features/history/hour-labels.ts"
 import { LOCALE, local } from "./history-fixtures.ts"
 import { ZONE } from "./today-fixtures.ts"
 
@@ -26,6 +26,33 @@ describe("hourLabels", () => {
   it("names the hour the clocks go back over twice", () => {
     const rows = rowsOf("2026-11-01", AUTUMN_ZONE, AUTUMN_START, 25)
     expect(hourLabels(rows, AUTUMN_ZONE, LOCALE).slice(0, 4)).toEqual(["12 AM", "1 AM", "1 AM", "2 AM"])
+  })
+})
+
+describe("hourNames", () => {
+  it("asks to log at each hour", () => {
+    const rows = rowsOf("2026-10-09", ZONE, local("00:00"), 24)
+    expect(hourNames(rows, hourLabels(rows, ZONE, LOCALE)).slice(0, 2)).toEqual(["Log at 12 AM", "Log at 1 AM"])
+  })
+
+  it("tells the two 1 AMs apart on the night the clocks go back, as the time picker does", () => {
+    const rows = rowsOf("2026-11-01", AUTUMN_ZONE, AUTUMN_START, 25)
+    expect(hourNames(rows, hourLabels(rows, AUTUMN_ZONE, LOCALE)).slice(1, 4)).toEqual([
+      "Log at 1 AM (first)",
+      "Log at 1 AM (second)",
+      "Log at 2 AM",
+    ])
+  })
+})
+
+describe("tapFraction", () => {
+  it("is how far down its hour a tap landed", () => {
+    expect(tapFraction(130, 100, 60, false)).toBe(0.5)
+  })
+
+  it("is the hour's start from the keyboard, which gives no position, or for a row with no height", () => {
+    expect(tapFraction(130, 100, 60, true)).toBe(0)
+    expect(tapFraction(130, 100, 0, false)).toBe(0)
   })
 })
 

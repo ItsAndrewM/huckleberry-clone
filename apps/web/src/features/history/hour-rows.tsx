@@ -1,20 +1,37 @@
 import type { HourRow } from "@bt/domain"
 import { cn } from "cn"
+import type { MouseEvent } from "react"
 import type { Display } from "../today/display.ts"
-import { atStep, stepsTall } from "./grid-classes.ts"
-import { hourLabels } from "./hour-labels.ts"
+import { atStep, stepsTall, tapFraction } from "./grid-classes.ts"
+import { hourLabels, hourNames } from "./hour-labels.ts"
 
 interface HourRowsProps {
   readonly rows: ReadonlyArray<HourRow>
   readonly display: Display
+  readonly now: number
+  readonly onTap: (row: HourRow, fraction: number) => void
 }
 
-export const HourRows = ({ rows, display }: HourRowsProps) => {
+const fractionOf = (event: MouseEvent<HTMLButtonElement>) => {
+  const { top, height } = event.currentTarget.getBoundingClientRect()
+  return tapFraction(event.clientY, top, height, event.detail === 0)
+}
+
+export const HourRows = ({ rows, display, now, onTap }: HourRowsProps) => {
   const labels = hourLabels(rows, display.timeZone, display.locale)
+  const names = hourNames(rows, labels)
   return rows.map((row, index) => (
-    <div
+    <button
       key={row.start}
-      className={cn("absolute inset-x-0 border-t border-border/70", atStep(row.top), stepsTall(row.height))}
+      type="button"
+      aria-label={names[index]}
+      disabled={row.start > now}
+      onClick={(event) => onTap(row, fractionOf(event))}
+      className={cn(
+        "absolute inset-x-0 border-t border-border/70 text-left outline-none focus-visible:bg-muted",
+        atStep(row.top),
+        stepsTall(row.height),
+      )}
     >
       <span
         aria-hidden="true"
@@ -22,6 +39,6 @@ export const HourRows = ({ rows, display }: HourRowsProps) => {
       >
         {labels[index]}
       </span>
-    </div>
+    </button>
   ))
 }
