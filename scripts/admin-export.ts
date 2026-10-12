@@ -1,5 +1,5 @@
-import { mkdirSync, writeFileSync } from "node:fs"
-import { dirname, isAbsolute, join, relative, resolve, sep } from "node:path"
+import { existsSync, mkdirSync, realpathSync, writeFileSync } from "node:fs"
+import { basename, dirname, isAbsolute, join, relative, resolve, sep } from "node:path"
 import { parseArgs } from "node:util"
 import { type HouseholdExport, householdExportFrom } from "../packages/contracts/src/export.ts"
 import { type AdminEnv, adminRequest } from "./admin-seed.ts"
@@ -17,6 +17,12 @@ const isWithin = (folder: string, path: string) => {
   return route === "" || (route !== ".." && !route.startsWith(`..${sep}`) && !isAbsolute(route))
 }
 
+const realPathOf = (path: string): string => {
+  if (existsSync(path)) return realpathSync(path)
+  const parent = dirname(path)
+  return parent === path ? path : join(realPathOf(parent), basename(path))
+}
+
 const gitSees = (path: string, checkout: string) =>
   isWithin(checkout, path) && !isWithin(join(checkout, "exports"), path)
 
@@ -26,8 +32,8 @@ export const exportFileFromArgs = (args: ReadonlyArray<string>, places: Places):
   if (file === undefined || file.trim() === "" || rest.length > 0) {
     throw new Error("Give one file to save the export to, like: pnpm admin export ~/baby-tracker.json")
   }
-  const path = resolve(places.cwd, file.replace(HOME_FOLDER, places.home))
-  if (gitSees(path, places.checkout)) {
+  const path = realPathOf(resolve(places.cwd, file.replace(HOME_FOLDER, places.home)))
+  if (gitSees(path, realPathOf(places.checkout))) {
     throw new Error(
       `Save the export outside this checkout, or under its exports/ folder, which git ignores, not ${path}`,
     )

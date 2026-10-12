@@ -1,5 +1,5 @@
 import { spawnSync } from "node:child_process"
-import { mkdtempSync, readFileSync, statSync, writeFileSync } from "node:fs"
+import { mkdirSync, mkdtempSync, readFileSync, realpathSync, statSync, symlinkSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { afterEach, describe, expect, it, vi } from "vitest"
@@ -97,6 +97,36 @@ describe("pnpm admin export", () => {
 
   it("refuses an option it doesn't know", () => {
     expect(() => exportFileFromArgs(["--force", "a.json"], PLACES)).toThrow("Unknown option '--force'")
+  })
+})
+
+describe("pnpm admin export, past symlinks", () => {
+  const checkoutWithLinks = () => {
+    const checkout = mkdtempSync(join(tmpdir(), "bt-checkout-"))
+    mkdirSync(join(checkout, "exports", "older"), { recursive: true })
+    mkdirSync(join(checkout, "apps"))
+    symlinkSync(join(checkout, "apps"), join(checkout, "exports", "linked"))
+    symlinkSync(join(checkout, "exports", "older"), join(checkout, "exports", "kept"))
+    const elsewhere = mkdtempSync(join(tmpdir(), "bt-elsewhere-"))
+    symlinkSync(join(checkout, "apps"), join(elsewhere, "into-checkout"))
+    return { places: { cwd: checkout, home: elsewhere, checkout }, elsewhere }
+  }
+
+  it.each([
+    ["a symlink under exports/ that leads back into the checkout", "exports/linked/household.json"],
+    ["a symlink outside the checkout that leads into it", "~/into-checkout/household.json"],
+  ])("refuses %s, since the file would land where git sees it", (_label, file) => {
+    const { places } = checkoutWithLinks()
+    expect(() => exportFileFromArgs([file], places)).toThrow(
+      "Save the export outside this checkout, or under its exports/ folder, which git ignores",
+    )
+  })
+
+  it("takes a symlink that stays under exports/, and names the folder it leads to", () => {
+    const { places } = checkoutWithLinks()
+    expect(exportFileFromArgs(["exports/kept/household.json"], places)).toBe(
+      join(realpathSync(places.checkout), "exports", "older", "household.json"),
+    )
   })
 })
 
