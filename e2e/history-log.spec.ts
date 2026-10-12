@@ -2,6 +2,13 @@ import { expect, type Page, test } from "@playwright/test"
 import { DAY, diaper, emptyDay, local, NO_TOTALS, openHistory, playHistory } from "./played-day.ts"
 
 const HOUR_PX = 60
+const WAITS_FOR_TODAY = "Logging opens once Today loads."
+
+const OPENS_WITHOUT_TODAY = [
+  { choice: "Nursing", sheet: "Past feed", field: "Started" },
+  { choice: "Diaper", sheet: "Diaper", field: "When" },
+  { choice: "Measurement", sheet: "Add measurement", field: "When" },
+]
 
 test.use({ timezoneId: "Europe/London" })
 
@@ -56,8 +63,34 @@ test("opens Nursing at the slot as a past feed, and Bottle there too", async ({ 
   await page.keyboard.press("Escape")
   await expect(pastFeed).toBeHidden()
   await tapHour(page, "4 AM", 50)
-  await page.getByRole("dialog", { name: "Log at 4:45 AM" }).getByRole("button", { name: "Bottle" }).click()
+  const menu = page.getByRole("dialog", { name: "Log at 4:45 AM" })
+  await expect(menu.getByText(WAITS_FOR_TODAY)).toBeHidden()
+  await menu.getByRole("button", { name: "Bottle" }).click()
   await expect(page.getByRole("dialog", { name: "Bottle" }).getByLabel("When")).toHaveValue("2026-10-09T04:45")
+})
+
+test("keeps Bottle waiting while Today can't be loaded, and says why, while the other three open at the slot", async ({
+  page,
+}) => {
+  await playHistory(page, [emptyDay(DAY)])
+  await page.route("**/api/today", (route) => route.fulfill({ status: 404 }))
+  await openHistory(page)
+  await tapHour(page, "2 AM", 20)
+  const menu = page.getByRole("dialog", { name: "Log at 2:15 AM" })
+  await expect(menu.getByText(WAITS_FOR_TODAY)).toBeVisible()
+  const bottle = menu.getByRole("button", { name: "Bottle" })
+  await expect(bottle).toBeDisabled()
+  await expect(bottle).toHaveAccessibleDescription(WAITS_FOR_TODAY)
+  await page.keyboard.press("Escape")
+  await expect(menu).toBeHidden()
+  for (const { choice, sheet, field } of OPENS_WITHOUT_TODAY) {
+    await tapHour(page, "2 AM", 20)
+    await menu.getByRole("button", { name: choice }).click()
+    const opened = page.getByRole("dialog", { name: sheet })
+    await expect(opened.getByLabel(field)).toHaveValue("2026-10-09T02:15")
+    await page.keyboard.press("Escape")
+    await expect(opened).toBeHidden()
+  }
 })
 
 test("opens Measurement at the slot", async ({ page }) => {

@@ -26,6 +26,14 @@ const NOW = at("2026-10-09", 9)
 
 const failedWith = (sending: Sending): Failed => ({ sending, error: new Offline() })
 
+const UNSAVED = failedWith({
+  sheet: "measurement",
+  action: {
+    kind: "logMeasurement",
+    payload: { actionId: ACTION_ID, measuredAt: MEASURED_AT, weightG: 4300, lengthCm: null, headCm: 36.8 },
+  },
+})
+
 describe("measurementSession", () => {
   it("starts a new measurement now, empty, in the household's units", () => {
     const session = measurementSession(null, null, IMPERIAL, ZONE, null)
@@ -55,12 +63,20 @@ describe("measurementSession", () => {
     })
   })
 
+  it("opens a measurement for editing at its own time, not the time the sheet was opened at", () => {
+    const session = measurementSession(null, STORED, UNITS, ZONE, NOW)
+    expect(session.form.when).toEqual({ kind: "at", local: "2026-10-06T10:00", pick: null })
+  })
+
   it("reopens a failed new measurement with what was sent, at the time it was sent, under the same actionId", () => {
-    const payload = { actionId: ACTION_ID, measuredAt: MEASURED_AT, weightG: 4300, lengthCm: null, headCm: 36.8 }
-    const failed = failedWith({ sheet: "measurement", action: { kind: "logMeasurement", payload } })
-    const session = measurementSession(failed, null, UNITS, ZONE, null)
+    const session = measurementSession(UNSAVED, null, UNITS, ZONE, null)
     expect(session).toMatchObject({ actionId: ACTION_ID, target: null, measuredAt: MEASURED_AT })
     expect(session.form.headCm).toEqual(entryOf(36.8, "cm"))
+    expect(session.form.when).toEqual({ kind: "at", local: "2026-10-06T10:00", pick: null })
+  })
+
+  it("keeps a failed save's own time over the time the sheet was opened at", () => {
+    const session = measurementSession(UNSAVED, null, UNITS, ZONE, NOW)
     expect(session.form.when).toEqual({ kind: "at", local: "2026-10-06T10:00", pick: null })
   })
 

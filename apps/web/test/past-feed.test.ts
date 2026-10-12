@@ -74,13 +74,21 @@ describe("pastFeedSession", () => {
     expect(session.when).toEqual({ kind: "at", local: "2026-10-09T02:15", pick: null })
   })
 
+  const unsaved = {
+    sending: {
+      sheet: "pastFeed" as const,
+      action: { kind: "logFeed" as const, payload: pastFeedEntry(ACTION_ID, START, feed(12, 8, 40, 10)) },
+    },
+    error: new Error("offline"),
+  }
+
+  it("keeps a failed save's own start over the time the sheet was opened at", () => {
+    const session = pastFeedSession(unsaved, START + 60 * MINUTE, ZONE, START + 45 * MINUTE)
+    expect(session.when).toEqual({ kind: "at", local: "2026-10-09T02:10", pick: null })
+  })
+
   it("reopens a feed that wasn't saved with what it held and the same actionId", () => {
-    const payload = pastFeedEntry(ACTION_ID, START, feed(12, 8, 40, 10))
-    const failed = {
-      sending: { sheet: "pastFeed" as const, action: { kind: "logFeed" as const, payload } },
-      error: new Error("offline"),
-    }
-    expect(pastFeedSession(failed, START + 60 * MINUTE, ZONE, null)).toEqual({
+    expect(pastFeedSession(unsaved, START + 60 * MINUTE, ZONE, null)).toEqual({
       actionId: ACTION_ID,
       when: { kind: "at", local: "2026-10-09T02:10", pick: null },
       first: "right",

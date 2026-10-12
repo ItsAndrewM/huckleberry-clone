@@ -3,6 +3,7 @@ import { useId } from "react"
 import { Button } from "../../components/ui/button.tsx"
 import type { SheetKind } from "../../sheets/sending.ts"
 import { useSheets } from "../../sheets/sheets-context.ts"
+import { useTodayLoaded, WAITS_FOR_TODAY } from "../../sheets/use-today-loaded.ts"
 import { KIND_ICONS } from "./kind-icons.ts"
 
 const ACTIONS = [
@@ -11,15 +12,16 @@ const ACTIONS = [
   { label: "Diaper", sheet: "diaper", Icon: KIND_ICONS.diaper },
 ] as const satisfies ReadonlyArray<{ label: string; sheet: SheetKind; Icon: LucideIcon }>
 
-export const QuickActions = ({ ready }: { readonly ready: boolean }) => {
+export const QuickActions = () => {
   const sheets = useSheets()
+  const ready = useTodayLoaded()
   const waitsId = useId()
   return (
     <div className="fixed inset-x-0 bottom-[calc(3.5rem+env(safe-area-inset-bottom))] border-t bg-background/95 backdrop-blur-sm">
       <section aria-label="Log" className="mx-auto flex max-w-lg flex-col gap-1.5 px-4 py-2">
         {ready ? null : (
           <p id={waitsId} className="text-center text-sm text-muted-foreground">
-            Logging opens once Today loads.
+            {WAITS_FOR_TODAY}
           </p>
         )}
         <div className="flex gap-2">
