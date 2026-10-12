@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest"
 import { deleteDiaper, logDiaper } from "../src/core/diapers.ts"
 import { deletePortion, deleteSegment } from "../src/core/feeds/components.ts"
 import { deleteFeed } from "../src/core/feeds/feed-edits.ts"
-import { pauseFeed, startFeed } from "../src/core/feeds/lifecycle.ts"
+import { pauseFeed, startFeed, switchSide } from "../src/core/feeds/lifecycle.ts"
 import { logFeed } from "../src/core/feeds/log.ts"
 import { deleteMeasurement, logMeasurement } from "../src/core/growth.ts"
 import { dayOf, monthOf, weekOf } from "../src/core/periods.ts"
@@ -32,6 +32,10 @@ const ac4 = (minutes: number) => OCT_7_AT_23_50 + minutes * MINUTE_MS
 const WEDNESDAY_OCT_14_NOON = Date.UTC(2026, 9, 14, 19)
 const SUNDAY_OCT_11_AT_23_50 = Date.UTC(2026, 9, 12, 6, 50)
 const sundayNight = (minutes: number) => SUNDAY_OCT_11_AT_23_50 + minutes * MINUTE_MS
+
+const OCT_7_AT_23_30 = Date.UTC(2026, 9, 8, 6, 30)
+const OCT_8_AT_00_15 = Date.UTC(2026, 9, 8, 7, 15)
+const OCT_8_AT_03_00 = Date.UTC(2026, 9, 8, 10)
 
 const LONDON_OCT_28 = Date.UTC(2026, 9, 28, 12)
 
@@ -201,6 +205,37 @@ describe("dayOf", () => {
   it("takes the day in the household's zone, all 25 hours of a day the clocks go back (AC 23)", async () => {
     const day = await inLondon((sql) => dayOf(sql, "2026-10-25", LONDON_OCT_28))
     expect(day.bounds).toEqual({ start: Date.UTC(2026, 9, 24, 23), end: Date.UTC(2026, 9, 26, 0) })
+  })
+})
+
+describe("at 3 AM, with a feed from before midnight still running", () => {
+  it("holds it whole in yesterday and today with its right side open, each day counting its own minutes, and the week adding them up", async () => {
+    const { feed, yesterday, today, tomorrow, week } = await inHousehold((sql) => {
+      const starting = { actionId: ACTION_ID, side: "left" as const, startedAt: OCT_7_AT_23_30 }
+      const started = saved(startFeed(stampOf(sql, ANDREW.email, OCT_7_AT_23_30), starting)(sql))
+      const switching = { actionId: ACTION_ID, version: started.version, occurredAt: OCT_8_AT_00_15 }
+      return {
+        feed: saved(switchSide(stampOf(sql, ANDREW.email, OCT_8_AT_00_15), started.id, switching)(sql)),
+        yesterday: dayOf(sql, "2026-10-07", OCT_8_AT_03_00),
+        today: dayOf(sql, "2026-10-08", OCT_8_AT_03_00),
+        tomorrow: dayOf(sql, "2026-10-09", OCT_8_AT_03_00),
+        week: weekOf(sql, "2026-W41", OCT_8_AT_03_00),
+      }
+    })
+    expect(feed.segments.map(({ endedAt }) => endedAt)).toEqual([OCT_8_AT_00_15, null])
+    expect(yesterday.feeds).toEqual([feed])
+    expect(yesterday.totals).toEqual({ ...NO_TOTALS, feedsStarted: 1, leftSeconds: 1800, nursingSeconds: 1800 })
+    expect(today.feeds).toEqual([feed])
+    expect(today.totals).toEqual({ ...NO_TOTALS, leftSeconds: 900, rightSeconds: 9900, nursingSeconds: 10800 })
+    expect(tomorrow.feeds).toEqual([])
+    expect(week.days.slice(2, 4).map(({ totals }) => totals)).toEqual([yesterday.totals, today.totals])
+    expect(week.totals).toEqual({
+      ...NO_TOTALS,
+      feedsStarted: 1,
+      leftSeconds: 2700,
+      rightSeconds: 9900,
+      nursingSeconds: 12600,
+    })
   })
 })
 
