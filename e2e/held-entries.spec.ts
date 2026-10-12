@@ -98,3 +98,44 @@ test("offers the second of two failed diapers in its own form once the first is 
   expect(retried).toEqual(pee)
   expect(both).toEqual({ ...poo, wet: true, dirty: true })
 })
+
+test("saves only the first of two failed diapers on a double tap, and leaves the second for its own tap", async ({
+  page,
+}) => {
+  const { andrew } = await caregiversOf(page)
+  await playHousehold(page, todayWith())
+  const failing = gate()
+  const sent: Array<Sent["body"]> = []
+  await page.route("**/api/diapers", async (route) => {
+    const body = route.request().postDataJSON()
+    sent.push(body)
+    if (sent.length > 2) return route.fulfill({ status: 201, json: savedDiaper(andrew.id)(body) })
+    await failing.opened
+    return route.fulfill({ status: 500, json: {} })
+  })
+  await muteLiveUpdates(page)
+  await openToday(page)
+  const sheet = page.getByRole("dialog", { name: "Diaper" })
+  await quickAction(page, "Diaper").click()
+  await sheet.getByRole("button", { name: "Pee" }).click()
+  await expect(sheet).toBeHidden()
+  await quickAction(page, "Diaper").click()
+  await sheet.getByRole("button", { name: "Poo" }).click()
+  await expect(sheet).toBeHidden()
+  await expect.poll(() => sent.length).toBe(2)
+  failing.open()
+  await expect(sheet.getByRole("alert")).toContainText("Not saved.")
+  const tryAgain = sheet.getByRole("button", { name: "Try again" })
+  await tryAgain.click({ trial: true })
+  const box = await tryAgain.boundingBox()
+  if (box === null) throw new Error("Try again isn't laid out")
+  await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2, { clickCount: 2 })
+  await expect(page.getByText("Diaper saved")).toBeVisible()
+  await expect(sheet.getByRole("alert")).toContainText("Not saved.")
+  expect(sent).toHaveLength(3)
+  await tryAgain.click()
+  await expect.poll(() => sent.length).toBe(4)
+  const [pee, poo, retriedPee, retriedPoo] = sent
+  expect(retriedPee).toEqual(pee)
+  expect(retriedPoo).toEqual(poo)
+})
