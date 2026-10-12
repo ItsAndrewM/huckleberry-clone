@@ -26,6 +26,22 @@ test("goes back to today from an earlier day", async ({ page }) => {
   await expect(dayHeading(page)).toHaveText("Fri, Oct 9")
 })
 
+test("doesn't call a link to today the current page while an earlier day shows", async ({ page }) => {
+  await playHistory(page, [emptyDay(DAY), emptyDay(YESTERDAY)])
+  await openHistory(page, `?date=${YESTERDAY}`)
+  const days = page.getByRole("navigation", { name: "Days" })
+  await expect(dayHeading(page)).toHaveText("Thu, Oct 8")
+  await expect(days.getByRole("link", { name: "Back to today" })).not.toHaveAttribute("aria-current")
+  await expect(days.getByRole("link", { name: "Next day" })).not.toHaveAttribute("aria-current")
+})
+
+test("makes Back to today a 44 px target", async ({ page }) => {
+  await playHistory(page, [emptyDay(DAY), emptyDay(YESTERDAY)])
+  await openHistory(page, `?date=${YESTERDAY}`)
+  const backToToday = page.getByRole("link", { name: "Back to today" })
+  expect((await backToToday.boundingBox())?.height).toBeGreaterThanOrEqual(44)
+})
+
 test("shows today for an address naming a later day or no real day", async ({ page }) => {
   await playHistory(page, [emptyDay(DAY)])
   await openHistory(page, "?date=2026-10-12")
@@ -64,12 +80,22 @@ test("says so when nothing was logged that day", async ({ page }) => {
   await expect(page.getByRole("region", { name: "This day" })).toHaveText("Nothing logged.")
 })
 
+test("offers Try again when a day couldn't be loaded", async ({ page }) => {
+  await playHistory(page, [emptyDay(DAY)])
+  await openHistory(page, `?date=${YESTERDAY}`)
+  await expect(page.getByText("This day couldn't be loaded.")).toBeVisible()
+  await expect(page.getByRole("button", { name: "Try again" })).toBeVisible()
+})
+
 test("opens a measurement from the growth strip in its edit sheet", async ({ page }) => {
   const taken = measurement("m1", local("08:00"), 4210, 55, 37.5, "caregiver-andrew")
   await playHistory(page, [{ ...emptyDay(DAY), measurements: [taken] }])
   await page.route("**/api/growth", (route) => route.fulfill({ json: { measurements: [taken] } }))
   await openHistory(page)
-  await page.getByRole("button", { name: "Edit the measurement from 8:00 AM" }).click()
+  const strip = page.getByRole("button", { name: "Edit the measurement from 8:00 AM" })
+  await expect(strip).toBeVisible()
+  await expect(page.getByRole("region", { name: "This day" })).not.toContainText("Nothing logged.")
+  await strip.click()
   const sheet = page.getByRole("dialog", { name: "Edit measurement" })
   await expect(sheet).toBeVisible()
   await expect(sheet.getByLabel("Weight", { exact: true })).toHaveValue("4.21")

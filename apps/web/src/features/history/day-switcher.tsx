@@ -16,6 +16,7 @@ const Step = ({ search, label, Icon }: StepProps) =>
     <Link
       to="/history"
       search={search}
+      activeOptions={{ exact: true }}
       aria-label={label}
       className={buttonVariants({ variant: "ghost", size: "icon-lg" })}
     >
@@ -31,7 +32,12 @@ export const DaySwitcher = ({ navigation }: { readonly navigation: DayNavigation
       {navigation.isToday ? (
         <p className="text-xs text-muted-foreground">Today</p>
       ) : (
-        <Link to="/history" search={{}} className="text-xs font-medium text-primary underline-offset-4 hover:underline">
+        <Link
+          to="/history"
+          search={{}}
+          activeOptions={{ exact: true }}
+          className="inline-flex min-h-11 items-center text-xs font-medium text-primary underline-offset-4 hover:underline"
+        >
           Back to today
         </Link>
       )}

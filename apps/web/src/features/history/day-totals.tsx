@@ -16,7 +16,7 @@ export const DayTotals = ({ day, me }: DayTotalsProps) => {
   return (
     <section aria-label="This day" className="flex flex-col gap-2">
       <div className="text-sm tabular-nums text-muted-foreground">
-        {lines.length === 0 ? (
+        {lines.length === 0 && growth.length === 0 ? (
           <p>Nothing logged.</p>
         ) : (
           lines.map((parts) => (
