@@ -83,7 +83,7 @@ const playGrowth = async (page: Page, measurements: ReadonlyArray<Measurement>, 
       ? route.fulfill({ json: { measurements: played.measurements } })
       : route.fallback(),
   )
-  const answer = (status: number, json: Saved | Refused, after = played.measurements) =>
+  const answer = (status: number, json?: Saved | Refused, after = played.measurements) =>
     page.route(GROWTH, (route) => {
       const request = route.request()
       if (request.method() === "GET") return route.fallback()
@@ -110,6 +110,17 @@ const openGrowth = async (page: Page) => {
 
 const saved = (answer: Measurement): Saved => ({ measurement: answer, changed: [["growth"]] })
 
+const typeAddBehindHeldEdit = async (page: Page, held: ReadonlyArray<string>) => {
+  await openGrowth(page)
+  await page.getByRole("button", { name: "Edit the measurement from Oct 6, 2026" }).click()
+  const edit = page.getByRole("dialog", { name: "Edit measurement" })
+  await edit.getByRole("textbox", { name: "Length" }).fill("55")
+  await edit.getByRole("button", { name: "Save" }).click()
+  await expect.poll(() => held.length).toBe(1)
+  await page.getByRole("button", { name: "Add measurement" }).click()
+  await page.getByRole("dialog", { name: "Add measurement" }).getByRole("textbox", { name: "Weight" }).fill("4.5")
+}
+
 test.use({ timezoneId: "Europe/London" })
 
 test("adds a weight typed in kg to an lb & oz household, and lists it in lb & oz at once", async ({ page }) => {
@@ -117,11 +128,24 @@ test("adds a weight typed in kg to an lb & oz household, and lists it in lb & oz
   const added = measurement("m4", NOW, { weightG: 4325 })
   await answer(201, saved(added), [added, ...STORED])
   await openGrowth(page)
+  const answered = gate()
+  const held = await holdRequests(page, "**/api/growth", () => answered.opened)
   await page.getByRole("button", { name: "Add measurement" }).click()
   const sheet = page.getByRole("dialog", { name: "Add measurement" })
   await sheet.getByRole("combobox", { name: "Weight unit" }).selectOption("kg")
   await sheet.getByRole("textbox", { name: "Weight" }).fill("4.325")
   await sheet.getByRole("button", { name: "Save" }).click()
+  await expect.poll(() => held.length).toBe(1)
+  const tile = page.getByRole("button", { name: /^Weight: 9\slb 8\.6\soz, \d+(st|nd|rd|th), Oct 9, 2026$/u })
+  const card = page.getByRole("listitem").first()
+  const chevron = card.getByRole("button", { name: "Edit the measurement from Oct 9, 2026" })
+  await expect(tile).toBeVisible()
+  await expect(card).toContainText("Oct 9, 2026")
+  await expect(card).toContainText("Saving…")
+  await expect(chevron).toHaveCount(0)
+  answered.open()
+  await expect(chevron).toBeVisible()
+  await expect(card).not.toContainText("Saving…")
   await expect
     .poll(() => played.sent)
     .toEqual([
@@ -131,10 +155,6 @@ test("adds a weight typed in kg to an lb & oz household, and lists it in lb & oz
         body: { actionId: ACTION_ID, measuredAt: NOW, weightG: 4325, lengthCm: null, headCm: null },
       },
     ])
-  await expect(
-    page.getByRole("button", { name: /^Weight: 9\slb 8\.6\soz, \d+(st|nd|rd|th), Oct 9, 2026$/u }),
-  ).toBeVisible()
-  await expect(page.getByRole("listitem").first()).toContainText("Oct 9, 2026")
 })
 
 test("edits a measurement from its card, sending what wasn't touched back unchanged, and opens Add blank after it", async ({
@@ -260,7 +280,7 @@ test("keeps the focus in the field being typed in, though the delete was asked a
   await expect(weight).toBeFocused()
 })
 
-test("says who changed the measurement when the other phone saved first, and keeps the sheet open", async ({
+test("says who changed the measurement when the other phone saved first, and reopens the sheet with what the parent typed", async ({
   page,
 }) => {
   const { played, answer } = await playGrowth(page, STORED, { weight: "kg", length: "cm" })
@@ -276,23 +296,81 @@ test("says who changed the measurement when the other phone saved first, and kee
   await expect(sheet.getByRole("textbox", { name: "Weight" })).toHaveValue("4.4")
 })
 
-test("lets go of a held edit when the parent deletes the measurement instead", async ({ page }) => {
+test("lets go of a held edit when the parent deletes the measurement instead, and deletes the newer copy on the second try", async ({
+  page,
+}) => {
   const { played, answer } = await playGrowth(page, STORED, { weight: "kg", length: "cm" })
   const emily = played.caregivers[1]
   const current = { ...NEWEST, version: 2, updatedBy: emily.id }
-  await answer(409, { _tag: "Conflict", code: "STALE_VERSION", current })
+  await answer(409, { _tag: "Conflict", code: "STALE_VERSION", current }, [current, EARLIER])
   await openGrowth(page)
   await page.getByRole("button", { name: "Edit the measurement from Oct 6, 2026" }).click()
   const sheet = page.getByRole("dialog", { name: "Edit measurement" })
-  await sheet.getByRole("textbox", { name: "Weight" }).fill("4.4")
+  const weight = sheet.getByRole("textbox", { name: "Weight" })
+  await weight.fill("4.4")
   await sheet.getByRole("button", { name: "Save" }).click()
+  await expect(sheet.getByRole("alert")).toHaveText(`${emily.displayName} changed this measurement a moment ago.`)
+  await expect(weight).toHaveValue("4.4")
+  await sheet.getByRole("button", { name: "Delete measurement" }).click()
+  await sheet.getByRole("button", { name: "Delete", exact: true }).click()
+  await expect(weight).toHaveValue("4.3")
   await expect(sheet.getByRole("alert")).toHaveText(`${emily.displayName} changed this measurement a moment ago.`)
   await answer(200, saved({ ...NEWEST, version: 3, deletedAt: NOW }), [EARLIER])
   await sheet.getByRole("button", { name: "Delete measurement" }).click()
   await sheet.getByRole("button", { name: "Delete", exact: true }).click()
-  await expect.poll(() => played.sent.map(({ method }) => method)).toEqual(["PATCH", "DELETE"])
+  await expect
+    .poll(() => played.sent)
+    .toEqual([
+      {
+        method: "PATCH",
+        path: "/api/growth/m3",
+        body: {
+          actionId: ACTION_ID,
+          version: 1,
+          measuredAt: TAKEN_AT,
+          weightG: 4400,
+          lengthCm: 54.5,
+          headCm: 36.8,
+        },
+      },
+      { method: "DELETE", path: "/api/growth/m3", body: { actionId: ACTION_ID, version: 1 } },
+      { method: "DELETE", path: "/api/growth/m3", body: { actionId: ACTION_ID, version: 2 } },
+    ])
   await expect(page.getByRole("button", { name: "Edit the measurement from Oct 6, 2026" })).toHaveCount(0)
   await expect(page.getByRole("dialog")).toBeHidden()
+})
+
+test("keeps Add, with its typed weight, when the edit sent just before it fails", async ({ page }) => {
+  const { answer } = await playGrowth(page, STORED, { weight: "kg", length: "cm" })
+  await answer(500)
+  const answered = gate()
+  const held = await holdRequests(page, "**/api/growth/m3", () => answered.opened)
+  await typeAddBehindHeldEdit(page, held)
+  answered.open()
+  const sheet = page.getByRole("dialog")
+  await expect(sheet.getByRole("alert")).toContainText("Not saved.")
+  await expect(sheet).toHaveAccessibleName("Add measurement")
+  await expect(sheet.getByRole("textbox", { name: "Weight" })).toHaveValue("4.5")
+})
+
+test("keeps Add, with its typed weight, when the edit sent just before it finds the measurement deleted", async ({
+  page,
+}) => {
+  const { played, answer } = await playGrowth(page, STORED, { weight: "kg", length: "cm" })
+  const emily = played.caregivers[1]
+  const current = { ...NEWEST, version: 2, updatedBy: emily.id, deletedAt: NOW }
+  await answer(409, { _tag: "Conflict", code: "STALE_VERSION", current }, [EARLIER])
+  const answered = gate()
+  const held = await holdRequests(page, "**/api/growth/m3", () => answered.opened)
+  await typeAddBehindHeldEdit(page, held)
+  answered.open()
+  const sheet = page.getByRole("dialog")
+  await expect(sheet.getByRole("alert")).toHaveText(`${emily.displayName} deleted this measurement a moment ago.`)
+  const card = page.getByRole("listitem", { includeHidden: true }).filter({ hasText: "Oct 6, 2026" })
+  await expect(card).toHaveCount(0)
+  await expect(sheet).toHaveAccessibleName("Add measurement")
+  await expect(sheet.getByText("This measurement was deleted.")).toHaveCount(0)
+  await expect(sheet.getByRole("textbox", { name: "Weight" })).toHaveValue("4.5")
 })
 
 test("refuses a number out of range, and points at the unit", async ({ page }) => {
