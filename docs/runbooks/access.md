@@ -86,7 +86,7 @@ Run these on each iPhone:
    5. a PITR bookmark of the household
    6. `wrangler deploy`
 
-   It then appends the time, the commit and the bookmark to `deploys.log`. Git ignores `deploys.log` and `exports/`. Each export is named for the minute in UTC and the commit, like `exports/2026-10-12T0314Z-20390a3.json`, and only your Mac's user can read it. It holds every row, her name and birth date included, so keep the folder on this Mac.
+   It then appends the time, the commit and the bookmark to `deploys.log`. Git ignores `deploys.log` and `exports/`. Each export is named for the second in UTC and the commit, like `exports/2026-10-12T031450Z-20390a3.json`, and only your Mac's user can read it. It holds every row, her name and birth date included, so keep the folder on this Mac.
 3. Open the app online on each phone once, so its offline copy moves to the new build.
 
 ## When a deploy goes wrong
@@ -98,6 +98,7 @@ Run these on each iPhone:
 ## Exports
 
 - **From your Mac:** `pnpm admin export <file>` saves the household's JSON export to a new file. It never writes over a file that's already there, and it prints only how many tables and rows the export holds. Each `pnpm release` saves one to `exports/` the same way.
+- **Where it may go:** outside the checkout, like `~/baby-tracker.json` (a leading `~` is your home folder, quoted or not), or under the checkout's `exports/`. It refuses anywhere else in the checkout, where git would see the file.
 - **From a phone:** Settings › Export shares the CSV or the JSON through the share sheet. A browser that can't share files downloads them instead.
 - **What's in them:** the JSON keeps every table as stored: every row and column, deleted rows and audit columns included, with the migrations applied. It leaves out the receipts, which expire after a day. The CSV has a row per live feed, diaper and measurement, at the household's local time.
 

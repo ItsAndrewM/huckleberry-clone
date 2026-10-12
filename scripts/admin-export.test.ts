@@ -127,9 +127,12 @@ describe("the exports/ folder", () => {
 })
 
 describe("releaseExportPath", () => {
-  it("names the file by the minute in UTC and the commit, under exports/", () => {
+  it("names the file by the second in UTC and the commit, under exports/, so a rerun a moment later gets its own", () => {
     expect(releaseExportPath(new Date(Date.UTC(2026, 9, 12, 3, 14, 50)), "20390a32dd62e7c7")).toBe(
-      "exports/2026-10-12T0314Z-20390a3.json",
+      "exports/2026-10-12T031450Z-20390a3.json",
+    )
+    expect(releaseExportPath(new Date(Date.UTC(2026, 9, 12, 3, 14, 51)), "20390a32dd62e7c7")).toBe(
+      "exports/2026-10-12T031451Z-20390a3.json",
     )
   })
 })
