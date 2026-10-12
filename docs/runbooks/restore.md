@@ -12,10 +12,10 @@ How to rewind the household's data, and how the drill that proves it went. Resto
 
 ## Pick the moment
 
-- **Before a deploy:** each line of `deploys.log`, in the main checkout, holds the time, the commit and the bookmark `pnpm release` took just before deploying. The first deploy's line says `first-deploy-no-bookmark`, because the household didn't exist yet.
+- **Before a deploy:** each deploy's message holds its restore point, the UTC second just before it went out, like `20390a3 restore point 2026-10-12T15:49:59Z ci:18233456789`. List them with `pnpm --filter @bt/web exec wrangler deployments list --config ../worker/wrangler.jsonc`, then restore with `--at` and that time. Deploys before M5.7 are in `deploys.log` in the main checkout, each with the bookmark `pnpm release` took then; they work until PITR ages them out, from about 10 November 2026.
 - **Before anything risky:** take a bookmark with `pnpm admin pitr:bookmark`. It answers `200 {"bookmark":"…"}`.
 - **A time instead:** `--at` takes an ISO time with its zone, such as `2026-10-10T18:00:00Z` or `2026-10-10T20:00:00+02:00`. The time must fall within the last 30 days and not in the future, or the Worker answers `400` naming `at`.
-- **Older than 30 days:** PITR can't reach it. Each `pnpm release` saves an export to `exports/` in the main checkout, and `pnpm admin export <file>` takes one at any time (M3.11). An export holds every row, deleted ones included, but nothing loads one back into the household yet, so rebuilding from it is manual.
+- **Older than 30 days:** PITR can't reach it, and only an export reaches that far back. `pnpm admin export <file>` takes one at any time (M3.11); deploys don't (M5.7), and the releases before M5.7 saved theirs to `exports/` in the main checkout. An export holds every row, deleted ones included, but nothing loads one back into the household yet, so rebuilding from it is manual.
 
 ## Restore
 
@@ -33,7 +33,7 @@ Run these from the main checkout, which holds `.admin-token.env`.
 
 ## The drill
 
-Run it again before trusting a restore to something new, such as a release with a new migration. It takes a few minutes and one phone.
+Run it again before trusting a restore to something new, such as before merging a new migration, since the merge deploys it. It takes a few minutes and one phone.
 
 1. Ask the other parent not to log anything until you're done.
 2. Run `pnpm admin pitr:bookmark`, and note the bookmark as B1.

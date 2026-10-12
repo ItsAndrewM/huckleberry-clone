@@ -1,6 +1,6 @@
 # Runbook: production, Access and deploys
 
-How the baby tracker runs in production, how it gets there, and what to do when something goes wrong. M1.16 set it up on 10 October 2026. The Step 0 spike (`docs/spike-results.md`) proved each piece first.
+How the baby tracker runs in production, how it gets there, and what to do when something goes wrong. M1.16 set it up on 10 October 2026, and M5.7 made every green push to `main` deploy itself. The Step 0 spike (`docs/spike-results.md`) proved each piece first.
 
 ## What runs where
 
@@ -14,6 +14,8 @@ How the baby tracker runs in production, how it gets there, and what to do when 
 | Cookie | `SameSite=Lax` and `HttpOnly`, with no binding cookie. Lax stops other sites from using the session. The other `andamonium.dev` apps count as the same site, so the Worker stops them itself: a `/api/ws` upgrade must come from the app's exact origin, and every write must be `application/json`, which no page can send to another origin without a CORS preflight the Worker never answers |
 | Policies | "BT caregivers" (Allow): the two parents' Google emails. "BT admin service token" (Service Auth): the `baby-tracker-admin` token |
 | Admin token | Service token `baby-tracker-admin`. Its Client ID is the Worker's `ADMIN_SERVICE_TOKEN_CN`. The secret lives only in `.admin-token.env` on Andrew's Mac |
+| Deploys | `.github/workflows/deploy.yml` runs `pnpm release` once CI passes on a push to `main` (M5.7). See "Deploys" below |
+| Deploy token | A Cloudflare API token with the Workers Editor role on the `baby-tracker` Worker alone, kept as the GitHub repo secret `CLOUDFLARE_API_TOKEN`. See "The deploy token" below |
 | Google side | Project "BT Access" (`bt-access-510920`) in Andrew's Google account. OAuth consent screen "Baby tracker" is External and in **Testing**, with both parents listed as test users. The web client "Cloudflare Access" has the team domain as its JavaScript origin and `<team domain>/cdn-cgi/access/callback` as its redirect URI |
 | Logs | Workers Logs keeps the app's own lines only. Cloudflare's per-request records (`invocation_logs`) are off, because they would store the Access JWT and the email |
 
@@ -21,7 +23,7 @@ How the baby tracker runs in production, how it gets there, and what to do when 
 
 ## The admin token file
 
-`pnpm admin` and `pnpm release` read `.admin-token.env` at the root of the checkout they run in. Git ignores it.
+`pnpm admin` reads `.admin-token.env` at the root of the checkout it runs in. Git ignores it. Deploys don't use it.
 
 ```
 BT_URL=https://baby.andamonium.dev
@@ -31,12 +33,27 @@ CF_ACCESS_CLIENT_SECRET=<the token's Client Secret>
 
 Never paste the secret into a chat, an issue or a commit. The Client ID isn't secret: it's in `wrangler.jsonc`.
 
+## The deploy token
+
+CI deploys with a Cloudflare API token that can edit the `baby-tracker` Worker and nothing else. It never expires (Andrew's choice, 12 October 2026). GitHub keeps it as the repo secret `CLOUDFLARE_API_TOKEN`. Only `deploy.yml` reads it, and only its deploy step: the install and the build never see it.
+
+To create it, or replace one that might have leaked:
+
+1. In the Cloudflare dashboard, create an API token with the Workers Editor role on the `baby-tracker` Worker alone (the per-Worker scope Cloudflare calls "Individual Workers"), and no expiry.
+2. In your own terminal, not through Claude, run `gh secret set CLOUDFLARE_API_TOKEN` and paste the token when it asks.
+3. Re-run the last deploy from its run's page, or wait for the next push, and check that it ends green.
+4. If it's a replacement, delete the old token in the dashboard.
+
+Cloudflare says a redeploy that leaves the Custom Domain as it is needs nothing more. If a deploy is refused over the domain anyway, add Zone › Workers Routes › Write on the `andamonium.dev` zone to the token.
+
+**The accepted risk:** the repo is private on GitHub Free, which has no deployment environments or branch protection, so a workflow on any branch could read a repo secret. Only Andrew and his Claude sessions push branches here, so the token stays a repo secret.
+
 ## First deploy
 
-Do this once, right after the M1.16 prep PR merges. It needs about 45 minutes, the Cloudflare dashboard, and both phones.
+Done on 10 October 2026. Run it again only to rebuild production from nothing. It needs about 45 minutes, the Cloudflare dashboard, and both phones.
 
 1. **Check the machine:** in the main checkout, on an up-to-date `main` whose CI is green, run `pnpm --filter @bt/web exec wrangler whoami --config ../worker/wrangler.jsonc`. It should list the account in `wrangler.jsonc`. Check that `.admin-token.env` holds the three values above.
-2. **Deploy:** run `pnpm release --first`. It creates the Worker and attaches `baby.andamonium.dev`. It takes no bookmark, because there's no household yet.
+2. **Deploy:** run `pnpm release` from your Mac. It creates the Worker and attaches `baby.andamonium.dev`. It runs on your Wrangler login, because CI's token can only redeploy a Worker that exists. Then create a new deploy token for the new Worker, as "The deploy token" says.
 3. **Check that Access is in front:** run `curl -sI https://baby.andamonium.dev/` and `curl -sI https://baby.andamonium.dev/sw.js`. Each should answer `302` with a `location` on `misty-wildflower-0505.cloudflareaccess.com`.
 4. **Check the admin gate:** run `pnpm admin pitr:bookmark`. Expect `200 {"bookmark":"…"}`. A `302` means Access refused the token: check the "BT admin service token" policy and `.admin-token.env`.
 5. **Seed:** run the command below with the real values as arguments only. Never put them in a file in the repo.
@@ -75,29 +92,45 @@ Run these on each iPhone:
 - [ ] **Time zone:** Settings' picker lists the household's zone.
 - [ ] **Socket idle timeout:** in desktop Chrome, open the app and watch the `/api/ws` socket in DevTools (Network, then WS). It pings every 30 s. Note whether Cloudflare ever closes it (1006) while the tab stays in front, and after how long.
 
-## Every later deploy
+## Deploys
 
-1. Merge to `main`, wait for CI, then pull the main checkout.
-2. Run `pnpm release`. It runs these steps and refuses at the first that fails:
-   1. the checkout is a clean `main` that matches `origin/main`
+Every push to `main` deploys itself once CI passes (M5.7):
+
+1. CI runs `check` and `e2e` on the push.
+2. When CI finishes green, `.github/workflows/deploy.yml` checks out the commit CI tested. If `main` has moved on since, it notes "main moved on to …" and ends green, and the newer commit deploys after its own CI.
+3. Otherwise it runs `pnpm release`, which refuses at the first of these that fails:
+   1. the checkout is clean and at `origin/main`
    2. CI passed on that commit
    3. a fresh build, without `CLOUDFLARE_ENV`, whose config passes the checks
-   4. an export of the household, saved to a new file in `exports/` (M3.11). `--skip-export` skips it: the first release that carries M3.11 needs that, because the Worker it replaces has no export route yet. Otherwise, use it only when the export itself is broken
-   5. a PITR bookmark of the household
-   6. `wrangler deploy`
 
-   It then appends the time, the commit and the bookmark to `deploys.log`. Git ignores `deploys.log` and `exports/`. Each export is named for the second in UTC and the commit, like `exports/2026-10-12T031450Z-20390a3.json`, and only your Mac's user can read it. It holds every row, her name and birth date included, so keep the folder on this Mac.
-3. Open the app online on each phone once, so its offline copy moves to the new build.
+   It then notes the restore point, the current UTC second, and runs `wrangler deploy`. The version's tag is the commit, and its message reads like `20390a3 restore point 2026-10-12T15:49:59Z ci:18233456789`.
+4. The run's summary repeats the commit, the restore point, and the command that rewinds the household to it.
+5. Open the app online on each phone once, so its offline copy moves to the new build. After a deploy whose PR says "device checklist after deploy", run the device checklist in `docs/implementation-plan.md` §6 too.
+
+- **The record:** `pnpm --filter @bt/web exec wrangler deployments list --config ../worker/wrangler.jsonc` lists every deploy with its message, whether CI or your Mac ran it. `deploys.log` in the main checkout stopped growing with M5.7. Its bookmarks still restore until PITR ages them out, from about 10 November 2026.
+- **A failed deploy:** GitHub emails a failed run to the person it's attributed to, normally whoever merged. Production stays on the previous version. Re-run the failed job from the run's page, or deploy by hand.
+- **Exports:** a deploy saves none. Run `pnpm admin export` before merging a migration (see Exports).
+
+## Deploying by hand
+
+Run `pnpm release` from the main checkout, on an up-to-date `main`, when CI's deploy failed or deploys are paused. It runs the same checks as CI, on your Wrangler login, and its message ends in `local` instead of the run. It still needs CI to have passed on the commit. So during a GitHub Actions outage, roll back if you must (below), and wait for Actions.
+
+## Pausing deploys
+
+`gh workflow disable deploy.yml` stops automatic deploys, and `gh workflow enable deploy.yml` starts them again. A push made while they're paused doesn't deploy, even once they're enabled again: run `pnpm release`, or wait for the next push. `pnpm release` works while they're paused.
 
 ## When a deploy goes wrong
 
-- **Code only** (the app misbehaves, but the data is right): roll back to the previous version with `pnpm --filter @bt/web exec wrangler rollback --config ../worker/wrangler.jsonc`. That config pins the account and names the Worker. Older code runs against a newer schema, because migrations only add.
-- **Data too:** find the bookmark taken before that deploy in `deploys.log`, and restore it as `docs/runbooks/restore.md` says. That runbook also covers a restore to a time and a restore that answers 503.
-- **Both:** roll back the code first, then restore the data. The order matters: a restore restarts the household under whatever code is deployed, and the household applies the code's missing migrations at every start. Restoring under the bad code would run its migration again over the restored data. After the rollback, the older code starts on the newer schema (it skips ledger entries it doesn't know), and the restore then takes the data and the migration ledger back to before that deploy.
+1. **Pause deploys** with `gh workflow disable deploy.yml`, so the next merge can't deploy the bad code again.
+2. **Code** (the app misbehaves): roll back to the previous version with `pnpm --filter @bt/web exec wrangler rollback --config ../worker/wrangler.jsonc`. That config pins the account and names the Worker. Older code runs against a newer schema, because migrations only add.
+3. **Data too:** find the bad deploy's restore point in its message in `wrangler deployments list`, and restore to it with `pnpm admin pitr:restore --at <restore point>`, as `docs/runbooks/restore.md` says. For a deploy before M5.7, use its bookmark in `deploys.log`. That runbook also covers a restore that answers 503.
+4. **Fix forward:** run `gh workflow enable deploy.yml` before you merge the fix, so its merge deploys it. Or merge it first, then enable deploys and run `pnpm release`.
+
+Roll back the code before you restore the data. The order matters: a restore restarts the household under whatever code is deployed, and the household applies the code's missing migrations at every start. Restoring under the bad code would run its migration again over the restored data. After the rollback, the older code starts on the newer schema (it skips ledger entries it doesn't know), and the restore then takes the data and the migration ledger back to before that deploy.
 
 ## Exports
 
-- **From your Mac:** `pnpm admin export <file>` saves the household's JSON export to a new file. It never writes over a file that's already there, and it prints only how many tables and rows the export holds. Each `pnpm release` saves one to `exports/` the same way.
+- **From your Mac:** `pnpm admin export <file>` saves the household's JSON export to a new file. It never writes over a file that's already there, and it prints only how many tables and rows the export holds. Deploys don't save one (M5.7), so take one before merging a migration, or whenever you want a copy older than PITR's 30 days. The releases before M5.7 saved theirs to `exports/`. Each holds every row, her name and birth date included, so keep the folder on this Mac.
 - **Where it may go:** outside the checkout, like `~/baby-tracker.json` (a leading `~` is your home folder, quoted or not), or under the checkout's `exports/`. It refuses anywhere else in the checkout, where git would see the file, even by way of a symlink.
 - **From a phone:** Settings › Export shares the CSV or the JSON through the share sheet. A browser that can't share files downloads them instead.
 - **What's in them:** the JSON keeps every table as stored: every row and column, deleted rows and audit columns included, with the migrations applied. It leaves out the receipts, which expire after a day. The CSV has a row per live feed, diaper and measurement, at the household's local time.
@@ -169,16 +202,16 @@ If the "Baby tracker" app is ever deleted, recreate it before anything else, so 
    ```
 
    Set SameSite explicitly, because it reverts to `None` when left out.
-2. Copy the new app's AUD tag into `ACCESS_AUD` in `apps/worker/wrangler.jsonc`. Merge that, then run `pnpm release`. Until it ships, every request is refused with `wrong-audience`.
+2. Copy the new app's AUD tag into `ACCESS_AUD` in `apps/worker/wrangler.jsonc`, and merge it. It deploys once CI passes. Until it ships, every request is refused with `wrong-audience`.
 
 ## Rotating the admin token
 
 The token never expires (Andrew's choice, 10 Oct 2026), so nothing needs renewing. The only reason to change it is a secret that might have leaked.
 
-If the secret leaks, replace the token; don't rotate it. Rotating keeps the Client ID, and the Worker admits any Access JWT that carries it, including ones already issued against the leaked secret, for up to 730 hours. Replace it in this order, so `pnpm release` can still take its bookmark:
+If the secret leaks, replace the token; don't rotate it. Rotating keeps the Client ID, and the Worker admits any Access JWT that carries it, including ones already issued against the leaked secret, for up to 730 hours. Replace it in this order:
 
 1. Create a new token.
 2. Add it to the "BT admin service token" policy, beside the old one.
-3. Put its Client ID in `ADMIN_SERVICE_TOKEN_CN`, merge, and run `pnpm release` while `.admin-token.env` still holds the old token. The deployed Worker still admits that one for the bookmark. From this release on, the Worker refuses every JWT that carries the old Client ID.
+3. Put its Client ID in `ADMIN_SERVICE_TOKEN_CN`, and merge it. Once that deploys, the Worker refuses every JWT that carries the old Client ID.
 4. Put the new token in `.admin-token.env`, and check that `pnpm admin pitr:bookmark` answers 200.
 5. Delete the old token, which also takes it out of the policy.
