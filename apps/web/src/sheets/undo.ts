@@ -58,6 +58,20 @@ export const toastFor = (sending: Sending, saved: Saved, now: number): Toast | n
   return { message, undo: undo === null ? null : { sheet: sending.sheet, action: undo }, until: now + TOAST_MS }
 }
 
+export const restoredToast = (saved: Saved, now: number, actionId: string): Toast => {
+  const until = now + TOAST_MS
+  if ("diaper" in saved) {
+    const { id, version } = saved.diaper
+    const action = { kind: "deleteDiaper", id, payload: { actionId, version } } as const
+    return { message: "Diaper restored", undo: { sheet: "diaper", action }, until }
+  }
+  if (!("feed" in saved)) return { message: "Measurement restored", undo: null, until }
+  const { id, version, segments } = saved.feed
+  const action = { kind: "deleteFeed", id, payload: { actionId, version } } as const
+  const message = segments.length === 0 ? "Bottle restored" : "Feed restored"
+  return { message, undo: { sheet: "pastFeed", action }, until }
+}
+
 interface LostMessages {
   readonly offline: string
   readonly otherwise: string

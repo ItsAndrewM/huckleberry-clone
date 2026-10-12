@@ -123,6 +123,30 @@ describe("send", () => {
     ])
   })
 
+  it("restores a diaper, a feed and a measurement at their restore endpoints, with the version the delete answered", async () => {
+    const payload = { actionId: ACTION_ID, version: 2 }
+    const answers: ReadonlyArray<readonly [Action, string, string]> = [
+      [
+        { kind: "restoreDiaper", id: "diaper-1", payload },
+        JSON.stringify({ diaper: diaperAt(NOW, { id: "diaper-1", version: 3 }), changed: [] }),
+        "/api/diapers/diaper-1/restore",
+      ],
+      [{ kind: "restoreFeed", id: "feed-1", payload }, SAVED_FEED, "/api/feeds/feed-1/restore"],
+      [
+        { kind: "restoreMeasurement", id: "m1", payload },
+        JSON.stringify({ measurement: STORED_MEASUREMENT, changed: [] }),
+        "/api/growth/m1/restore",
+      ],
+    ]
+    const sent = []
+    for (const [action, answer] of answers) {
+      const { api, requests } = household(200, answer)
+      await send(api, action)
+      for (const request of requests) sent.push([request.method, request.url, await request.json()])
+    }
+    expect(sent).toEqual(answers.map(([, , path]) => ["POST", `${ORIGIN}${path}`, payload]))
+  })
+
   it("decodes the household's conflict with its copy of the measurement", async () => {
     const current = { ...STORED_MEASUREMENT, version: 3 }
     const { api } = household(409, JSON.stringify({ _tag: "Conflict", code: "STALE_VERSION", current }))
