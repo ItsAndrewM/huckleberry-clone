@@ -174,9 +174,9 @@ Covers AC 6, 7, 12, 15 (export half), 16–20, 22, 23.
 
 | Task | Size | Notes |
 |---|---|---|
-| M3.1 Sleep core: manual, start, wake, PATCH, DELETE, restore; active uniqueness; overlap check including the running session (treated as `[start, now)`) | M | Uses the shared timer helpers. Shared lifecycle suite now runs for both kinds |
+| M3.1 Sleep core: manual, start, wake, PATCH, DELETE, restore; active uniqueness; overlap check including the running session (treated as `[start, now)`) | M | Uses the shared timer helpers. Shared lifecycle suite now runs for both kinds. Sleeps join M3.11's CSV sheet as their own kind: its test listing every table fails until they do. The JSON export takes the new table by itself |
 | M3.2 Sleep UI: Today status (asleep timer / time since last wake), Start sleep / Wake up (≤ 2 taps), manual entry, nap/night label | M | |
-| M3.3 Supplements: definitions CRUD (Vitamin D seeded); logs with `local_date`; duplicate-day 409 → "Record another dose anyway?" → `confirmedDuplicate`; "Vitamin D logged at 9:10 by Emily" on Today | M | AC 6: two-phone E2E with two browser contexts; assert the other context shows the log within 2 s |
+| M3.3 Supplements: definitions CRUD (Vitamin D seeded); logs with `local_date`; duplicate-day 409 → "Record another dose anyway?" → `confirmedDuplicate`; "Vitamin D logged at 9:10 by Emily" on Today | M | AC 6: two-phone E2E with two browser contexts; assert the other context shows the log within 2 s. Doses join M3.11's CSV sheet as their own kind, as sleeps do |
 | M3.4 Universal edit/delete UI for every record type, with confirmation and version checks; move-whole-feed with offset preview | M | |
 | M3.5 Recently deleted (Settings): list, restore with D10 | S | AC 19 |
 | M3.6 `GET /api/days/:date`, `/weeks/:isoWeek`, `/months/:month`: summaries + records, using the domain aggregations | M | Property tests: the sum of daily allocations equals the total duration for random intervals across DST days |
