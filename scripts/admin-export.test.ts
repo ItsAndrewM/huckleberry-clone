@@ -69,8 +69,15 @@ describe("pnpm admin export", () => {
     )
   })
 
+  it("reads a name starting with .. as a name, not a step up, so it can sit under exports/", () => {
+    expect(exportFileFromArgs(["exports/..today.json"], PLACES)).toBe(
+      "/Users/andrew/huckleberry-clone/exports/..today.json",
+    )
+  })
+
   it.each([
     ["a bare name, which lands in the checkout", "backup.json"],
+    ["a bare name starting with .., which is still in the checkout", "..backup.json"],
     ["a path that climbs out of exports/", "exports/../backup.json"],
     ["a folder named ~user, which isn't the home folder", "~user/backup.json"],
     ["the checkout's own source", "/Users/andrew/huckleberry-clone/apps/backup.json"],

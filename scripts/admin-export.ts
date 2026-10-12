@@ -1,5 +1,5 @@
 import { mkdirSync, writeFileSync } from "node:fs"
-import { dirname, isAbsolute, join, relative, resolve } from "node:path"
+import { dirname, isAbsolute, join, relative, resolve, sep } from "node:path"
 import { parseArgs } from "node:util"
 import { type HouseholdExport, householdExportFrom } from "../packages/contracts/src/export.ts"
 import { type AdminEnv, adminRequest } from "./admin-seed.ts"
@@ -14,7 +14,7 @@ const HOME_FOLDER = /^~(?=\/|$)/
 
 const isWithin = (folder: string, path: string) => {
   const route = relative(folder, path)
-  return route === "" || (!route.startsWith("..") && !isAbsolute(route))
+  return route === "" || (route !== ".." && !route.startsWith(`..${sep}`) && !isAbsolute(route))
 }
 
 const gitSees = (path: string, checkout: string) =>
