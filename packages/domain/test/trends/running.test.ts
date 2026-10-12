@@ -112,6 +112,35 @@ describe("runningTotals", () => {
     expect(runningTotals(DAY, [feed], [], AFTER).nursingSeconds.at(-1)?.value).toBe(2)
   })
 
+  it("floors each side once across its segments: two left segments of 1.5 s make 3, not 2", () => {
+    const feed = sides(
+      local("01:00"),
+      ["left", local("01:00"), local("01:00") + 1500],
+      ["left", local("02:00"), local("02:00") + 1500],
+    )
+    expect(runningTotals(DAY, [feed], [], AFTER).nursingSeconds.at(-1)?.value).toBe(3)
+  })
+
+  it("leaves out a side lying wholly outside the day, before it began or from its end", () => {
+    const yesterday = local("23:00", "2026-10-08")
+    const beforeDay = sides(yesterday, ["left", yesterday, local("23:30", "2026-10-08")])
+    const fromEnd = sides(DAY.end, ["right", DAY.end, local("00:30", "2026-10-10")])
+    expect(runningTotals(DAY, [beforeDay, fromEnd], [], AFTER).nursingSeconds).toEqual(flat(DAY.start, DAY.end))
+  })
+
+  it("climbs in time order when the feeds list their segments out of start order", () => {
+    const later = sides(local("01:19"), ["right", local("01:19"), local("01:28")])
+    const earlier = sides(local("01:05"), ["left", local("01:05"), local("01:19")])
+    expect(runningTotals(DAY, [later, earlier], [], AFTER).nursingSeconds).toEqual([
+      { at: DAY.start, value: 0 },
+      { at: local("01:05"), value: 0 },
+      { at: local("01:19"), value: 840 },
+      { at: local("01:19"), value: 840 },
+      { at: local("01:28"), value: 1380 },
+      { at: DAY.end, value: 1380 },
+    ])
+  })
+
   it("adds each bottle's breast milk and formula, in tenths of a mL", () => {
     const feeds = [bottle(local("02:00"), 30.1, 10), bottle(local("05:00"), 0, 30.2)]
     expect(runningTotals(DAY, feeds, [], AFTER).bottleMl).toEqual([
