@@ -82,6 +82,20 @@ describe("GET /api/weeks/:week and GET /api/months/:month", () => {
     expect(month.days).toHaveLength(31)
     expect([week.asOf, month.asOf]).toEqual([NOW, NOW])
   })
+
+  it("answers 2100-W51, the last week whose days all fall in the years a date allows", async () => {
+    const week = decodeWeek(await okBody(await seededHousehold(), "/api/weeks/2100-W51"))
+    expect(week).toMatchObject({ week: "2100-W51", feeds: [] })
+    expect(week.days.map(({ date }) => date)).toEqual([
+      "2100-12-20",
+      "2100-12-21",
+      "2100-12-22",
+      "2100-12-23",
+      "2100-12-24",
+      "2100-12-25",
+      "2100-12-26",
+    ])
+  })
 })
 
 describe("a period that isn't one", () => {
@@ -91,6 +105,7 @@ describe("a period that isn't one", () => {
     ["/api/days/2101-01-01", "date"],
     ["/api/weeks/2025-W53", "week"],
     ["/api/weeks/2026-41", "week"],
+    ["/api/weeks/2100-W52", "week"],
     ["/api/months/2026-13", "month"],
   ])("answers %s with 400, naming the %s", async (path, field) => {
     const response = await get(await seededHousehold(), path, ANDREW.email)

@@ -1,3 +1,4 @@
+import { isIsoWeek, isoWeekDates } from "@bt/domain"
 import { Schema } from "effect"
 import { HttpApiEndpoint, HttpApiGroup } from "effect/http-api"
 import { Diaper } from "./diapers.ts"
@@ -5,6 +6,14 @@ import { Feed } from "./feeds.ts"
 import { Measurement } from "./growth.ts"
 import { Instant, IsoWeek, LocalDate, YearMonth } from "./time.ts"
 import { Totals } from "./today.ts"
+
+const isEncodableDate = Schema.is(LocalDate)
+
+const WeekOfLocalDates = IsoWeek.check(
+  Schema.makeFilter((week: string) => !isIsoWeek(week) || isoWeekDates(week).every(isEncodableDate), {
+    expected: "an ISO week whose seven days fall from 1999 to 2100",
+  }),
+)
 
 export const PeriodBounds = Schema.Struct({ start: Schema.Int, end: Schema.Int })
 export type PeriodBounds = typeof PeriodBounds.Type
@@ -49,5 +58,5 @@ export type MonthPeriod = typeof MonthPeriod.Type
 
 export class PeriodsGroup extends HttpApiGroup.make("periods")
   .add(HttpApiEndpoint.get("day", "/days/:date", { params: { date: LocalDate }, success: DayPeriod }))
-  .add(HttpApiEndpoint.get("week", "/weeks/:week", { params: { week: IsoWeek }, success: WeekPeriod }))
+  .add(HttpApiEndpoint.get("week", "/weeks/:week", { params: { week: WeekOfLocalDates }, success: WeekPeriod }))
   .add(HttpApiEndpoint.get("month", "/months/:month", { params: { month: YearMonth }, success: MonthPeriod })) {}
