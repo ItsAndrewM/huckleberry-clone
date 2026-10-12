@@ -1,0 +1,24 @@
+import type { LocalDate, VolumeUnit } from "@bt/contracts"
+import { TRENDS_METRICS } from "./metrics.ts"
+import type { TrendDay } from "./trends-numbers.ts"
+import { dayName } from "./trends-titles.ts"
+
+export interface TableRow {
+  readonly date: LocalDate
+  readonly name: string
+  readonly cells: ReadonlyArray<string>
+}
+
+const SHOWN = new Set(["counted", "no-entries", "today"])
+
+export const tableRows = (days: ReadonlyArray<TrendDay>, volume: VolumeUnit, locale?: string): TableRow[] =>
+  days
+    .filter(({ status }) => SHOWN.has(status))
+    .map(({ date, status, totals }) => ({
+      date,
+      name: status === "today" ? `${dayName(date, locale)}, so far` : dayName(date, locale),
+      cells:
+        status === "no-entries"
+          ? ["No entries"]
+          : TRENDS_METRICS.map((metric) => metric.format(metric.total(totals), volume)),
+    }))
