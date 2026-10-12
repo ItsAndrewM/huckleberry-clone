@@ -23,6 +23,11 @@ export const diaperText = ({ wet, dirty }: Diaper) => {
   return wet ? "Pee" : "Poo"
 }
 
+const progressOf = (feed: Feed, running: string) => {
+  if (feed.status === "completed") return []
+  return [feed.segments.some(({ endedAt }) => endedAt === null) ? running : "paused"]
+}
+
 export const blockText = (feed: Feed, volume: VolumeUnit, now: number) => {
   const { leftSeconds, rightSeconds, bottleMl } = feedSummary(feed, now)
   const parts = presentParts([
@@ -30,7 +35,8 @@ export const blockText = (feed: Feed, volume: VolumeUnit, now: number) => {
     [rightSeconds, `${shortMinutes(rightSeconds)} R`],
     [bottleMl, formatVolume(bottleMl, volume)],
   ])
-  return parts.length === 0 ? "Nursing" : `Nursing ${parts.join(" · ")}`
+  const nursed = parts.length === 0 ? "Nursing" : `Nursing ${parts.join(" · ")}`
+  return [nursed, ...progressOf(feed, "now")].join(" · ")
 }
 
 const diaperChip = ({ wet, dirty }: Diaper) => {
@@ -41,16 +47,11 @@ const diaperChip = ({ wet, dirty }: Diaper) => {
 export const markerText = (entry: Entry, volume: VolumeUnit, now: number) =>
   entry.kind === "diaper" ? diaperChip(entry.diaper) : formatVolume(feedSummary(entry.feed, now).bottleMl, volume)
 
-const progressOf = (feed: Feed) => {
-  if (feed.status === "completed") return []
-  return [feed.segments.some(({ endedAt }) => endedAt === null) ? "in progress" : "paused"]
-}
-
 export const entryName = (entry: Entry, display: Display, now: number) => {
   const time = (at: number) => clockTime(at, display.timeZone, display.locale)
   if (entry.kind === "diaper") return `Diaper at ${time(entry.diaper.occurredAt)}: ${diaperText(entry.diaper)}`
   const { feed } = entry
-  const details = [...progressOf(feed), ...feedParts(feed, display.volume, now)]
+  const details = [...progressOf(feed, "in progress"), ...feedParts(feed, display.volume, now)]
   const name = `${feedTitle(feed)} at ${time(feed.startedAt)}`
   return details.length === 0 ? name : `${name}: ${details.join(", ")}`
 }

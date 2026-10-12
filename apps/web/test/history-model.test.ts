@@ -1,9 +1,36 @@
+import type { Feed } from "@bt/contracts"
+import { zonedDayBounds } from "@bt/domain"
 import { describe, expect, it } from "vitest"
 import { anchorOf, dayModel, entriesIn, isLiveFeed } from "../src/features/history/day-model.ts"
-import { BOTH, BOTTLE, BOUNDS, dayWith, NOW_ON_DAY, NURSED, PAUSED, PEE, POO, RUNNING } from "./history-fixtures.ts"
-import { ZONE } from "./today-fixtures.ts"
+import { markersOf } from "../src/features/history/grid-markers.ts"
+import {
+  BOTH,
+  BOTTLE,
+  BOUNDS,
+  DISPLAY,
+  dayWith,
+  local,
+  NOW_ON_DAY,
+  NURSED,
+  PAUSED,
+  PEE,
+  POO,
+  RUNNING,
+} from "./history-fixtures.ts"
+import { feedAt, ZONE } from "./today-fixtures.ts"
 
 const LATER_DAY = BOUNDS.end + 3_600_000
+const DAY_BEFORE = "2026-10-08"
+
+const BOTTLE_AT_MIDNIGHT: Feed = {
+  ...feedAt(local("23:30", DAY_BEFORE)),
+  endedAt: BOUNDS.start,
+  segments: [
+    { id: "late-0", side: "left", startedAt: local("23:30", DAY_BEFORE), endedAt: local("23:45", DAY_BEFORE) },
+    { id: "late-1", side: "right", startedAt: local("23:45", DAY_BEFORE), endedAt: BOUNDS.start },
+  ],
+  portions: [{ id: "late-p0", occurredAt: BOUNDS.start, breastMilkMl: 60, formulaMl: 0 }],
+}
 
 describe("dayModel", () => {
   const model = dayModel(dayWith(), ZONE, NOW_ON_DAY)
@@ -26,6 +53,33 @@ describe("dayModel", () => {
       { top: 48, ids: [BOTTLE.id] },
       { top: 66, ids: [BOTH.id] },
     ])
+  })
+
+  it("draws a nursing feed whose bottle lands as the day begins as that bottle, at the top, opening the feed", () => {
+    const next = dayModel(dayWith({ feeds: [BOTTLE_AT_MIDNIGHT], diapers: [] }), ZONE, NOW_ON_DAY)
+    expect(next.grid.blocks).toEqual([])
+    expect(next.grid.clusters).toEqual([{ top: 0, ids: [BOTTLE_AT_MIDNIGHT.id] }])
+    expect(markersOf(next, DISPLAY, NOW_ON_DAY)).toEqual([
+      expect.objectContaining({
+        kind: "bottle",
+        text: "60 mL",
+        name: "Nursing and bottle at 11:30 PM: Left 15 min, Right 15 min, 60 mL",
+      }),
+    ])
+    expect(entriesIn(next, [BOTTLE_AT_MIDNIGHT.id])).toEqual([{ kind: "feed", feed: BOTTLE_AT_MIDNIGHT }])
+  })
+
+  it("keeps that feed a block on the day it nursed, ending at the bottom of the grid", () => {
+    const bounds = zonedDayBounds(DAY_BEFORE, ZONE)
+    const before = dayModel(
+      dayWith({ date: DAY_BEFORE, bounds, feeds: [BOTTLE_AT_MIDNIGHT], diapers: [] }),
+      ZONE,
+      NOW_ON_DAY,
+    )
+    expect(before.grid.blocks).toEqual([
+      expect.objectContaining({ id: BOTTLE_AT_MIDNIGHT.id, top: 282, height: 6, endsAfter: false }),
+    ])
+    expect(before.grid.clusters).toEqual([])
   })
 
   it("finds each entry by id, skipping ids it no longer has", () => {

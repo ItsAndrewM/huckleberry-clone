@@ -1,7 +1,8 @@
 import { expect, type Locator, test } from "@playwright/test"
-import { busyDay, DAY, emptyDay, feed, local, NOW, openHistory, playHistory } from "./played-day.ts"
+import { busyDay, DAY, diaper, emptyDay, feed, local, NOW, openHistory, playHistory } from "./played-day.ts"
 
 const HOUR_LABEL = /^\d{1,2}\s[AP]M$/u
+const YESTERDAY = "2026-10-08"
 
 type Box = Awaited<ReturnType<Locator["boundingBox"]>>
 
@@ -40,8 +41,26 @@ test("draws the part of yesterday's feed after midnight, and a feed still going 
   const grid = page.getByRole("region", { name: "The day by hour" })
   await expect(grid.getByRole("button", { name: /^Nursing at 11:40 PM: Left 35 min$/u })).toBeVisible()
   await expect(grid.getByRole("button", { name: "Nursing at 9:10 AM: in progress, Left 20 min" })).toHaveText(
-    "Nursing 20m L",
+    "Nursing 20m L · now",
   )
+})
+
+test("opens today scrolled to the hour now falls in", async ({ page }) => {
+  const { played, andrew, emily } = await playHistory(page, [])
+  played.days.push(busyDay(andrew, emily))
+  await openHistory(page)
+  const grid = page.getByRole("region", { name: "The day by hour" })
+  await expect(grid.getByRole("button", { name: "Log at 9 AM", exact: true })).toBeInViewport()
+})
+
+test("opens an earlier day scrolled to its first entry", async ({ page }) => {
+  const { played, emily } = await playHistory(page, [])
+  played.days.push({
+    ...emptyDay(YESTERDAY),
+    diapers: [diaper("evening", local("20:00", YESTERDAY), true, false, emily)],
+  })
+  await openHistory(page, `?date=${YESTERDAY}`)
+  await expect(page.getByRole("button", { name: "Diaper at 8:00 PM: Pee" })).toBeInViewport()
 })
 
 test("grows a running feed's block as time passes", async ({ page }) => {
@@ -53,10 +72,10 @@ test("grows a running feed's block as time passes", async ({ page }) => {
   await page.clock.install({ time: NOW })
   await page.goto("/history")
   const block = page.getByRole("button", { name: /^Nursing at 9:10 AM: in progress/u })
-  await expect(block).toHaveText("Nursing 20m L")
+  await expect(block).toHaveText("Nursing 20m L · now")
   const before = await block.boundingBox()
   await page.clock.fastForward("30:00")
-  await expect(block).toHaveText("Nursing 50m L")
+  await expect(block).toHaveText("Nursing 50m L · now")
   const after = await block.boundingBox()
   expect((after?.height ?? 0) - (before?.height ?? 0)).toBeCloseTo(30, 0)
 })

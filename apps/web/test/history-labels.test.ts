@@ -24,14 +24,22 @@ describe("shortMinutes", () => {
 })
 
 describe("a block's label", () => {
-  it("names each side's minutes and any bottle given during the feed", () => {
+  it("names each side's minutes and any bottle given during a finished feed, and nothing after them", () => {
     expect(blockText(NURSED, "ml", NOW_ON_DAY)).toBe("Nursing 14m L · 9m R")
     expect(blockText(PAUSED, "ml", NOW_ON_DAY)).toBe("Nursing 10m L · 10m R · 60 mL")
-    expect(blockText(RUNNING, "ml", NOW_ON_DAY)).toBe("Nursing 20m L")
   })
 
-  it("says just Nursing for a side that started this moment", () => {
-    expect(blockText(RUNNING, "ml", RUNNING.startedAt)).toBe("Nursing")
+  it("ends with now while a side is running", () => {
+    expect(blockText(RUNNING, "ml", NOW_ON_DAY)).toBe("Nursing 20m L · now")
+  })
+
+  it("says just Nursing · now for a side that started this moment", () => {
+    expect(blockText(RUNNING, "ml", RUNNING.startedAt)).toBe("Nursing · now")
+  })
+
+  it("ends with paused while the feed waits with every side ended", () => {
+    const waiting = { ...NURSED, status: "active" as const, endedAt: null }
+    expect(blockText(waiting, "ml", NOW_ON_DAY)).toBe("Nursing 14m L · 9m R · paused")
   })
 })
 
@@ -88,5 +96,14 @@ describe("markersOf", () => {
       ["diaper", "Both", 1],
     ])
     expect(markers[0]?.name).toBe("2 entries from 2:10 AM")
+  })
+
+  it("keys each marker by the ids it holds, and places it at its cluster's step", () => {
+    const markers = markersOf(dayModel(dayWith(), ZONE, NOW_ON_DAY), DISPLAY, NOW_ON_DAY)
+    expect(markers.map(({ key, top }) => [key, top])).toEqual([
+      [`${PEE.id},${POO.id}`, 26],
+      [BOTTLE.id, 48],
+      [BOTH.id, 66],
+    ])
   })
 })

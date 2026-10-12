@@ -4,6 +4,7 @@ import {
   type CalendarPoint,
   type DayGrid,
   type GridScale,
+  type Interval,
   layoutDay,
   sessionBounds,
   type Side,
@@ -22,6 +23,10 @@ export interface DayModel {
 
 const isNursing = (feed: Feed) => feed.segments.length > 0
 
+const endsAsDayBegins = (feed: Feed, { start }: Interval) => sessionBounds(feed)?.endedAt === start
+
+const isBlock = (feed: Feed, bounds: Interval) => isNursing(feed) && !endsAsDayBegins(feed, bounds)
+
 const blockOf = (feed: Feed): ReadonlyArray<CalendarBlock<Side>> => {
   const span = sessionBounds(feed)
   if (span === null) return []
@@ -29,9 +34,11 @@ const blockOf = (feed: Feed): ReadonlyArray<CalendarBlock<Side>> => {
   return [{ id: feed.id, ...span, bands }]
 }
 
-const pointsOf = (day: DayPeriod): ReadonlyArray<CalendarPoint> => [
-  ...day.feeds.filter((feed) => !isNursing(feed)).map(({ id, startedAt }) => ({ id, at: startedAt })),
-  ...day.diapers.map(({ id, occurredAt }) => ({ id, at: occurredAt })),
+const pointAt = (feed: Feed, bounds: Interval) => (isNursing(feed) ? bounds.start : feed.startedAt)
+
+const pointsOf = ({ feeds, diapers, bounds }: DayPeriod): ReadonlyArray<CalendarPoint> => [
+  ...feeds.filter((feed) => !isBlock(feed, bounds)).map((feed) => ({ id: feed.id, at: pointAt(feed, bounds) })),
+  ...diapers.map(({ id, occurredAt }) => ({ id, at: occurredAt })),
 ]
 
 const entriesOf = (day: DayPeriod): ReadonlyMap<string, Entry> =>
@@ -47,7 +54,7 @@ export const dayModel = (day: DayPeriod, zone: string, now: number): DayModel =>
       zone,
       bounds: day.bounds,
       now,
-      blocks: day.feeds.filter(isNursing).flatMap(blockOf),
+      blocks: day.feeds.filter((feed) => isBlock(feed, day.bounds)).flatMap(blockOf),
       points: pointsOf(day),
     },
     SCALE,
