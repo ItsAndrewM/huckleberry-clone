@@ -47,7 +47,16 @@ export const runningChartDefinition = ({ bounds, points, usual, ticks, tickLabel
       ...(usual === null
         ? []
         : [decorative(ruleY([usual], { id: "usual", stroke: MUTED, strokeWidth: 1.5, strokeDasharray: "4 4" }))]),
-      decorative(lineY(points, { id: "so-far", x: "at", y: "value", stroke: ACCENT, strokeWidth: 2 })),
+      decorative(
+        lineY(points, {
+          id: "so-far",
+          x: "at",
+          y: "value",
+          key: (_point, { index }) => index,
+          stroke: ACCENT,
+          strokeWidth: 2,
+        }),
+      ),
     ],
     scales: {
       x: {

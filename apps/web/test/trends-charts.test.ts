@@ -1,6 +1,6 @@
 import { datesBetween, runningTotals, zonedDayBounds } from "@bt/domain"
 import { createChartScene, renderChartSvg } from "@tanstack/charts"
-import { describe, expect, it } from "vitest"
+import { describe, expect, it, vi } from "vitest"
 import { barChartDefinition, barChartModel } from "../src/features/trends/bar-chart-definition.ts"
 import { dayTicks, hourLabel } from "../src/features/trends/day-ticks.ts"
 import { TRENDS_METRICS } from "../src/features/trends/metrics.ts"
@@ -120,5 +120,17 @@ describe("runningChartDefinition", () => {
   it("ticks the day at 12 AM, 6 AM, 12 PM, 6 PM and the next 12 AM", () => {
     const scene = createChartScene(runningChartDefinition(runningChartModel(DIAPERS, "ml", runningInput(null))), SIZE)
     expect(scene.scales["x"]?.ticks?.map(({ label }) => label)).toEqual(["12 AM", "6 AM", "12 PM", "6 PM", "12 AM"])
+  })
+
+  it("draws the climbing line without asking for a key, even where steps repeat a time", () => {
+    const model = runningChartModel(FEEDS, "ml", runningInput(null))
+    expect(new Set(model.points.map((point) => point.at)).size).toBeLessThan(model.points.length)
+    const warn = vi.spyOn(console, "warn")
+    try {
+      createChartScene(runningChartDefinition(model), SIZE)
+      expect(warn).not.toHaveBeenCalled()
+    } finally {
+      warn.mockRestore()
+    }
   })
 })
