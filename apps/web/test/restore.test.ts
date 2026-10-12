@@ -9,7 +9,7 @@ import {
 } from "@bt/contracts"
 import { describe, expect, it } from "vitest"
 import { AuthRequired, Offline } from "../src/api/errors.ts"
-import { restoreFailure, restoreOf, restoreWaitReason } from "../src/features/deleted/restore.ts"
+import { restoreFailure, restoreOf, restoreWaitReason, withoutEntry } from "../src/features/deleted/restore.ts"
 import type { Household } from "../src/sheets/failure.ts"
 import { measurement } from "./growth-fixtures.ts"
 import { ANDREW, diaperAt, EMILY, feedAt, MINUTE, NOW, nursedFor, ZONE } from "./today-fixtures.ts"
@@ -42,6 +42,19 @@ describe("restoreOf", () => {
       { kind: "restoreFeed", id: "feed-1", payload: { actionId: ACTION_ID, version: 4 } },
       { kind: "restoreMeasurement", id: "m1", payload: { actionId: ACTION_ID, version: 3 } },
     ])
+  })
+})
+
+describe("withoutEntry", () => {
+  it("takes a restored entry off the list, whatever its kind, and leaves the rest", () => {
+    const diaper = diaperAt(NOW, { id: "diaper-1", deletedAt: NOW })
+    const kept = diaperAt(NOW - MINUTE, { id: "diaper-2", deletedAt: NOW })
+    const feed = feedAt(NOW, { id: "feed-1", deletedAt: NOW })
+    const measured = { ...measurement("m1", NOW, { weightG: 4300 }), deletedAt: NOW }
+    const deleted = { feeds: [feed], diapers: [diaper, kept], measurements: [measured] }
+    expect(withoutEntry(deleted, "diaper-1")).toEqual({ ...deleted, diapers: [kept] })
+    expect(withoutEntry(deleted, "feed-1")).toEqual({ ...deleted, feeds: [] })
+    expect(withoutEntry(deleted, "m1")).toEqual({ ...deleted, measurements: [] })
   })
 })
 

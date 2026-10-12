@@ -2,6 +2,7 @@ import type { Child, Household } from "@bt/contracts"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { useSyncExternalStore } from "react"
 import { useApp } from "../app-context.ts"
+import { deletedQuery } from "./deleted.ts"
 import { growthQuery } from "./growth.ts"
 import { meQuery } from "./me.ts"
 import { type ChildFields, type HouseholdChange, rememberSaved, saveChild, saveHousehold } from "./settings.ts"
@@ -30,6 +31,11 @@ export const useLast24h = () => {
 export const useGrowth = () => {
   const { api } = useApp()
   return useQuery(growthQuery(api))
+}
+
+export const useDeleted = () => {
+  const { api } = useApp()
+  return useQuery(deletedQuery(api))
 }
 
 export const useConnectivity = () => {

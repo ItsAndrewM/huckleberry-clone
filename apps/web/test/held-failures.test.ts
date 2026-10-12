@@ -37,6 +37,7 @@ const sheetsOf = (state: SheetsState): Sheets => ({
   keep: () => {},
   discard: () => {},
   send: () => {},
+  announce: () => {},
 })
 
 describe("two saves that fail on one bar of signal", () => {

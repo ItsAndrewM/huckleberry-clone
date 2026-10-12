@@ -1,4 +1,11 @@
-import { DiaperConflict, FeedConflict, InvalidInput, MeasurementConflict, Unauthorized } from "@bt/contracts"
+import {
+  type Deleted,
+  DiaperConflict,
+  FeedConflict,
+  InvalidInput,
+  MeasurementConflict,
+  Unauthorized,
+} from "@bt/contracts"
 import type { Action } from "../../api/actions.ts"
 import type { Connectivity } from "../../api/connectivity.ts"
 import { AuthRequired, Offline } from "../../api/errors.ts"
@@ -19,6 +26,12 @@ export const restoreOf = (record: DeletedRecord, actionId: string): Action => {
     }
   }
 }
+
+export const withoutEntry = (deleted: Deleted, id: string): Deleted => ({
+  feeds: deleted.feeds.filter((feed) => feed.id !== id),
+  diapers: deleted.diapers.filter((diaper) => diaper.id !== id),
+  measurements: deleted.measurements.filter((measurement) => measurement.id !== id),
+})
 
 export const restoreWaitReason = (connectivity: Connectivity): string | null => {
   if (connectivity === "offline") return "Restoring needs a connection."
