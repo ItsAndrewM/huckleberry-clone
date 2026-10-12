@@ -8,6 +8,7 @@ import { trackFreshness } from "./api/freshness.ts"
 import { startLive } from "./api/live-connection.ts"
 import { socketUrl } from "./api/live.ts"
 import { createQueryClient } from "./api/query-client.ts"
+import { refreshPeriodsOnZoneChange } from "./api/zone-change.ts"
 import { AppContext } from "./app-context.ts"
 import { registerServiceWorker } from "./service-worker/register.ts"
 import { takeDraft } from "./sheets/drafts.ts"
@@ -23,6 +24,7 @@ const connectivity = createConnectivity(navigator.onLine)
 followBrowser(connectivity, window)
 const api = connectApi({ report: connectivity.report })
 const queryClient = createQueryClient()
+refreshPeriodsOnZoneChange(queryClient)
 const freshness = trackFreshness(queryClient.getQueryCache(), connectivity)
 const draft = takeDraft(() => sessionStorage, `${window.location.pathname}${window.location.search}`)
 const kept = restored(draft, readKept(keptStorage), Date.now(), () => crypto.randomUUID())
