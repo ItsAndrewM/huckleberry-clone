@@ -35,4 +35,21 @@ describe("the deploy workflow", () => {
   it("never cancels a deploy that's running", () => {
     expect(deploy).toContain("cancel-in-progress: false")
   })
+
+  it("skips only the deploy step when the head check finds main moved on", () => {
+    expect(deploy).toContain("id: head")
+    expect(deploy).toContain(`echo "superseded=true" >> "$GITHUB_OUTPUT"`)
+    expect(deploy).toContain("if: steps.head.outputs.superseded != 'true'")
+  })
+
+  it("pins every action outside GitHub's own to a full commit, since its job holds the token", () => {
+    const actions = [...deploy.matchAll(/uses: (\S+)/g)].map(([, uses]) => uses ?? "")
+    const unpinned = actions.filter((uses) => !uses.startsWith("actions/") && !/@[0-9a-f]{40}$/.test(uses))
+    expect(actions).not.toEqual([])
+    expect(unpinned).toEqual([])
+  })
+
+  it("gives up after 20 minutes, so a hung deploy can't hold up the deploys behind it", () => {
+    expect(deploy).toContain("timeout-minutes: 20")
+  })
 })

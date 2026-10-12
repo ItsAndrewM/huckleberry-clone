@@ -30,11 +30,20 @@ export interface CiRun {
   readonly createdAt: string
 }
 
-export interface Deploy {
+export interface Upload {
   readonly config: string
   readonly commit: string
-  readonly restorePoint: string
   readonly runId: string | undefined
+}
+
+export interface Rollout extends Upload {
+  readonly versionId: string
+  readonly restorePoint: string
+}
+
+interface WranglerOutputEntry {
+  readonly type?: string
+  readonly version_id?: string
 }
 
 type Check<A> = readonly [expectation: string, holds: (value: A) => boolean]
@@ -100,22 +109,45 @@ export const envFor = (tool: Tool, env: NodeJS.ProcessEnv): NodeJS.ProcessEnv =>
 
 export const restorePointOf = (at: Date): string => `${at.toISOString().slice(0, 19)}Z`
 
-const deployMessage = ({ commit, restorePoint, runId }: Deploy): string =>
-  `${commit.slice(0, 7)} restore point ${restorePoint} ${runId === undefined ? "local" : `ci:${runId}`}`
+const sourceOf = (runId: string | undefined): string => (runId === undefined ? "local" : `ci:${runId}`)
 
-export const wranglerDeployArgs = (deploy: Deploy): string[] => [
-  "deploy",
+export const versionUploadArgs = ({ config, commit, runId }: Upload): string[] => [
+  "versions",
+  "upload",
   "--config",
-  deploy.config,
+  config,
   "--tag",
-  deploy.commit,
+  commit,
   "--message",
-  deployMessage(deploy),
+  `${commit.slice(0, 7)} ${sourceOf(runId)}`,
 ]
 
-export const releaseReport = (commit: string, restorePoint: string): string =>
+export const uploadedVersionId = (output: string): string => {
+  const entries: ReadonlyArray<WranglerOutputEntry> = output
+    .split("\n")
+    .filter((line) => line !== "")
+    .map((line) => JSON.parse(line))
+  const versionId = entries.find((entry) => entry.type === "version-upload")?.version_id ?? ""
+  if (versionId === "") throw new Error("Wrangler reported no uploaded version in its output file")
+  return versionId
+}
+
+export const versionDeployArgs = ({ config, versionId, commit, restorePoint, runId }: Rollout): string[] => [
+  "versions",
+  "deploy",
+  `${versionId}@100%`,
+  "--config",
+  config,
+  "--message",
+  `${commit.slice(0, 7)} restore point ${restorePoint} ${sourceOf(runId)}`,
+  "--yes",
+]
+
+export const restorePointReport = (restorePoint: string): string =>
+  `Restore point: ${restorePoint}. To rewind the household to just before this deploy, run \`pnpm admin pitr:restore --at ${restorePoint}\`.`
+
+export const releasedReport = (commit: string): string =>
   [
     `Released ${commit.slice(0, 7)} to https://${PRODUCTION_HOSTNAME}.`,
-    `Restore point: ${restorePoint}. To rewind the household to just before this deploy, run \`pnpm admin pitr:restore --at ${restorePoint}\`.`,
     "Open the app online on each phone, so its offline copy updates to this build.",
   ].join("\n\n")

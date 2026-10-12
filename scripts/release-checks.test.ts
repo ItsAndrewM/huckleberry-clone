@@ -10,12 +10,19 @@ import {
   deployProblems,
   envFor,
   refuseUnknownFlags,
-  releaseReport,
+  releasedReport,
   restorePointOf,
-  wranglerDeployArgs,
+  restorePointReport,
+  uploadedVersionId,
+  versionDeployArgs,
+  versionUploadArgs,
 } from "./release-checks.ts"
 
 const COMMIT = "20390a32dd62e7c7a4b1f0e9d8c7b6a5f4e3d2c1"
+const VERSION_ID = "3f1c2d4e-5a6b-4c7d-8e9f-0a1b2c3d4e5f"
+const BUILT_CONFIG = "/repo/apps/web/dist/baby_tracker/wrangler.json"
+
+const valueAfter = (args: ReadonlyArray<string>, flag: string) => args[args.indexOf(flag) + 1] ?? ""
 
 const DEPLOYABLE: DeployConfig = {
   name: "baby-tracker",
@@ -189,45 +196,88 @@ describe("the restore point a release records", () => {
   })
 })
 
-describe("the deploy a release runs", () => {
-  const DEPLOY = {
-    config: "/repo/apps/web/dist/baby_tracker/wrangler.json",
-    commit: COMMIT,
-    restorePoint: "2026-10-12T15:49:59Z",
-  }
-  const valueAfter = (args: ReadonlyArray<string>, flag: string) => args[args.indexOf(flag) + 1] ?? ""
+describe("the version a release uploads", () => {
+  const UPLOAD = { config: BUILT_CONFIG, commit: COMMIT }
 
-  it("tags the version with the whole commit, and puts the restore point and the CI run in its message", () => {
-    expect(wranglerDeployArgs({ ...DEPLOY, runId: "18233456789" })).toEqual([
-      "deploy",
+  it("uploads the build as a version tagged with the whole commit, naming the CI run, without putting it live", () => {
+    expect(versionUploadArgs({ ...UPLOAD, runId: "18233456789" })).toEqual([
+      "versions",
+      "upload",
       "--config",
-      "/repo/apps/web/dist/baby_tracker/wrangler.json",
+      BUILT_CONFIG,
       "--tag",
       COMMIT,
       "--message",
-      "20390a3 restore point 2026-10-12T15:49:59Z ci:18233456789",
+      "20390a3 ci:18233456789",
     ])
   })
 
   it("says local when it runs from the Mac", () => {
-    expect(valueAfter(wranglerDeployArgs({ ...DEPLOY, runId: undefined }), "--message")).toBe(
+    expect(valueAfter(versionUploadArgs({ ...UPLOAD, runId: undefined }), "--message")).toBe("20390a3 local")
+  })
+})
+
+describe("the version Wrangler reports it uploaded", () => {
+  it("is read from the version-upload line of Wrangler's output file", () => {
+    const output = [
+      JSON.stringify({ type: "wrangler-session", version: 1 }),
+      JSON.stringify({ type: "version-upload", version: 1, version_id: VERSION_ID }),
+      "",
+    ].join("\n")
+    expect(uploadedVersionId(output)).toBe(VERSION_ID)
+  })
+
+  it.each([
+    ["an empty file, from an upload that failed before writing it", ""],
+    ["a file with no version-upload line", JSON.stringify({ type: "wrangler-session", version: 1 })],
+  ])("stops the release on %s", (_label, output) => {
+    expect(() => uploadedVersionId(output)).toThrow("Wrangler reported no uploaded version")
+  })
+})
+
+describe("the deploy that puts the uploaded version live", () => {
+  const ROLLOUT = { config: BUILT_CONFIG, versionId: VERSION_ID, commit: COMMIT, restorePoint: "2026-10-12T15:49:59Z" }
+
+  it("sends all traffic to that version, with the restore point and the CI run in the deployment's message", () => {
+    expect(versionDeployArgs({ ...ROLLOUT, runId: "18233456789" })).toEqual([
+      "versions",
+      "deploy",
+      `${VERSION_ID}@100%`,
+      "--config",
+      BUILT_CONFIG,
+      "--message",
+      "20390a3 restore point 2026-10-12T15:49:59Z ci:18233456789",
+      "--yes",
+    ])
+  })
+
+  it("says local when it runs from the Mac", () => {
+    expect(valueAfter(versionDeployArgs({ ...ROLLOUT, runId: undefined }), "--message")).toBe(
       "20390a3 restore point 2026-10-12T15:49:59Z local",
     )
   })
 
-  it("stays within Cloudflare's 100-byte tag and 1,000-byte message", () => {
-    const args = wranglerDeployArgs({ ...DEPLOY, runId: "9".repeat(20) })
-    expect(Buffer.byteLength(valueAfter(args, "--tag"))).toBeLessThanOrEqual(100)
-    expect(Buffer.byteLength(valueAfter(args, "--message"))).toBeLessThanOrEqual(1000)
+  it("stays within Cloudflare's 100-byte tag and 1,000-byte messages", () => {
+    const runId = "9".repeat(20)
+    const upload = versionUploadArgs({ config: BUILT_CONFIG, commit: COMMIT, runId })
+    const rollout = versionDeployArgs({ ...ROLLOUT, runId })
+    expect(Buffer.byteLength(valueAfter(upload, "--tag"))).toBeLessThanOrEqual(100)
+    expect(Buffer.byteLength(valueAfter(upload, "--message"))).toBeLessThanOrEqual(1000)
+    expect(Buffer.byteLength(valueAfter(rollout, "--message"))).toBeLessThanOrEqual(1000)
   })
 })
 
 describe("what a release reports", () => {
-  it("names the commit, the restore point and the command that rewinds to it, and reminds about the phones", () => {
-    expect(releaseReport(COMMIT, "2026-10-12T15:49:59Z")).toBe(
+  it("gives the restore point and the command that rewinds to it, before the version goes live", () => {
+    expect(restorePointReport("2026-10-12T15:49:59Z")).toBe(
+      "Restore point: 2026-10-12T15:49:59Z. To rewind the household to just before this deploy, run `pnpm admin pitr:restore --at 2026-10-12T15:49:59Z`.",
+    )
+  })
+
+  it("names the commit once it's live, and reminds about the phones", () => {
+    expect(releasedReport(COMMIT)).toBe(
       [
         "Released 20390a3 to https://baby.andamonium.dev.",
-        "Restore point: 2026-10-12T15:49:59Z. To rewind the household to just before this deploy, run `pnpm admin pitr:restore --at 2026-10-12T15:49:59Z`.",
         "Open the app online on each phone, so its offline copy updates to this build.",
       ].join("\n\n"),
     )

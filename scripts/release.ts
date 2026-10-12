@@ -1,5 +1,7 @@
 import { spawnSync } from "node:child_process"
-import { appendFileSync, readFileSync } from "node:fs"
+import { appendFileSync, mkdtempSync, readFileSync, rmSync } from "node:fs"
+import { tmpdir } from "node:os"
+import { join } from "node:path"
 import { fileURLToPath } from "node:url"
 import { builtWorkerConfig } from "./bundle-size.ts"
 import {
@@ -9,9 +11,12 @@ import {
   deployProblems,
   envFor,
   refuseUnknownFlags,
-  releaseReport,
+  releasedReport,
   restorePointOf,
-  wranglerDeployArgs,
+  restorePointReport,
+  uploadedVersionId,
+  versionDeployArgs,
+  versionUploadArgs,
 } from "./release-checks.ts"
 
 const rootDir = fileURLToPath(new URL("../", import.meta.url))
@@ -24,10 +29,16 @@ const output = (tool: "git" | "gh", args: string[]): string => {
   return run.stdout.trim()
 }
 
-const pnpm = (tool: "build" | "wrangler", args: string[], cwd: string): void => {
-  const run = spawnSync("pnpm", args, { cwd, env: envFor(tool, process.env), stdio: "inherit" })
+const pnpm = (tool: "build" | "wrangler", args: string[], cwd: string, extraEnv: NodeJS.ProcessEnv = {}): void => {
+  const run = spawnSync("pnpm", args, { cwd, env: { ...envFor(tool, process.env), ...extraEnv }, stdio: "inherit" })
   if (run.error !== undefined) throw run.error
   if (run.status !== 0) process.exit(run.status ?? 1)
+}
+
+const report = (paragraphs: string): void => {
+  console.log(paragraphs)
+  const summary = process.env.GITHUB_STEP_SUMMARY
+  if (summary !== undefined) appendFileSync(summary, `${paragraphs}\n\n`)
 }
 
 const stopUnless = (problems: string[]): void => {
@@ -70,14 +81,20 @@ pnpm("build", ["build"], rootDir)
 const config = builtWorkerConfig(webDir)
 stopUnless(deployProblems(JSON.parse(readFileSync(config, "utf8"))))
 
+const runId = process.env.GITHUB_RUN_ID
+const outputDir = mkdtempSync(join(tmpdir(), "bt-release-"))
+const outputFile = join(outputDir, "wrangler-output.ndjson")
+pnpm("wrangler", ["exec", "wrangler", ...versionUploadArgs({ config, commit: head, runId })], webDir, {
+  WRANGLER_OUTPUT_FILE_PATH: outputFile,
+})
+const versionId = uploadedVersionId(readFileSync(outputFile, "utf8"))
+rmSync(outputDir, { recursive: true, force: true })
+
 const restorePoint = restorePointOf(new Date())
+report(restorePointReport(restorePoint))
 pnpm(
   "wrangler",
-  ["exec", "wrangler", ...wranglerDeployArgs({ config, commit: head, restorePoint, runId: process.env.GITHUB_RUN_ID })],
+  ["exec", "wrangler", ...versionDeployArgs({ config, versionId, commit: head, restorePoint, runId })],
   webDir,
 )
-
-const report = releaseReport(head, restorePoint)
-console.log(report)
-const summary = process.env.GITHUB_STEP_SUMMARY
-if (summary !== undefined) appendFileSync(summary, `${report}\n`)
+report(releasedReport(head))
