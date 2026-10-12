@@ -50,14 +50,14 @@ export const isoWeekOfDate = (date: LocalDate): IsoWeek => {
   const midnight = utcMidnightOf(date)
   const thursday = midnight + (MONDAY_TO_THURSDAY - daysSinceMonday(midnight)) * DAY_MS
   const year = new Date(thursday).getUTCFullYear()
-  const week = Math.floor((thursday - Date.UTC(year, 0, 1)) / WEEK_MS) + 1
+  const week = Math.floor((thursday - new Date(0).setUTCFullYear(year, 0, 1)) / WEEK_MS) + 1
   return `${year}-W${String(week).padStart(2, "0")}`
 }
 
 const mondayOf = (week: string): LocalDate | null => {
   const [, year, weekNumber] = ISO_WEEK_FORMAT.exec(week) ?? []
   if (weekNumber === undefined) return null
-  const fourthOfJanuary = Date.UTC(Number(year), 0, 4)
+  const fourthOfJanuary = new Date(0).setUTCFullYear(Number(year), 0, 4)
   const firstMonday = fourthOfJanuary - daysSinceMonday(fourthOfJanuary) * DAY_MS
   const monday = utcDateOf(firstMonday + (Number(weekNumber) - 1) * WEEK_MS)
   return isLocalDate(monday) && isoWeekOfDate(monday) === week ? monday : null

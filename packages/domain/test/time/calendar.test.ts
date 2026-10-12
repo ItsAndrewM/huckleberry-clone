@@ -120,6 +120,19 @@ describe("ISO weeks", () => {
     )
   })
 
+  it("numbers weeks in years 0 to 199 as date-fns does, where Date.UTC reads years below 100 as the 1900s", () => {
+    const utc = tz("UTC")
+    const earlyDates = fc
+      .integer({ min: new Date(0).setUTCFullYear(0, 0, 1), max: new Date(0).setUTCFullYear(199, 11, 31) })
+      .map((ms) => new Date(ms).toISOString().slice(0, 10))
+    fc.assert(
+      fc.property(earlyDates, (date) => {
+        const day = utc(Date.parse(`${date}T00:00:00Z`))
+        expect(isoWeekOfDate(date)).toBe(`${getISOWeekYear(day)}-W${String(getISOWeek(day)).padStart(2, "0")}`)
+      }),
+    )
+  })
+
   it("puts every date in the week that starts on the Monday up to six days before it", () => {
     fc.assert(
       fc.property(dates, (date) => {
