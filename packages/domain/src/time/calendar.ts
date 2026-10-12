@@ -64,3 +64,11 @@ export const isoWeekMonday = (week: IsoWeek): LocalDate => {
   if (monday === null) throw new RangeError(`Expected an ISO week like 2026-W41, got "${week}"`)
   return monday
 }
+
+export const isoWeekDates = (week: IsoWeek): LocalDate[] => {
+  const monday = isoWeekMonday(week)
+  return datesBetween(monday, addDaysToDate(monday, 6))
+}
+
+export const monthDates = (month: YearMonth): LocalDate[] =>
+  datesBetween(`${month}-01`, addDaysToDate(`${nextMonth(month)}-01`, -1))

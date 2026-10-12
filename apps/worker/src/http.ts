@@ -26,6 +26,7 @@ import { growthHandlers } from "./growth-handlers.ts"
 import { householdHandlers } from "./household-handlers.ts"
 import { logRefusal, routeOf } from "./logs.ts"
 import { mutations, type Saved } from "./mutations.ts"
+import { periodHandlers } from "./period-handlers.ts"
 import type { Broadcast } from "./sockets.ts"
 
 export const invalidInputs = HttpApiMiddleware.layerSchemaErrorTransform(InvalidInputs, (error) =>
@@ -108,6 +109,7 @@ export const householdApi = (storage: DurableObjectStorage, broadcast: Broadcast
     feedHandlers(storage, broadcast),
     growthHandlers(storage, broadcast),
     exportHandlers(storage.sql),
+    periodHandlers(storage.sql),
   )
   return HttpRouter.toWebHandler(
     Layer.mergeAll(

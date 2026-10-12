@@ -1,3 +1,4 @@
+export { type DayTotals, feedTouches, sumTotals, totalsByDay } from "./aggregate/periods.ts"
 export { type DiaperChange, last24hPeriod, type StartedFeed, type Totals, totalsIn } from "./aggregate/totals.ts"
 export type { CalendarBand, CalendarBlock, PlacedBand, PlacedBlock } from "./calendar/blocks.ts"
 export type { CalendarPoint, PlacedCluster } from "./calendar/clusters.ts"
@@ -33,10 +34,12 @@ export {
   isIsoWeek,
   isLocalDate,
   type IsoWeek,
+  isoWeekDates,
   isoWeekMonday,
   isoWeekOfDate,
   isYearMonth,
   type LocalDate,
+  monthDates,
   monthOfDate,
   nextMonth,
   type YearMonth,

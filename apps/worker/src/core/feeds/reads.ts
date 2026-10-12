@@ -1,5 +1,5 @@
 import type { Feed, Prefill, Side } from "@bt/contracts"
-import type { Instant } from "@bt/domain"
+import { feedTouches, type Instant, type Interval } from "@bt/domain"
 import { loadFeed } from "./store.ts"
 
 type BottleRow = { breast_milk_ml: number; formula_ml: number }
@@ -17,6 +17,19 @@ export const liveFeedsSince = (sql: SqlStorage, from: Instant): Feed[] =>
       )
       .toArray(),
   )
+
+export const liveFeedsTouching = (sql: SqlStorage, period: Interval, now: Instant): Feed[] =>
+  loaded(
+    sql,
+    sql
+      .exec<{ id: string }>(
+        `SELECT id FROM feeds WHERE deleted_at IS NULL AND started_at < ? AND (ended_at IS NULL OR ended_at >= ?)
+         ORDER BY started_at, rowid`,
+        period.end,
+        period.start,
+      )
+      .toArray(),
+  ).filter((feed) => feedTouches(period, feed, now))
 
 export const lastFeed = (sql: SqlStorage): Feed | null => {
   const rows = sql
