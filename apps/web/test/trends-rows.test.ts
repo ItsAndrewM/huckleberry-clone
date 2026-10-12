@@ -1,4 +1,4 @@
-import { zonedDayBounds } from "@bt/domain"
+import { flOzFromMl, zonedDayBounds } from "@bt/domain"
 import { describe, expect, it } from "vitest"
 import { barRows, tallestDay } from "../src/features/trends/bar-rows.ts"
 import { dayTicks, hourLabel } from "../src/features/trends/day-ticks.ts"
@@ -13,8 +13,9 @@ const [FEEDS, NURSING, BOTTLES] = TRENDS_METRICS
 const DAYS = trendDays(WEEK, TODAY, BIRTH)
 
 describe("barRows", () => {
-  it("draws finished days and today, and nothing for days still to come", () => {
-    expect(barRows(FEEDS, DAYS, "ml", null).map(({ date, value }) => [date, value])).toEqual([
+  it("draws finished days and today, and nothing for days still to come, logged or not", () => {
+    const logged = trendDays([...WEEK.slice(0, 3), dated("2026-10-15", MONDAY)], TODAY, BIRTH)
+    expect(barRows(FEEDS, logged, "ml", null).map(({ date, value }) => [date, value])).toEqual([
       ["2026-10-12", 8],
       ["2026-10-13", 7],
       [TODAY, 2],
@@ -29,10 +30,10 @@ describe("barRows", () => {
       ["2026-10-13:right", 40],
       [`${TODAY}:left`, 15],
     ])
-    expect(barRows(BOTTLES, DAYS, "fl_oz", null).map(({ key }) => key)).toEqual([
-      "2026-10-12:breast-milk",
-      "2026-10-12:formula",
-      "2026-10-13:breast-milk",
+    expect(barRows(BOTTLES, DAYS, "fl_oz", null).map(({ key, value }) => [key, value])).toEqual([
+      ["2026-10-12:breast-milk", flOzFromMl(400)],
+      ["2026-10-12:formula", flOzFromMl(210)],
+      ["2026-10-13:breast-milk", flOzFromMl(520)],
     ])
   })
 
@@ -94,6 +95,10 @@ describe("usualDay", () => {
     const earlier = [dated("2026-10-06", MONDAY), dated("2026-10-07", TUESDAY), dated("2026-10-11")]
     expect(usualDay([earlier, WEEK], TODAY, TODAY, BIRTH)).toMatchObject({ days: 3 })
     expect(usualDay([WEEK, WEEK], TODAY, TODAY, BIRTH)).toMatchObject({ days: 2, totals: { feedsStarted: 7.5 } })
+  })
+
+  it("never counts the shown day in its own usual day, even with entries", () => {
+    expect(usualDay([WEEK, WEEK], "2026-10-13", TODAY, BIRTH)).toMatchObject({ days: 1, totals: { feedsStarted: 8 } })
   })
 
   it("is null when none of the seven days before had entries", () => {

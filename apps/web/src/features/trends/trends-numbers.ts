@@ -28,7 +28,7 @@ export const averageNumbers = (
   volume: VolumeUnit,
   isCurrent: boolean,
 ): Numbers => {
-  if (average === null) return { value: isCurrent ? "No finished day yet" : "No entries", detail: [] }
+  if (average === null) return { value: isCurrent ? "No full day logged yet" : "No entries", detail: [] }
   const value = metric.format(metric.total(average.totals), volume)
   return { value: `${value} a day, ${overDays(average.days)}`, detail: metric.detail(average.totals, volume) }
 }

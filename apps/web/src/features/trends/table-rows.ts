@@ -1,4 +1,5 @@
 import type { LocalDate, VolumeUnit } from "@bt/contracts"
+import type { DayStatus } from "@bt/domain"
 import { TRENDS_METRICS } from "./metrics.ts"
 import type { TrendDay } from "./trends-numbers.ts"
 import { dayName } from "./trends-titles.ts"
@@ -9,7 +10,7 @@ export interface TableRow {
   readonly cells: ReadonlyArray<string>
 }
 
-const SHOWN = new Set(["counted", "no-entries", "today"])
+const SHOWN: ReadonlySet<DayStatus> = new Set(["counted", "no-entries", "today"])
 
 export const tableRows = (days: ReadonlyArray<TrendDay>, volume: VolumeUnit, locale?: string): TableRow[] =>
   days

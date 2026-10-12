@@ -44,8 +44,8 @@ describe("averageNumbers", () => {
     })
   })
 
-  it("says no day has finished yet in the period holding today, and no entries in an earlier one", () => {
-    expect(averageNumbers(FEEDS, null, "ml", true)).toEqual({ value: "No finished day yet", detail: [] })
+  it("says no full day is logged yet in the period holding today, and no entries in an earlier one", () => {
+    expect(averageNumbers(FEEDS, null, "ml", true)).toEqual({ value: "No full day logged yet", detail: [] })
     expect(averageNumbers(FEEDS, null, "ml", false)).toEqual({ value: "No entries", detail: [] })
   })
 })
