@@ -11,7 +11,7 @@ export class ShareFailed extends Error {
   override readonly name = "ShareFailed"
 }
 
-const BYTE_ORDER_MARK = "﻿"
+const BYTE_ORDER_MARK = "\uFEFF"
 
 const MEDIA_TYPES = { csv: "text/csv", json: "application/json" } satisfies Record<ExportKind, string>
 
