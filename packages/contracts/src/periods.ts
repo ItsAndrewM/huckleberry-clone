@@ -1,4 +1,4 @@
-import { isIsoWeek, isoWeekDates } from "@bt/domain"
+import { isoWeekDates } from "@bt/domain"
 import { Schema } from "effect"
 import { HttpApiEndpoint, HttpApiGroup } from "effect/http-api"
 import { Diaper } from "./diapers.ts"
@@ -7,10 +7,11 @@ import { Measurement } from "./growth.ts"
 import { Instant, IsoWeek, LocalDate, YearMonth } from "./time.ts"
 import { Totals } from "./today.ts"
 
+const isContractWeek = Schema.is(IsoWeek)
 const isEncodableDate = Schema.is(LocalDate)
 
 const WeekOfLocalDates = IsoWeek.check(
-  Schema.makeFilter((week: string) => !isIsoWeek(week) || isoWeekDates(week).every(isEncodableDate), {
+  Schema.makeFilter((week: string) => !isContractWeek(week) || isoWeekDates(week).every(isEncodableDate), {
     expected: "an ISO week whose seven days fall from 1999 to 2100",
   }),
 )

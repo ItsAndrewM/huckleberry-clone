@@ -106,6 +106,7 @@ describe("a period that isn't one", () => {
     ["/api/weeks/2025-W53", "week"],
     ["/api/weeks/2026-41", "week"],
     ["/api/weeks/2100-W52", "week"],
+    ["/api/weeks/9999-W52", "week"],
     ["/api/months/2026-13", "month"],
   ])("answers %s with 400, naming the %s", async (path, field) => {
     const response = await get(await seededHousehold(), path, ANDREW.email)
