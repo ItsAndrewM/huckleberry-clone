@@ -35,16 +35,16 @@ Never paste the secret into a chat, an issue or a commit. The Client ID isn't se
 
 ## The deploy token
 
-CI deploys with a Cloudflare API token that can edit the `baby-tracker` Worker and nothing else. It never expires (Andrew's choice, 12 October 2026). GitHub keeps it as the repo secret `CLOUDFLARE_API_TOKEN`. Only `deploy.yml` reads it, and only its deploy step: the install and the build never see it.
+CI deploys with a Cloudflare API token that can edit the `baby-tracker` Worker and nothing else. It never expires (Andrew's choice, 12 October 2026). GitHub keeps it as the repo secret `CLOUDFLARE_API_TOKEN`. Only the deploy job's last step gets it, and inside `pnpm release` only Wrangler's processes do. The install, the build, git and gh run without it in their environment. The whole job is the real boundary, since code that runs earlier in the job could still reach that step. That's why the job pins its one third-party action to a commit.
 
 To create it, or replace one that might have leaked:
 
 1. In the Cloudflare dashboard, create an API token with the Workers Editor role on the `baby-tracker` Worker alone (the per-Worker scope Cloudflare calls "Individual Workers"), and no expiry.
 2. In your own terminal, not through Claude, run `gh secret set CLOUDFLARE_API_TOKEN` and paste the token when it asks.
-3. Re-run the last deploy from its run's page, or wait for the next push, and check that it ends green.
+3. Re-run the last deploy from its run's page, or wait for the next push. Check that the run's Deploy step ran and that its summary says "Released …". A run that only notes "main moved on" never used the token.
 4. If it's a replacement, delete the old token in the dashboard.
 
-Cloudflare says a redeploy that leaves the Custom Domain as it is needs nothing more. If a deploy is refused over the domain anyway, add Zone › Workers Routes › Write on the `andamonium.dev` zone to the token.
+A deploy uploads a version and then puts it live (`wrangler versions upload`, then `wrangler versions deploy`). Neither step touches the Custom Domain, which a token for one Worker can't change, so the token needs nothing more.
 
 **The accepted risk:** the repo is private on GitHub Free, which has no deployment environments or branch protection, so a workflow on any branch could read a repo secret. Only Andrew and his Claude sessions push branches here, so the token stays a repo secret.
 
@@ -53,7 +53,7 @@ Cloudflare says a redeploy that leaves the Custom Domain as it is needs nothing 
 Done on 10 October 2026. Run it again only to rebuild production from nothing. It needs about 45 minutes, the Cloudflare dashboard, and both phones.
 
 1. **Check the machine:** in the main checkout, on an up-to-date `main` whose CI is green, run `pnpm --filter @bt/web exec wrangler whoami --config ../worker/wrangler.jsonc`. It should list the account in `wrangler.jsonc`. Check that `.admin-token.env` holds the three values above.
-2. **Deploy:** run `pnpm release` from your Mac. It creates the Worker and attaches `baby.andamonium.dev`. It runs on your Wrangler login, because CI's token can only redeploy a Worker that exists. Then create a new deploy token for the new Worker, as "The deploy token" says.
+2. **Deploy:** from your Mac, with no `CLOUDFLARE_ENV` set, run `pnpm build`, then `pnpm --filter @bt/web exec wrangler deploy --config dist/baby_tracker/wrangler.json`. That creates the Worker and attaches `baby.andamonium.dev`, on your Wrangler login. `pnpm release` can't do it, since it uploads a version of a Worker that already exists. Then create a new deploy token for the new Worker, as "The deploy token" says.
 3. **Check that Access is in front:** run `curl -sI https://baby.andamonium.dev/` and `curl -sI https://baby.andamonium.dev/sw.js`. Each should answer `302` with a `location` on `misty-wildflower-0505.cloudflareaccess.com`.
 4. **Check the admin gate:** run `pnpm admin pitr:bookmark`. Expect `200 {"bookmark":"…"}`. A `302` means Access refused the token: check the "BT admin service token" policy and `.admin-token.env`.
 5. **Seed:** run the command below with the real values as arguments only. Never put them in a file in the repo.
@@ -103,17 +103,25 @@ Every push to `main` deploys itself once CI passes (M5.7):
    2. CI passed on that commit
    3. a fresh build, without `CLOUDFLARE_ENV`, whose config passes the checks
 
-   It then notes the restore point, the current UTC second, and runs `wrangler deploy`. The version's tag is the commit, and its message reads like `20390a3 restore point 2026-10-12T15:49:59Z ci:18233456789`.
-4. The run's summary repeats the commit, the restore point, and the command that rewinds the household to it.
+   It then uploads the build as a new version, tagged with the commit (`wrangler versions upload`). Nothing is live yet. Next it notes the restore point, the current UTC second, and puts that version live (`wrangler versions deploy <version>@100%`). The deployment's message reads like `20390a3 restore point 2026-10-12T15:49:59Z ci:18233456789`.
+4. The run's summary gives the restore point and the command that rewinds the household to it, before the version goes live. It then says "Released …" once the version is live.
 5. Open the app online on each phone once, so its offline copy moves to the new build. After a deploy whose PR says "device checklist after deploy", run the device checklist in `docs/implementation-plan.md` §6 too.
 
-- **The record:** `pnpm --filter @bt/web exec wrangler deployments list --config ../worker/wrangler.jsonc` lists every deploy with its message, whether CI or your Mac ran it. `deploys.log` in the main checkout stopped growing with M5.7. Its bookmarks still restore until PITR ages them out, from about 10 November 2026.
-- **A failed deploy:** GitHub emails a failed run to the person it's attributed to, normally whoever merged. Production stays on the previous version. Re-run the failed job from the run's page, or deploy by hand.
+- **The record:** `pnpm --filter @bt/web exec wrangler deployments list --config ../worker/wrangler.jsonc` shows the 10 most recent deploys with their messages, whether CI or your Mac ran them. For an older deploy, open its Deploy run (`gh run list --workflow deploy.yml`). Its summary and its log (`gh run view <run id> --log`) hold the restore point, and GitHub keeps them 90 days. `deploys.log` in the main checkout stopped growing with M5.7. Its bookmarks still restore until PITR ages them out, from about 10 November 2026.
+- **A failed deploy:** GitHub emails a failed run to the person it's attributed to, normally whoever merged. Production stays on the previous version: a failed upload puts nothing live, and a failed `versions deploy` leaves its uploaded version unused. Re-run the failed job from the run's page, or deploy by hand.
+- **Re-running CI:** on `main`, re-run only the newest commit's CI. CI runs on `main` share one queue that cancels a run still going, so re-running an older commit's CI can cancel the newest one's, and then nothing deploys main's head. If main's head shows a cancelled CI, re-run it, or deploy by hand.
+- **What CI can't deploy:** a commit that adds, renames or deletes a Durable Object class (a new `migrations` entry in `apps/worker/wrangler.jsonc`). For that, `wrangler versions upload` refuses with "pending Durable Object migration". Deploy such a commit by hand:
+  1. Pause deploys (below), and merge it.
+  2. From an up-to-date `main`, with no `CLOUDFLARE_ENV` set, run `pnpm build`. Note the current UTC second as its restore point.
+  3. Run `pnpm --filter @bt/web exec wrangler deploy --config dist/baby_tracker/wrangler.json`.
+  4. Enable deploys again.
+
+  Its PR should say so.
 - **Exports:** a deploy saves none. Run `pnpm admin export` before merging a migration (see Exports).
 
 ## Deploying by hand
 
-Run `pnpm release` from the main checkout, on an up-to-date `main`, when CI's deploy failed or deploys are paused. It runs the same checks as CI, on your Wrangler login, and its message ends in `local` instead of the run. It still needs CI to have passed on the commit. So during a GitHub Actions outage, roll back if you must (below), and wait for Actions.
+From the main checkout, run `git switch main`, `git pull --ff-only`, `pnpm install --frozen-lockfile`, then `pnpm release`. Use it when CI's deploy failed or deploys are paused. It runs the same checks and steps as CI, on your Wrangler login, and its messages end in `local` instead of the run. It still needs CI to have passed on the commit. So during a GitHub Actions outage, roll back if you must (below), and wait for Actions.
 
 ## Pausing deploys
 
@@ -121,9 +129,13 @@ Run `pnpm release` from the main checkout, on an up-to-date `main`, when CI's de
 
 ## When a deploy goes wrong
 
-1. **Pause deploys** with `gh workflow disable deploy.yml`, so the next merge can't deploy the bad code again.
-2. **Code** (the app misbehaves): roll back to the previous version with `pnpm --filter @bt/web exec wrangler rollback --config ../worker/wrangler.jsonc`. That config pins the account and names the Worker. Older code runs against a newer schema, because migrations only add.
-3. **Data too:** find the bad deploy's restore point in its message in `wrangler deployments list`, and restore to it with `pnpm admin pitr:restore --at <restore point>`, as `docs/runbooks/restore.md` says. For a deploy before M5.7, use its bookmark in `deploys.log`. That runbook also covers a restore that answers 503.
+1. **Pause deploys** with `gh workflow disable deploy.yml`, so the next merge can't deploy the bad code again. That doesn't stop a run that's already going. Check `gh run list --workflow deploy.yml --limit 5`, and cancel any queued or running one with `gh run cancel <run id>`.
+2. **Code** (the app misbehaves):
+   1. Run `pnpm --filter @bt/web exec wrangler deployments list --config ../worker/wrangler.jsonc`, and find the bad commit's deploy by its message.
+   2. Roll back to the version deployed just before it: `pnpm --filter @bt/web exec wrangler rollback <that version's ID> --message "<why>" --config ../worker/wrangler.jsonc`.
+
+   Don't roll back to "the previous version" without looking: a later merge may sit on top of the bad one and still hold its change. That config pins the account and names the Worker. Older code runs against a newer schema, because migrations only add.
+3. **Data too:** take the bad deploy's restore point from its message, or from its Deploy run if it's older than the last 10 deploys. Restore to it with `pnpm admin pitr:restore --at <restore point>`, as `docs/runbooks/restore.md` says. For a deploy before M5.7, use its bookmark in `deploys.log`. That runbook also covers a restore that answers 503.
 4. **Fix forward:** run `gh workflow enable deploy.yml` before you merge the fix, so its merge deploys it. Or merge it first, then enable deploys and run `pnpm release`.
 
 Roll back the code before you restore the data. The order matters: a restore restarts the household under whatever code is deployed, and the household applies the code's missing migrations at every start. Restoring under the bad code would run its migration again over the restored data. After the rollback, the older code starts on the newer schema (it skips ledger entries it doesn't know), and the restore then takes the data and the migration ledger back to before that deploy.
