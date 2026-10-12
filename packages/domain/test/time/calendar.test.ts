@@ -5,9 +5,11 @@ import {
   datesBetween,
   isIsoWeek,
   isLocalDate,
+  isoWeekDates,
   isoWeekMonday,
   isoWeekOfDate,
   isYearMonth,
+  monthDates,
   monthOfDate,
   nextMonth,
 } from "../../src/index.ts"
@@ -79,6 +81,23 @@ describe("months", () => {
   it.each(["2026-13", "2026-1"])("throws on the month %j", (month) => {
     expect(() => nextMonth(month)).toThrow(RangeError)
   })
+
+  it.each([
+    ["2026-10", 31],
+    ["2026-11", 30],
+    ["2026-02", 28],
+    ["2028-02", 29],
+  ])("lists the %s dates from the 1st to the last, %i of them", (month, days) => {
+    const dates = monthDates(month)
+    expect(dates).toHaveLength(days)
+    expect(dates[0]).toBe(`${month}-01`)
+    expect(dates.at(-1)).toBe(`${month}-${days}`)
+    expect(dates).toEqual(datesBetween(`${month}-01`, `${month}-${days}`))
+  })
+
+  it("throws on a month that isn't one", () => {
+    expect(() => monthDates("2026-13")).toThrow(RangeError)
+  })
 })
 
 describe("ISO weeks", () => {
@@ -102,6 +121,15 @@ describe("ISO weeks", () => {
 
   it.each(["2026-W54", "2025-W53", "2026-W5", "2026-41"])("throws on the week %j, which does not exist", (week) => {
     expect(() => isoWeekMonday(week)).toThrow(RangeError)
+    expect(() => isoWeekDates(week)).toThrow(RangeError)
+  })
+
+  it.each([
+    ["2026-W42", "2026-10-12", "2026-10-18"],
+    ["2026-W53", "2026-12-28", "2027-01-03"],
+  ])("lists %s's seven dates, Monday %s to Sunday %s", (week, monday, sunday) => {
+    expect(isoWeekDates(week)).toEqual(datesBetween(monday, sunday))
+    expect(isoWeekDates(week)).toHaveLength(7)
   })
 
   it("puts every date in the week that starts on the Monday up to six days before it", () => {

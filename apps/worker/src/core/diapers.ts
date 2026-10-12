@@ -8,7 +8,7 @@ import {
   queryKeys,
   type VersionedAction,
 } from "@bt/contracts"
-import type { Instant } from "@bt/domain"
+import type { Instant, Interval } from "@bt/domain"
 import { type Calendar, calendarOf, changedKeys, timeIssue } from "./calendar.ts"
 import type { CoreResult, Stamp } from "./receipts.ts"
 
@@ -49,6 +49,17 @@ export const liveDiapersSince = (sql: SqlStorage, from: Instant): Diaper[] =>
     .exec<DiaperRow>(
       `SELECT ${COLUMNS} FROM diapers WHERE deleted_at IS NULL AND occurred_at >= ? ORDER BY occurred_at, rowid`,
       from,
+    )
+    .toArray()
+    .map(diaperOf)
+
+export const liveDiapersIn = (sql: SqlStorage, period: Interval): Diaper[] =>
+  sql
+    .exec<DiaperRow>(
+      `SELECT ${COLUMNS} FROM diapers WHERE deleted_at IS NULL AND occurred_at >= ? AND occurred_at < ?
+       ORDER BY occurred_at, rowid`,
+      period.start,
+      period.end,
     )
     .toArray()
     .map(diaperOf)

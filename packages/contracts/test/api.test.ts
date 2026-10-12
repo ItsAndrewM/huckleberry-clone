@@ -38,6 +38,9 @@ describe("the API the household serves", () => {
       "POST /api/growth/:id/restore",
       "GET /api/export.json",
       "GET /api/export.csv",
+      "GET /api/days/:date",
+      "GET /api/weeks/:week",
+      "GET /api/months/:month",
     ])
   })
 

@@ -9964,6 +9964,1599 @@
           }
         }
       }
+    },
+    "/api/days/{date}": {
+      "get": {
+        "tags": [
+          "periods"
+        ],
+        "operationId": "periods.day",
+        "parameters": [
+          {
+            "name": "date",
+            "in": "path",
+            "schema": {
+              "type": "string",
+              "format": "date"
+            },
+            "required": true
+          }
+        ],
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "date": {
+                      "type": "string",
+                      "format": "date"
+                    },
+                    "bounds": {
+                      "type": "object",
+                      "properties": {
+                        "start": {
+                          "type": "integer"
+                        },
+                        "end": {
+                          "type": "integer"
+                        }
+                      },
+                      "required": [
+                        "start",
+                        "end"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "asOf": {
+                      "type": "integer",
+                      "minimum": 946684800000,
+                      "exclusiveMaximum": 4102444800000
+                    },
+                    "totals": {
+                      "type": "object",
+                      "properties": {
+                        "feedsStarted": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "leftSeconds": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "rightSeconds": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "nursingSeconds": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "breastMilkMl": {
+                          "type": "number",
+                          "minimum": 0
+                        },
+                        "formulaMl": {
+                          "type": "number",
+                          "minimum": 0
+                        },
+                        "bottleMl": {
+                          "type": "number",
+                          "minimum": 0
+                        },
+                        "diapers": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "wetDiapers": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "dirtyDiapers": {
+                          "type": "integer",
+                          "minimum": 0
+                        }
+                      },
+                      "required": [
+                        "feedsStarted",
+                        "leftSeconds",
+                        "rightSeconds",
+                        "nursingSeconds",
+                        "breastMilkMl",
+                        "formulaMl",
+                        "bottleMl",
+                        "diapers",
+                        "wetDiapers",
+                        "dirtyDiapers"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "feeds": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string"
+                          },
+                          "status": {
+                            "type": "string",
+                            "enum": [
+                              "active",
+                              "completed"
+                            ]
+                          },
+                          "startedAt": {
+                            "type": "integer",
+                            "minimum": 946684800000,
+                            "exclusiveMaximum": 4102444800000
+                          },
+                          "endedAt": {
+                            "anyOf": [
+                              {
+                                "type": "integer",
+                                "minimum": 946684800000,
+                                "exclusiveMaximum": 4102444800000
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "segments": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "id": {
+                                  "type": "string"
+                                },
+                                "side": {
+                                  "type": "string",
+                                  "enum": [
+                                    "left",
+                                    "right"
+                                  ]
+                                },
+                                "startedAt": {
+                                  "type": "integer",
+                                  "minimum": 946684800000,
+                                  "exclusiveMaximum": 4102444800000
+                                },
+                                "endedAt": {
+                                  "anyOf": [
+                                    {
+                                      "type": "integer",
+                                      "minimum": 946684800000,
+                                      "exclusiveMaximum": 4102444800000
+                                    },
+                                    {
+                                      "type": "null"
+                                    }
+                                  ]
+                                }
+                              },
+                              "required": [
+                                "id",
+                                "side",
+                                "startedAt",
+                                "endedAt"
+                              ],
+                              "additionalProperties": false
+                            }
+                          },
+                          "portions": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "id": {
+                                  "type": "string"
+                                },
+                                "occurredAt": {
+                                  "type": "integer",
+                                  "minimum": 946684800000,
+                                  "exclusiveMaximum": 4102444800000
+                                },
+                                "breastMilkMl": {
+                                  "type": "number",
+                                  "minimum": 0,
+                                  "maximum": 500
+                                },
+                                "formulaMl": {
+                                  "type": "number",
+                                  "minimum": 0,
+                                  "maximum": 500
+                                }
+                              },
+                              "required": [
+                                "id",
+                                "occurredAt",
+                                "breastMilkMl",
+                                "formulaMl"
+                              ],
+                              "additionalProperties": false
+                            }
+                          },
+                          "version": {
+                            "type": "integer",
+                            "minimum": 1
+                          },
+                          "createdBy": {
+                            "type": "string"
+                          },
+                          "createdAt": {
+                            "type": "integer",
+                            "minimum": 946684800000,
+                            "exclusiveMaximum": 4102444800000
+                          },
+                          "updatedBy": {
+                            "type": "string"
+                          },
+                          "updatedAt": {
+                            "type": "integer",
+                            "minimum": 946684800000,
+                            "exclusiveMaximum": 4102444800000
+                          },
+                          "deletedAt": {
+                            "anyOf": [
+                              {
+                                "type": "integer",
+                                "minimum": 946684800000,
+                                "exclusiveMaximum": 4102444800000
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "status",
+                          "startedAt",
+                          "endedAt",
+                          "segments",
+                          "portions",
+                          "version",
+                          "createdBy",
+                          "createdAt",
+                          "updatedBy",
+                          "updatedAt",
+                          "deletedAt"
+                        ],
+                        "additionalProperties": false
+                      }
+                    },
+                    "diapers": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string"
+                          },
+                          "occurredAt": {
+                            "type": "integer",
+                            "minimum": 946684800000,
+                            "exclusiveMaximum": 4102444800000
+                          },
+                          "wet": {
+                            "type": "boolean"
+                          },
+                          "dirty": {
+                            "type": "boolean"
+                          },
+                          "version": {
+                            "type": "integer",
+                            "minimum": 1
+                          },
+                          "createdBy": {
+                            "type": "string"
+                          },
+                          "createdAt": {
+                            "type": "integer",
+                            "minimum": 946684800000,
+                            "exclusiveMaximum": 4102444800000
+                          },
+                          "updatedBy": {
+                            "type": "string"
+                          },
+                          "updatedAt": {
+                            "type": "integer",
+                            "minimum": 946684800000,
+                            "exclusiveMaximum": 4102444800000
+                          },
+                          "deletedAt": {
+                            "anyOf": [
+                              {
+                                "type": "integer",
+                                "minimum": 946684800000,
+                                "exclusiveMaximum": 4102444800000
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "occurredAt",
+                          "wet",
+                          "dirty",
+                          "version",
+                          "createdBy",
+                          "createdAt",
+                          "updatedBy",
+                          "updatedAt",
+                          "deletedAt"
+                        ],
+                        "additionalProperties": false
+                      }
+                    },
+                    "measurements": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string"
+                          },
+                          "measuredAt": {
+                            "type": "integer",
+                            "minimum": 946684800000,
+                            "exclusiveMaximum": 4102444800000
+                          },
+                          "weightG": {
+                            "anyOf": [
+                              {
+                                "type": "number",
+                                "minimum": 200,
+                                "maximum": 40000
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "lengthCm": {
+                            "anyOf": [
+                              {
+                                "type": "number",
+                                "minimum": 20,
+                                "maximum": 150
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "headCm": {
+                            "anyOf": [
+                              {
+                                "type": "number",
+                                "minimum": 15,
+                                "maximum": 70
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "version": {
+                            "type": "integer",
+                            "minimum": 1
+                          },
+                          "createdBy": {
+                            "type": "string"
+                          },
+                          "createdAt": {
+                            "type": "integer",
+                            "minimum": 946684800000,
+                            "exclusiveMaximum": 4102444800000
+                          },
+                          "updatedBy": {
+                            "type": "string"
+                          },
+                          "updatedAt": {
+                            "type": "integer",
+                            "minimum": 946684800000,
+                            "exclusiveMaximum": 4102444800000
+                          },
+                          "deletedAt": {
+                            "anyOf": [
+                              {
+                                "type": "integer",
+                                "minimum": 946684800000,
+                                "exclusiveMaximum": 4102444800000
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "measuredAt",
+                          "weightG",
+                          "lengthCm",
+                          "headCm",
+                          "version",
+                          "createdBy",
+                          "createdAt",
+                          "updatedBy",
+                          "updatedAt",
+                          "deletedAt"
+                        ],
+                        "additionalProperties": false
+                      }
+                    }
+                  },
+                  "required": [
+                    "date",
+                    "bounds",
+                    "asOf",
+                    "totals",
+                    "feeds",
+                    "diapers",
+                    "measurements"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "InvalidInput",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvalidInputEncoded"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnauthorizedEncoded"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/weeks/{week}": {
+      "get": {
+        "tags": [
+          "periods"
+        ],
+        "operationId": "periods.week",
+        "parameters": [
+          {
+            "name": "week",
+            "in": "path",
+            "schema": {
+              "type": "string",
+              "pattern": "^\\d{4}-W\\d{2}$"
+            },
+            "required": true
+          }
+        ],
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "week": {
+                      "type": "string",
+                      "pattern": "^\\d{4}-W\\d{2}$"
+                    },
+                    "bounds": {
+                      "type": "object",
+                      "properties": {
+                        "start": {
+                          "type": "integer"
+                        },
+                        "end": {
+                          "type": "integer"
+                        }
+                      },
+                      "required": [
+                        "start",
+                        "end"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "asOf": {
+                      "type": "integer",
+                      "minimum": 946684800000,
+                      "exclusiveMaximum": 4102444800000
+                    },
+                    "totals": {
+                      "type": "object",
+                      "properties": {
+                        "feedsStarted": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "leftSeconds": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "rightSeconds": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "nursingSeconds": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "breastMilkMl": {
+                          "type": "number",
+                          "minimum": 0
+                        },
+                        "formulaMl": {
+                          "type": "number",
+                          "minimum": 0
+                        },
+                        "bottleMl": {
+                          "type": "number",
+                          "minimum": 0
+                        },
+                        "diapers": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "wetDiapers": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "dirtyDiapers": {
+                          "type": "integer",
+                          "minimum": 0
+                        }
+                      },
+                      "required": [
+                        "feedsStarted",
+                        "leftSeconds",
+                        "rightSeconds",
+                        "nursingSeconds",
+                        "breastMilkMl",
+                        "formulaMl",
+                        "bottleMl",
+                        "diapers",
+                        "wetDiapers",
+                        "dirtyDiapers"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "days": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "date": {
+                            "type": "string",
+                            "format": "date"
+                          },
+                          "bounds": {
+                            "type": "object",
+                            "properties": {
+                              "start": {
+                                "type": "integer"
+                              },
+                              "end": {
+                                "type": "integer"
+                              }
+                            },
+                            "required": [
+                              "start",
+                              "end"
+                            ],
+                            "additionalProperties": false
+                          },
+                          "totals": {
+                            "type": "object",
+                            "properties": {
+                              "feedsStarted": {
+                                "type": "integer",
+                                "minimum": 0
+                              },
+                              "leftSeconds": {
+                                "type": "integer",
+                                "minimum": 0
+                              },
+                              "rightSeconds": {
+                                "type": "integer",
+                                "minimum": 0
+                              },
+                              "nursingSeconds": {
+                                "type": "integer",
+                                "minimum": 0
+                              },
+                              "breastMilkMl": {
+                                "type": "number",
+                                "minimum": 0
+                              },
+                              "formulaMl": {
+                                "type": "number",
+                                "minimum": 0
+                              },
+                              "bottleMl": {
+                                "type": "number",
+                                "minimum": 0
+                              },
+                              "diapers": {
+                                "type": "integer",
+                                "minimum": 0
+                              },
+                              "wetDiapers": {
+                                "type": "integer",
+                                "minimum": 0
+                              },
+                              "dirtyDiapers": {
+                                "type": "integer",
+                                "minimum": 0
+                              }
+                            },
+                            "required": [
+                              "feedsStarted",
+                              "leftSeconds",
+                              "rightSeconds",
+                              "nursingSeconds",
+                              "breastMilkMl",
+                              "formulaMl",
+                              "bottleMl",
+                              "diapers",
+                              "wetDiapers",
+                              "dirtyDiapers"
+                            ],
+                            "additionalProperties": false
+                          }
+                        },
+                        "required": [
+                          "date",
+                          "bounds",
+                          "totals"
+                        ],
+                        "additionalProperties": false
+                      }
+                    },
+                    "feeds": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string"
+                          },
+                          "status": {
+                            "type": "string",
+                            "enum": [
+                              "active",
+                              "completed"
+                            ]
+                          },
+                          "startedAt": {
+                            "type": "integer",
+                            "minimum": 946684800000,
+                            "exclusiveMaximum": 4102444800000
+                          },
+                          "endedAt": {
+                            "anyOf": [
+                              {
+                                "type": "integer",
+                                "minimum": 946684800000,
+                                "exclusiveMaximum": 4102444800000
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "segments": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "id": {
+                                  "type": "string"
+                                },
+                                "side": {
+                                  "type": "string",
+                                  "enum": [
+                                    "left",
+                                    "right"
+                                  ]
+                                },
+                                "startedAt": {
+                                  "type": "integer",
+                                  "minimum": 946684800000,
+                                  "exclusiveMaximum": 4102444800000
+                                },
+                                "endedAt": {
+                                  "anyOf": [
+                                    {
+                                      "type": "integer",
+                                      "minimum": 946684800000,
+                                      "exclusiveMaximum": 4102444800000
+                                    },
+                                    {
+                                      "type": "null"
+                                    }
+                                  ]
+                                }
+                              },
+                              "required": [
+                                "id",
+                                "side",
+                                "startedAt",
+                                "endedAt"
+                              ],
+                              "additionalProperties": false
+                            }
+                          },
+                          "portions": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "id": {
+                                  "type": "string"
+                                },
+                                "occurredAt": {
+                                  "type": "integer",
+                                  "minimum": 946684800000,
+                                  "exclusiveMaximum": 4102444800000
+                                },
+                                "breastMilkMl": {
+                                  "type": "number",
+                                  "minimum": 0,
+                                  "maximum": 500
+                                },
+                                "formulaMl": {
+                                  "type": "number",
+                                  "minimum": 0,
+                                  "maximum": 500
+                                }
+                              },
+                              "required": [
+                                "id",
+                                "occurredAt",
+                                "breastMilkMl",
+                                "formulaMl"
+                              ],
+                              "additionalProperties": false
+                            }
+                          },
+                          "version": {
+                            "type": "integer",
+                            "minimum": 1
+                          },
+                          "createdBy": {
+                            "type": "string"
+                          },
+                          "createdAt": {
+                            "type": "integer",
+                            "minimum": 946684800000,
+                            "exclusiveMaximum": 4102444800000
+                          },
+                          "updatedBy": {
+                            "type": "string"
+                          },
+                          "updatedAt": {
+                            "type": "integer",
+                            "minimum": 946684800000,
+                            "exclusiveMaximum": 4102444800000
+                          },
+                          "deletedAt": {
+                            "anyOf": [
+                              {
+                                "type": "integer",
+                                "minimum": 946684800000,
+                                "exclusiveMaximum": 4102444800000
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "status",
+                          "startedAt",
+                          "endedAt",
+                          "segments",
+                          "portions",
+                          "version",
+                          "createdBy",
+                          "createdAt",
+                          "updatedBy",
+                          "updatedAt",
+                          "deletedAt"
+                        ],
+                        "additionalProperties": false
+                      }
+                    },
+                    "diapers": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string"
+                          },
+                          "occurredAt": {
+                            "type": "integer",
+                            "minimum": 946684800000,
+                            "exclusiveMaximum": 4102444800000
+                          },
+                          "wet": {
+                            "type": "boolean"
+                          },
+                          "dirty": {
+                            "type": "boolean"
+                          },
+                          "version": {
+                            "type": "integer",
+                            "minimum": 1
+                          },
+                          "createdBy": {
+                            "type": "string"
+                          },
+                          "createdAt": {
+                            "type": "integer",
+                            "minimum": 946684800000,
+                            "exclusiveMaximum": 4102444800000
+                          },
+                          "updatedBy": {
+                            "type": "string"
+                          },
+                          "updatedAt": {
+                            "type": "integer",
+                            "minimum": 946684800000,
+                            "exclusiveMaximum": 4102444800000
+                          },
+                          "deletedAt": {
+                            "anyOf": [
+                              {
+                                "type": "integer",
+                                "minimum": 946684800000,
+                                "exclusiveMaximum": 4102444800000
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "occurredAt",
+                          "wet",
+                          "dirty",
+                          "version",
+                          "createdBy",
+                          "createdAt",
+                          "updatedBy",
+                          "updatedAt",
+                          "deletedAt"
+                        ],
+                        "additionalProperties": false
+                      }
+                    },
+                    "measurements": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string"
+                          },
+                          "measuredAt": {
+                            "type": "integer",
+                            "minimum": 946684800000,
+                            "exclusiveMaximum": 4102444800000
+                          },
+                          "weightG": {
+                            "anyOf": [
+                              {
+                                "type": "number",
+                                "minimum": 200,
+                                "maximum": 40000
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "lengthCm": {
+                            "anyOf": [
+                              {
+                                "type": "number",
+                                "minimum": 20,
+                                "maximum": 150
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "headCm": {
+                            "anyOf": [
+                              {
+                                "type": "number",
+                                "minimum": 15,
+                                "maximum": 70
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "version": {
+                            "type": "integer",
+                            "minimum": 1
+                          },
+                          "createdBy": {
+                            "type": "string"
+                          },
+                          "createdAt": {
+                            "type": "integer",
+                            "minimum": 946684800000,
+                            "exclusiveMaximum": 4102444800000
+                          },
+                          "updatedBy": {
+                            "type": "string"
+                          },
+                          "updatedAt": {
+                            "type": "integer",
+                            "minimum": 946684800000,
+                            "exclusiveMaximum": 4102444800000
+                          },
+                          "deletedAt": {
+                            "anyOf": [
+                              {
+                                "type": "integer",
+                                "minimum": 946684800000,
+                                "exclusiveMaximum": 4102444800000
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "measuredAt",
+                          "weightG",
+                          "lengthCm",
+                          "headCm",
+                          "version",
+                          "createdBy",
+                          "createdAt",
+                          "updatedBy",
+                          "updatedAt",
+                          "deletedAt"
+                        ],
+                        "additionalProperties": false
+                      }
+                    }
+                  },
+                  "required": [
+                    "week",
+                    "bounds",
+                    "asOf",
+                    "totals",
+                    "days",
+                    "feeds",
+                    "diapers",
+                    "measurements"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "InvalidInput",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvalidInputEncoded"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnauthorizedEncoded"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/months/{month}": {
+      "get": {
+        "tags": [
+          "periods"
+        ],
+        "operationId": "periods.month",
+        "parameters": [
+          {
+            "name": "month",
+            "in": "path",
+            "schema": {
+              "type": "string",
+              "pattern": "^\\d{4}-\\d{2}$"
+            },
+            "required": true
+          }
+        ],
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "month": {
+                      "type": "string",
+                      "pattern": "^\\d{4}-\\d{2}$"
+                    },
+                    "bounds": {
+                      "type": "object",
+                      "properties": {
+                        "start": {
+                          "type": "integer"
+                        },
+                        "end": {
+                          "type": "integer"
+                        }
+                      },
+                      "required": [
+                        "start",
+                        "end"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "asOf": {
+                      "type": "integer",
+                      "minimum": 946684800000,
+                      "exclusiveMaximum": 4102444800000
+                    },
+                    "totals": {
+                      "type": "object",
+                      "properties": {
+                        "feedsStarted": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "leftSeconds": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "rightSeconds": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "nursingSeconds": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "breastMilkMl": {
+                          "type": "number",
+                          "minimum": 0
+                        },
+                        "formulaMl": {
+                          "type": "number",
+                          "minimum": 0
+                        },
+                        "bottleMl": {
+                          "type": "number",
+                          "minimum": 0
+                        },
+                        "diapers": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "wetDiapers": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "dirtyDiapers": {
+                          "type": "integer",
+                          "minimum": 0
+                        }
+                      },
+                      "required": [
+                        "feedsStarted",
+                        "leftSeconds",
+                        "rightSeconds",
+                        "nursingSeconds",
+                        "breastMilkMl",
+                        "formulaMl",
+                        "bottleMl",
+                        "diapers",
+                        "wetDiapers",
+                        "dirtyDiapers"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "days": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "date": {
+                            "type": "string",
+                            "format": "date"
+                          },
+                          "bounds": {
+                            "type": "object",
+                            "properties": {
+                              "start": {
+                                "type": "integer"
+                              },
+                              "end": {
+                                "type": "integer"
+                              }
+                            },
+                            "required": [
+                              "start",
+                              "end"
+                            ],
+                            "additionalProperties": false
+                          },
+                          "totals": {
+                            "type": "object",
+                            "properties": {
+                              "feedsStarted": {
+                                "type": "integer",
+                                "minimum": 0
+                              },
+                              "leftSeconds": {
+                                "type": "integer",
+                                "minimum": 0
+                              },
+                              "rightSeconds": {
+                                "type": "integer",
+                                "minimum": 0
+                              },
+                              "nursingSeconds": {
+                                "type": "integer",
+                                "minimum": 0
+                              },
+                              "breastMilkMl": {
+                                "type": "number",
+                                "minimum": 0
+                              },
+                              "formulaMl": {
+                                "type": "number",
+                                "minimum": 0
+                              },
+                              "bottleMl": {
+                                "type": "number",
+                                "minimum": 0
+                              },
+                              "diapers": {
+                                "type": "integer",
+                                "minimum": 0
+                              },
+                              "wetDiapers": {
+                                "type": "integer",
+                                "minimum": 0
+                              },
+                              "dirtyDiapers": {
+                                "type": "integer",
+                                "minimum": 0
+                              }
+                            },
+                            "required": [
+                              "feedsStarted",
+                              "leftSeconds",
+                              "rightSeconds",
+                              "nursingSeconds",
+                              "breastMilkMl",
+                              "formulaMl",
+                              "bottleMl",
+                              "diapers",
+                              "wetDiapers",
+                              "dirtyDiapers"
+                            ],
+                            "additionalProperties": false
+                          }
+                        },
+                        "required": [
+                          "date",
+                          "bounds",
+                          "totals"
+                        ],
+                        "additionalProperties": false
+                      }
+                    },
+                    "feeds": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string"
+                          },
+                          "status": {
+                            "type": "string",
+                            "enum": [
+                              "active",
+                              "completed"
+                            ]
+                          },
+                          "startedAt": {
+                            "type": "integer",
+                            "minimum": 946684800000,
+                            "exclusiveMaximum": 4102444800000
+                          },
+                          "endedAt": {
+                            "anyOf": [
+                              {
+                                "type": "integer",
+                                "minimum": 946684800000,
+                                "exclusiveMaximum": 4102444800000
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "segments": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "id": {
+                                  "type": "string"
+                                },
+                                "side": {
+                                  "type": "string",
+                                  "enum": [
+                                    "left",
+                                    "right"
+                                  ]
+                                },
+                                "startedAt": {
+                                  "type": "integer",
+                                  "minimum": 946684800000,
+                                  "exclusiveMaximum": 4102444800000
+                                },
+                                "endedAt": {
+                                  "anyOf": [
+                                    {
+                                      "type": "integer",
+                                      "minimum": 946684800000,
+                                      "exclusiveMaximum": 4102444800000
+                                    },
+                                    {
+                                      "type": "null"
+                                    }
+                                  ]
+                                }
+                              },
+                              "required": [
+                                "id",
+                                "side",
+                                "startedAt",
+                                "endedAt"
+                              ],
+                              "additionalProperties": false
+                            }
+                          },
+                          "portions": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "id": {
+                                  "type": "string"
+                                },
+                                "occurredAt": {
+                                  "type": "integer",
+                                  "minimum": 946684800000,
+                                  "exclusiveMaximum": 4102444800000
+                                },
+                                "breastMilkMl": {
+                                  "type": "number",
+                                  "minimum": 0,
+                                  "maximum": 500
+                                },
+                                "formulaMl": {
+                                  "type": "number",
+                                  "minimum": 0,
+                                  "maximum": 500
+                                }
+                              },
+                              "required": [
+                                "id",
+                                "occurredAt",
+                                "breastMilkMl",
+                                "formulaMl"
+                              ],
+                              "additionalProperties": false
+                            }
+                          },
+                          "version": {
+                            "type": "integer",
+                            "minimum": 1
+                          },
+                          "createdBy": {
+                            "type": "string"
+                          },
+                          "createdAt": {
+                            "type": "integer",
+                            "minimum": 946684800000,
+                            "exclusiveMaximum": 4102444800000
+                          },
+                          "updatedBy": {
+                            "type": "string"
+                          },
+                          "updatedAt": {
+                            "type": "integer",
+                            "minimum": 946684800000,
+                            "exclusiveMaximum": 4102444800000
+                          },
+                          "deletedAt": {
+                            "anyOf": [
+                              {
+                                "type": "integer",
+                                "minimum": 946684800000,
+                                "exclusiveMaximum": 4102444800000
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "status",
+                          "startedAt",
+                          "endedAt",
+                          "segments",
+                          "portions",
+                          "version",
+                          "createdBy",
+                          "createdAt",
+                          "updatedBy",
+                          "updatedAt",
+                          "deletedAt"
+                        ],
+                        "additionalProperties": false
+                      }
+                    },
+                    "diapers": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string"
+                          },
+                          "occurredAt": {
+                            "type": "integer",
+                            "minimum": 946684800000,
+                            "exclusiveMaximum": 4102444800000
+                          },
+                          "wet": {
+                            "type": "boolean"
+                          },
+                          "dirty": {
+                            "type": "boolean"
+                          },
+                          "version": {
+                            "type": "integer",
+                            "minimum": 1
+                          },
+                          "createdBy": {
+                            "type": "string"
+                          },
+                          "createdAt": {
+                            "type": "integer",
+                            "minimum": 946684800000,
+                            "exclusiveMaximum": 4102444800000
+                          },
+                          "updatedBy": {
+                            "type": "string"
+                          },
+                          "updatedAt": {
+                            "type": "integer",
+                            "minimum": 946684800000,
+                            "exclusiveMaximum": 4102444800000
+                          },
+                          "deletedAt": {
+                            "anyOf": [
+                              {
+                                "type": "integer",
+                                "minimum": 946684800000,
+                                "exclusiveMaximum": 4102444800000
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "occurredAt",
+                          "wet",
+                          "dirty",
+                          "version",
+                          "createdBy",
+                          "createdAt",
+                          "updatedBy",
+                          "updatedAt",
+                          "deletedAt"
+                        ],
+                        "additionalProperties": false
+                      }
+                    },
+                    "measurements": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string"
+                          },
+                          "measuredAt": {
+                            "type": "integer",
+                            "minimum": 946684800000,
+                            "exclusiveMaximum": 4102444800000
+                          },
+                          "weightG": {
+                            "anyOf": [
+                              {
+                                "type": "number",
+                                "minimum": 200,
+                                "maximum": 40000
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "lengthCm": {
+                            "anyOf": [
+                              {
+                                "type": "number",
+                                "minimum": 20,
+                                "maximum": 150
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "headCm": {
+                            "anyOf": [
+                              {
+                                "type": "number",
+                                "minimum": 15,
+                                "maximum": 70
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "version": {
+                            "type": "integer",
+                            "minimum": 1
+                          },
+                          "createdBy": {
+                            "type": "string"
+                          },
+                          "createdAt": {
+                            "type": "integer",
+                            "minimum": 946684800000,
+                            "exclusiveMaximum": 4102444800000
+                          },
+                          "updatedBy": {
+                            "type": "string"
+                          },
+                          "updatedAt": {
+                            "type": "integer",
+                            "minimum": 946684800000,
+                            "exclusiveMaximum": 4102444800000
+                          },
+                          "deletedAt": {
+                            "anyOf": [
+                              {
+                                "type": "integer",
+                                "minimum": 946684800000,
+                                "exclusiveMaximum": 4102444800000
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "measuredAt",
+                          "weightG",
+                          "lengthCm",
+                          "headCm",
+                          "version",
+                          "createdBy",
+                          "createdAt",
+                          "updatedBy",
+                          "updatedAt",
+                          "deletedAt"
+                        ],
+                        "additionalProperties": false
+                      }
+                    }
+                  },
+                  "required": [
+                    "month",
+                    "bounds",
+                    "asOf",
+                    "totals",
+                    "days",
+                    "feeds",
+                    "diapers",
+                    "measurements"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "InvalidInput",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvalidInputEncoded"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnauthorizedEncoded"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -10641,6 +12234,9 @@
     },
     {
       "name": "export"
+    },
+    {
+      "name": "periods"
     }
   ]
 }
