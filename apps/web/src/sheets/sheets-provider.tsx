@@ -2,6 +2,7 @@ import { type ReactNode, useState } from "react"
 import { useConnectivity } from "../api/hooks.ts"
 import { type Draft, draftStorage, dropDraft } from "./drafts.ts"
 import { isHeld } from "./held.ts"
+import { restored } from "./restored.ts"
 import type { Sending } from "./sending.ts"
 import { type Sheets, SheetsContext } from "./sheets-context.ts"
 import {
@@ -10,6 +11,7 @@ import {
   expiredState,
   failedState,
   keptState,
+  reopenedState,
   restoredState,
   savedState,
   sendingState,
@@ -27,7 +29,9 @@ interface SheetsProviderProps {
 const dropDraftOf = ({ action }: Sending) => dropDraft(draftStorage, action.payload.actionId)
 
 export const SheetsProvider = ({ draft, children }: SheetsProviderProps) => {
-  const [state, setState] = useState(() => restoredState(draft, Date.now(), crypto.randomUUID()))
+  const [state, setState] = useState(() =>
+    reopenedState(restoredState(restored(draft, [], Date.now(), () => crypto.randomUUID()).held)),
+  )
   const [editing, setEditing] = useState<string | null>(null)
   const online = useConnectivity() === "online"
   const sweepAfter = (shownAt: number) =>
@@ -53,6 +57,7 @@ export const SheetsProvider = ({ draft, children }: SheetsProviderProps) => {
   const sheets: Sheets = {
     ...state,
     editing,
+    keeping: true,
     busy: mutation.isPending ? (mutation.variables ?? null) : null,
     show: (sheet, record) => {
       setEditing(record ?? null)
