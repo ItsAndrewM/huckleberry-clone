@@ -1,4 +1,4 @@
-import { SOCKET_PATH } from "@bt/contracts"
+import { type HouseholdExport, SOCKET_PATH } from "@bt/contracts"
 import { DurableObject } from "cloudflare:workers"
 import { Option, Schema } from "effect"
 import {
@@ -9,6 +9,7 @@ import {
   type ScheduledRestore,
 } from "./admin.ts"
 import { activeCaregiver, setCaregiverActive, setCaregiverEmail } from "./core/caregivers.ts"
+import { householdExportOf } from "./core/export.ts"
 import { seedHousehold } from "./core/household.ts"
 import { PRUNE_EVERY_MS, pruneReceipts } from "./core/receipts.ts"
 import { migrate } from "./db/migrate.ts"
@@ -103,6 +104,10 @@ export class HouseholdDO extends DurableObject<HouseholdEnv> {
 
   restart(): void {
     this.ctx.abort(RESTART_REASON)
+  }
+
+  exportHousehold(): HouseholdExport {
+    return householdExportOf(this.ctx.storage.sql, Date.now())
   }
 }
 

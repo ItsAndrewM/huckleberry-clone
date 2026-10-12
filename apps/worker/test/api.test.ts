@@ -1,4 +1,4 @@
-import { HEARTBEAT } from "@bt/contracts"
+import { HEARTBEAT, type HouseholdExport } from "@bt/contracts"
 import { env } from "cloudflare:test"
 import { afterEach, describe, expect, it, vi } from "vitest"
 import type { Caller } from "../src/access.ts"
@@ -11,6 +11,13 @@ const ORIGIN = "https://bt.example.test"
 const ADMIN_CLIENT_ID = "bt-admin.access"
 const BOOKMARK = "0000007b-0000b26e-00001538-0c3e87bb37b3db5cc52eedb93cd3b96b"
 const UNDO = "0000007b-0000b26f-00000000-00000000000000000000000000000000"
+const EXPORTED: HouseholdExport = {
+  format: "baby-tracker-export",
+  version: 1,
+  exportedAt: Date.UTC(2026, 9, 12, 3),
+  migrations: ["0001-household"],
+  tables: { household: [{ id: 1, name: "Test household", time_zone: "America/Vancouver" }] },
+}
 
 const andrew: Caller = { kind: "user", email: "andrew@example.test" }
 const adminToken: Caller = { kind: "service", clientId: ADMIN_CLIENT_ID }
@@ -66,6 +73,7 @@ const recordingHousehold = (alreadySeeded = false, restart = restartsAsAborted):
       return { bookmark: target.kind === "bookmark" ? target.bookmark : BOOKMARK, undo: UNDO }
     },
     restart,
+    exportHousehold: async () => EXPORTED,
   }
 }
 
@@ -80,6 +88,7 @@ const unreachableHousehold: Household = {
   pitrBookmark: lost,
   pitrScheduleRestore: lost,
   restart: lost,
+  exportHousehold: lost,
 }
 
 const routeWith =
@@ -489,6 +498,26 @@ describe("taking a bookmark (POST /api/admin/pitr/bookmark)", () => {
   })
 })
 
+describe("exporting the household (POST /api/admin/export)", () => {
+  it("answers 200 no-store with the household's export", async () => {
+    const { response } = await route("/api/admin/export", adminToken, { method: "POST" })
+    expect(response.status).toBe(200)
+    expect(response.headers.get("cache-control")).toBe("no-store")
+    expect(await response.json()).toEqual(EXPORTED)
+  })
+
+  it("answers 404 to a GET, as every admin route takes POST", async () => {
+    const { response } = await route("/api/admin/export", adminToken)
+    expect(response.status).toBe(404)
+  })
+
+  it("is refused to a caregiver", async () => {
+    quietly("warn")
+    const { response } = await route("/api/admin/export", andrew, { method: "POST" })
+    expect(response.status).toBe(401)
+  })
+})
+
 describe("restoring the household (POST /api/admin/pitr/restore)", () => {
   const DAY_MS = 24 * 60 * 60 * 1000
   const restore = (body: RestoreBody, restart = restartsAsAborted) =>
@@ -629,6 +658,14 @@ describe("a household that can't be reached", () => {
       adminToken,
       { method: "POST", body: JSON.stringify({ email: "andrew@example.test" }) },
       "POST /api/admin/caregiver/disable",
+      "Network connection lost.",
+    ],
+    [
+      "the admin's export",
+      "/api/admin/export",
+      adminToken,
+      { method: "POST" },
+      "POST /api/admin/export",
       "Network connection lost.",
     ],
   ])(

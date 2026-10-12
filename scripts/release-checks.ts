@@ -92,5 +92,9 @@ export const bookmarkFrom = (status: number, body: string): string => {
   return bookmark
 }
 
+export const exportProblem = (failure: Error): string =>
+  `the household can be exported first (${failure.message}). ` +
+  "If the live Worker predates exports, as before the first release with M3.11, release once with --skip-export"
+
 export const deployLogLine = (at: Date, commit: string, bookmark: string | null): string =>
   `${at.toISOString()} ${commit} ${bookmark ?? "first-deploy-no-bookmark"}\n`

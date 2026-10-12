@@ -20,6 +20,7 @@ import { deleteDiaper, editDiaper, logDiaper, restoreDiaper } from "./core/diape
 import { meOf } from "./core/household.ts"
 import { last24hOf, todayOf } from "./core/today.ts"
 import { errorResponse } from "./error-response.ts"
+import { exportHandlers } from "./export-handlers.ts"
 import { feedHandlers } from "./feed-handlers.ts"
 import { growthHandlers } from "./growth-handlers.ts"
 import { householdHandlers } from "./household-handlers.ts"
@@ -106,6 +107,7 @@ export const householdApi = (storage: DurableObjectStorage, broadcast: Broadcast
     diaperHandlers(storage, broadcast),
     feedHandlers(storage, broadcast),
     growthHandlers(storage, broadcast),
+    exportHandlers(storage.sql),
   )
   return HttpRouter.toWebHandler(
     Layer.mergeAll(

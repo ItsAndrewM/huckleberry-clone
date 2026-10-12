@@ -5,6 +5,7 @@ dist
 .env*
 .admin-token.env
 deploys.log
+/exports/
 coverage
 playwright-report
 test-results

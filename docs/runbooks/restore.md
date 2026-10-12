@@ -15,6 +15,7 @@ How to rewind the household's data, and how the drill that proves it went. Resto
 - **Before a deploy:** each line of `deploys.log`, in the main checkout, holds the time, the commit and the bookmark `pnpm release` took just before deploying. The first deploy's line says `first-deploy-no-bookmark`, because the household didn't exist yet.
 - **Before anything risky:** take a bookmark with `pnpm admin pitr:bookmark`. It answers `200 {"bookmark":"…"}`.
 - **A time instead:** `--at` takes an ISO time with its zone, such as `2026-10-10T18:00:00Z` or `2026-10-10T20:00:00+02:00`. The time must fall within the last 30 days and not in the future, or the Worker answers `400` naming `at`.
+- **Older than 30 days:** PITR can't reach it. Each `pnpm release` saves an export to `exports/` in the main checkout, and `pnpm admin export <file>` takes one at any time (M3.11). An export holds every row, deleted ones included, but nothing loads one back into the household yet, so rebuilding from it is manual.
 
 ## Restore
 

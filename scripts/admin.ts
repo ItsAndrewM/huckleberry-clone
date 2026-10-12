@@ -1,4 +1,7 @@
+import { homedir } from "node:os"
+import { fileURLToPath } from "node:url"
 import { caregiverFromArgs, emailChangeFromArgs } from "./admin-caregiver.ts"
+import { exportFileFromArgs, saveExport } from "./admin-export.ts"
 import { restoreFromArgs } from "./admin-pitr.ts"
 import { adminRequest, seedFromArgs } from "./admin-seed.ts"
 
@@ -10,7 +13,8 @@ const USAGE = `Usage: pnpm admin household:seed --name <name> --time-zone <IANA 
        pnpm admin caregiver:set-email <current email> <new email>
        pnpm admin pitr:bookmark
        pnpm admin pitr:restore <bookmark>
-       pnpm admin pitr:restore --at <ISO time, like 2026-10-10T18:00:00Z>`
+       pnpm admin pitr:restore --at <ISO time, like 2026-10-10T18:00:00Z>
+       pnpm admin export <file>`
 
 const COMMANDS = new Map([
   ["household:seed", (args: string[]) => adminRequest(process.env, "/api/admin/household", seedFromArgs(args))],
@@ -31,6 +35,11 @@ const COMMANDS = new Map([
 ])
 
 const [command = "", ...args] = process.argv.slice(2)
+if (command === "export") {
+  const places = { cwd: process.cwd(), home: homedir(), checkout: fileURLToPath(new URL("../", import.meta.url)) }
+  console.log(await saveExport(process.env, exportFileFromArgs(args, places)))
+  process.exit(0)
+}
 const requestFor = COMMANDS.get(command)
 if (requestFor === undefined) {
   console.error(USAGE)

@@ -52,7 +52,7 @@ packages/
   contracts/           Effect Schema request/response/error types, query-key definitions
 e2e/                   Playwright specs
 scripts/               Node tooling and its tests; pnpm admin (seed the household; disable, enable and re-email caregivers;
-                       PITR bookmarks and restores) and pnpm release (M1.16)
+                       PITR bookmarks and restores; exports, M3.11) and pnpm release (M1.16), which saves an export first (M3.11)
 docs/                  spec, this plan, runbooks (production, Access and deploys in runbooks/access.md; restores and the drill in runbooks/restore.md)
 ```
 
@@ -174,9 +174,9 @@ Covers AC 6, 7, 12, 15 (export half), 16–20, 22, 23.
 
 | Task | Size | Notes |
 |---|---|---|
-| M3.1 Sleep core: manual, start, wake, PATCH, DELETE, restore; active uniqueness; overlap check including the running session (treated as `[start, now)`) | M | Uses the shared timer helpers. Shared lifecycle suite now runs for both kinds |
+| M3.1 Sleep core: manual, start, wake, PATCH, DELETE, restore; active uniqueness; overlap check including the running session (treated as `[start, now)`) | M | Uses the shared timer helpers. Shared lifecycle suite now runs for both kinds. Sleeps join M3.11's CSV sheet as their own kind: its test listing every table fails until they do. The JSON export takes the new table by itself |
 | M3.2 Sleep UI: Today status (asleep timer / time since last wake), Start sleep / Wake up (≤ 2 taps), manual entry, nap/night label | M | |
-| M3.3 Supplements: definitions CRUD (Vitamin D seeded); logs with `local_date`; duplicate-day 409 → "Record another dose anyway?" → `confirmedDuplicate`; "Vitamin D logged at 9:10 by Emily" on Today | M | AC 6: two-phone E2E with two browser contexts; assert the other context shows the log within 2 s |
+| M3.3 Supplements: definitions CRUD (Vitamin D seeded); logs with `local_date`; duplicate-day 409 → "Record another dose anyway?" → `confirmedDuplicate`; "Vitamin D logged at 9:10 by Emily" on Today | M | AC 6: two-phone E2E with two browser contexts; assert the other context shows the log within 2 s. Doses join M3.11's CSV sheet as their own kind, as sleeps do |
 | M3.4 Universal edit/delete UI for every record type, with confirmation and version checks; move-whole-feed with offset preview | M | |
 | M3.5 Recently deleted (Settings): list, restore with D10 | S | AC 19 |
 | M3.6 `GET /api/days/:date`, `/weeks/:isoWeek`, `/months/:month`: summaries + records, using the domain aggregations | M | Property tests: the sum of daily allocations equals the total duration for random intervals across DST days |
@@ -184,7 +184,7 @@ Covers AC 6, 7, 12, 15 (export half), 16–20, 22, 23.
 | M3.8 Calendar Week view: 7 columns, sticky headers, horizontal scroll, minimum column width; filters, period navigation, date picker | M | |
 | M3.9 History list view (accessible equivalent) with the same actions | S | |
 | M3.10 Trends: Day/Week/Month charts (TanStack Charts, which M4.5 adds; decided 10 Oct 2026), separate minutes and mL scales, numeric summaries next to each chart, "No entries" vs zero, partial-period labelling, averages with their denominator | M | |
-| M3.11 Export: `/api/export.json` (schema version, raw rows, audit) and `/api/export.csv` (events + growth tables) | S | |
+| M3.11 Export: `/api/export.json` (schema version, raw rows, audit) and `/api/export.csv` (events + growth tables) | S | Built ahead of the rest of M3, during M1's week of use, since it only reads (decided 12 Oct 2026). The JSON is every table as stored, with the migrations applied: every row and column, deleted rows and audit included, and the receipts and Cloudflare's own tables left out. A table a later migration adds joins it by itself. **Decided 12 Oct 2026:** Settings › Export shares either file through the share sheet, or downloads it where the browser can't share files, and `pnpm admin export <file>` saves the JSON on Andrew's Mac through `POST /api/admin/export`. The CSV is one sheet with a row per live feed, diaper and measurement, oldest first, at the household's local time, in mL, g and cm; each new kind joins it with its task. `pnpm release` saves the JSON to `exports/` before its bookmark, and stops if it can't. `--skip-export` skips that, as the first release with M3.11 must, since the Worker it replaces has no export route |
 
 ### M4 — Growth and percentiles
 
@@ -272,7 +272,7 @@ Spec scenarios that become named fixtures: the 15+15 min / 50+50 mL feed (AC 4),
 | Static Assets and Access interaction (S4) | Assets get no `ctx.access`; the shell and `/sw.js` require sign-in | D5 verifies the JWT. The service worker installs and updates only while signed in. The installed app's cached shell opens offline (S4 pass) |
 | Import source unknown | M2 blocked | **Resolved:** M2 dropped (10 Oct 2026). The household starts fresh |
 | WHO extreme-value handling and dataset choice | Wrong percentiles | M4.2 gate, which passes (`docs/percentiles.md`). CI runs it on every pull request |
-| Two-person, single-environment ops | A bad migration hits live data | Migrations are forward-only and tested against an export of production data in a preview DO before deploy, once M3.11's export exists. `pnpm release` takes a PITR bookmark before every deploy and logs it, and `pnpm admin pitr:restore` rewinds to it (M1.16) |
+| Two-person, single-environment ops | A bad migration hits live data | Migrations are forward-only and tested against an export of production data before deploy. `pnpm release` saves an export to `exports/` before every deploy (M3.11), so M3.1, the first new table, can test its migration on the latest one. `pnpm release` also takes a PITR bookmark before every deploy and logs it, and `pnpm admin pitr:restore` rewinds to it (M1.16) |
 
 **Questions for Andrew and Emily before M1:**
 

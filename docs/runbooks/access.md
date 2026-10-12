@@ -82,10 +82,11 @@ Run these on each iPhone:
    1. the checkout is a clean `main` that matches `origin/main`
    2. CI passed on that commit
    3. a fresh build, without `CLOUDFLARE_ENV`, whose config passes the checks
-   4. a PITR bookmark of the household
-   5. `wrangler deploy`
+   4. an export of the household, saved to a new file in `exports/` (M3.11). `--skip-export` skips it: the first release that carries M3.11 needs that, because the Worker it replaces has no export route yet. Otherwise, use it only when the export itself is broken
+   5. a PITR bookmark of the household
+   6. `wrangler deploy`
 
-   It then appends the time, the commit and the bookmark to `deploys.log`, which git ignores.
+   It then appends the time, the commit and the bookmark to `deploys.log`. Git ignores `deploys.log` and `exports/`. Each export is named for the second in UTC and the commit, like `exports/2026-10-12T031450Z-20390a3.json`, and only your Mac's user can read it. It holds every row, her name and birth date included, so keep the folder on this Mac.
 3. Open the app online on each phone once, so its offline copy moves to the new build.
 
 ## When a deploy goes wrong
@@ -93,6 +94,13 @@ Run these on each iPhone:
 - **Code only** (the app misbehaves, but the data is right): roll back to the previous version with `pnpm --filter @bt/web exec wrangler rollback --config ../worker/wrangler.jsonc`. That config pins the account and names the Worker. Older code runs against a newer schema, because migrations only add.
 - **Data too:** find the bookmark taken before that deploy in `deploys.log`, and restore it as `docs/runbooks/restore.md` says. That runbook also covers a restore to a time and a restore that answers 503.
 - **Both:** roll back the code first, then restore the data. The order matters: a restore restarts the household under whatever code is deployed, and the household applies the code's missing migrations at every start. Restoring under the bad code would run its migration again over the restored data. After the rollback, the older code starts on the newer schema (it skips ledger entries it doesn't know), and the restore then takes the data and the migration ledger back to before that deploy.
+
+## Exports
+
+- **From your Mac:** `pnpm admin export <file>` saves the household's JSON export to a new file. It never writes over a file that's already there, and it prints only how many tables and rows the export holds. Each `pnpm release` saves one to `exports/` the same way.
+- **Where it may go:** outside the checkout, like `~/baby-tracker.json` (a leading `~` is your home folder, quoted or not), or under the checkout's `exports/`. It refuses anywhere else in the checkout, where git would see the file, even by way of a symlink.
+- **From a phone:** Settings › Export shares the CSV or the JSON through the share sheet. A browser that can't share files downloads them instead.
+- **What's in them:** the JSON keeps every table as stored: every row and column, deleted rows and audit columns included, with the migrations applied. It leaves out the receipts, which expire after a day. The CSV has a row per live feed, diaper and measurement, at the household's local time.
 
 ## Caregivers
 
