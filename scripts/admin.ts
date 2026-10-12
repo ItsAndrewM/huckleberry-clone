@@ -1,3 +1,5 @@
+import { homedir } from "node:os"
+import { fileURLToPath } from "node:url"
 import { caregiverFromArgs, emailChangeFromArgs } from "./admin-caregiver.ts"
 import { exportFileFromArgs, saveExport } from "./admin-export.ts"
 import { restoreFromArgs } from "./admin-pitr.ts"
@@ -34,7 +36,8 @@ const COMMANDS = new Map([
 
 const [command = "", ...args] = process.argv.slice(2)
 if (command === "export") {
-  console.log(await saveExport(process.env, exportFileFromArgs(args)))
+  const places = { cwd: process.cwd(), home: homedir(), checkout: fileURLToPath(new URL("../", import.meta.url)) }
+  console.log(await saveExport(process.env, exportFileFromArgs(args, places)))
   process.exit(0)
 }
 const requestFor = COMMANDS.get(command)

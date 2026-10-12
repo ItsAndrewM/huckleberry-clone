@@ -1,3 +1,4 @@
+import { spawnSync } from "node:child_process"
 import { mkdtempSync, readFileSync, statSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
@@ -27,6 +28,12 @@ const EXPORTED = {
 
 const BODY = JSON.stringify(EXPORTED)
 
+const PLACES = {
+  cwd: "/Users/andrew/huckleberry-clone",
+  home: "/Users/andrew",
+  checkout: "/Users/andrew/huckleberry-clone",
+}
+
 const answering = (status: number, body: string) =>
   vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response(body, { status }))
 
@@ -45,8 +52,32 @@ describe("pnpm admin export", () => {
     expect(await request.json()).toEqual({})
   })
 
-  it("takes the one file to save to", () => {
-    expect(exportFileFromArgs(["~/baby-tracker.json"])).toBe("~/baby-tracker.json")
+  it("takes the one file to save to, outside the checkout", () => {
+    expect(exportFileFromArgs(["/Users/andrew/Backups/baby-tracker.json"], PLACES)).toBe(
+      "/Users/andrew/Backups/baby-tracker.json",
+    )
+  })
+
+  it("reads a leading ~ as the home folder, as the shell does only for an unquoted path", () => {
+    expect(exportFileFromArgs(["~/baby-tracker.json"], PLACES)).toBe("/Users/andrew/baby-tracker.json")
+    expect(exportFileFromArgs(["~"], { ...PLACES, cwd: "/tmp" })).toBe("/Users/andrew")
+  })
+
+  it("saves under the checkout's exports/, which git ignores", () => {
+    expect(exportFileFromArgs(["exports/today.json"], PLACES)).toBe(
+      "/Users/andrew/huckleberry-clone/exports/today.json",
+    )
+  })
+
+  it.each([
+    ["a bare name, which lands in the checkout", "backup.json"],
+    ["a path that climbs out of exports/", "exports/../backup.json"],
+    ["a folder named ~user, which isn't the home folder", "~user/backup.json"],
+    ["the checkout's own source", "/Users/andrew/huckleberry-clone/apps/backup.json"],
+  ])("refuses %s, where git would see her name and every entry", (_label, file) => {
+    expect(() => exportFileFromArgs([file], PLACES)).toThrow(
+      "Save the export outside this checkout, or under its exports/ folder, which git ignores",
+    )
   })
 
   it.each([
@@ -54,11 +85,11 @@ describe("pnpm admin export", () => {
     ["two files", ["a.json", "b.json"]],
     ["a blank name", ["  "]],
   ])("refuses %s", (_label, args) => {
-    expect(() => exportFileFromArgs(args)).toThrow("Give one file to save the export to")
+    expect(() => exportFileFromArgs(args, PLACES)).toThrow("Give one file to save the export to")
   })
 
   it("refuses an option it doesn't know", () => {
-    expect(() => exportFileFromArgs(["--force", "a.json"])).toThrow("Unknown option '--force'")
+    expect(() => exportFileFromArgs(["--force", "a.json"], PLACES)).toThrow("Unknown option '--force'")
   })
 })
 
@@ -83,6 +114,15 @@ describe("exportFrom", () => {
 describe("exportSummary", () => {
   it("counts the tables and rows, and says when the export was taken", () => {
     expect(exportSummary(exportFrom(200, BODY))).toBe("2 tables and 3 rows, as of 2026-10-12T03:14:50.000Z")
+  })
+})
+
+describe("the exports/ folder", () => {
+  const ignored = (path: string) => spawnSync("git", ["check-ignore", "--quiet", "--no-index", path]).status === 0
+
+  it("is kept out of git at the checkout's root, and only there", () => {
+    expect(ignored("exports/2026-10-12T031450Z-20390a3.json")).toBe(true)
+    expect(ignored("packages/contracts/src/exports/index.ts")).toBe(false)
   })
 })
 
