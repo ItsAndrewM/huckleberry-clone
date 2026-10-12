@@ -53,20 +53,33 @@ const bottleAt = (occurredAt: number, breastMilkMl = 30): StartedFeed => ({
   portions: [{ occurredAt, breastMilkMl, formulaMl: 0 }],
 })
 
+const withBottle = (feed: StartedFeed, occurredAt: number): StartedFeed => ({
+  ...feed,
+  portions: [...feed.portions, ...bottleAt(occurredAt).portions],
+})
+
+const SIDE_BEFORE_THE_DAY = nursing(OCT_8.start - 2 * HOUR, OCT_8.start - HOUR)
+
 describe("feedTouches", () => {
   it.each([
-    ["a side nursed during the day", nursing(OCT_8.start + HOUR, OCT_8.start + 2 * HOUR), true],
-    ["a side that ran on past the day's start", nursing(OCT_8.start - HOUR, OCT_8.start + MINUTE), true],
-    ["a side that ended as the day began", nursing(OCT_8.start - HOUR, OCT_8.start), false],
-    ["a side that began as the day ended", nursing(OCT_8.end, OCT_8.end + HOUR), false],
+    ["a side nursed during the day", true, nursing(OCT_8.start + HOUR, OCT_8.start + 2 * HOUR)],
+    ["a side that ran on past the day's start", true, nursing(OCT_8.start - HOUR, OCT_8.start + MINUTE)],
+    ["a side that ended as the day began", false, nursing(OCT_8.start - HOUR, OCT_8.start)],
+    ["a side that began as the day ended", false, nursing(OCT_8.end, OCT_8.end + HOUR)],
+    ["a paused feed whose side ended an hour before the day", false, SIDE_BEFORE_THE_DAY],
+    ["a bottle as the day began", true, bottleAt(OCT_8.start)],
+    ["a bottle as the day ended", false, bottleAt(OCT_8.end)],
     [
-      "a paused feed whose side ended an hour before the day",
-      nursing(OCT_8.start - 2 * HOUR, OCT_8.start - HOUR),
+      "a feed whose side ended before the day and whose bottle came after it, though its span covers the day",
       false,
+      withBottle(SIDE_BEFORE_THE_DAY, OCT_8.end + HOUR),
     ],
-    ["a bottle as the day began", bottleAt(OCT_8.start), true],
-    ["a bottle as the day ended", bottleAt(OCT_8.end), false],
-  ])("answers %s with %s", (_label, feed, touches) => {
+    [
+      "a feed whose side ended before the day and whose bottle came during it",
+      true,
+      withBottle(SIDE_BEFORE_THE_DAY, OCT_8.start + HOUR),
+    ],
+  ])("answers %s with %s", (_label, touches, feed) => {
     expect(feedTouches(OCT_8, feed, NOW)).toBe(touches)
   })
 
