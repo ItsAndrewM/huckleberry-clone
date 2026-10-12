@@ -1,3 +1,5 @@
+import { tz } from "@date-fns/tz"
+import { getISOWeek, getISOWeekYear } from "date-fns"
 import fc from "fast-check"
 import { describe, expect, it } from "vitest"
 import {
@@ -102,6 +104,20 @@ describe("ISO weeks", () => {
 
   it.each(["2026-W54", "2025-W53", "2026-W5", "2026-41"])("throws on the week %j, which does not exist", (week) => {
     expect(() => isoWeekMonday(week)).toThrow(RangeError)
+  })
+
+  it("numbers every week as date-fns does in UTC, from 1999 to 2100, without reading the device's zone", () => {
+    const utc = tz("UTC")
+    const centuryDates = fc
+      .integer({ min: Date.UTC(1999, 0, 1), max: Date.UTC(2100, 11, 31) })
+      .map((ms) => new Date(ms).toISOString().slice(0, 10))
+    fc.assert(
+      fc.property(centuryDates, (date) => {
+        const day = utc(Date.parse(`${date}T00:00:00Z`))
+        const week = `${getISOWeekYear(day)}-W${String(getISOWeek(day)).padStart(2, "0")}`
+        expect([isoWeekOfDate(date), isIsoWeek(week), isoWeekMonday(week) <= date]).toEqual([week, true, true])
+      }),
+    )
   })
 
   it("puts every date in the week that starts on the Monday up to six days before it", () => {
