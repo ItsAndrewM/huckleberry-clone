@@ -87,7 +87,7 @@ export const sendingState = (state: SheetsState, sending: Sending, online: boole
   const toast = UNDOES.has(sending.action.kind) ? null : state.toast
   const held = withoutGoing(withoutAction(state.held, actionIdOf(sending)), sending.sheet)
   const sent = { ...state, held, toast }
-  if (closesOnSend(sending) && online) return closing(sent)
+  if (closesOnSend(sending) && online) return state.open === null ? sent : closing(sent)
   if (!closesOnSend(sending) && !closesOnSave(sending)) return sent
   return state.open === sending.sheet ? { ...sent, keptOpen: actionIdOf(sending) } : sent
 }

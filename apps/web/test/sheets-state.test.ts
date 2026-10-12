@@ -269,11 +269,28 @@ describe("entries back from a reload", () => {
     expect(restoredState([])).toEqual(CLOSED)
   })
 
-  it("opens the first one's sheet on its own once ready, and the next when that one closes", () => {
+  it("opens the first one's sheet on its own once ready", () => {
     const opened = reopenedState(restoredState(back))
     expect(opened).toMatchObject({ open: "diaper", opened: 1, queued: true })
     expect(reopenedState(opened)).toBe(opened)
     expect(reopenedState(CLOSED)).toBe(CLOSED)
+  })
+
+  it("leaves them to wait for the app when a draft sent again at startup closes nothing", () => {
+    const resent: Sending = {
+      sheet: "bottle",
+      action: {
+        kind: "logFeed",
+        payload: {
+          actionId: "6f1d2c3b-4a5e-4b6c-8d7e-9f0a1b2c3d4e",
+          segments: [],
+          portions: [{ occurredAt: NOW, breastMilkMl: 40, formulaMl: 0 }],
+        },
+      },
+    }
+    const sent = sendingState(restoredState(back), resent, true)
+    expect(sent.open).toBeNull()
+    expect(sent.held).toEqual(back)
   })
 
   it("leaves a sheet the parent opened alone, and marks it as opened by hand", () => {
