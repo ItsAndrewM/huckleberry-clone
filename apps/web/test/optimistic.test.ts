@@ -90,7 +90,7 @@ describe("optimistic measurements", () => {
     expect(queryClient.getQueryData(queryKeys.growth)).toEqual({ measurements: MEASUREMENTS })
   })
 
-  it("swaps in the household's answer, and refreshes what it says changed", async () => {
+  it("swaps in the household's answer, and marks what it says changed for a refetch", async () => {
     const queryClient = householdCache()
     await pendIn(queryClient, LOG, NOW)
     const answer = measurement("m4", NOW, { weightG: 4500 })

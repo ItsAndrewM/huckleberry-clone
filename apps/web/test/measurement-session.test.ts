@@ -21,6 +21,7 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/u
 const IMPERIAL = { ...UNITS, weight: "lb_oz", length: "in" } as const
 const MEASURED_AT = at("2026-10-06", 10) + 42_123
 const STORED = { ...measurement("m3", MEASURED_AT, { weightG: 4300.4, lengthCm: 54.5 }), version: 4 }
+const NEWER = { ...STORED, version: 5 }
 const NOW = at("2026-10-09", 9)
 
 const failedWith = (sending: Sending): Failed => ({ sending, error: new Offline() })
@@ -49,15 +50,16 @@ describe("measurementSession", () => {
     })
   })
 
-  it("reopens a failed new measurement with what was sent, under the same actionId", () => {
+  it("reopens a failed new measurement with what was sent, at the time it was sent, under the same actionId", () => {
     const payload = { actionId: ACTION_ID, measuredAt: MEASURED_AT, weightG: 4300, lengthCm: null, headCm: 36.8 }
     const failed = failedWith({ sheet: "measurement", action: { kind: "logMeasurement", payload } })
     const session = measurementSession(failed, null, UNITS, ZONE)
     expect(session).toMatchObject({ actionId: ACTION_ID, target: null, measuredAt: MEASURED_AT })
     expect(session.form.headCm).toEqual(entryOf(36.8, "cm"))
+    expect(session.form.when).toEqual({ kind: "at", local: "2026-10-06T10:00", pick: null })
   })
 
-  it("reopens a failed edit on the version it was sent against", () => {
+  it("reopens a failed edit on the version it was sent against, though the household has moved on", () => {
     const payload = {
       actionId: ACTION_ID,
       version: 4,
@@ -67,16 +69,18 @@ describe("measurementSession", () => {
       headCm: null,
     }
     const failed = failedWith({ sheet: "measurement", action: { kind: "editMeasurement", id: "m3", payload } })
-    const session = measurementSession(failed, STORED, UNITS, ZONE)
+    const session = measurementSession(failed, NEWER, UNITS, ZONE)
     expect(session).toMatchObject({ actionId: ACTION_ID, target: { id: "m3", version: 4 } })
     expect(session.form.weightG).toEqual(entryOf(4400, "kg"))
+    expect(session.form.when).toEqual({ kind: "at", local: "2026-10-06T10:00", pick: null })
   })
 
-  it("reopens a failed delete as an edit of the measurement, under a fresh actionId", () => {
+  it("reopens a failed delete as an edit of the cached measurement, on its version and under a fresh actionId", () => {
     const action = { kind: "deleteMeasurement", id: "m3", payload: { actionId: ACTION_ID, version: 4 } } as const
-    const session = measurementSession(failedWith({ sheet: "measurement", action }), STORED, UNITS, ZONE)
-    expect(session.target).toEqual({ id: "m3", version: 4 })
+    const session = measurementSession(failedWith({ sheet: "measurement", action }), NEWER, UNITS, ZONE)
+    expect(session.target).toEqual({ id: "m3", version: 5 })
     expect(session.actionId).not.toBe(ACTION_ID)
+    expect(session.form.when).toEqual({ kind: "at", local: "2026-10-06T10:00", pick: null })
   })
 })
 
@@ -93,6 +97,26 @@ describe("readings", () => {
   it("gives the values in grams and centimetres, null where empty", () => {
     const typed = { ...form, weightG: { ...form.weightG, text: "4.3" }, headCm: { ...form.headCm, text: "36.8" } }
     expect(valuesOf(readingsOf(typed))).toEqual({ weightG: 4300, lengthCm: null, headCm: 36.8 })
+  })
+
+  it("gives an untouched edit's values exactly as stored", () => {
+    const editing = measurementSession(null, STORED, UNITS, ZONE)
+    expect(valuesOf(readingsOf(editing.form))).toEqual({ weightG: 4300.4, lengthCm: 54.5, headCm: null })
+  })
+
+  it("empties only the metric whose box was cleared", () => {
+    const editing = measurementSession(null, STORED, UNITS, ZONE)
+    const partlyCleared = { ...editing.form, weightG: { ...editing.form.weightG, text: "" } }
+    expect(valuesOf(readingsOf(partlyCleared))).toEqual({ weightG: null, lengthCm: 54.5, headCm: null })
+  })
+
+  it("holds length and head circumference to their own limits", () => {
+    const typed = { ...form, lengthCm: { ...form.lengthCm, text: "75" }, headCm: { ...form.headCm, text: "75" } }
+    expect(readingsOf(typed)).toEqual({
+      weightG: { kind: "empty" },
+      lengthCm: { kind: "value", value: 75 },
+      headCm: { kind: "invalid", issue: "out_of_range" },
+    })
   })
 
   it("counts an edit with every value cleared as a delete, but never a new measurement", () => {

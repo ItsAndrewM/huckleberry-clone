@@ -124,14 +124,30 @@ describe("failureNote", () => {
     )
   })
 
-  it("asks to check the measurements when the household refuses one of them", () => {
-    const refused = new InvalidInput({ fieldErrors: [{ path: "weightG", issue: "invalid" }] })
+  it.each(["weightG", "lengthCm", "headCm"])("asks to check the measurements when the household refuses %s", (path) => {
+    const refused = new InvalidInput({ fieldErrors: [{ path, issue: "invalid" }] })
+    expect(message(refused)).toBe("Check the measurements, then try again.")
+  })
+
+  it("asks to check the measurements when the household refuses one of them beside a field with no message of its own", () => {
+    const refused = new InvalidInput({
+      fieldErrors: [
+        { path: "measuredAt", issue: "invalid" },
+        { path: "weightG", issue: "invalid" },
+      ],
+    })
     expect(message(refused)).toBe("Check the measurements, then try again.")
   })
 
   it("says a measurement changed, and that Growth is up to date, when the household no longer has it", () => {
     expect(failureNote(new NotFound(), HOUSEHOLD, { held: true, sheet: "measurement" }).message).toBe(
       "This measurement has changed since it opened. Growth is up to date now.",
+    )
+  })
+
+  it("keeps Today's wording when the household no longer has what a Today sheet opened on", () => {
+    expect(failureNote(new NotFound(), HOUSEHOLD, { held: true, sheet: "bottle" }).message).toBe(
+      "This has changed since it opened. Today is up to date now.",
     )
   })
 })
