@@ -13,6 +13,14 @@ const playWeeks = (page: Page) =>
 const chart = (page: Page, name: string) => page.getByRole("region", { name })
 const periods = (page: Page) => page.getByRole("navigation", { name: /weeks|months/u })
 
+const tapDay = async (page: Page, name: string, date: string) => {
+  const bar = chart(page, name).locator(`[data-ts-key^="days:"][data-ts-key*=":${date}:"]`).first()
+  await bar.scrollIntoViewIfNeeded()
+  const box = await bar.boundingBox()
+  if (box === null) throw new Error(`No bar for ${date} on ${name}`)
+  await page.touchscreen.tap(box.x + box.width / 2, box.y + box.height / 2)
+}
+
 test("opens on this week, so far, with each chart's average over the days that have finished", async ({ page }) => {
   await playWeeks(page)
   await openTrends(page)
@@ -39,6 +47,38 @@ test("leaves a day with nothing logged out of the averages, and says so in the t
     "420 mL",
     "7",
   ])
+})
+
+test("picks a day on all four charts with one tap, and goes back to the averages", async ({ page }) => {
+  await playWeeks(page)
+  await openTrends(page)
+  await tapDay(page, "Bottles", "2026-10-06")
+  await expect(page.locator("output", { hasText: "Tue, Oct 6" })).toBeVisible()
+  await expect(chart(page, "Feeds started")).toContainText(/^Feeds started7/u)
+  await expect(chart(page, "Nursing")).toContainText(/1 h 20 min\s*Left 40 min\s·\sRight 40 min/u)
+  await expect(chart(page, "Bottles")).toContainText(/520 mL\s*Breast milk 520 mL/u)
+  await expect(chart(page, "Diapers")).toContainText(/7\s*5 pee\s·\s3 poo/u)
+  await page.getByRole("button", { name: "Back to the averages" }).click()
+  await expect(chart(page, "Bottles")).toContainText("543 mL a day, over 4 days")
+})
+
+test("picks today, and a finished day with nothing logged, each with its own numbers", async ({ page }) => {
+  await playWeeks(page)
+  await openTrends(page, "?date=2026-09-28")
+  await tapDay(page, "Bottles", "2026-10-02")
+  await expect(chart(page, "Bottles")).toContainText(/420 mL/u)
+  await openTrends(page)
+  await tapDay(page, "Feeds started", "2026-10-09")
+  await expect(chart(page, "Feeds started")).toContainText("3 so far")
+})
+
+test("picks a day from the keyboard", async ({ page }) => {
+  await playWeeks(page)
+  await openTrends(page)
+  await chart(page, "Diapers").getByRole("img").focus()
+  await page.keyboard.press("ArrowRight")
+  await page.keyboard.press("Enter")
+  await expect(page.locator("output", { hasText: "Tue, Oct 6" })).toBeVisible()
 })
 
 test("steps back a week and forward again, and never past this week", async ({ page }) => {

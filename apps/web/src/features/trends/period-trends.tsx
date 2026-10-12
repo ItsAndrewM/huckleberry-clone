@@ -8,6 +8,8 @@ import type { TrendsPeriod } from "./trends-period.ts"
 interface Shown {
   readonly me: Me
   readonly today: LocalDate
+  readonly picked: LocalDate | null
+  readonly onPick: (date: LocalDate | null) => void
 }
 
 interface LoadedProps extends Shown {

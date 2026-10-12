@@ -1,6 +1,7 @@
-import type { Me } from "@bt/contracts"
+import type { LocalDate, Me } from "@bt/contracts"
 import { localDateOf } from "@bt/domain"
 import { getRouteApi } from "@tanstack/react-router"
+import { useState } from "react"
 import { useMe } from "../../api/hooks.ts"
 import { retryOf } from "../../api/retry.ts"
 import { NotLoaded } from "../../shell/not-loaded.tsx"
@@ -14,15 +15,30 @@ import { ViewSwitch } from "./view-switch.tsx"
 
 const route = getRouteApi("/trends")
 
+interface Picked {
+  readonly period: string
+  readonly date: LocalDate
+}
+
 const TrendsBody = ({ me, now }: { readonly me: Me; readonly now: number }) => {
   const search = route.useSearch()
+  const [pick, setPick] = useState<Picked | null>(null)
   const today = localDateOf(now, me.household.timeZone)
   const period = shownPeriod(search, today, me.child.birthDate)
+  const id = periodId(period)
+  const picked = pick?.period === id ? pick.date : null
   return (
     <>
-      <ViewSwitch period={period} today={today} birthDate={me.child.birthDate} />
+      <ViewSwitch period={period} today={today} birthDate={me.child.birthDate} picked={picked} />
       <PeriodSwitcher navigation={navigationOf(period, today, me.child.birthDate)} />
-      <PeriodTrends key={periodId(period)} period={period} me={me} today={today} />
+      <PeriodTrends
+        key={id}
+        period={period}
+        me={me}
+        today={today}
+        picked={picked}
+        onPick={(date) => setPick(date === null ? null : { period: id, date })}
+      />
     </>
   )
 }

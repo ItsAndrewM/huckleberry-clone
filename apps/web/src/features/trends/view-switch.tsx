@@ -13,9 +13,10 @@ interface ViewSwitchProps {
   readonly period: TrendsPeriod
   readonly today: LocalDate
   readonly birthDate: LocalDate
+  readonly picked: LocalDate | null
 }
 
-export const ViewSwitch = ({ period, today, birthDate }: ViewSwitchProps) => {
+export const ViewSwitch = ({ period, today, birthDate, picked }: ViewSwitchProps) => {
   const navigate = useNavigate()
   return (
     <ToggleGroup
@@ -24,7 +25,7 @@ export const ViewSwitch = ({ period, today, birthDate }: ViewSwitchProps) => {
       onValueChange={([next]) => {
         const view = VIEWS.find(({ value }) => value === next)?.value
         if (view !== undefined)
-          void navigate({ to: "/trends", search: viewSearch(view, period, today, birthDate, null) })
+          void navigate({ to: "/trends", search: viewSearch(view, period, today, birthDate, picked) })
       }}
       variant="outline"
       size="lg"
