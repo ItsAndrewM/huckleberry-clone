@@ -10,8 +10,8 @@ import {
   Unauthorized,
 } from "@bt/contracts"
 import { AuthRequired, Offline } from "../api/errors.ts"
-import { clockTime, dayClockTime } from "../clock-time.ts"
-import { StaleDraft } from "./drafts.ts"
+import { clockTime } from "../clock-time.ts"
+import { restoredNote } from "./restored-note.ts"
 import type { SheetKind } from "./sending.ts"
 
 export interface Note {
@@ -99,36 +99,34 @@ const conflictNote = (error: Error, household: Household): Note | null => {
   return null
 }
 
-const dayTimeOf = ({ locale, timeZone }: Household, instant: number) => dayClockTime(instant, timeZone, locale)
-
-const staleNote = (error: StaleDraft, household: Household): Note =>
-  note(`This wasn't saved before you signed in, ${dayTimeOf(household, error.createdAt)}. Save it now?`, "Save now")
-
 const GONE = "This has changed since it opened. Today is up to date now."
 
 const MEASUREMENT_GONE = "This measurement has changed since it opened. Growth is up to date now."
 
+export type KeptOn = "phone" | "app" | null
+
 export interface NoteOptions {
-  readonly held: boolean
+  readonly keptOn: KeptOn
   readonly sheet?: SheetKind
 }
 
-const offlineNote = (held: boolean): Note =>
-  note(
-    held
-      ? "No connection. Keep the app open, and try again once you're back online."
-      : "No connection. Try again once you're back online.",
-    TRY_AGAIN,
-  )
+const OFFLINE = {
+  phone: "No connection. This is kept on this phone: try again once you're back online.",
+  app: "No connection. Keep the app open, and try again once you're back online.",
+}
+
+const offlineNote = (keptOn: KeptOn): Note =>
+  note(keptOn === null ? "No connection. Try again once you're back online." : OFFLINE[keptOn], TRY_AGAIN)
 
 const goneNote = (sheet: SheetKind | undefined): Note => note(sheet === "measurement" ? MEASUREMENT_GONE : GONE)
 
-export const failureNote = (error: Error, household: Household, { held, sheet }: NoteOptions): Note => {
-  if (error instanceof Offline) return offlineNote(held)
+export const failureNote = (error: Error, household: Household, { keptOn, sheet }: NoteOptions): Note => {
+  if (error instanceof Offline) return offlineNote(keptOn)
   if (error instanceof AuthRequired || error instanceof Unauthorized) {
     return { message: "Your sign-in has expired. Sign in, and this will be saved.", retry: null, signIn: true }
   }
-  if (error instanceof StaleDraft) return staleNote(error, household)
+  const restored = restoredNote(error, household)
+  if (restored !== null) return restored
   if (error instanceof InvalidInput) return fieldNote(error, household)
   if (error instanceof NotFound) return goneNote(sheet)
   return conflictNote(error, household) ?? note("Not saved.", TRY_AGAIN)

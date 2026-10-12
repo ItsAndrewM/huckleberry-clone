@@ -3,11 +3,12 @@ import {
   DRAFT_KEY,
   DRAFT_RETRY_MS,
   type Draft,
-  dropDraft,
+  dropDraftUnlessHeld,
   isFresh,
   stashDraft,
   takeDraft,
 } from "../src/sheets/drafts.ts"
+import { blocked, memoryStorage } from "./memory-storage.ts"
 
 const ACTION_ID = "4b1c2a5e-8f3d-4c6b-9a7e-2d1f0e3c5b6a"
 const OTHER_ACTION_ID = "9d2e1f3c-5b4a-4e6d-8c7b-1a0f2e3d4c5b"
@@ -20,22 +21,6 @@ const DRAFT: Draft = {
     action: { kind: "logDiaper", payload: { actionId: ACTION_ID, occurredAt: AT, wet: true, dirty: false } },
   },
   createdAt: AT,
-}
-
-const memoryStorage = () => {
-  const items = new Map<string, string>()
-  return {
-    items,
-    storage: {
-      getItem: (key: string) => items.get(key) ?? null,
-      setItem: (key: string, value: string) => void items.set(key, value),
-      removeItem: (key: string) => void items.delete(key),
-    },
-  }
-}
-
-const blocked = () => {
-  throw new DOMException("The operation is insecure.", "SecurityError")
 }
 
 describe("sign-in drafts", () => {
@@ -68,20 +53,20 @@ describe("sign-in drafts", () => {
     expect(stashDraft(() => ({ ...storage, setItem: blocked }), DRAFT)).toBe(false)
   })
 
-  it("drops the draft of an entry sent again or discarded, and keeps a draft of another entry", () => {
+  it("keeps the draft while its action is held, and drops it once the action is sent again, discarded or let go", () => {
     const { storage, items } = memoryStorage()
     stashDraft(() => storage, DRAFT)
-    dropDraft(() => storage, OTHER_ACTION_ID)
+    dropDraftUnlessHeld(() => storage, [OTHER_ACTION_ID, ACTION_ID])
     expect(items.get(DRAFT_KEY)).toBe(JSON.stringify(DRAFT))
-    dropDraft(() => storage, ACTION_ID)
+    dropDraftUnlessHeld(() => storage, [OTHER_ACTION_ID])
     expect(items.has(DRAFT_KEY)).toBe(false)
   })
 
   it("carries on without dropping anything when the browser blocks storage", () => {
-    expect(() => dropDraft(blocked, ACTION_ID)).not.toThrow()
+    expect(() => dropDraftUnlessHeld(blocked, [])).not.toThrow()
     const { storage, items } = memoryStorage()
     stashDraft(() => storage, DRAFT)
-    expect(() => dropDraft(() => ({ ...storage, removeItem: blocked }), ACTION_ID)).not.toThrow()
+    expect(() => dropDraftUnlessHeld(() => ({ ...storage, removeItem: blocked }), [])).not.toThrow()
     expect(items.has(DRAFT_KEY)).toBe(true)
   })
 

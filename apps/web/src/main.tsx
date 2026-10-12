@@ -11,6 +11,8 @@ import { createQueryClient } from "./api/query-client.ts"
 import { AppContext } from "./app-context.ts"
 import { registerServiceWorker } from "./service-worker/register.ts"
 import { takeDraft } from "./sheets/drafts.ts"
+import { keptStorage, readKept } from "./sheets/kept.ts"
+import { restored } from "./sheets/restored.ts"
 import { router } from "./shell/router.tsx"
 import "./index.css"
 
@@ -23,6 +25,7 @@ const api = connectApi({ report: connectivity.report })
 const queryClient = createQueryClient()
 const freshness = trackFreshness(queryClient.getQueryCache(), connectivity)
 const draft = takeDraft(() => sessionStorage, `${window.location.pathname}${window.location.search}`)
+const kept = restored(draft, readKept(keptStorage), Date.now(), () => crypto.randomUUID())
 const live = startLive({
   open: () => new WebSocket(socketUrl(window.location)),
   onChanged: (keys) => {
@@ -36,7 +39,7 @@ if (import.meta.env.PROD) window.addEventListener("load", () => void registerSer
 
 createRoot(root).render(
   <StrictMode>
-    <AppContext value={{ api, connectivity, freshness, draft }}>
+    <AppContext value={{ api, connectivity, freshness, restored: kept }}>
       <QueryClientProvider client={queryClient}>
         <RouterProvider router={router} />
       </QueryClientProvider>

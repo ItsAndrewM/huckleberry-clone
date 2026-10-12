@@ -1,16 +1,15 @@
 import { useEffect } from "react"
-import { type Draft, isFresh } from "./drafts.ts"
 import type { Sending } from "./sending.ts"
 
 let resumed = false
 
-export const useResumedDraft = (draft: Draft | null, send: (sending: Sending) => void) => {
+export const useResumedDraft = (resend: Sending | null, send: (sending: Sending) => void) => {
   useEffect(
     function resumeDraft() {
-      if (resumed || draft === null || !isFresh(draft, Date.now())) return
+      if (resumed || resend === null) return
       resumed = true
-      send(draft.sending)
+      send(resend)
     },
-    [draft, send],
+    [resend, send],
   )
 }

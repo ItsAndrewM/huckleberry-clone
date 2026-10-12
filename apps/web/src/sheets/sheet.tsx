@@ -1,6 +1,7 @@
 import { cn } from "cn"
 import type { ReactNode } from "react"
 import { Drawer, DrawerContent, DrawerDescription, DrawerHeader, DrawerTitle } from "../components/ui/drawer.tsx"
+import { holdTapsWhileArriving } from "./arrival.ts"
 import { DiscardPrompt } from "./discard-prompt.tsx"
 import type { SheetKind } from "./sending.ts"
 import { failedFor, useSheets } from "./sheets-context.ts"
@@ -31,7 +32,11 @@ export const Sheet = ({ sheet, title, description, children }: SheetProps) => {
             {description === undefined ? null : <DrawerDescription>{description}</DrawerDescription>}
           </DrawerHeader>
           {asking ? <DiscardPrompt failed={failed} /> : null}
-          <div key={sheets.opened} className={asking ? "hidden" : "contents"}>
+          <div
+            key={sheets.opened}
+            ref={sheets.queued ? holdTapsWhileArriving : undefined}
+            className={cn(asking ? "hidden" : "contents", "data-arriving:pointer-events-none")}
+          >
             {children}
           </div>
         </div>

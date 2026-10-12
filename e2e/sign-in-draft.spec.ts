@@ -1,5 +1,5 @@
 import { expect, type Page, test } from "@playwright/test"
-import { NOW, openToday, playHousehold, type TodayAnswer, todayWith } from "./played-household.ts"
+import { gate, holdRequests, NOW, openToday, playHousehold, type TodayAnswer, todayWith } from "./played-household.ts"
 
 const SIGNED_OUT_COOKIE = "bt-preview-signed-out"
 const HOUR = 3_600_000
@@ -117,4 +117,29 @@ test("says so when the phone can't keep the entry through signing in, and signs 
   await expect(sheet).toBeHidden()
   await expect(page.getByText("Nothing logged in the last 24 hours.")).toBeVisible()
   expect(sent).toHaveLength(1)
+})
+
+test("shows Today while a draft sent again at startup is still on its way", async ({ page }) => {
+  const draft = {
+    route: "/",
+    sending: {
+      sheet: "diaper",
+      action: {
+        kind: "logDiaper",
+        payload: { actionId: OLD_ACTION_ID, occurredAt: NOW - HOUR, wet: true, dirty: false },
+      },
+    },
+    createdAt: NOW - HOUR,
+  }
+  await page.addInitScript((stored) => sessionStorage.setItem("bt.draft", stored), JSON.stringify(draft))
+  const { played } = await playHousehold(page, todayWith())
+  const sent = await recordDiapers(page, played, () => false)
+  const answered = gate()
+  const held = await holdRequests(page, "**/api/diapers", () => answered.opened)
+  await openToday(page)
+  await expect.poll(() => held.length).toBe(1)
+  expect(sent).toEqual([])
+  answered.open()
+  await expect(page.getByRole("list", { name: "Last 24 hours" })).toContainText("Pee")
+  expect(sent).toEqual([{ actionId: OLD_ACTION_ID, occurredAt: NOW - HOUR, dirty: false }])
 })

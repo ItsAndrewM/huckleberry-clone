@@ -2,14 +2,15 @@ import { FeedConflict } from "@bt/contracts"
 import { describe, expect, it } from "vitest"
 import type { Action } from "../src/api/actions.ts"
 import { Offline } from "../src/api/errors.ts"
-import { DRAFT_RETRY_MS, StaleDraft } from "../src/sheets/drafts.ts"
 import { closesOnSend, type Sending } from "../src/sheets/sending.ts"
 import {
   CLOSED,
   expiredState,
   failedState,
   isEntry,
+  reopenedState,
   restoredState,
+  shownState,
   savedState,
   sendingState,
 } from "../src/sheets/sheets-state.ts"
@@ -196,7 +197,13 @@ describe("a saved measurement", () => {
 describe("a failed send", () => {
   it("reopens its sheet with the reason, holding the entry", () => {
     const failed = { sending: DIAPER, error: new Offline() }
-    expect(failedState(CLOSED, failed, NOW)).toEqual({ ...CLOSED, open: "diaper", opened: 1, held: [failed] })
+    expect(failedState(CLOSED, failed, NOW)).toEqual({
+      ...CLOSED,
+      queued: true,
+      open: "diaper",
+      opened: 1,
+      held: [failed],
+    })
   })
 
   it("says so in a toast when it was an undo", () => {
@@ -251,20 +258,45 @@ describe("a saved entry", () => {
   })
 })
 
-describe("a draft back from signing in", () => {
-  const draft = { route: "/", sending: DIAPER, createdAt: NOW }
+describe("entries back from a reload", () => {
+  const back = [
+    { sending: DIAPER, error: new Offline() },
+    { sending: OTHER_DIAPER, error: new Offline() },
+  ]
 
-  it("leaves a fresh draft to be re-sent as it was", () => {
-    expect(restoredState(draft, NOW + 1000, RENEWED)).toEqual(CLOSED)
-    expect(restoredState(null, NOW, RENEWED)).toEqual(CLOSED)
+  it("holds them with every sheet closed, until the app is ready to ask", () => {
+    expect(restoredState(back)).toEqual({ ...CLOSED, held: back })
+    expect(restoredState([])).toEqual(CLOSED)
   })
 
-  it("asks before saving a draft past the retry window, with a new actionId, holding it like any failed entry", () => {
-    const state = restoredState(draft, NOW + DRAFT_RETRY_MS, RENEWED)
-    expect(state.open).toBe("diaper")
-    expect(state.held).toHaveLength(1)
-    expect(state.held[0]?.error).toEqual(new StaleDraft({ createdAt: NOW }))
-    expect(state.held[0]?.sending.action.payload.actionId).toBe(RENEWED)
+  it("opens the first one's sheet on its own once ready", () => {
+    const opened = reopenedState(restoredState(back))
+    expect(opened).toMatchObject({ open: "diaper", opened: 1, queued: true })
+    expect(reopenedState(opened)).toBe(opened)
+    expect(reopenedState(CLOSED)).toBe(CLOSED)
+  })
+
+  it("leaves them to wait for the app when a draft sent again at startup closes nothing", () => {
+    const resent: Sending = {
+      sheet: "bottle",
+      action: {
+        kind: "logFeed",
+        payload: {
+          actionId: "6f1d2c3b-4a5e-4b6c-8d7e-9f0a1b2c3d4e",
+          segments: [],
+          portions: [{ occurredAt: NOW, breastMilkMl: 40, formulaMl: 0 }],
+        },
+      },
+    }
+    const sent = sendingState(restoredState(back), resent, true)
+    expect(sent.open).toBeNull()
+    expect(sent.held).toEqual(back)
+  })
+
+  it("leaves a sheet the parent opened alone, and marks it as opened by hand", () => {
+    const shown = shownState(restoredState(back), "bottle")
+    expect(shown).toMatchObject({ open: "bottle", queued: false })
+    expect(reopenedState(shown)).toBe(shown)
   })
 })
 

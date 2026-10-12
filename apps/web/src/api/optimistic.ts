@@ -1,5 +1,5 @@
 import { type Growth, type Me, queryKeys, type Today } from "@bt/contracts"
-import type { QueryClient } from "@tanstack/react-query"
+import type { QueryClient, QueryKey } from "@tanstack/react-query"
 import { type Action, isMeasurementAction, type MeasurementAction } from "./actions.ts"
 import { pendingGrowth, savedGrowth, withdrawnGrowth } from "./growth-cache.ts"
 import type { Saved } from "./send.ts"
@@ -20,6 +20,7 @@ interface GrowthPended {
 export type Pended = TodayPended | GrowthPended
 
 const pendToday = async (queryClient: QueryClient, action: Action, now: number): Promise<Pended | null> => {
+  if (queryClient.getQueryData(queryKeys.today) === undefined) return null
   await queryClient.cancelQueries({ queryKey: queryKeys.today })
   const before = queryClient.getQueryData<Today>(queryKeys.today)
   const me = queryClient.getQueryData<Me>(queryKeys.me)
@@ -32,6 +33,7 @@ const pendToday = async (queryClient: QueryClient, action: Action, now: number):
 }
 
 const pendGrowth = async (queryClient: QueryClient, action: MeasurementAction, now: number): Promise<Pended | null> => {
+  if (queryClient.getQueryData(queryKeys.growth) === undefined) return null
   await queryClient.cancelQueries({ queryKey: queryKeys.growth })
   const before = queryClient.getQueryData<Growth>(queryKeys.growth)
   const me = queryClient.getQueryData<Me>(queryKeys.me)
@@ -65,6 +67,12 @@ export const rollBack = (queryClient: QueryClient, action: Action, pended: Pende
   void queryClient.invalidateQueries({ queryKey: isMeasurementAction(action) ? queryKeys.growth : queryKeys.today })
 }
 
+const refetchAfterSave = async (queryClient: QueryClient, queryKey: QueryKey) => {
+  const { data, fetchStatus } = queryClient.getQueryState(queryKey) ?? {}
+  if (data === undefined && fetchStatus === "fetching") await queryClient.cancelQueries({ queryKey })
+  await queryClient.invalidateQueries({ queryKey })
+}
+
 export const settle = (queryClient: QueryClient, saved: Saved, action: Action) => {
   if (isMeasurementAction(action) && "measurement" in saved) {
     queryClient.setQueryData<Growth>(queryKeys.growth, (growth) =>
@@ -75,5 +83,5 @@ export const settle = (queryClient: QueryClient, saved: Saved, action: Action) =
       today === undefined ? today : savedToday(today, saved, action),
     )
   }
-  for (const queryKey of saved.changed) void queryClient.invalidateQueries({ queryKey })
+  for (const queryKey of saved.changed) void refetchAfterSave(queryClient, queryKey)
 }

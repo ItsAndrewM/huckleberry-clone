@@ -11,6 +11,7 @@ import { describe, expect, it } from "vitest"
 import { AuthRequired, Offline } from "../src/api/errors.ts"
 import { StaleDraft } from "../src/sheets/drafts.ts"
 import { failureNote, type Household } from "../src/sheets/failure.ts"
+import { Unsaved } from "../src/sheets/kept.ts"
 import { measurement } from "./growth-fixtures.ts"
 import { ANDREW, diaperAt, EMILY, feedAt, MINUTE, NOW, ZONE } from "./today-fixtures.ts"
 
@@ -24,20 +25,26 @@ const HOUSEHOLD: Household = {
   locale: "en-US",
 }
 
-const message = (error: Error) => failureNote(error, HOUSEHOLD, { held: true }).message.replace(/\s/gu, " ")
+const message = (error: Error) => failureNote(error, HOUSEHOLD, { keptOn: "phone" }).message.replace(/\s/gu, " ")
 
 describe("failureNote", () => {
-  it("asks to keep the app open for a held entry with no connection, and offers to try again", () => {
-    expect(failureNote(new Offline(), HOUSEHOLD, { held: true })).toEqual({
-      message: "No connection. Keep the app open, and try again once you're back online.",
+  it("says an entry with no connection is kept on this phone, and offers to try again", () => {
+    expect(failureNote(new Offline(), HOUSEHOLD, { keptOn: "phone" })).toEqual({
+      message: "No connection. This is kept on this phone: try again once you're back online.",
       retry: "Try again",
       signIn: false,
     })
-    expect(failureNote(new ServiceUnavailable(), HOUSEHOLD, { held: true }).retry).toBe("Try again")
+    expect(failureNote(new ServiceUnavailable(), HOUSEHOLD, { keptOn: "phone" }).retry).toBe("Try again")
+  })
+
+  it("asks to keep the app open for an entry the phone can't keep", () => {
+    expect(failureNote(new Offline(), HOUSEHOLD, { keptOn: "app" }).message).toBe(
+      "No connection. Keep the app open, and try again once you're back online.",
+    )
   })
 
   it("promises nothing kept for a control with no connection, since it goes with its sheet", () => {
-    expect(failureNote(new Offline(), HOUSEHOLD, { held: false })).toEqual({
+    expect(failureNote(new Offline(), HOUSEHOLD, { keptOn: null })).toEqual({
       message: "No connection. Try again once you're back online.",
       retry: "Try again",
       signIn: false,
@@ -46,7 +53,7 @@ describe("failureNote", () => {
 
   it("asks to sign in when Access or the household has signed the parent out", () => {
     for (const error of [new AuthRequired(), new Unauthorized()]) {
-      expect(failureNote(error, HOUSEHOLD, { held: true })).toEqual({
+      expect(failureNote(error, HOUSEHOLD, { keptOn: "phone" })).toEqual({
         message: "Your sign-in has expired. Sign in, and this will be saved.",
         retry: null,
         signIn: true,
@@ -104,8 +111,19 @@ describe("failureNote", () => {
     expect(message(new NotFound())).toBe("This has changed since it opened. Today is up to date now.")
   })
 
+  it("asks before saving an entry kept through a reload, with when it was kept and whether it failed", () => {
+    expect(failureNote(new Unsaved({ keptAt: NOW, failed: true }), HOUSEHOLD, { keptOn: "phone" })).toMatchObject({
+      message: expect.stringMatching(/^This wasn't saved, Fri 9:30\sAM\. Save it now\?$/u),
+      retry: "Save now",
+    })
+    expect(failureNote(new Unsaved({ keptAt: NOW, failed: false }), HOUSEHOLD, { keptOn: "phone" })).toMatchObject({
+      message: expect.stringMatching(/^This might not have been saved, Fri 9:30\sAM\. Save it now\?$/u),
+      retry: "Save now",
+    })
+  })
+
   it("asks before saving a draft that waited too long, with when it was kept", () => {
-    expect(failureNote(new StaleDraft({ createdAt: NOW }), HOUSEHOLD, { held: true })).toMatchObject({
+    expect(failureNote(new StaleDraft({ createdAt: NOW }), HOUSEHOLD, { keptOn: "phone" })).toMatchObject({
       message: expect.stringMatching(/^This wasn't saved before you signed in, Fri 9:30\sAM\. Save it now\?$/u),
       retry: "Save now",
     })
@@ -140,13 +158,13 @@ describe("failureNote", () => {
   })
 
   it("says a measurement changed, and that Growth is up to date, when the household no longer has it", () => {
-    expect(failureNote(new NotFound(), HOUSEHOLD, { held: true, sheet: "measurement" }).message).toBe(
+    expect(failureNote(new NotFound(), HOUSEHOLD, { keptOn: "phone", sheet: "measurement" }).message).toBe(
       "This measurement has changed since it opened. Growth is up to date now.",
     )
   })
 
   it("keeps Today's wording when the household no longer has what a Today sheet opened on", () => {
-    expect(failureNote(new NotFound(), HOUSEHOLD, { held: true, sheet: "bottle" }).message).toBe(
+    expect(failureNote(new NotFound(), HOUSEHOLD, { keptOn: "phone", sheet: "bottle" }).message).toBe(
       "This has changed since it opened. Today is up to date now.",
     )
   })

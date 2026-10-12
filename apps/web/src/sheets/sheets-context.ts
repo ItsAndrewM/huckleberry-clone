@@ -11,6 +11,8 @@ export interface Sheets {
   readonly asking: boolean
   readonly busy: Sending | null
   readonly toast: Toast | null
+  readonly queued: boolean
+  readonly keeping: boolean
   readonly show: (sheet: SheetKind, editing?: string) => void
   readonly close: () => void
   readonly keep: () => void
