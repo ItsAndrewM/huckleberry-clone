@@ -3,7 +3,7 @@ import { mkdirSync, mkdtempSync, readFileSync, realpathSync, statSync, symlinkSy
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { afterEach, describe, expect, it, vi } from "vitest"
-import { exportFileFromArgs, exportFrom, exportSummary, releaseExportPath, saveExport } from "./admin-export.ts"
+import { exportFileFromArgs, exportFrom, exportSummary, saveExport } from "./admin-export.ts"
 import { adminRequest } from "./admin-seed.ts"
 
 const ENV = {
@@ -160,17 +160,6 @@ describe("the exports/ folder", () => {
   it("is kept out of git at the checkout's root, and only there", () => {
     expect(ignored("exports/2026-10-12T031450Z-20390a3.json")).toBe(true)
     expect(ignored("packages/contracts/src/exports/index.ts")).toBe(false)
-  })
-})
-
-describe("releaseExportPath", () => {
-  it("names the file by the second in UTC and the commit, under exports/, so a rerun a moment later gets its own", () => {
-    expect(releaseExportPath(new Date(Date.UTC(2026, 9, 12, 3, 14, 50)), "20390a32dd62e7c7")).toBe(
-      "exports/2026-10-12T031450Z-20390a3.json",
-    )
-    expect(releaseExportPath(new Date(Date.UTC(2026, 9, 12, 3, 14, 51)), "20390a32dd62e7c7")).toBe(
-      "exports/2026-10-12T031451Z-20390a3.json",
-    )
   })
 })
 

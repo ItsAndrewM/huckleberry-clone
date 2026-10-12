@@ -1,22 +1,25 @@
 import { readFileSync } from "node:fs"
 import ts from "typescript"
 import { describe, expect, it } from "vitest"
+import { restoreFromArgs } from "./admin-pitr.ts"
 import {
-  bookmarkFrom,
   type Checkout,
   checkoutProblems,
   ciProblems,
   type DeployConfig,
-  deployLogLine,
   deployProblems,
-  exportProblem,
-  withoutCloudflareEnv,
+  envFor,
+  refuseUnknownFlags,
+  releaseReport,
+  restorePointOf,
+  wranglerDeployArgs,
 } from "./release-checks.ts"
 
-const BOOKMARK = "0000007b-0000b26e-00001538-0c3e87bb37b3db5cc52eedb93cd3b96b"
+const COMMIT = "20390a32dd62e7c7a4b1f0e9d8c7b6a5f4e3d2c1"
 
 const DEPLOYABLE: DeployConfig = {
   name: "baby-tracker",
+  account_id: "6624f09210327baade61004af0d9be84",
   routes: [{ pattern: "baby.andamonium.dev", custom_domain: true }],
   workers_dev: false,
   preview_urls: false,
@@ -24,7 +27,7 @@ const DEPLOYABLE: DeployConfig = {
   observability: { logs: { invocation_logs: false } },
 }
 
-const ON_MAIN: Checkout = { branch: "main", clean: true, head: "7321bf2", originMain: "7321bf2" }
+const AT_ORIGIN_MAIN: Checkout = { clean: true, head: "7321bf2", originMain: "7321bf2" }
 
 describe("the Worker config a release deploys", () => {
   it("passes as built for production", () => {
@@ -46,6 +49,11 @@ describe("the Worker config a release deploys", () => {
         "the Worker is baby-tracker, not a local build (rebuild without CLOUDFLARE_ENV)",
         "no made-up LOCAL_HOUSEHOLD is seeded",
       ],
+    ],
+    [
+      "an empty account_id, which CI's token for one Worker can't look up",
+      { account_id: "" },
+      ["account_id is pinned"],
     ],
     [
       "workers.dev or preview URLs, which Access doesn't cover",
@@ -82,17 +90,30 @@ describe("the Worker config a release deploys", () => {
   })
 })
 
+describe("the flags pnpm release takes", () => {
+  it("takes none", () => {
+    expect(() => refuseUnknownFlags([])).not.toThrow()
+  })
+
+  it.each(["--first", "--skip-export"])("refuses %s, which M5.7 removed, rather than ignoring it", (flag) => {
+    expect(() => refuseUnknownFlags([flag])).toThrow(`Unknown option '${flag}'`)
+  })
+})
+
 describe("the checkout a release deploys from", () => {
-  it("passes on a clean main that matches origin/main", () => {
-    expect(checkoutProblems(ON_MAIN)).toEqual([])
+  it("passes on a clean checkout at origin/main's head, on a branch or on CI's checkout of a commit", () => {
+    expect(checkoutProblems(AT_ORIGIN_MAIN)).toEqual([])
   })
 
   it.each([
-    ["a feature branch", { branch: "feature/x" }, ["the checkout is on main"]],
     ["uncommitted changes", { clean: false }, ["the checkout has no uncommitted changes"]],
-    ["a main that's behind or ahead of origin", { originMain: "2eee922" }, ["main is the same commit as origin/main"]],
+    [
+      "a commit behind or ahead of origin/main, such as an old CI run re-run after main moved on",
+      { originMain: "2eee922" },
+      ["HEAD is the same commit as origin/main"],
+    ],
   ])("refuses %s", (_label, change, problems) => {
-    expect(checkoutProblems({ ...ON_MAIN, ...change })).toEqual(problems)
+    expect(checkoutProblems({ ...AT_ORIGIN_MAIN, ...change })).toEqual(problems)
   })
 })
 
@@ -130,38 +151,85 @@ describe("CI on the commit a release deploys", () => {
   })
 })
 
-describe("the build a release runs", () => {
-  it("drops CLOUDFLARE_ENV, so a shell left on local still builds production", () => {
-    expect(withoutCloudflareEnv({ CLOUDFLARE_ENV: "local", PATH: "/usr/bin" })).toEqual({ PATH: "/usr/bin" })
+describe("the credentials each step of a release gets", () => {
+  const SHELL = {
+    PATH: "/usr/bin",
+    CLOUDFLARE_ENV: "local",
+    CLOUDFLARE_API_TOKEN: "cf-token",
+    GH_TOKEN: "gh-token",
+    GITHUB_TOKEN: "github-token",
+  }
+
+  it("gives the build no token and no CLOUDFLARE_ENV, since it runs dependency code and must build production", () => {
+    expect(envFor("build", SHELL)).toEqual({ PATH: "/usr/bin" })
+  })
+
+  it("gives git no token, since the checkout carries its own credentials", () => {
+    expect(envFor("git", SHELL)).toEqual({ PATH: "/usr/bin" })
+  })
+
+  it("gives gh the GitHub tokens and no Cloudflare one", () => {
+    expect(envFor("gh", SHELL)).toEqual({ PATH: "/usr/bin", GH_TOKEN: "gh-token", GITHUB_TOKEN: "github-token" })
+  })
+
+  it("gives Wrangler the Cloudflare token and no GitHub one", () => {
+    expect(envFor("wrangler", SHELL)).toEqual({ PATH: "/usr/bin", CLOUDFLARE_API_TOKEN: "cf-token" })
   })
 })
 
-describe("the export a release saves before its bookmark", () => {
-  it("says why it failed, and names the flag for a live Worker that has no export route yet", () => {
-    expect(exportProblem(new Error('Couldn\'t export the household: 404 {"_tag":"NotFound"}'))).toBe(
-      'the household can be exported first (Couldn\'t export the household: 404 {"_tag":"NotFound"}). ' +
-        "If the live Worker predates exports, as before the first release with M3.11, release once with --skip-export",
+describe("the restore point a release records", () => {
+  const AT = new Date(Date.UTC(2026, 9, 12, 15, 49, 59, 812))
+
+  it("is the UTC second, written with its zone", () => {
+    expect(restorePointOf(AT)).toBe("2026-10-12T15:49:59Z")
+  })
+
+  it("is a time pnpm admin pitr:restore --at takes, at that same second", () => {
+    expect(restoreFromArgs(["--at", restorePointOf(AT)])).toEqual({ at: Date.UTC(2026, 9, 12, 15, 49, 59) })
+  })
+})
+
+describe("the deploy a release runs", () => {
+  const DEPLOY = {
+    config: "/repo/apps/web/dist/baby_tracker/wrangler.json",
+    commit: COMMIT,
+    restorePoint: "2026-10-12T15:49:59Z",
+  }
+  const valueAfter = (args: ReadonlyArray<string>, flag: string) => args[args.indexOf(flag) + 1] ?? ""
+
+  it("tags the version with the whole commit, and puts the restore point and the CI run in its message", () => {
+    expect(wranglerDeployArgs({ ...DEPLOY, runId: "18233456789" })).toEqual([
+      "deploy",
+      "--config",
+      "/repo/apps/web/dist/baby_tracker/wrangler.json",
+      "--tag",
+      COMMIT,
+      "--message",
+      "20390a3 restore point 2026-10-12T15:49:59Z ci:18233456789",
+    ])
+  })
+
+  it("says local when it runs from the Mac", () => {
+    expect(valueAfter(wranglerDeployArgs({ ...DEPLOY, runId: undefined }), "--message")).toBe(
+      "20390a3 restore point 2026-10-12T15:49:59Z local",
     )
   })
+
+  it("stays within Cloudflare's 100-byte tag and 1,000-byte message", () => {
+    const args = wranglerDeployArgs({ ...DEPLOY, runId: "9".repeat(20) })
+    expect(Buffer.byteLength(valueAfter(args, "--tag"))).toBeLessThanOrEqual(100)
+    expect(Buffer.byteLength(valueAfter(args, "--message"))).toBeLessThanOrEqual(1000)
+  })
 })
 
-describe("the bookmark a release takes before deploying", () => {
-  it("is read from the admin route's answer", () => {
-    expect(bookmarkFrom(200, JSON.stringify({ bookmark: BOOKMARK }))).toBe(BOOKMARK)
-  })
-
-  it.each([
-    ["a refusal", 401, JSON.stringify({ _tag: "Unauthorized" })],
-    ["Access's sign-in redirect, from a wrong service token", 302, ""],
-    ["an answer that isn't JSON", 200, "<html>"],
-    ["a bookmark that isn't one", 200, JSON.stringify({ bookmark: "yesterday" })],
-  ])("stops the release on %s", (_label, status, body) => {
-    expect(() => bookmarkFrom(status, body)).toThrow(`Couldn't take a bookmark before deploying: ${status}`)
-  })
-
-  it("is logged with the time and the commit, or noted as missing on the first deploy", () => {
-    const at = new Date(Date.UTC(2026, 9, 10, 18))
-    expect(deployLogLine(at, "7321bf2", BOOKMARK)).toBe(`2026-10-10T18:00:00.000Z 7321bf2 ${BOOKMARK}\n`)
-    expect(deployLogLine(at, "7321bf2", null)).toBe("2026-10-10T18:00:00.000Z 7321bf2 first-deploy-no-bookmark\n")
+describe("what a release reports", () => {
+  it("names the commit, the restore point and the command that rewinds to it, and reminds about the phones", () => {
+    expect(releaseReport(COMMIT, "2026-10-12T15:49:59Z")).toBe(
+      [
+        "Released 20390a3 to https://baby.andamonium.dev.",
+        "Restore point: 2026-10-12T15:49:59Z. To rewind the household to just before this deploy, run `pnpm admin pitr:restore --at 2026-10-12T15:49:59Z`.",
+        "Open the app online on each phone, so its offline copy updates to this build.",
+      ].join("\n\n"),
+    )
   })
 })
