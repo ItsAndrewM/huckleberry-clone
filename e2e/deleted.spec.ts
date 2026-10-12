@@ -230,7 +230,7 @@ test("tries a restore the household couldn't take again under the same actionId,
   expect(played.sent[1]?.body.actionId).toBe(played.sent[0]?.body.actionId)
 })
 
-test("says a running feed can't come back while another runs, and keeps it on the list to try again", async ({
+test("says a feed still running when it was deleted can't come back over a feed started since, without asking to finish that one", async ({
   page,
 }) => {
   const { answer, emily } = await playDeleted(page, (andrew) => ({
@@ -243,9 +243,9 @@ test("says a running feed can't come back while another runs, and keeps it on th
   await answer(409, { _tag: "Conflict", code: "FEED_ALREADY_ACTIVE", current: other })
   await page.getByRole("button", { name: /^Restore Nursing/u }).click()
   await expect(entries(page).getByRole("alert")).toHaveText(
-    "Emily (local) started a feed at 9:05 AM. Finish it, then restore this one.",
+    "It was still running when it was deleted, so it would run on over the feed Emily (local) started at 9:05 AM. It can't come back.",
   )
-  await expect(page.getByRole("button", { name: /^Restore Nursing/u })).toBeEnabled()
+  await expect(entries(page).getByRole("listitem")).toContainText("Running when deleted")
 })
 
 test("refuses an entry from before her birth date, saying why", async ({ page }) => {

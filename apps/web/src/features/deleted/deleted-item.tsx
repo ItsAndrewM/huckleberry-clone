@@ -49,7 +49,7 @@ export const DeletedItem = ({ row, household, reasonId }: DeletedItemProps) => {
       </div>
       {restoring.error === null ? null : (
         <p role="alert" className="text-sm text-destructive">
-          {restoreFailure(restoring.error, household)}
+          {restoreFailure(restoring.error, household, row.record)}
         </p>
       )}
     </li>

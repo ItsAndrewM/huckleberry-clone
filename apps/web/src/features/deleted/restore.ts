@@ -10,6 +10,7 @@ import type { Action } from "../../api/actions.ts"
 import type { Connectivity } from "../../api/connectivity.ts"
 import { AuthRequired, Offline } from "../../api/errors.ts"
 import { type Household, nameOf, spanOf, timeOf } from "../../sheets/failure.ts"
+import { runningSide } from "../today/feed-status.ts"
 import type { DeletedRecord } from "./deleted-rows.ts"
 
 const NOT_RESTORED = "Not restored. Try again."
@@ -46,14 +47,23 @@ interface Current {
 const staleSentence = (household: Household, { updatedBy, deletedAt }: Current) =>
   `${nameOf(household, updatedBy)} ${deletedAt === null ? "restored" : "changed"} this a moment ago.`
 
-const feedSentence = ({ code, current }: FeedConflict, household: Household): string => {
+const stillRunning = (record: DeletedRecord) => record.kind === "feed" && runningSide(record.feed) !== undefined
+
+const runningOver = (other: string) =>
+  `It was still running when it was deleted, so it would run on over ${other}. It can't come back.`
+
+const feedSentence = ({ code, current }: FeedConflict, household: Household, running: boolean): string => {
   switch (code) {
     case "FEED_ALREADY_ACTIVE": {
-      const started = `${nameOf(household, current.createdBy)} started a feed at ${timeOf(household, current.startedAt)}.`
-      return `${started} Finish it, then restore this one.`
+      const name = nameOf(household, current.createdBy)
+      const time = timeOf(household, current.startedAt)
+      if (running) return runningOver(`the feed ${name} started at ${time}`)
+      return `${name} started a feed at ${time}. Finish it, then restore this one.`
     }
-    case "SEGMENT_OVERLAP":
-      return `This overlaps the feed at ${spanOf(household, current)}.`
+    case "SEGMENT_OVERLAP": {
+      const other = `the feed at ${spanOf(household, current)}`
+      return running ? runningOver(other) : `This overlaps ${other}.`
+    }
     case "STALE_VERSION":
       return staleSentence(household, current)
     case "FEED_EMPTY":
@@ -62,8 +72,8 @@ const feedSentence = ({ code, current }: FeedConflict, household: Household): st
   }
 }
 
-const conflictSentence = (error: Error, household: Household): string | null => {
-  if (error instanceof FeedConflict) return feedSentence(error, household)
+const conflictSentence = (error: Error, household: Household, record: DeletedRecord): string | null => {
+  if (error instanceof FeedConflict) return feedSentence(error, household, stillRunning(record))
   if (!(error instanceof DiaperConflict) && !(error instanceof MeasurementConflict)) return null
   return error.code === "STALE_VERSION" ? staleSentence(household, error.current) : NOT_RESTORED
 }
@@ -71,11 +81,11 @@ const conflictSentence = (error: Error, household: Household): string | null => 
 const invalidSentence = ({ fieldErrors }: InvalidInput, { childName }: Household) =>
   fieldErrors.some(({ issue }) => issue === "before_birth") ? `That's before ${childName} was born.` : NOT_RESTORED
 
-export const restoreFailure = (error: Error, household: Household): string => {
+export const restoreFailure = (error: Error, household: Household, record: DeletedRecord): string => {
   if (error instanceof Offline) return "No connection. Try again once you're back online."
   if (error instanceof AuthRequired || error instanceof Unauthorized) {
     return "Your sign-in has expired. Sign in, then try again."
   }
   if (error instanceof InvalidInput) return invalidSentence(error, household)
-  return conflictSentence(error, household) ?? NOT_RESTORED
+  return conflictSentence(error, household, record) ?? NOT_RESTORED
 }

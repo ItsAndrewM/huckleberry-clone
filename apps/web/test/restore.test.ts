@@ -9,6 +9,7 @@ import {
 } from "@bt/contracts"
 import { describe, expect, it } from "vitest"
 import { AuthRequired, Offline } from "../src/api/errors.ts"
+import type { DeletedRecord } from "../src/features/deleted/deleted-rows.ts"
 import { restoreFailure, restoreOf, restoreWaitReason, withoutEntry } from "../src/features/deleted/restore.ts"
 import type { Household } from "../src/sheets/failure.ts"
 import { measurement } from "./growth-fixtures.ts"
@@ -26,7 +27,23 @@ const HOUSEHOLD = {
 
 const ACTION_ID = "4b1c2a5e-8f3d-4c6b-9a7e-2d1f0e3c5b6a"
 
-const failure = (error: Error) => restoreFailure(error, HOUSEHOLD).replace(/\s/gu, " ")
+const A_DIAPER = { kind: "diaper", diaper: diaperAt(NOW - 50 * MINUTE, { deletedAt: NOW }) } satisfies DeletedRecord
+
+const PAUSED_WHEN_DELETED = {
+  kind: "feed",
+  feed: { ...nursedFor(feedAt(NOW - 60 * MINUTE, { status: "active", deletedAt: NOW }), "left", 10), endedAt: null },
+} satisfies DeletedRecord
+
+const RUNNING_WHEN_DELETED = {
+  kind: "feed",
+  feed: {
+    ...feedAt(NOW - 60 * MINUTE, { status: "active", endedAt: null, deletedAt: NOW - 59 * MINUTE }),
+    segments: [{ id: "segment-1", side: "left", startedAt: NOW - 60 * MINUTE, endedAt: null }],
+  },
+} satisfies DeletedRecord
+
+const failure = (error: Error, record: DeletedRecord = A_DIAPER) =>
+  restoreFailure(error, HOUSEHOLD, record).replace(/\s/gu, " ")
 
 describe("restoreOf", () => {
   it("restores each kind at its own endpoint, from the version its delete answered", () => {
@@ -72,17 +89,28 @@ describe("restoreFailure", () => {
     expect(failure(error)).toBe("That's before Robin was born.")
   })
 
-  it("names the running feed that stops a running one coming back, and what to do", () => {
+  it("names the running feed that stops a paused one coming back, and asks to finish it first", () => {
     const running = feedAt(NOW - 25 * MINUTE, { status: "active", endedAt: null, createdBy: EMILY })
-    expect(failure(new FeedConflict({ code: "FEED_ALREADY_ACTIVE", current: running }))).toBe(
+    expect(failure(new FeedConflict({ code: "FEED_ALREADY_ACTIVE", current: running }), PAUSED_WHEN_DELETED)).toBe(
       "Emily started a feed at 9:05 AM. Finish it, then restore this one.",
     )
   })
 
   it("names the feed a restored one would overlap", () => {
     const other = nursedFor(feedAt(NOW - 40 * MINUTE), "left", 15)
-    expect(failure(new FeedConflict({ code: "SEGMENT_OVERLAP", current: other }))).toBe(
+    expect(failure(new FeedConflict({ code: "SEGMENT_OVERLAP", current: other }), PAUSED_WHEN_DELETED)).toBe(
       "This overlaps the feed at 8:50 AM–9:05 AM.",
+    )
+  })
+
+  it("says a feed still running when it was deleted can't come back over a feed logged since, rather than asking to finish that one", () => {
+    const running = feedAt(NOW - 25 * MINUTE, { status: "active", endedAt: null, createdBy: EMILY })
+    const other = nursedFor(feedAt(NOW - 40 * MINUTE), "left", 15)
+    expect(failure(new FeedConflict({ code: "FEED_ALREADY_ACTIVE", current: running }), RUNNING_WHEN_DELETED)).toBe(
+      "It was still running when it was deleted, so it would run on over the feed Emily started at 9:05 AM. It can't come back.",
+    )
+    expect(failure(new FeedConflict({ code: "SEGMENT_OVERLAP", current: other }), RUNNING_WHEN_DELETED)).toBe(
+      "It was still running when it was deleted, so it would run on over the feed at 8:50 AM–9:05 AM. It can't come back.",
     )
   })
 
