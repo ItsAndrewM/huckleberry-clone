@@ -139,16 +139,16 @@ describe("growthRows", () => {
       {
         id: "m3",
         measuredOn: "Oct 6, 2026",
-        age: "1 mo 5 d",
-        value: "4.30 kg",
+        age: "1\u00a0mo 5\u00a0d",
+        value: "4.30\u00a0kg",
         percentile: "47th",
         point: { months: 35 / DAYS_PER_MONTH, value: 4.3 },
       },
       {
         id: "m2",
         measuredOn: "Sep 15, 2026",
-        age: "14 d",
-        value: "3.60 kg",
+        age: "14\u00a0d",
+        value: "3.60\u00a0kg",
         percentile: "52nd",
         point: { months: 14 / DAYS_PER_MONTH, value: 3.6 },
       },
@@ -156,7 +156,7 @@ describe("growthRows", () => {
         id: "m1",
         measuredOn: "Sep 1, 2026",
         age: "Birth",
-        value: "3.20 kg",
+        value: "3.20\u00a0kg",
         percentile: "47th",
         point: { months: 0, value: 3.2 },
       },
@@ -165,7 +165,11 @@ describe("growthRows", () => {
 
   it("dates and ages a late-evening measurement by the household's day, though UTC has moved on", () => {
     const [row] = growthRows([measurement("m", at("2026-10-06", 23), { weightG: 4300 })], WEIGHT, meWith(), LOCALE)
-    expect(row).toMatchObject({ measuredOn: "Oct 6, 2026", age: "1 mo 5 d", point: { months: 35 / DAYS_PER_MONTH } })
+    expect(row).toMatchObject({
+      measuredOn: "Oct 6, 2026",
+      age: "1\u00a0mo 5\u00a0d",
+      point: { months: 35 / DAYS_PER_MONTH },
+    })
   })
 
   it("leaves out a measurement without the metric", () => {
@@ -174,13 +178,13 @@ describe("growthRows", () => {
 
   it("shows values in the household's units, and plots them in the axis unit", () => {
     const [newest] = growthRows(MEASUREMENTS, HEAD, meWith({ units: { ...UNITS, length: "in" } }), LOCALE)
-    expect(newest?.value).toBe("14.5 in")
+    expect(newest?.value).toBe("14.5\u00a0in")
     expect(newest?.point?.value).toBeCloseTo(36.8 / 2.54, 12)
   })
 
   it.each([
     { reason: "before the birth date", measuredAt: at("2026-08-31", 10), age: "Before birth" },
-    { reason: "after day 730", measuredAt: at("2028-09-01", 10), age: "24 mo" },
+    { reason: "after day 730", measuredAt: at("2028-09-01", 10), age: "24\u00a0mo" },
   ])("lists a measurement from $reason without a percentile or a point", ({ measuredAt, age }) => {
     const [row] = growthRows([measurement("m", measuredAt, { weightG: 4000 })], WEIGHT, meWith(), LOCALE)
     expect(row).toMatchObject({ age, percentile: "Percentile unavailable", point: null })
@@ -189,7 +193,7 @@ describe("growthRows", () => {
   it("plots a measurement on day 730, WHO's last day, with its percentile", () => {
     const [row] = growthRows([measurement("m", at("2028-08-31", 10), { weightG: 12_000 })], WEIGHT, meWith(), LOCALE)
     expect(row).toMatchObject({
-      age: "23 mo 30 d",
+      age: "23\u00a0mo 30\u00a0d",
       percentile: "64th",
       point: { months: 730 / DAYS_PER_MONTH, value: 12 },
     })

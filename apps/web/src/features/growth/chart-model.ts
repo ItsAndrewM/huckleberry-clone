@@ -101,28 +101,41 @@ export interface GrowthRow {
   readonly point: ChartPoint | null
 }
 
+export const datedOf = (measurement: Measurement, { household, child }: Me, locale?: string) => {
+  const measuredOn = localDateOf(measurement.measuredAt, household.timeZone)
+  return {
+    ageDays: ageInDays(measuredOn, child.birthDate),
+    measuredOn: formatMeasuredOn(measurement.measuredAt, household.timeZone, locale),
+    age: formatAge(ageInMonthsAndDays(measuredOn, child.birthDate)),
+  }
+}
+
+export const growthRowOf = (
+  measurement: Measurement,
+  info: GrowthMetricInfo,
+  me: Me,
+  locale?: string,
+): GrowthRow | null => {
+  const recorded = info.recorded(measurement)
+  if (recorded === null) return null
+  const { household, child } = me
+  const { ageDays, measuredOn, age } = datedOf(measurement, me, locale)
+  const onTheChart = ageDays >= 0 && ageDays <= WHO_LAST_DAY
+  return {
+    id: measurement.id,
+    measuredOn,
+    age,
+    value: formatMeasurement(info.metric, recorded, household.units),
+    percentile: formatPercentile(percentileFor(info.metric, child.sex, ageDays, recorded)),
+    point: onTheChart
+      ? { months: ageDays / DAYS_PER_MONTH, value: inAxisUnit(recorded, axisUnitOf(info.metric, household.units)) }
+      : null,
+  }
+}
+
 export const growthRows = (
   measurements: ReadonlyArray<Measurement>,
   info: GrowthMetricInfo,
-  { household, child }: Me,
+  me: Me,
   locale?: string,
-): ReadonlyArray<GrowthRow> =>
-  measurements.flatMap((measurement) => {
-    const recorded = info.recorded(measurement)
-    if (recorded === null) return []
-    const measuredOn = localDateOf(measurement.measuredAt, household.timeZone)
-    const ageDays = ageInDays(measuredOn, child.birthDate)
-    const onTheChart = ageDays >= 0 && ageDays <= WHO_LAST_DAY
-    return [
-      {
-        id: measurement.id,
-        measuredOn: formatMeasuredOn(measurement.measuredAt, household.timeZone, locale),
-        age: formatAge(ageInMonthsAndDays(measuredOn, child.birthDate)),
-        value: formatMeasurement(info.metric, recorded, household.units),
-        percentile: formatPercentile(percentileFor(info.metric, child.sex, ageDays, recorded)),
-        point: onTheChart
-          ? { months: ageDays / DAYS_PER_MONTH, value: inAxisUnit(recorded, axisUnitOf(info.metric, household.units)) }
-          : null,
-      },
-    ]
-  })
+): ReadonlyArray<GrowthRow> => measurements.flatMap((measurement) => growthRowOf(measurement, info, me, locale) ?? [])

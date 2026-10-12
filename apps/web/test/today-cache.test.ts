@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest"
 import { pendingId } from "../src/api/pending.ts"
 import { pendingToday, savedToday } from "../src/api/today-cache.ts"
+import { measurement } from "./growth-fixtures.ts"
 import { ANDREW, diaperAt, feedAt, MINUTE, NO_TOTALS, NOW, nursedFor, todayWith, ZONE } from "./today-fixtures.ts"
 
 const ACTION_ID = "4b1c2a5e-8f3d-4c6b-9a7e-2d1f0e3c5b6a"
@@ -205,5 +206,15 @@ describe("savedToday", () => {
     }
     const next = savedToday(started, { feed: other, changed: [] }, action)
     expect(next.activeFeed?.id).toBe(pendingId(ACTION_ID))
+  })
+
+  it("leaves Today as it is when a measurement's answer comes back", () => {
+    const today = todayWith()
+    const answer = measurement("m1", NOW, { weightG: 4300 })
+    const action = {
+      kind: "logMeasurement" as const,
+      payload: { actionId: ACTION_ID, measuredAt: NOW, weightG: 4300, lengthCm: null, headCm: null },
+    }
+    expect(savedToday(today, { measurement: answer, changed: [] }, action)).toBe(today)
   })
 })

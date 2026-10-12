@@ -2,6 +2,7 @@ import { DiaperSheet } from "../features/diaper/diaper-sheet.tsx"
 import { BottleSheet } from "../features/feed/bottle-sheet.tsx"
 import { NursingSheet } from "../features/feed/nursing-sheet.tsx"
 import { PastFeedSheet } from "../features/feed/past-feed-sheet.tsx"
+import { MeasurementSheet } from "../features/growth/measurement-sheet.tsx"
 
 export const LogSheets = () => (
   <>
@@ -9,5 +10,6 @@ export const LogSheets = () => (
     <NursingSheet />
     <PastFeedSheet />
     <DiaperSheet />
+    <MeasurementSheet />
   </>
 )

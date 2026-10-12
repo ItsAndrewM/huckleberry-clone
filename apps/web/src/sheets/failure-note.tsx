@@ -54,7 +54,7 @@ export const FailureNote = ({ sheet }: { readonly sheet: SheetKind }) => {
   const household = useHousehold()
   const failed = failedFor(sheets, sheet)
   if (failed === null || household === null) return null
-  const { message, retry, signIn } = failureNote(failed.error, household, { held: isEntry(failed.sending) })
+  const { message, retry, signIn } = failureNote(failed.error, household, { held: isEntry(failed.sending), sheet })
   return (
     <div role="alert" className="flex flex-col gap-3 rounded-lg bg-destructive/10 p-3 text-sm text-destructive">
       {signIn ? <SignInNote message={message} sending={failed.sending} /> : <p>{message}</p>}

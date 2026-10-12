@@ -57,7 +57,9 @@ describe("plottedRows", () => {
 describe("pointSummary", () => {
   it("reads a point as its date, age, value and percentile", () => {
     const [newest] = weightRows()
-    expect(newest === undefined ? "" : pointSummary(newest)).toBe("Oct 6, 2026 · 1 mo 5 d · 4.30 kg · 47th")
+    expect(newest === undefined ? "" : pointSummary(newest)).toBe(
+      "Oct 6, 2026 · 1\u00a0mo 5\u00a0d · 4.30\u00a0kg · 47th",
+    )
   })
 })
 

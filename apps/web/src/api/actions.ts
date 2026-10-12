@@ -4,8 +4,10 @@ import {
   FeedFinish,
   FeedResume,
   FeedStart,
+  MeasurementEdit,
   NewDiaper,
   NewFeed,
+  NewMeasurement,
   Side,
   TimedAction,
   VersionedAction,
@@ -47,8 +49,18 @@ export const FeedAction = Schema.Union([
 ])
 export type FeedAction = typeof FeedAction.Type
 
-export const Action = Schema.Union([DiaperAction, FeedAction])
+export const MeasurementAction = Schema.Union([
+  created("logMeasurement", NewMeasurement),
+  onRecord("editMeasurement", MeasurementEdit),
+  onRecord("deleteMeasurement", VersionedAction),
+])
+export type MeasurementAction = typeof MeasurementAction.Type
+
+export const Action = Schema.Union([DiaperAction, FeedAction, MeasurementAction])
 export type Action = typeof Action.Type
 
 export const isDiaperAction = (action: Action): action is DiaperAction =>
   action.kind === "logDiaper" || action.kind === "editDiaper" || action.kind === "deleteDiaper"
+
+export const isMeasurementAction = (action: Action): action is MeasurementAction =>
+  action.kind === "logMeasurement" || action.kind === "editMeasurement" || action.kind === "deleteMeasurement"

@@ -28,6 +28,7 @@ const dropDraftOf = ({ action }: Sending) => dropDraft(draftStorage, action.payl
 
 export const SheetsProvider = ({ draft, children }: SheetsProviderProps) => {
   const [state, setState] = useState(() => restoredState(draft, Date.now(), crypto.randomUUID()))
+  const [editing, setEditing] = useState<string | null>(null)
   const online = useConnectivity() === "online"
   const sweepAfter = (shownAt: number) =>
     setTimeout(() => setState((current) => expiredState(current, shownAt + TOAST_MS)), TOAST_MS)
@@ -51,8 +52,12 @@ export const SheetsProvider = ({ draft, children }: SheetsProviderProps) => {
   useResumedDraft(draft, send)
   const sheets: Sheets = {
     ...state,
+    editing,
     busy: mutation.isPending ? (mutation.variables ?? null) : null,
-    show: (sheet) => setState((current) => shownState(current, sheet)),
+    show: (sheet, record) => {
+      setEditing(record ?? null)
+      setState((current) => shownState(current, sheet))
+    },
     close: () => setState(dismissedState),
     keep: () => setState(keptState),
     discard: (failed) => {
