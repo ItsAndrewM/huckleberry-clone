@@ -97,5 +97,7 @@ export const savedState = (state: SheetsState, sending: Sending, saved: Saved, n
   return state.keptOpen === actionIdOf(sending) ? closing(toasted) : toasted
 }
 
+export const announcedState = (state: SheetsState, toast: Toast): SheetsState => ({ ...state, toast })
+
 export const expiredState = (state: SheetsState, now: number): SheetsState =>
   state.toast !== null && now >= state.toast.until ? { ...state, toast: null } : state

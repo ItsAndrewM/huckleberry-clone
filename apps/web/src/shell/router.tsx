@@ -1,4 +1,5 @@
 import { createRootRoute, createRoute, createRouter } from "@tanstack/react-router"
+import { DeletedPage } from "../features/deleted/deleted-page.tsx"
 import { GrowthPage } from "../features/growth/growth-page.tsx"
 import { dateInSearch, type HistorySearch } from "../features/history/history-date.ts"
 import { HistoryPage } from "../features/history/history-page.tsx"
@@ -22,6 +23,7 @@ const routeTree = rootRoute.addChildren([
   createRoute({ getParentRoute, path: "/trends", component: TrendsPage }),
   createRoute({ getParentRoute, path: "/growth", component: GrowthPage }),
   createRoute({ getParentRoute, path: "/settings", component: SettingsPage }),
+  createRoute({ getParentRoute, path: "/settings/deleted", component: DeletedPage }),
 ])
 
 export const router = createRouter({ routeTree })

@@ -4,6 +4,7 @@ import { NotLoaded } from "../../shell/not-loaded.tsx"
 import { Page } from "../../shell/page.tsx"
 import { AccountSection } from "./account-section.tsx"
 import { ChildSection } from "./child-section.tsx"
+import { DeletedSection } from "./deleted-section.tsx"
 import { ExportSection } from "./export-section.tsx"
 import { HomeScreenSection } from "./home-screen-section.tsx"
 import { OfflineCopySection } from "./offline-copy-section.tsx"
@@ -33,6 +34,7 @@ export const SettingsPage = () => {
           <ChildSection child={me.child} />
           <AccountSection caregiver={me.caregiver} />
           <ExportSection timeZone={me.household.timeZone} />
+          <DeletedSection />
         </>
       )}
       <OfflineCopySection />

@@ -1,5 +1,6 @@
 import type { Feed } from "@bt/contracts"
 import { describe, expect, it } from "vitest"
+import { deletedOf } from "../src/core/deleted.ts"
 import { deleteFeed, moveFeed, restoreFeed } from "../src/core/feeds/feed-edits.ts"
 import { finishFeed, startFeed } from "../src/core/feeds/lifecycle.ts"
 import { logFeed } from "../src/core/feeds/log.ts"
@@ -23,7 +24,9 @@ import {
   inHousehold,
   MINUTE_MS,
   minutesAgo,
+  movedBirthDate,
   NOW,
+  SEP_3_BEGINS,
   saved,
   stampOf,
 } from "./fixtures.ts"
@@ -209,6 +212,27 @@ describe("deleting and restoring a feed", () => {
       return { feed, restored: saved(restoreFeed(stampOf(sql), feed.id, versioned(deleted))(sql)) }
     })
     expect(restored).toEqual({ ...feed, version: 3 })
+  })
+
+  it("refuses to restore a feed that starts before the birth date with before_birth on startedAt, and leaves it deleted", async () => {
+    const { result, stillDeleted } = await inHousehold((sql) => {
+      const entry = newFeed([segment("left", SEP_3_BEGINS, SEP_3_BEGINS + 15 * MINUTE_MS)])
+      const feed = saved(logFeed(stampOf(sql), entry)(sql))
+      const deleted = saved(deleteFeed(stampOf(sql), feed.id, versioned(feed))(sql))
+      movedBirthDate(sql, "2026-09-04")
+      const result = restoreFeed(stampOf(sql), feed.id, versioned(deleted))(sql)
+      return {
+        result,
+        stillDeleted: deletedOf(sql, NOW)
+          .feeds.map(({ id }) => id)
+          .includes(feed.id),
+      }
+    })
+    expect(result).toMatchObject({
+      ok: false,
+      error: { _tag: "InvalidInput", fieldErrors: [{ path: "startedAt", issue: "before_birth" }] },
+    })
+    expect(stillDeleted).toBe(true)
   })
 
   it("refuses to restore an active feed while another is active, with FEED_ALREADY_ACTIVE and that feed (D10)", async () => {

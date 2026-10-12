@@ -1,5 +1,6 @@
 import type { NewDiaper } from "@bt/contracts"
 import { describe, expect, it } from "vitest"
+import { deletedOf } from "../src/core/deleted.ts"
 import { deleteDiaper, editDiaper, logDiaper, restoreDiaper } from "../src/core/diapers.ts"
 import type { Stamp } from "../src/core/receipts.ts"
 import {
@@ -11,8 +12,10 @@ import {
   EMILY,
   inHousehold,
   MINUTE_MS,
+  movedBirthDate,
   NOW,
   OCT_1_AT_00_30,
+  SEP_3_BEGINS,
   SEP_30_AT_23_30,
   saved,
   stampOf,
@@ -180,6 +183,36 @@ describe("deleting and restoring a diaper", () => {
       }
     })
     expect(restored).toEqual({ ...logged, version: 3 })
+  })
+
+  it("refuses to restore a diaper from before the birth date with before_birth, and leaves it deleted", async () => {
+    const { result, stillDeleted } = await inHousehold((sql) => {
+      const logged = saved(logDiaper(stampOf(sql), wet(SEP_3_BEGINS))(sql))
+      saved(deleteDiaper(stampOf(sql), logged.id, { actionId: ACTION_ID, version: 1 })(sql))
+      movedBirthDate(sql, "2026-09-04")
+      const result = restoreDiaper(stampOf(sql), logged.id, { actionId: ACTION_ID, version: 2 })(sql)
+      return {
+        result,
+        stillDeleted: deletedOf(sql, NOW)
+          .diapers.map(({ id }) => id)
+          .includes(logged.id),
+      }
+    })
+    expect(result).toMatchObject({
+      ok: false,
+      error: { _tag: "InvalidInput", fieldErrors: [{ path: "occurredAt", issue: "before_birth" }] },
+    })
+    expect(stillDeleted).toBe(true)
+  })
+
+  it("restores a diaper from the first moment of the birth date", async () => {
+    const restored = await inHousehold((sql) => {
+      const logged = saved(logDiaper(stampOf(sql), wet(SEP_3_BEGINS))(sql))
+      saved(deleteDiaper(stampOf(sql), logged.id, { actionId: ACTION_ID, version: 1 })(sql))
+      movedBirthDate(sql, "2026-09-03")
+      return restoreDiaper(stampOf(sql), logged.id, { actionId: ACTION_ID, version: 2 })(sql)
+    })
+    expect(restored).toMatchObject({ ok: true, response: { occurredAt: SEP_3_BEGINS, deletedAt: null } })
   })
 
   it("answers NotFound when restoring a diaper that isn't deleted", async () => {

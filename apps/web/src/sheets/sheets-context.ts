@@ -22,6 +22,7 @@ export interface Sheets {
   readonly keep: () => void
   readonly discard: (failed: Failed) => void
   readonly send: (sending: Sending) => void
+  readonly announce: (toast: Toast) => void
 }
 
 export const SheetsContext = createContext<Sheets | null>(null)

@@ -11557,6 +11557,378 @@
           }
         }
       }
+    },
+    "/api/deleted": {
+      "get": {
+        "tags": [
+          "deleted"
+        ],
+        "operationId": "deleted.deleted",
+        "parameters": [],
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "feeds": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string"
+                          },
+                          "status": {
+                            "type": "string",
+                            "enum": [
+                              "active",
+                              "completed"
+                            ]
+                          },
+                          "startedAt": {
+                            "type": "integer",
+                            "minimum": 946684800000,
+                            "exclusiveMaximum": 4102444800000
+                          },
+                          "endedAt": {
+                            "anyOf": [
+                              {
+                                "type": "integer",
+                                "minimum": 946684800000,
+                                "exclusiveMaximum": 4102444800000
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "segments": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "id": {
+                                  "type": "string"
+                                },
+                                "side": {
+                                  "type": "string",
+                                  "enum": [
+                                    "left",
+                                    "right"
+                                  ]
+                                },
+                                "startedAt": {
+                                  "type": "integer",
+                                  "minimum": 946684800000,
+                                  "exclusiveMaximum": 4102444800000
+                                },
+                                "endedAt": {
+                                  "anyOf": [
+                                    {
+                                      "type": "integer",
+                                      "minimum": 946684800000,
+                                      "exclusiveMaximum": 4102444800000
+                                    },
+                                    {
+                                      "type": "null"
+                                    }
+                                  ]
+                                }
+                              },
+                              "required": [
+                                "id",
+                                "side",
+                                "startedAt",
+                                "endedAt"
+                              ],
+                              "additionalProperties": false
+                            }
+                          },
+                          "portions": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "id": {
+                                  "type": "string"
+                                },
+                                "occurredAt": {
+                                  "type": "integer",
+                                  "minimum": 946684800000,
+                                  "exclusiveMaximum": 4102444800000
+                                },
+                                "breastMilkMl": {
+                                  "type": "number",
+                                  "minimum": 0,
+                                  "maximum": 500
+                                },
+                                "formulaMl": {
+                                  "type": "number",
+                                  "minimum": 0,
+                                  "maximum": 500
+                                }
+                              },
+                              "required": [
+                                "id",
+                                "occurredAt",
+                                "breastMilkMl",
+                                "formulaMl"
+                              ],
+                              "additionalProperties": false
+                            }
+                          },
+                          "version": {
+                            "type": "integer",
+                            "minimum": 1
+                          },
+                          "createdBy": {
+                            "type": "string"
+                          },
+                          "createdAt": {
+                            "type": "integer",
+                            "minimum": 946684800000,
+                            "exclusiveMaximum": 4102444800000
+                          },
+                          "updatedBy": {
+                            "type": "string"
+                          },
+                          "updatedAt": {
+                            "type": "integer",
+                            "minimum": 946684800000,
+                            "exclusiveMaximum": 4102444800000
+                          },
+                          "deletedAt": {
+                            "anyOf": [
+                              {
+                                "type": "integer",
+                                "minimum": 946684800000,
+                                "exclusiveMaximum": 4102444800000
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "status",
+                          "startedAt",
+                          "endedAt",
+                          "segments",
+                          "portions",
+                          "version",
+                          "createdBy",
+                          "createdAt",
+                          "updatedBy",
+                          "updatedAt",
+                          "deletedAt"
+                        ],
+                        "additionalProperties": false
+                      }
+                    },
+                    "diapers": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string"
+                          },
+                          "occurredAt": {
+                            "type": "integer",
+                            "minimum": 946684800000,
+                            "exclusiveMaximum": 4102444800000
+                          },
+                          "wet": {
+                            "type": "boolean"
+                          },
+                          "dirty": {
+                            "type": "boolean"
+                          },
+                          "version": {
+                            "type": "integer",
+                            "minimum": 1
+                          },
+                          "createdBy": {
+                            "type": "string"
+                          },
+                          "createdAt": {
+                            "type": "integer",
+                            "minimum": 946684800000,
+                            "exclusiveMaximum": 4102444800000
+                          },
+                          "updatedBy": {
+                            "type": "string"
+                          },
+                          "updatedAt": {
+                            "type": "integer",
+                            "minimum": 946684800000,
+                            "exclusiveMaximum": 4102444800000
+                          },
+                          "deletedAt": {
+                            "anyOf": [
+                              {
+                                "type": "integer",
+                                "minimum": 946684800000,
+                                "exclusiveMaximum": 4102444800000
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "occurredAt",
+                          "wet",
+                          "dirty",
+                          "version",
+                          "createdBy",
+                          "createdAt",
+                          "updatedBy",
+                          "updatedAt",
+                          "deletedAt"
+                        ],
+                        "additionalProperties": false
+                      }
+                    },
+                    "measurements": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string"
+                          },
+                          "measuredAt": {
+                            "type": "integer",
+                            "minimum": 946684800000,
+                            "exclusiveMaximum": 4102444800000
+                          },
+                          "weightG": {
+                            "anyOf": [
+                              {
+                                "type": "number",
+                                "minimum": 200,
+                                "maximum": 40000
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "lengthCm": {
+                            "anyOf": [
+                              {
+                                "type": "number",
+                                "minimum": 20,
+                                "maximum": 150
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "headCm": {
+                            "anyOf": [
+                              {
+                                "type": "number",
+                                "minimum": 15,
+                                "maximum": 70
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "version": {
+                            "type": "integer",
+                            "minimum": 1
+                          },
+                          "createdBy": {
+                            "type": "string"
+                          },
+                          "createdAt": {
+                            "type": "integer",
+                            "minimum": 946684800000,
+                            "exclusiveMaximum": 4102444800000
+                          },
+                          "updatedBy": {
+                            "type": "string"
+                          },
+                          "updatedAt": {
+                            "type": "integer",
+                            "minimum": 946684800000,
+                            "exclusiveMaximum": 4102444800000
+                          },
+                          "deletedAt": {
+                            "anyOf": [
+                              {
+                                "type": "integer",
+                                "minimum": 946684800000,
+                                "exclusiveMaximum": 4102444800000
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "measuredAt",
+                          "weightG",
+                          "lengthCm",
+                          "headCm",
+                          "version",
+                          "createdBy",
+                          "createdAt",
+                          "updatedBy",
+                          "updatedAt",
+                          "deletedAt"
+                        ],
+                        "additionalProperties": false
+                      }
+                    }
+                  },
+                  "required": [
+                    "feeds",
+                    "diapers",
+                    "measurements"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "InvalidInput",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvalidInputEncoded"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnauthorizedEncoded"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -12237,6 +12609,9 @@
     },
     {
       "name": "periods"
+    },
+    {
+      "name": "deleted"
     }
   ]
 }

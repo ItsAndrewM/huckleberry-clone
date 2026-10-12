@@ -46,7 +46,7 @@ const formOf = (values: Values, units: Units, when: When): MeasurementForm => ({
 })
 
 const sentSession = (action: MeasurementAction, units: Units, zone: string): MeasurementSession | null => {
-  if (action.kind === "deleteMeasurement") return null
+  if (action.kind === "deleteMeasurement" || action.kind === "restoreMeasurement") return null
   const { payload } = action
   const target = action.kind === "editMeasurement" ? { id: action.id, version: action.payload.version } : null
   const when = whenAt(payload.measuredAt, zone)

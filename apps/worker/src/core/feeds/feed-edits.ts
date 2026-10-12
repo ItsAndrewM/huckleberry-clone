@@ -60,10 +60,13 @@ export const deleteFeed =
 
 export const restoreFeed =
   (stamp: Stamp, id: string, action: VersionedAction) =>
-  (sql: SqlStorage): CoreResult<Feed, NotFound | FeedConflict> => {
+  (sql: SqlStorage): CoreResult<Feed, InvalidInput | NotFound | FeedConflict> => {
     const found = feedFor(sql, id, action.version, "deleted")
     if (!found.ok) return found
     const { feed } = found
+    const calendar = calendarOf(sql)
+    const invalid = invalidUnless(errorAt("startedAt", timeIssue(calendar, feed.startedAt, stamp.now)))
+    if (invalid !== null) return { ok: false, error: invalid }
     const active = feed.status === "active" ? activeFeed(sql) : undefined
     if (active !== undefined) {
       return { ok: false, error: new FeedConflict({ code: "FEED_ALREADY_ACTIVE", current: active }) }
@@ -71,6 +74,6 @@ export const restoreFeed =
     const overlapped = overlappedFeed(sql, feed.segments, stamp.now, NO_EXCLUSION)
     if (overlapped !== undefined) return { ok: false, error: overlapConflict(overlapped) }
     const restored = saveFeed(sql, stamp, { ...feed, deletedAt: null })
-    const changed = [...feedChanges(calendarOf(sql), null, restored, stamp.now), queryKeys.deleted]
+    const changed = [...feedChanges(calendar, null, restored, stamp.now), queryKeys.deleted]
     return { ok: true, response: restored, changed }
   }
