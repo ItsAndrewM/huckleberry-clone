@@ -9,9 +9,9 @@ import { TabBar } from "./tab-bar.tsx"
 
 export const Shell = () => {
   useMe()
-  const { draft } = useApp()
+  const { draft, restored } = useApp()
   return (
-    <SheetsProvider draft={draft}>
+    <SheetsProvider draft={draft} restored={restored}>
       <div className="flex min-h-dvh flex-col pt-[env(safe-area-inset-top)]">
         <div className="sticky top-0 z-10">
           <ConnectionBanner />

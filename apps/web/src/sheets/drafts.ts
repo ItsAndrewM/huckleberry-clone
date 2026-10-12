@@ -30,9 +30,12 @@ export const takeDraft = (openStorage: () => BrowserStorage, route: string): Dra
   return Option.getOrNull(Option.filter(stored, (draft) => draft.route === route))
 }
 
-export const dropDraft = (openStorage: () => BrowserStorage, actionId: string) => {
-  const ofEntry = Option.exists(storedDraft(openStorage), ({ sending }) => sending.action.payload.actionId === actionId)
-  if (ofEntry) removeDraft(openStorage)
+export const dropDraftUnlessHeld = (openStorage: () => BrowserStorage, heldIds: ReadonlyArray<string>) => {
+  const letGo = Option.exists(
+    storedDraft(openStorage),
+    ({ sending }) => !heldIds.includes(sending.action.payload.actionId),
+  )
+  if (letGo) removeDraft(openStorage)
 }
 
 export const draftStorage = () => sessionStorage

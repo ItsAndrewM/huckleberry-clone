@@ -3,7 +3,7 @@ import {
   DRAFT_KEY,
   DRAFT_RETRY_MS,
   type Draft,
-  dropDraft,
+  dropDraftUnlessHeld,
   isFresh,
   stashDraft,
   takeDraft,
@@ -53,20 +53,20 @@ describe("sign-in drafts", () => {
     expect(stashDraft(() => ({ ...storage, setItem: blocked }), DRAFT)).toBe(false)
   })
 
-  it("drops the draft of an entry sent again or discarded, and keeps a draft of another entry", () => {
+  it("keeps the draft while its action is held, and drops it once the action is sent again, discarded or let go", () => {
     const { storage, items } = memoryStorage()
     stashDraft(() => storage, DRAFT)
-    dropDraft(() => storage, OTHER_ACTION_ID)
+    dropDraftUnlessHeld(() => storage, [OTHER_ACTION_ID, ACTION_ID])
     expect(items.get(DRAFT_KEY)).toBe(JSON.stringify(DRAFT))
-    dropDraft(() => storage, ACTION_ID)
+    dropDraftUnlessHeld(() => storage, [OTHER_ACTION_ID])
     expect(items.has(DRAFT_KEY)).toBe(false)
   })
 
   it("carries on without dropping anything when the browser blocks storage", () => {
-    expect(() => dropDraft(blocked, ACTION_ID)).not.toThrow()
+    expect(() => dropDraftUnlessHeld(blocked, [])).not.toThrow()
     const { storage, items } = memoryStorage()
     stashDraft(() => storage, DRAFT)
-    expect(() => dropDraft(() => ({ ...storage, removeItem: blocked }), ACTION_ID)).not.toThrow()
+    expect(() => dropDraftUnlessHeld(() => ({ ...storage, removeItem: blocked }), [])).not.toThrow()
     expect(items.has(DRAFT_KEY)).toBe(true)
   })
 

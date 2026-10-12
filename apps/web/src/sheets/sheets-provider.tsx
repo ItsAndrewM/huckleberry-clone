@@ -1,8 +1,7 @@
 import { type ReactNode, useState } from "react"
 import { useConnectivity } from "../api/hooks.ts"
-import { type Draft, draftStorage, dropDraft } from "./drafts.ts"
-import { isHeld } from "./held.ts"
-import { restored } from "./restored.ts"
+import type { Draft } from "./drafts.ts"
+import type { Restored } from "./restored.ts"
 import type { Sending } from "./sending.ts"
 import { type Sheets, SheetsContext } from "./sheets-context.ts"
 import {
@@ -18,38 +17,43 @@ import {
   shownState,
 } from "./sheets-state.ts"
 import { TOAST_MS } from "./undo.ts"
+import { useHeldDrafts } from "./use-held-drafts.ts"
+import { useKeptEntries } from "./use-kept-entries.ts"
+import { useReopenWhenReady } from "./use-reopen.ts"
 import { useResumedDraft } from "./use-resumed-draft.ts"
 import { useSend } from "./use-send.ts"
 
 interface SheetsProviderProps {
   readonly draft: Draft | null
+  readonly restored: Restored
   readonly children: ReactNode
 }
 
-const dropDraftOf = ({ action }: Sending) => dropDraft(draftStorage, action.payload.actionId)
-
-export const SheetsProvider = ({ draft, children }: SheetsProviderProps) => {
-  const [state, setState] = useState(() =>
-    reopenedState(restoredState(restored(draft, [], Date.now(), () => crypto.randomUUID()).held)),
-  )
+export const SheetsProvider = ({ draft, restored, children }: SheetsProviderProps) => {
+  const [state, setState] = useState(() => restoredState(restored.held))
   const [editing, setEditing] = useState<string | null>(null)
+  const kept = useKeptEntries(restored.kept)
   const online = useConnectivity() === "online"
+  useHeldDrafts(state.held)
+  useReopenWhenReady(state, () => setState(reopenedState))
   const sweepAfter = (shownAt: number) =>
     setTimeout(() => setState((current) => expiredState(current, shownAt + TOAST_MS)), TOAST_MS)
   const mutation = useSend({
     onFailed: (failed) => {
+      kept.failed(failed)
       const now = Date.now()
       setState((current) => failedState(current, failed, now))
       sweepAfter(now)
     },
     onSaved: (sending, saved) => {
+      kept.done(sending)
       const now = Date.now()
       setState((current) => savedState(current, sending, saved, now))
       sweepAfter(now)
     },
   })
   const send = (sending: Sending) => {
-    if (isHeld(state.held, sending)) dropDraftOf(sending)
+    kept.sending(sending)
     setState((current) => sendingState(current, sending, online))
     mutation.mutate(sending)
   }
@@ -57,7 +61,7 @@ export const SheetsProvider = ({ draft, children }: SheetsProviderProps) => {
   const sheets: Sheets = {
     ...state,
     editing,
-    keeping: true,
+    keeping: kept.keeping,
     busy: mutation.isPending ? (mutation.variables ?? null) : null,
     show: (sheet, record) => {
       setEditing(record ?? null)
@@ -66,7 +70,7 @@ export const SheetsProvider = ({ draft, children }: SheetsProviderProps) => {
     close: () => setState(dismissedState),
     keep: () => setState(keptState),
     discard: (failed) => {
-      dropDraftOf(failed.sending)
+      kept.done(failed.sending)
       setState((current) => discardedState(current, failed))
     },
     send,

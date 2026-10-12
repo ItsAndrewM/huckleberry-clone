@@ -58,7 +58,7 @@ test("keeps a diaper logged offline in its sheet, and Try again saves it to the 
   await sheet.getByRole("button", { name: "Change" }).click()
   await sheet.getByLabel("When").fill(localMinute(occurredAt))
   await sheet.getByRole("button", { name: "Poo" }).click()
-  await expect(sheet.getByRole("alert")).toContainText("No connection. Keep the app open")
+  await expect(sheet.getByRole("alert")).toContainText("No connection. This is kept on this phone:")
   await context.setOffline(false)
   await sheet.getByRole("button", { name: "Try again" }).click()
   await expect(sheet).toBeHidden()

@@ -196,7 +196,7 @@ test("says Saving… on the feed while a bottle added to it is on its way, and h
   await expect(page.getByText("Saving…")).toHaveCount(0)
 })
 
-test("holds a draft's reopened Bottle sheet until Today loads, then logs a bottle from before the running feed as its own feed", async ({
+test("opens a draft's Bottle sheet once Today loads, then logs a bottle from before the running feed as its own feed", async ({
   page,
 }) => {
   const { andrew } = await caregiversOf(page)
@@ -225,8 +225,7 @@ test("holds a draft's reopened Bottle sheet until Today loads, then logs a bottl
   await expect(page.getByText("Robin")).toBeVisible()
   await expect.poll(() => held.length).toBeGreaterThan(0)
   const sheet = page.getByRole("dialog", { name: "Bottle" })
-  await expect(sheet).toBeVisible()
-  await expect(sheet.getByRole("button", { name: "Save" })).toHaveCount(0)
+  await expect(sheet).toHaveCount(0)
   loaded.open()
   await expect(sheet.getByRole("button", { name: "Save", exact: true })).toBeVisible()
   await expect(sheet.getByText(/^Adds to the feed/u)).toHaveCount(0)
