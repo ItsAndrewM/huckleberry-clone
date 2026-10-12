@@ -7,8 +7,19 @@ export type SavedCopy = Pick<Cache, "match">
 export type Network = (request: Request) => Promise<Response>
 export type Wait = (ms: number) => Promise<void>
 export type Report = (failure: Error) => void
+export type BuildFile = readonly [url: string, file: Response]
 
 export const cacheName = (version: string) => `${CACHE_PREFIX}${version}`
+
+const isShell = ([url]: BuildFile) => url === SHELL_URL
+const isAsset = (file: BuildFile) => !isShell(file)
+const putAll = (cache: Pick<Cache, "put">, files: readonly BuildFile[]) =>
+  Promise.all(files.map(([url, file]) => cache.put(url, file)))
+
+export const saveBuild = async (cache: Pick<Cache, "put">, files: readonly BuildFile[]) => {
+  await putAll(cache, files.filter(isAsset))
+  await putAll(cache, files.filter(isShell))
+}
 
 export const staleCaches = (names: readonly string[], current: string) =>
   names.filter((name) => name.startsWith(CACHE_PREFIX) && name !== current)
