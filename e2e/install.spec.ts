@@ -71,11 +71,28 @@ test.describe("install guidance on an iPhone", () => {
 
   test("shows the card above every tab until Not now, wherever that's tapped", async ({ page }) => {
     await phone(page, false)
-    await page.goto("/settings")
+    await page.goto("/")
+    await expect(installCard(page)).toBeVisible()
+    const tabs = page.getByRole("navigation", { name: "Main" })
+    await tabs.getByRole("link", { name: "Settings" }).click()
+    await expect(page.getByRole("heading", { name: "Settings", level: 1 })).toBeVisible()
+    await expect(installCard(page)).toBeVisible()
     await installCard(page).getByRole("button", { name: "Not now" }).click()
-    await page.getByRole("navigation", { name: "Main" }).getByRole("link", { name: "Today" }).click()
+    await tabs.getByRole("link", { name: "Today" }).click()
     await expect(page.getByRole("heading", { name: "Today", level: 1 })).toBeVisible()
     await expect(installCard(page)).toHaveCount(0)
+  })
+
+  test("logs a diaper in two taps while the card shows", async ({ page }) => {
+    await phone(page, false)
+    await page.goto("/")
+    await expect(installCard(page)).toBeVisible()
+    await expect(page.getByText("Totals")).toBeVisible()
+    await page.getByRole("region", { name: "Log", exact: true }).getByRole("button", { name: "Diaper" }).click()
+    const saved = page.waitForResponse((response) => response.url().endsWith("/api/diapers"))
+    await page.getByRole("dialog", { name: "Diaper" }).getByRole("button", { name: "Pee" }).click()
+    expect((await saved).status()).toBe(201)
+    await expect(installCard(page)).toBeVisible()
   })
 
   test("the installed app never shows the card", async ({ page }) => {
