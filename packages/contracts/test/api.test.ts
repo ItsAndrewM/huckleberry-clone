@@ -41,6 +41,7 @@ describe("the API the household serves", () => {
       "GET /api/days/:date",
       "GET /api/weeks/:week",
       "GET /api/months/:month",
+      "GET /api/deleted",
     ])
   })
 

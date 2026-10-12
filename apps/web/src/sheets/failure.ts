@@ -31,12 +31,12 @@ const TRY_AGAIN = "Try again"
 
 const note = (message: string, retry: string | null = null): Note => ({ message, retry, signIn: false })
 
-const nameOf = ({ caregivers }: Household, id: string) =>
+export const nameOf = ({ caregivers }: Household, id: string) =>
   caregivers.find((caregiver) => caregiver.id === id)?.displayName ?? "The other phone"
 
-const timeOf = ({ locale, timeZone }: Household, instant: number) => clockTime(instant, timeZone, locale)
+export const timeOf = ({ locale, timeZone }: Household, instant: number) => clockTime(instant, timeZone, locale)
 
-const spanOf = (household: Household, feed: Feed) =>
+export const spanOf = (household: Household, feed: Feed) =>
   `${timeOf(household, feed.startedAt)}–${feed.endedAt === null ? "now" : timeOf(household, feed.endedAt)}`
 
 const fieldMessage = (issue: FieldIssue, household: Household): string | null => {

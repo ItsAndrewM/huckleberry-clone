@@ -1,5 +1,6 @@
 export { ActionId } from "./action-id.ts"
 export { Api, Authorization, CurrentCaregiver, InvalidInputs } from "./api.ts"
+export { Deleted, DeletedGroup, RECENTLY_DELETED_DAYS } from "./deleted.ts"
 export { Diaper, DiaperConflict, DiaperEdit, DiapersGroup, NewDiaper, SavedDiaper } from "./diapers.ts"
 export {
   BottlePortion,

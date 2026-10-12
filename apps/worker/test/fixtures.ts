@@ -1,4 +1,5 @@
 import { env, runInDurableObject } from "cloudflare:test"
+import { editChild } from "../src/core/household-edits.ts"
 import type { CoreResult, Stamp } from "../src/core/receipts.ts"
 import type { HouseholdSeed } from "../src/seed.ts"
 
@@ -59,4 +60,11 @@ export const stampOf = (sql: SqlStorage, email = ANDREW.email, now = NOW): Stamp
 export const saved = <A, E>(result: CoreResult<A, E>): A => {
   if (!result.ok) throw new Error(`expected the core to save, but it answered ${JSON.stringify(result.error)}`)
   return result.response
+}
+
+export const SEP_3_BEGINS = Date.UTC(2026, 8, 3, 7)
+
+export const movedBirthDate = (sql: SqlStorage, birthDate: string) => {
+  const { version } = sql.exec<{ version: number }>("SELECT version FROM child").one()
+  return saved(editChild(stampOf(sql), { actionId: ACTION_ID, version, ...SEED.child, birthDate })(sql))
 }

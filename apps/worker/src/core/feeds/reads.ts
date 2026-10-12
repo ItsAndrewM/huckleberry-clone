@@ -31,6 +31,14 @@ export const liveFeedsTouching = (sql: SqlStorage, period: Interval, now: Instan
       .toArray(),
   ).filter((feed) => feedTouches(period, feed, now))
 
+export const deletedFeedsSince = (sql: SqlStorage, since: Instant): Feed[] =>
+  loaded(
+    sql,
+    sql
+      .exec<{ id: string }>("SELECT id FROM feeds WHERE deleted_at >= ? ORDER BY deleted_at DESC, rowid DESC", since)
+      .toArray(),
+  )
+
 export const lastFeed = (sql: SqlStorage): Feed | null => {
   const rows = sql
     .exec<{ id: string }>("SELECT id FROM feeds WHERE deleted_at IS NULL ORDER BY started_at DESC, rowid DESC LIMIT 1")
