@@ -9821,6 +9821,107 @@
           "required": true
         }
       }
+    },
+    "/api/export.json": {
+      "get": {
+        "tags": [
+          "export"
+        ],
+        "operationId": "export.exportJson",
+        "parameters": [],
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "format": {
+                      "type": "string",
+                      "enum": [
+                        "baby-tracker-export"
+                      ]
+                    },
+                    "version": {
+                      "type": "number",
+                      "enum": [
+                        1
+                      ]
+                    },
+                    "exportedAt": {
+                      "type": "integer",
+                      "minimum": 946684800000,
+                      "exclusiveMaximum": 4102444800000
+                    },
+                    "migrations": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    "tables": {
+                      "type": "object",
+                      "additionalProperties": {
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "additionalProperties": {
+                            "anyOf": [
+                              {
+                                "anyOf": [
+                                  {
+                                    "type": "string"
+                                  },
+                                  {
+                                    "type": "number"
+                                  }
+                                ]
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          }
+                        }
+                      }
+                    }
+                  },
+                  "required": [
+                    "format",
+                    "version",
+                    "exportedAt",
+                    "migrations",
+                    "tables"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "InvalidInput",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvalidInputEncoded"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnauthorizedEncoded"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -9837,6 +9938,51 @@
         },
         "required": [
           "_tag"
+        ],
+        "additionalProperties": false
+      },
+      "InvalidInputEncoded": {
+        "type": "object",
+        "properties": {
+          "_tag": {
+            "type": "string",
+            "enum": [
+              "InvalidInput"
+            ]
+          },
+          "fieldErrors": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "path": {
+                  "type": "string"
+                },
+                "issue": {
+                  "type": "string",
+                  "enum": [
+                    "not_finite",
+                    "not_positive",
+                    "too_many_decimals",
+                    "end_not_after_start",
+                    "before_birth",
+                    "in_future",
+                    "out_of_range",
+                    "invalid"
+                  ]
+                }
+              },
+              "required": [
+                "path",
+                "issue"
+              ],
+              "additionalProperties": false
+            }
+          }
+        },
+        "required": [
+          "_tag",
+          "fieldErrors"
         ],
         "additionalProperties": false
       },
@@ -9971,51 +10117,6 @@
         },
         "required": [
           "_tag"
-        ],
-        "additionalProperties": false
-      },
-      "InvalidInputEncoded": {
-        "type": "object",
-        "properties": {
-          "_tag": {
-            "type": "string",
-            "enum": [
-              "InvalidInput"
-            ]
-          },
-          "fieldErrors": {
-            "type": "array",
-            "items": {
-              "type": "object",
-              "properties": {
-                "path": {
-                  "type": "string"
-                },
-                "issue": {
-                  "type": "string",
-                  "enum": [
-                    "not_finite",
-                    "not_positive",
-                    "too_many_decimals",
-                    "end_not_after_start",
-                    "before_birth",
-                    "in_future",
-                    "out_of_range",
-                    "invalid"
-                  ]
-                }
-              },
-              "required": [
-                "path",
-                "issue"
-              ],
-              "additionalProperties": false
-            }
-          }
-        },
-        "required": [
-          "_tag",
-          "fieldErrors"
         ],
         "additionalProperties": false
       },
@@ -10495,6 +10596,9 @@
     },
     {
       "name": "growth"
+    },
+    {
+      "name": "export"
     }
   ]
 }

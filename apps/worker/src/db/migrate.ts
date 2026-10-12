@@ -9,8 +9,8 @@ const LEDGER = `CREATE TABLE IF NOT EXISTS _migrations (
   applied_at INTEGER NOT NULL
 ) STRICT`
 
-const appliedNames = (storage: DurableObjectStorage): string[] =>
-  storage.sql
+export const appliedNames = (sql: SqlStorage): string[] =>
+  sql
     .exec<{ name: string }>("SELECT name FROM _migrations ORDER BY id")
     .toArray()
     .map(({ name }) => name)
@@ -26,7 +26,7 @@ const checkLedger = (applied: ReadonlyArray<string>, migrations: ReadonlyArray<M
 
 export const migrate = (storage: DurableObjectStorage, migrations: ReadonlyArray<Migration>, now: number): void => {
   storage.sql.exec(LEDGER)
-  const applied = appliedNames(storage)
+  const applied = appliedNames(storage.sql)
   checkLedger(applied, migrations)
   migrations.slice(applied.length).forEach(({ name, sql }, index) =>
     storage.transactionSync(() => {
