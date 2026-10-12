@@ -59,6 +59,7 @@ test.describe("install guidance on an iPhone", () => {
     await phone(page, false)
     await page.goto("/")
     await expect(installCard(page)).toContainText("then Add to Home Screen. No Share button? Tap More first.")
+    await expect(installCard(page)).toContainText("Already added it? Open Baby tracker from your Home Screen.")
     const notNow = installCard(page).getByRole("button", { name: "Not now" })
     expect((await notNow.boundingBox())?.height).toBeGreaterThanOrEqual(44)
     await notNow.click()
@@ -107,6 +108,9 @@ test.describe("install guidance on an iPhone", () => {
     await installCard(page).getByRole("button", { name: "Not now" }).click()
     await expect(page.getByRole("heading", { name: "Home Screen" })).toBeVisible()
     await expect(page.getByText(/^In a browser tab\. Tap Share/)).toContainText("No Share button? Tap More first.")
+    await expect(page.getByText(/^In a browser tab\. Tap Share/)).toContainText(
+      "Already added it? Open Baby tracker from your Home Screen.",
+    )
   })
 
   test("Settings says the installed app is installed", async ({ page }) => {
