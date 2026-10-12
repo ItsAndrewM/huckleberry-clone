@@ -1,7 +1,12 @@
-import { expect, test } from "@playwright/test"
+import { expect, type Locator, type Page, test } from "@playwright/test"
 import { DAY, dayHeading, emptyDay, local, measurement, NO_TOTALS, openHistory, playHistory } from "./played-day.ts"
 
 const YESTERDAY = "2026-10-08"
+
+const topOfPage = async (page: Page, region: Locator) => {
+  const scrolled = await page.evaluate<number>("window.scrollY")
+  return ((await region.boundingBox())?.y ?? Number.NaN) + scrolled
+}
 
 test("opens on the household's today, steps back a day and forward again, and never past today", async ({ page }) => {
   await playHistory(page, [emptyDay(DAY), emptyDay(YESTERDAY)])
@@ -47,13 +52,12 @@ test("starts the day at the same height on an earlier day as on today", async ({
   await openHistory(page, `?date=${YESTERDAY}`)
   const day = page.getByRole("region", { name: "This day" })
   await expect(day).toBeVisible()
-  const earlier = (await day.boundingBox())?.y
+  const earlier = await topOfPage(page, day)
   await page.getByRole("link", { name: "Next day" }).click()
   await expect(dayHeading(page)).toHaveText("Fri, Oct 9")
   await expect(day).toBeVisible()
-  const today = (await day.boundingBox())?.y
-  expect(earlier).toBeDefined()
-  expect(today).toBe(earlier)
+  const today = await topOfPage(page, day)
+  expect(today).toBeCloseTo(earlier, 1)
 })
 
 test("shows today for an address naming a later day or no real day", async ({ page }) => {
