@@ -26,11 +26,14 @@ export const DayView = ({ day, me, now }: DayViewProps) => {
     setShown(ids)
     sheets.show("details")
   }
+  const detailsLeftFromAnotherDay = shown === null && sheets.open === "details"
   return (
     <>
       <DayTotals day={day} me={me} />
       <DayGrid model={model} display={display} now={now} onOpen={open} />
-      {shown === null ? null : <DetailsSheet entries={entriesIn(model, shown)} display={display} now={now} />}
+      {detailsLeftFromAnotherDay ? null : (
+        <DetailsSheet entries={entriesIn(model, shown ?? [])} display={display} now={now} />
+      )}
     </>
   )
 }
