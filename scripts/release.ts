@@ -1,7 +1,9 @@
 import { spawnSync } from "node:child_process"
 import { appendFileSync, readFileSync } from "node:fs"
+import { join } from "node:path"
 import { fileURLToPath } from "node:url"
 import { parseArgs } from "node:util"
+import { releaseExportPath, saveExport } from "./admin-export.ts"
 import { adminRequest } from "./admin-seed.ts"
 import { builtWorkerConfig } from "./bundle-size.ts"
 import {
@@ -10,6 +12,7 @@ import {
   ciProblems,
   deployLogLine,
   deployProblems,
+  exportProblem,
   PRODUCTION_HOSTNAME,
   withoutCloudflareEnv,
 } from "./release-checks.ts"
@@ -39,7 +42,10 @@ const stopUnless = (problems: string[]): void => {
   process.exit(1)
 }
 
-const { values } = parseArgs({ options: { first: { type: "boolean", default: false } }, strict: true })
+const { values } = parseArgs({
+  options: { first: { type: "boolean", default: false }, "skip-export": { type: "boolean", default: false } },
+  strict: true,
+})
 
 output("git", ["fetch", "--quiet", "origin", "main"])
 const head = output("git", ["rev-parse", "HEAD"])
@@ -62,6 +68,17 @@ stopUnless(
 step("pnpm", ["build"])
 const config = builtWorkerConfig(webDir)
 stopUnless(deployProblems(JSON.parse(readFileSync(config, "utf8"))))
+
+const exportProblems = async (): Promise<string[]> => {
+  if (values.first || values["skip-export"]) return []
+  try {
+    console.log(await saveExport(process.env, join(rootDir, releaseExportPath(new Date(), head))))
+    return []
+  } catch (error) {
+    return [exportProblem(error instanceof Error ? error : new Error(String(error)))]
+  }
+}
+stopUnless(await exportProblems())
 
 const bookmarkResponse = values.first ? null : await fetch(adminRequest(process.env, "/api/admin/pitr/bookmark"))
 const bookmark = bookmarkResponse === null ? null : bookmarkFrom(bookmarkResponse.status, await bookmarkResponse.text())

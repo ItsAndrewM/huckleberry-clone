@@ -52,7 +52,7 @@ packages/
   contracts/           Effect Schema request/response/error types, query-key definitions
 e2e/                   Playwright specs
 scripts/               Node tooling and its tests; pnpm admin (seed the household; disable, enable and re-email caregivers;
-                       PITR bookmarks and restores) and pnpm release (M1.16)
+                       PITR bookmarks and restores; exports, M3.11) and pnpm release (M1.16), which saves an export first (M3.11)
 docs/                  spec, this plan, runbooks (production, Access and deploys in runbooks/access.md; restores and the drill in runbooks/restore.md)
 ```
 
@@ -272,7 +272,7 @@ Spec scenarios that become named fixtures: the 15+15 min / 50+50 mL feed (AC 4),
 | Static Assets and Access interaction (S4) | Assets get no `ctx.access`; the shell and `/sw.js` require sign-in | D5 verifies the JWT. The service worker installs and updates only while signed in. The installed app's cached shell opens offline (S4 pass) |
 | Import source unknown | M2 blocked | **Resolved:** M2 dropped (10 Oct 2026). The household starts fresh |
 | WHO extreme-value handling and dataset choice | Wrong percentiles | M4.2 gate, which passes (`docs/percentiles.md`). CI runs it on every pull request |
-| Two-person, single-environment ops | A bad migration hits live data | Migrations are forward-only and tested against an export of production data in a preview DO before deploy, once M3.11's export exists. `pnpm release` takes a PITR bookmark before every deploy and logs it, and `pnpm admin pitr:restore` rewinds to it (M1.16) |
+| Two-person, single-environment ops | A bad migration hits live data | Migrations are forward-only and tested against an export of production data before deploy. `pnpm release` saves an export to `exports/` before every deploy (M3.11), so M3.1, the first new table, can test its migration on the latest one. `pnpm release` also takes a PITR bookmark before every deploy and logs it, and `pnpm admin pitr:restore` rewinds to it (M1.16) |
 
 **Questions for Andrew and Emily before M1:**
 

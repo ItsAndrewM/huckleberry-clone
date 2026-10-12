@@ -1,4 +1,4 @@
-import { Instant, InvalidInput, invalidInputFrom, NotFound } from "@bt/contracts"
+import { type HouseholdExport, Instant, InvalidInput, invalidInputFrom, NotFound } from "@bt/contracts"
 import { Result, Schema } from "effect"
 import { errorResponse } from "./error-response.ts"
 import { logOutage } from "./logs.ts"
@@ -36,6 +36,7 @@ export interface AdminHousehold {
   pitrBookmark(): Promise<string>
   pitrScheduleRestore(target: RestoreTarget): Promise<ScheduledRestore>
   restart(): Promise<void>
+  exportHousehold(): Promise<HouseholdExport>
 }
 
 type AdminRoute = (request: Request, household: AdminHousehold) => Promise<Response>
@@ -114,6 +115,9 @@ const restore: AdminRoute = async (request, household) => {
   return Response.json({ restoredTo: scheduled.bookmark, undo: scheduled.undo }, { headers: noStore })
 }
 
+const householdExport: AdminRoute = async (_request, household) =>
+  Response.json(await household.exportHousehold(), { headers: noStore })
+
 const ROUTES = new Map<string, AdminRoute>([
   ["POST /api/admin/household", seed],
   ["POST /api/admin/caregiver/disable", caregiverRoute((household, email) => household.disableCaregiver(email))],
@@ -121,6 +125,7 @@ const ROUTES = new Map<string, AdminRoute>([
   ["POST /api/admin/caregiver/set-email", setEmail],
   ["POST /api/admin/pitr/bookmark", bookmark],
   ["POST /api/admin/pitr/restore", restore],
+  ["POST /api/admin/export", householdExport],
 ])
 
 export const routeAdmin = async (request: Request, household: AdminHousehold): Promise<Response> => {

@@ -113,6 +113,13 @@ describe("GET /api/export.json", () => {
     expect(body.tables.sleeps).toEqual([{ id: "s1", started_at: NOW }])
   })
 
+  it("is the same export the admin route takes through the household's RPC", async () => {
+    const household = await seededHousehold()
+    await diaperAt(household, NOW - HOUR_MS)
+    const { body } = await exported(household)
+    expect(await household.exportHousehold()).toEqual(body)
+  })
+
   it("is refused to someone who isn't a caregiver", async () => {
     const response = await get(await seededHousehold(), "/api/export.json", "stranger@example.test")
     expect(response.status).toBe(401)

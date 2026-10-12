@@ -9,6 +9,7 @@ import {
   type DeployConfig,
   deployLogLine,
   deployProblems,
+  exportProblem,
   withoutCloudflareEnv,
 } from "./release-checks.ts"
 
@@ -132,6 +133,15 @@ describe("CI on the commit a release deploys", () => {
 describe("the build a release runs", () => {
   it("drops CLOUDFLARE_ENV, so a shell left on local still builds production", () => {
     expect(withoutCloudflareEnv({ CLOUDFLARE_ENV: "local", PATH: "/usr/bin" })).toEqual({ PATH: "/usr/bin" })
+  })
+})
+
+describe("the export a release saves before its bookmark", () => {
+  it("says why it failed, and names the flag for a live Worker that has no export route yet", () => {
+    expect(exportProblem(new Error('Couldn\'t export the household: 404 {"_tag":"NotFound"}'))).toBe(
+      'the household can be exported first (Couldn\'t export the household: 404 {"_tag":"NotFound"}). ' +
+        "If the live Worker predates exports, as before the first release with M3.11, release once with --skip-export",
+    )
   })
 })
 
