@@ -4,6 +4,7 @@ import { scaleBand } from "@tanstack/charts/scales/band"
 import { scaleLinear } from "@tanstack/charts/scales/linear"
 import { type BarRow, barRows, type DayTarget, dayTargets, tallestDay } from "./bar-rows.ts"
 import type { TrendsMetric } from "./metrics.ts"
+import { PLOT_LEFT_MARGIN } from "./plot-margin.ts"
 import type { TrendDay } from "./trends-numbers.ts"
 import { weekdayOf } from "./trends-titles.ts"
 
@@ -63,6 +64,7 @@ export const barChartDefinition = ({ dates, ticks, tickLabel, rows, targets, pic
         radius: { end: 3 },
       }),
     ],
+    margin: { left: PLOT_LEFT_MARGIN },
     scales: {
       x: {
         scale: scaleBand<LocalDate>()

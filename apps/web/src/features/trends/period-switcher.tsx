@@ -20,6 +20,7 @@ const Step = ({ search, label, Icon }: StepProps) =>
     <Link
       to="/trends"
       search={search}
+      activeOptions={{ exact: true }}
       aria-label={label}
       className={buttonVariants({ variant: "ghost", size: "icon-lg" })}
     >
@@ -40,7 +41,8 @@ export const PeriodSwitcher = ({ navigation }: { readonly navigation: TrendsNavi
           <Link
             to="/trends"
             search={navigation.current}
-            className="text-xs font-medium text-primary underline-offset-4 hover:underline"
+            activeOptions={{ exact: true }}
+            className="-my-3.5 inline-flex min-h-11 items-center text-xs font-medium text-primary underline-offset-4 hover:underline"
           >
             {backLabel(view)}
           </Link>

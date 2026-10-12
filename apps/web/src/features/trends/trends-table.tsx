@@ -34,12 +34,12 @@ export const TrendsTable = ({ days, volume }: TrendsTableProps) => (
               {name}
             </th>
             {cells.length === 1 ? (
-              <td colSpan={TRENDS_METRICS.length} className="py-2 text-muted-foreground">
+              <td colSpan={TRENDS_METRICS.length} className="py-2 whitespace-nowrap text-muted-foreground">
                 {cells[0]}
               </td>
             ) : (
               cells.map((cell, index) => (
-                <td key={TRENDS_METRICS[index]?.id} className="py-2 pr-2">
+                <td key={TRENDS_METRICS[index]?.id} className="py-2 pr-2 whitespace-nowrap">
                   {cell}
                 </td>
               ))

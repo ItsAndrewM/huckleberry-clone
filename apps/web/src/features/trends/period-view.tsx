@@ -1,5 +1,6 @@
 import type { DayTotals, LocalDate, Me } from "@bt/contracts"
 import { averageDay } from "@bt/domain"
+import { useMemo } from "react"
 import { BarChart } from "./bar-chart.tsx"
 import { MetricSection } from "./metric-section.tsx"
 import { TRENDS_METRICS } from "./metrics.ts"
@@ -15,7 +16,7 @@ interface PeriodViewProps {
 export const PeriodView = ({ days, me, today }: PeriodViewProps) => {
   const { birthDate } = me.child
   const { volume } = me.household.units
-  const trend = trendDays(days, today, birthDate)
+  const trend = useMemo(() => trendDays(days, today, birthDate), [days, today, birthDate])
   const average = averageDay(days, today, birthDate)
   const isCurrent = trend.some(({ status }) => status === "today")
   return (

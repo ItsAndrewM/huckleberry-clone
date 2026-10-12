@@ -1,9 +1,10 @@
 import { datesBetween, runningTotals, zonedDayBounds } from "@bt/domain"
-import { createChartScene, renderChartSvg } from "@tanstack/charts"
+import { type ChartScene, createChartScene, renderChartSvg } from "@tanstack/charts"
 import { describe, expect, it, vi } from "vitest"
 import { barChartDefinition, barChartModel } from "../src/features/trends/bar-chart-definition.ts"
 import { dayTicks, hourLabel } from "../src/features/trends/day-ticks.ts"
 import { TRENDS_METRICS } from "../src/features/trends/metrics.ts"
+import { PLOT_LEFT_MARGIN } from "../src/features/trends/plot-margin.ts"
 import { runningChartDefinition, runningChartModel } from "../src/features/trends/running-chart-definition.ts"
 import { trendDays } from "../src/features/trends/trends-numbers.ts"
 import { diaperAt, feedAt, nursedFor, ZONE } from "./today-fixtures.ts"
@@ -16,6 +17,9 @@ const THEME_PAINT =
   /^(?:currentColor|none|var\(--[a-z-]+\)|color-mix\(in oklab, var\(--primary\) \d+%, var\(--background\)\))$/u
 
 const captured = (svg: string, pattern: RegExp) => [...svg.matchAll(pattern)].map((match) => match.slice(1).join(":"))
+
+const widestYLabel = ({ scales }: Pick<ChartScene, "scales">) =>
+  Math.max(...(scales["y"]?.ticks ?? []).map(({ label }) => label.length))
 
 const OCTOBER = trendDays(
   datesBetween("2026-10-01", "2026-10-31").map((date) => dated(date, date < TODAY ? MONDAY : undefined)),
@@ -73,6 +77,14 @@ describe("barChartDefinition", () => {
       const paints = captured(renderChartSvg(scene, { ariaLabel: "Bottles" }), /\s(?:fill|stroke)="([^"]*)"/gu)
       expect(paints.filter((paint) => !THEME_PAINT.test(paint))).toEqual([])
     }
+  })
+
+  it("starts every chart's plot at the same x, however wide its y labels are", () => {
+    const scenes = TRENDS_METRICS.map((metric) =>
+      createChartScene(barChartDefinition(barChartModel(metric, DAYS, "ml", null)), SIZE),
+    )
+    expect(new Set(scenes.map(widestYLabel)).size).toBeGreaterThan(1)
+    expect(scenes.map(({ chart }) => chart.x)).toEqual(scenes.map(() => PLOT_LEFT_MARGIN))
   })
 })
 
@@ -132,5 +144,13 @@ describe("runningChartDefinition", () => {
     } finally {
       warn.mockRestore()
     }
+  })
+
+  it("starts every running chart's plot at the same x, however wide its y labels are", () => {
+    const scenes = TRENDS_METRICS.map((metric) =>
+      createChartScene(runningChartDefinition(runningChartModel(metric, "ml", runningInput(null))), SIZE),
+    )
+    expect(new Set(scenes.map(widestYLabel)).size).toBeGreaterThan(1)
+    expect(scenes.map(({ chart }) => chart.x)).toEqual(scenes.map(() => PLOT_LEFT_MARGIN))
   })
 })

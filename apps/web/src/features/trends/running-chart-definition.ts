@@ -4,6 +4,7 @@ import { defineChart, lineY, ruleY } from "@tanstack/charts"
 import { decorative } from "@tanstack/charts/mark/decorative"
 import { scaleLinear } from "@tanstack/charts/scales/linear"
 import type { TrendsMetric } from "./metrics.ts"
+import { PLOT_LEFT_MARGIN } from "./plot-margin.ts"
 
 export interface RunningChartModel {
   readonly bounds: Interval
@@ -58,6 +59,7 @@ export const runningChartDefinition = ({ bounds, points, usual, ticks, tickLabel
         }),
       ),
     ],
+    margin: { left: PLOT_LEFT_MARGIN },
     scales: {
       x: {
         scale: scaleLinear().domain([bounds.start, bounds.end]),
