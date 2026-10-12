@@ -9,6 +9,8 @@ import { ZONE } from "./today-fixtures.ts"
 const HOUR = 3_600_000
 const AUTUMN_ZONE = "America/Los_Angeles"
 const AUTUMN_START = Date.parse("2026-11-01T00:00:00-07:00")
+const TROLL_ZONE = "Antarctica/Troll"
+const TROLL_START = Date.parse("2026-10-25T00:00:00+02:00")
 
 const rowsOf = (date: string, zone: string, start: number, hours: number): ReadonlyArray<HourRow> =>
   layoutDay({ date, zone, bounds: { start, end: start + hours * HOUR }, now: start, blocks: [], points: [] }, SCALE)
@@ -42,6 +44,19 @@ describe("hourNames", () => {
       "Log at 1 AM (second)",
       "Log at 2 AM",
     ])
+  })
+
+  it("tells both passes of each hour apart when the clocks go back two hours, so no two rows share a name", () => {
+    const rows = rowsOf("2026-10-25", TROLL_ZONE, TROLL_START, 26)
+    const names = hourNames(rows, hourLabels(rows, TROLL_ZONE, LOCALE))
+    expect(names.slice(1, 5)).toEqual([
+      "Log at 1 AM (first)",
+      "Log at 2 AM (first)",
+      "Log at 1 AM (second)",
+      "Log at 2 AM (second)",
+    ])
+    expect(names).toHaveLength(26)
+    expect(new Set(names).size).toBe(26)
   })
 })
 

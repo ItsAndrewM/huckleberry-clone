@@ -28,7 +28,8 @@ export const HourRows = ({ rows, display, now, onTap }: HourRowsProps) => {
       disabled={row.start > now}
       onClick={(event) => onTap(row, fractionOf(event))}
       className={cn(
-        "absolute inset-x-0 border-t border-border/70 text-left outline-none focus-visible:bg-muted",
+        "absolute inset-x-0 border-t border-border/70 text-left outline-none",
+        "focus-visible:bg-muted focus-visible:ring-3 focus-visible:ring-inset focus-visible:ring-ring/50",
         atStep(row.top),
         stepsTall(row.height),
       )}

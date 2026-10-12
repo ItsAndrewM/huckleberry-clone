@@ -1,8 +1,9 @@
 import type { HourRow } from "@bt/domain"
 
-const turnOf = (row: HourRow, next: HourRow | undefined) => {
-  if (row.repeated) return " (second)"
-  return next?.repeated === true ? " (first)" : ""
+const turnOf = (labels: ReadonlyArray<string>, index: number) => {
+  const label = labels[index] ?? ""
+  if (labels.indexOf(label) < index) return " (second)"
+  return labels.lastIndexOf(label) > index ? " (first)" : ""
 }
 
 export const hourLabels = (rows: ReadonlyArray<HourRow>, timeZone: string, locale?: string): ReadonlyArray<string> => {
@@ -11,4 +12,4 @@ export const hourLabels = (rows: ReadonlyArray<HourRow>, timeZone: string, local
 }
 
 export const hourNames = (rows: ReadonlyArray<HourRow>, labels: ReadonlyArray<string>): ReadonlyArray<string> =>
-  rows.map((row, index) => `Log at ${labels[index] ?? ""}${turnOf(row, rows[index + 1])}`)
+  rows.map((_, index) => `Log at ${labels[index] ?? ""}${turnOf(labels, index)}`)

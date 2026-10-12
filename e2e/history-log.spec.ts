@@ -3,6 +3,8 @@ import { DAY, diaper, emptyDay, local, NO_TOTALS, openHistory, playHistory } fro
 
 const HOUR_PX = 60
 
+test.use({ timezoneId: "Europe/London" })
+
 const tapHour = (page: Page, hour: string, minute: number) =>
   page
     .getByRole("region", { name: "The day by hour" })
@@ -58,6 +60,14 @@ test("opens Nursing at the slot as a past feed, and Bottle there too", async ({ 
   await expect(page.getByRole("dialog", { name: "Bottle" }).getByLabel("When")).toHaveValue("2026-10-09T04:45")
 })
 
+test("opens Measurement at the slot", async ({ page }) => {
+  await playHistory(page, [emptyDay(DAY)])
+  await openHistory(page)
+  await tapHour(page, "3 AM", 40)
+  await page.getByRole("dialog", { name: "Log at 3:30 AM" }).getByRole("button", { name: "Measurement" }).click()
+  await expect(page.getByRole("dialog", { name: "Add measurement" }).getByLabel("When")).toHaveValue("2026-10-09T03:30")
+})
+
 test("starts the quick actions on Today at Now again after History opened a sheet at a slot", async ({ page }) => {
   await playHistory(page, [emptyDay(DAY)])
   await playToday(page)
@@ -87,7 +97,12 @@ test("asks for both 1 AMs by name on the night the clocks go back", async ({ pag
   const grid = page.getByRole("region", { name: "The day by hour" })
   await expect(grid.getByRole("button", { name: /^Log at / })).toHaveCount(25)
   await grid.getByRole("button", { name: "Log at 1 AM (second)" }).click({ position: { x: 200, y: 31 } })
-  await expect(page.getByRole("dialog", { name: /^Log at 1:30\sAM$/u })).toBeVisible()
+  const menu = page.getByRole("dialog", { name: /^Log at 1:30\sAM$/u })
+  await expect(menu).toBeVisible()
+  await menu.getByRole("button", { name: "Diaper" }).click()
+  const sheet = page.getByRole("dialog", { name: "Diaper" })
+  await expect(sheet.getByRole("button", { name: /^1:30\sAM \(second\)$/u })).toHaveAttribute("aria-pressed", "true")
+  await expect(sheet.getByRole("button", { name: /^1:30\sAM \(first\)$/u })).toHaveAttribute("aria-pressed", "false")
 })
 
 test("logs at the hour's start from the keyboard", async ({ page }) => {
