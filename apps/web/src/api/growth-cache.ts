@@ -30,6 +30,8 @@ export const pendingGrowth = (growth: Growth, action: MeasurementAction, author:
     }
     case "deleteMeasurement":
       return measurementIn(growth, action.id) === undefined ? growth : without(growth, action.id)
+    case "restoreMeasurement":
+      return growth
   }
 }
 

@@ -69,6 +69,15 @@ export const liveMeasurementsIn = (sql: SqlStorage, period: Interval): Measureme
     .toArray()
     .map(measurementOf)
 
+export const deletedMeasurementsSince = (sql: SqlStorage, since: Instant): Measurement[] =>
+  sql
+    .exec<MeasurementRow>(
+      `SELECT ${COLUMNS} FROM growth_measurements WHERE deleted_at >= ? ORDER BY deleted_at DESC, rowid DESC`,
+      since,
+    )
+    .toArray()
+    .map(measurementOf)
+
 const moment = (at: Instant | null) => (at === null ? null : { start: at, end: at })
 
 const changedFrom = (calendar: Calendar, before: Instant | null, after: Instant | null): Changed => [
@@ -147,9 +156,12 @@ export const editMeasurement =
 
 const setDeletedAt =
   (stamp: Stamp, id: string, action: VersionedAction, deletedAt: Instant | null) =>
-  (sql: SqlStorage): CoreResult<Measurement, NotFound | MeasurementConflict> => {
+  (sql: SqlStorage): CoreResult<Measurement, NotFound | InvalidInput | MeasurementConflict> => {
     const found = measurementFor(sql, id, action.version, deletedAt === null ? "deleted" : "live")
     if (!found.ok) return found
+    const calendar = calendarOf(sql)
+    const invalid = deletedAt === null ? invalidTime(calendar, found.row.measured_at, stamp.now) : null
+    if (invalid !== null) return { ok: false, error: invalid }
     const row = sql
       .exec<MeasurementRow>(
         `UPDATE growth_measurements SET deleted_at = ?, version = version + 1, updated_by = ?, updated_at = ?
@@ -163,7 +175,7 @@ const setDeletedAt =
     return {
       ok: true,
       response: measurementOf(row),
-      changed: [...changedFrom(calendarOf(sql), row.measured_at, null), queryKeys.deleted],
+      changed: [...changedFrom(calendar, row.measured_at, null), queryKeys.deleted],
     }
   }
 

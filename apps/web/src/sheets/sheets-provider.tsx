@@ -4,6 +4,7 @@ import type { Restored } from "./restored.ts"
 import type { Sending } from "./sending.ts"
 import { type Sheets, SheetsContext } from "./sheets-context.ts"
 import {
+  announcedState,
   discardedState,
   dismissedState,
   expiredState,
@@ -72,6 +73,10 @@ export const SheetsProvider = ({ restored, children }: SheetsProviderProps) => {
       setState((current) => discardedState(current, failed))
     },
     send,
+    announce: (toast) => {
+      setState((current) => announcedState(current, toast))
+      sweepAfter(toast.until - TOAST_MS)
+    },
   }
   return <SheetsContext value={sheets}>{children}</SheetsContext>
 }

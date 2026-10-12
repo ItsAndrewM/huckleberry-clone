@@ -1,6 +1,7 @@
 import type { MeasurementEdit, NewMeasurement } from "@bt/contracts"
 import { gramsFromPoundsOunces } from "@bt/domain"
 import { describe, expect, it } from "vitest"
+import { deletedOf } from "../src/core/deleted.ts"
 import { deleteMeasurement, editMeasurement, growthOf, logMeasurement, restoreMeasurement } from "../src/core/growth.ts"
 import { editChild } from "../src/core/household-edits.ts"
 import type { Stamp } from "../src/core/receipts.ts"
@@ -216,6 +217,26 @@ describe("deleting and restoring a measurement", () => {
       return { logged, restored: saved(restoring(sql)) }
     })
     expect(restored).toEqual({ ...logged, version: 3 })
+  })
+
+  it("refuses to restore a measurement from before the birth date with before_birth, and leaves it deleted", async () => {
+    const { result, stillDeleted } = await inHousehold((sql) => {
+      const logged = saved(logMeasurement(stampOf(sql), weighed(SEP_3_BEGINS))(sql))
+      saved(deleteMeasurement(stampOf(sql), logged.id, { actionId: ACTION_ID, version: 1 })(sql))
+      saved(editChild(stampOf(sql), birthDateEdit("2026-09-04"))(sql))
+      const result = restoreMeasurement(stampOf(sql), logged.id, { actionId: ACTION_ID, version: 2 })(sql)
+      return {
+        result,
+        stillDeleted: deletedOf(sql, NOW)
+          .measurements.map(({ id }) => id)
+          .includes(logged.id),
+      }
+    })
+    expect(result).toMatchObject({
+      ok: false,
+      error: { _tag: "InvalidInput", fieldErrors: [{ path: "measuredAt", issue: "before_birth" }] },
+    })
+    expect(stillDeleted).toBe(true)
   })
 
   it("answers NotFound when restoring a measurement that isn't deleted", async () => {

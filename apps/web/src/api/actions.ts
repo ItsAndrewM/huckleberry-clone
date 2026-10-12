@@ -32,6 +32,7 @@ export const DiaperAction = Schema.Union([
   created("logDiaper", NewDiaper),
   onRecord("editDiaper", DiaperEdit),
   onRecord("deleteDiaper", VersionedAction),
+  onRecord("restoreDiaper", VersionedAction),
 ])
 export type DiaperAction = typeof DiaperAction.Type
 
@@ -46,6 +47,7 @@ export const FeedAction = Schema.Union([
   onRecord("deleteFeed", VersionedAction),
   onRecord("deletePortion", ComponentDelete),
   onRecord("editPortion", VersionedPortion),
+  onRecord("restoreFeed", VersionedAction),
 ])
 export type FeedAction = typeof FeedAction.Type
 
@@ -53,14 +55,22 @@ export const MeasurementAction = Schema.Union([
   created("logMeasurement", NewMeasurement),
   onRecord("editMeasurement", MeasurementEdit),
   onRecord("deleteMeasurement", VersionedAction),
+  onRecord("restoreMeasurement", VersionedAction),
 ])
 export type MeasurementAction = typeof MeasurementAction.Type
 
 export const Action = Schema.Union([DiaperAction, FeedAction, MeasurementAction])
 export type Action = typeof Action.Type
 
-export const isDiaperAction = (action: Action): action is DiaperAction =>
-  action.kind === "logDiaper" || action.kind === "editDiaper" || action.kind === "deleteDiaper"
+const DIAPER_KINDS = new Set<Action["kind"]>(["logDiaper", "editDiaper", "deleteDiaper", "restoreDiaper"])
 
-export const isMeasurementAction = (action: Action): action is MeasurementAction =>
-  action.kind === "logMeasurement" || action.kind === "editMeasurement" || action.kind === "deleteMeasurement"
+const MEASUREMENT_KINDS = new Set<Action["kind"]>([
+  "logMeasurement",
+  "editMeasurement",
+  "deleteMeasurement",
+  "restoreMeasurement",
+])
+
+export const isDiaperAction = (action: Action): action is DiaperAction => DIAPER_KINDS.has(action.kind)
+
+export const isMeasurementAction = (action: Action): action is MeasurementAction => MEASUREMENT_KINDS.has(action.kind)
