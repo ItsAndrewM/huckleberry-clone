@@ -1,6 +1,6 @@
 import { type Me, queryKeys } from "@bt/contracts"
-import { QueryClient } from "@tanstack/react-query"
-import { describe, expect, it } from "vitest"
+import { QueryClient, type QueryKey, QueryObserver } from "@tanstack/react-query"
+import { describe, expect, it, vi } from "vitest"
 import { refreshPeriodsOnZoneChange } from "../src/api/zone-change.ts"
 import { meWith } from "./growth-fixtures.ts"
 
@@ -15,40 +15,71 @@ const phone = (me: Me | null = ME) => {
   if (me !== null) queryClient.setQueryData(queryKeys.me, me)
   refreshPeriodsOnZoneChange(queryClient)
   for (const queryKey of CACHED) queryClient.setQueryData(queryKey, "cached")
-  const refetching = () => CACHED.filter((queryKey) => queryClient.getQueryState(queryKey)?.isInvalidated === true)
-  return { queryClient, refetching }
+  const invalidated = () => CACHED.filter((queryKey) => queryClient.getQueryState(queryKey)?.isInvalidated === true)
+  return { queryClient, invalidated }
 }
+
+const onScreen = (queryClient: QueryClient, queryKey: QueryKey) => {
+  let fetches = 0
+  const observer = new QueryObserver(queryClient, {
+    queryKey,
+    queryFn: () => {
+      fetches += 1
+      return `fetch ${fetches}`
+    },
+  })
+  const stop = observer.subscribe(() => undefined)
+  const shows = () => {
+    const { data, error } = observer.getCurrentResult()
+    return { fetches, data, error }
+  }
+  return { shows, stop }
+}
+
+const settled = (queryClient: QueryClient) => vi.waitFor(() => expect(queryClient.isFetching()).toBe(0))
 
 describe("refreshPeriodsOnZoneChange", () => {
   it("refreshes every cached day, week and month when this phone saves a new zone, and nothing else", () => {
-    const { queryClient, refetching } = phone()
+    const { queryClient, invalidated } = phone()
     queryClient.setQueryData(queryKeys.me, inZone("Europe/London"))
-    expect(refetching()).toEqual(PERIODS)
+    expect(invalidated()).toEqual(PERIODS)
   })
 
   it("refreshes them when the other phone's change comes back in a refetch of me", async () => {
-    const { queryClient, refetching } = phone()
+    const { queryClient, invalidated } = phone()
     await queryClient.fetchQuery({ queryKey: queryKeys.me, staleTime: 0, queryFn: async () => inZone("Asia/Tokyo") })
-    expect(refetching()).toEqual(PERIODS)
+    expect(invalidated()).toEqual(PERIODS)
   })
 
   it("leaves them alone when me changes but the zone doesn't", () => {
-    const { queryClient, refetching } = phone()
+    const { queryClient, invalidated } = phone()
     queryClient.setQueryData(queryKeys.me, { ...ME, household: { ...ME.household, name: "Home" } })
-    expect(refetching()).toEqual([])
+    expect(invalidated()).toEqual([])
   })
 
   it("leaves them alone when me first arrives, since nothing was cached in another zone", () => {
-    const { queryClient, refetching } = phone(null)
+    const { queryClient, invalidated } = phone(null)
     queryClient.setQueryData(queryKeys.me, inZone("Europe/London"))
-    expect(refetching()).toEqual([])
+    expect(invalidated()).toEqual([])
+  })
+
+  it("fetches each day, week and month on screen just once more, since it takes the new zone before the fetches it starts update the cache it watches", async () => {
+    const { queryClient } = phone()
+    const screens = PERIODS.map((queryKey) => onScreen(queryClient, queryKey))
+    const shown = () => screens.map((screen) => screen.shows())
+    await settled(queryClient)
+    expect(shown()).toEqual(Array(3).fill({ fetches: 1, data: "fetch 1", error: null }))
+    queryClient.setQueryData(queryKeys.me, inZone("Europe/London"))
+    await settled(queryClient)
+    expect(shown()).toEqual(Array(3).fill({ fetches: 2, data: "fetch 2", error: null }))
+    for (const screen of screens) screen.stop()
   })
 
   it("refreshes them once for one change, however many updates follow", () => {
-    const { queryClient, refetching } = phone()
+    const { queryClient, invalidated } = phone()
     queryClient.setQueryData(queryKeys.me, inZone("Europe/London"))
     for (const queryKey of PERIODS) queryClient.setQueryData(queryKey, "refetched in London")
     queryClient.setQueryData(queryKeys.me, { ...inZone("Europe/London"), caregiver: ME.caregiver })
-    expect(refetching()).toEqual([])
+    expect(invalidated()).toEqual([])
   })
 })
