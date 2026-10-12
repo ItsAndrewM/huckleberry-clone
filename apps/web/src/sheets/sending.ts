@@ -1,7 +1,7 @@
 import { Schema } from "effect"
 import { Action } from "../api/actions.ts"
 
-export const SheetKind = Schema.Literals(["diaper", "bottle", "nursing", "pastFeed"])
+export const SheetKind = Schema.Literals(["diaper", "bottle", "nursing", "pastFeed", "measurement"])
 export type SheetKind = typeof SheetKind.Type
 
 export const Sending = Schema.Struct({ sheet: SheetKind, action: Action })
@@ -22,7 +22,16 @@ export interface Recovery {
   readonly sendingAt: (tap: Tap) => Sending
 }
 
-const CLOSES_ON_SEND = new Set<Action["kind"]>(["logDiaper", "logFeed", "startFeed", "addBottle", "finishFeed"])
+const CLOSES_ON_SEND = new Set<Action["kind"]>([
+  "logDiaper",
+  "logFeed",
+  "startFeed",
+  "addBottle",
+  "finishFeed",
+  "logMeasurement",
+  "editMeasurement",
+  "deleteMeasurement",
+])
 
 const CLOSES_ON_SAVE = new Set<Action["kind"]>(["editDiaper", "editPortion"])
 

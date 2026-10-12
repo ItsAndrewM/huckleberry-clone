@@ -89,6 +89,7 @@ const savedFeed = (today: Today, feed: Feed, recent: ReadonlyArray<RecentEntry>)
 }
 
 export const savedToday = (today: Today, saved: Saved, action: Action): Today => {
+  if ("measurement" in saved) return today
   const recent = without(today.recent, pendingId(action.payload.actionId))
   if ("feed" in saved) return savedFeed(today, saved.feed, recent)
   const { diaper } = saved

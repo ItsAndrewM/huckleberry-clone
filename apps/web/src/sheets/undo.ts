@@ -32,7 +32,7 @@ const undoFeed = (action: Action, feed: Feed, actionId: string): Action | null =
 
 export const undoOf = ({ action }: Sending, saved: Saved, actionId: string): Action | null => {
   if ("feed" in saved) return undoFeed(action, saved.feed, actionId)
-  if (action.kind !== "logDiaper") return null
+  if (action.kind !== "logDiaper" || !("diaper" in saved)) return null
   return { kind: "deleteDiaper", id: saved.diaper.id, payload: { actionId, version: saved.diaper.version } }
 }
 

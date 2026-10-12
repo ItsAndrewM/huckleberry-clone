@@ -14,6 +14,7 @@ import {
   sendingState,
 } from "../src/sheets/sheets-state.ts"
 import { TOAST_MS } from "../src/sheets/undo.ts"
+import { measurement } from "./growth-fixtures.ts"
 import { diaperAt, feedAt, NOW } from "./today-fixtures.ts"
 
 const ACTION_ID = "4b1c2a5e-8f3d-4c6b-9a7e-2d1f0e3c5b6a"
@@ -133,6 +134,28 @@ const EDIT_PORTION: Sending = {
   },
 }
 
+const MEASURED: Sending = {
+  sheet: "measurement",
+  action: {
+    kind: "logMeasurement",
+    payload: { actionId: ACTION_ID, measuredAt: NOW, weightG: 4300, lengthCm: null, headCm: null },
+  },
+}
+
+const MEASUREMENT_EDITED: Sending = {
+  sheet: "measurement",
+  action: {
+    kind: "editMeasurement",
+    id: "measurement-1",
+    payload: { actionId: ACTION_ID, version: 1, measuredAt: NOW, weightG: 4300, lengthCm: 54.5, headCm: null },
+  },
+}
+
+const MEASUREMENT_DELETED: Sending = {
+  sheet: "measurement",
+  action: { kind: "deleteMeasurement", id: "measurement-1", payload: { actionId: ACTION_ID, version: 2 } },
+}
+
 const CLOSING = {
   logDiaper: { sending: DIAPER, closes: true, entry: true },
   deleteDiaper: { sending: UNDO_DIAPER, closes: false, entry: false },
@@ -147,6 +170,9 @@ const CLOSING = {
   deletePortion: { sending: UNDO_PORTION, closes: false, entry: false },
   editDiaper: { sending: EDIT_DIAPER, closes: false, entry: false },
   editPortion: { sending: EDIT_PORTION, closes: false, entry: false },
+  logMeasurement: { sending: MEASURED, closes: true, entry: true },
+  editMeasurement: { sending: MEASUREMENT_EDITED, closes: true, entry: false },
+  deleteMeasurement: { sending: MEASUREMENT_DELETED, closes: true, entry: false },
 } satisfies Record<Action["kind"], { readonly sending: Sending; readonly closes: boolean; readonly entry: boolean }>
 
 describe("sending", () => {
@@ -157,6 +183,13 @@ describe("sending", () => {
   it("keeps the sheet open offline, and for a running feed's controls", () => {
     expect(sendingState({ ...CLOSED, open: "diaper" }, DIAPER, false).open).toBe("diaper")
     expect(sendingState({ ...CLOSED, open: "nursing" }, SWITCH, true).open).toBe("nursing")
+  })
+})
+
+describe("a saved measurement", () => {
+  it("offers no Undo, since its card edits or deletes it", () => {
+    const saved = { measurement: measurement("measurement-1", NOW, { weightG: 4300 }), changed: [] }
+    expect(savedState(CLOSED, MEASURED, saved, NOW).toast).toBeNull()
   })
 })
 
