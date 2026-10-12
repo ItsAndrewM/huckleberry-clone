@@ -26,7 +26,8 @@ const TrendsBody = ({ me, now }: { readonly me: Me; readonly now: number }) => {
   const today = localDateOf(now, me.household.timeZone)
   const period = shownPeriod(search, today, me.child.birthDate)
   const id = periodId(period)
-  const picked = pick?.period === id ? pick.date : null
+  if (pick !== null && pick.period !== id) setPick(null)
+  const picked = pick?.date ?? null
   return (
     <>
       <ViewSwitch period={period} today={today} birthDate={me.child.birthDate} picked={picked} />
