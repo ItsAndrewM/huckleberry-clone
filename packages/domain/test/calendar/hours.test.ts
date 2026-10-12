@@ -1,9 +1,11 @@
 import fc from "fast-check"
 import { describe, expect, it } from "vitest"
-import { addDaysToDate, layoutDay, localDateTimeOf, zonedDayBounds } from "../../src/index.ts"
+import { layoutDay, localDateOf, localDateTimeOf, zonedDayBounds } from "../../src/index.ts"
 import { AC23_DAY_LENGTHS } from "../fixtures/scenarios.ts"
-import { PROPERTY_ZONES, VANCOUVER } from "../fixtures/zones.ts"
+import { VANCOUVER, zonedInstants } from "../fixtures/zones.ts"
 import { BOUNDS, MINUTE, SCALE, dayOf } from "./fixtures.ts"
+
+const TROLL = "Antarctica/Troll"
 
 const hoursOf = (date: string, zone: string) => {
   const bounds = zonedDayBounds(date, zone)
@@ -46,6 +48,13 @@ describe("layoutDay's hour rows", () => {
     expect(grid.hours.map(({ repeated }) => repeated).slice(0, 4)).toEqual([false, false, true, false])
   })
 
+  it("marks both second-pass hours on a day the clocks go back two hours", () => {
+    const grid = hoursOf("2026-10-25", TROLL)
+    expect(localTimes("2026-10-25", TROLL).slice(0, 6)).toEqual(["00:00", "01:00", "02:00", "01:00", "02:00", "03:00"])
+    expect(grid.hours.map(({ repeated }) => repeated).slice(0, 6)).toEqual([false, false, false, true, true, false])
+    expect(grid.hours.filter(({ repeated }) => repeated)).toHaveLength(2)
+  })
+
   it("skips the hour the clocks went forward over", () => {
     expect(localTimes("2026-03-08", VANCOUVER).slice(0, 3)).toEqual(["00:00", "01:00", "03:00"])
   })
@@ -54,10 +63,10 @@ describe("layoutDay's hour rows", () => {
     expect(localTimes("2026-09-06", "America/Santiago")[0]).toBe("01:00")
   })
 
-  it("tiles every day in every zone from the first step to the last, with 23 to 25 rows", () => {
-    const dates = fc.integer({ min: 0, max: 4000 }).map((days) => addDaysToDate("2020-01-01", days))
+  it("tiles every day in every zone from the first step to the last, with 23 to 25 rows, clock changes included", () => {
     fc.assert(
-      fc.property(dates, fc.constantFrom(...PROPERTY_ZONES), (date, zone) => {
+      fc.property(zonedInstants, ([instant, zone]) => {
+        const date = localDateOf(instant, zone)
         const grid = hoursOf(date, zone)
         expect(tiles(grid)).toBe(true)
         expect(grid.hours[0]?.start).toBe(zonedDayBounds(date, zone).start)

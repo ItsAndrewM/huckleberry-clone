@@ -21,6 +21,11 @@ describe("slotIn", () => {
     expect(slotIn(TWO_AM, 3, LATER)).toBe(atMinute(165))
   })
 
+  it("treats a tap with no readable position as the hour's start, or nothing when that's after now", () => {
+    expect(slotIn(TWO_AM, Number.NaN, LATER)).toBe(atMinute(120))
+    expect(slotIn(TWO_AM, Number.NaN, atMinute(110))).toBeNull()
+  })
+
   it("does nothing for a tap after now, and rounds one before it down as usual", () => {
     expect(slotIn(TWO_AM, 0.25, atMinute(130))).toBeNull()
     expect(slotIn(TWO_AM, 0.1, atMinute(130))).toBe(atMinute(120))

@@ -26,16 +26,16 @@ const hourStarts = (date: LocalDate, zone: TimeZone, bounds: Interval): Readonly
 export const hourRows = (date: LocalDate, zone: TimeZone, placing: Placing): ReadonlyArray<HourRow> => {
   const { bounds, scale } = placing
   const starts = hourStarts(date, zone, bounds)
+  const clocks = starts.map((start) => localDateTimeOf(start, zone))
   return starts.map((start, index) => {
     const end = starts[index + 1] ?? bounds.end
     const top = stepAt(bounds, scale.stepMs, start)
-    const previous = starts[index - 1]
     return {
       start,
       end,
       top,
       height: stepAt(bounds, scale.stepMs, end) - top,
-      repeated: previous !== undefined && localDateTimeOf(previous, zone) === localDateTimeOf(start, zone),
+      repeated: clocks.indexOf(localDateTimeOf(start, zone)) < index,
     }
   })
 }

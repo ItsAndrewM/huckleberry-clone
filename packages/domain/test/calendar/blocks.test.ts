@@ -129,6 +129,19 @@ describe("layoutDay's blocks", () => {
     ])
   })
 
+  it("starts a new group of lanes with a block that begins exactly where the overlapping ones end", () => {
+    const blocks = [
+      block("a", [side("left", 60, 120)]),
+      block("b", [side("left", 60, 120)]),
+      block("c", [side("left", 120, 180)]),
+    ]
+    expect(lanesOf(blocks)).toEqual([
+      ["a", 0, 2],
+      ["b", 1, 2],
+      ["c", 0, 1],
+    ])
+  })
+
   it("orders blocks that start together by end, then by id", () => {
     const blocks = [
       block("long", [side("left", 300, 360)]),
