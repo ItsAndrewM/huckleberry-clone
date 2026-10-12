@@ -24,7 +24,10 @@ const scrollIntoMiddle = (node: HTMLDivElement | null) => node?.scrollIntoView({
 export const DayGrid = ({ model, display, now, onOpen }: DayGridProps) => {
   const { grid } = model
   return (
-    <section aria-label="The day by hour" className={cn("relative mt-2 mb-4 [--cal-step:5px]", stepsTall(grid.steps))}>
+    <section
+      aria-label="The day by hour"
+      className={cn("relative isolate mt-2 mb-4 [--cal-step:5px]", stepsTall(grid.steps))}
+    >
       <div ref={scrollIntoMiddle} aria-hidden="true" className={cn("absolute", atStep(anchorOf(model)))} />
       <div className="pointer-events-none absolute inset-y-0 right-26 left-14 z-10">
         {grid.blocks.map((block) => {

@@ -1,7 +1,22 @@
-import { expect, test } from "@playwright/test"
+import { expect, type Locator, test } from "@playwright/test"
 import { busyDay, DAY, emptyDay, feed, local, NOW, openHistory, playHistory } from "./played-day.ts"
 
-const HOUR_LABEL = /^\d{1,2} [AP]M$/u
+const HOUR_LABEL = /^\d{1,2}\s[AP]M$/u
+
+type Box = Awaited<ReturnType<Locator["boundingBox"]>>
+
+interface Point {
+  readonly x: number
+  readonly y: number
+}
+
+const middleOf = (box: Box): Point => ({
+  x: (box?.x ?? Number.NaN) + (box?.width ?? Number.NaN) / 2,
+  y: (box?.y ?? Number.NaN) + (box?.height ?? Number.NaN) / 2,
+})
+
+const covers = (box: Box, { x, y }: Point) =>
+  box !== null && box.x < x && x < box.x + box.width && box.y < y && y < box.y + box.height
 
 test("draws each nursing feed as a block, and bottles and diapers as markers by the hour", async ({ page }) => {
   const { played, andrew, emily } = await playHistory(page, [])
@@ -62,4 +77,20 @@ test("skips the hour the clocks go forward over", async ({ page }) => {
   const grid = page.getByRole("region", { name: "The day by hour" })
   await expect(grid.getByText(HOUR_LABEL)).toHaveCount(23)
   await expect(grid.getByText("2 AM", { exact: true })).toHaveCount(0)
+})
+
+test("keeps the grid under the tab bar, so a tab with a block scrolled behind it still takes the tap", async ({
+  page,
+}) => {
+  const { played, andrew, emily } = await playHistory(page, [])
+  played.days.push(busyDay(andrew, emily))
+  await openHistory(page)
+  const block = page.getByRole("button", { name: /^Nursing at 9:10 AM: in progress/u })
+  const trends = page.getByRole("navigation", { name: "Main" }).getByRole("link", { name: "Trends" })
+  await expect(block).toBeVisible()
+  const tab = middleOf(await trends.boundingBox())
+  await page.evaluate(`window.scrollBy(0, ${middleOf(await block.boundingBox()).y - tab.y})`)
+  expect(covers(await block.boundingBox(), tab)).toBe(true)
+  await trends.click()
+  await expect(page).toHaveURL(/\/trends$/u)
 })

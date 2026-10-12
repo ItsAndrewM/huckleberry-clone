@@ -101,7 +101,7 @@
   left: calc(100% / var(--cal-lanes) * --value(integer));
 }
 
-@source inline("cal-at cal-tall {cal-at,cal-tall}-tens-{0..30} {cal-at,cal-tall}-ones-{0..9}");
+@source inline("cal-at cal-tall {cal-at,cal-tall}-tens-{0..31} {cal-at,cal-tall}-ones-{0..9}");
 @source inline("cal-lanes-{1..6} cal-lane-{0..5}");
 
 @layer base {

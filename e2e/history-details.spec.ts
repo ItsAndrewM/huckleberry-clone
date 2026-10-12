@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test"
-import { busyDay, openHistory, playHistory } from "./played-day.ts"
+import { busyDay, dayHeading, diaper, emptyDay, local, openHistory, playHistory } from "./played-day.ts"
 
 test("opens a feed's details: its times, sides, pause and bottle, and who logged it", async ({ page }) => {
   const { played, andrew, emily } = await playHistory(page, [])
@@ -49,4 +49,24 @@ test("opens the Nursing sheet for a feed that's still going, as Today does", asy
   await page.getByRole("button", { name: /^Nursing at 9:10 AM: in progress/u }).click()
   const sheet = page.getByRole("dialog", { name: "Nursing" })
   await expect(sheet.getByRole("button", { name: "Pause" })).toBeVisible()
+})
+
+test("closes an entry's details when the day changes under them, rather than calling the entry deleted", async ({
+  page,
+}) => {
+  const { played, emily } = await playHistory(page, [emptyDay("2026-10-08")])
+  played.days.push({
+    ...emptyDay("2026-10-07"),
+    diapers: [diaper("early", local("08:00", "2026-10-07"), true, false, emily)],
+  })
+  await openHistory(page, "?date=2026-10-08")
+  await page.getByRole("link", { name: "Previous day" }).click()
+  await expect(dayHeading(page)).toHaveText("Wed, Oct 7")
+  await page.getByRole("button", { name: "Diaper at 8:00 AM: Pee" }).click()
+  await expect(page.getByRole("dialog", { name: "Diaper" })).toBeVisible()
+  await page.goBack()
+  await expect(page).toHaveURL(/\/history\?date=2026-10-08$/u)
+  await expect(page.getByRole("dialog")).toHaveCount(0)
+  await expect(page.getByText("This entry was deleted.")).toHaveCount(0)
+  await expect(dayHeading(page)).toHaveText("Thu, Oct 8")
 })

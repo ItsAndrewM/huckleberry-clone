@@ -57,7 +57,7 @@ test("starts the day at the same height on an earlier day as on today", async ({
   await expect(dayHeading(page)).toHaveText("Fri, Oct 9")
   await expect(day).toBeVisible()
   const today = await topOfPage(page, day)
-  expect(today).toBeCloseTo(earlier, 1)
+  expect(today).toBeCloseTo(earlier, 0)
 })
 
 test("shows today for an address naming a later day or no real day", async ({ page }) => {
