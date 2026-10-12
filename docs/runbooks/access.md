@@ -66,7 +66,7 @@ Run these on each iPhone:
 
 - [ ] iOS 16.4 or later. The built CSS needs it.
 - [ ] **Sign in:** in Safari, open https://baby.andamonium.dev. It goes straight to Google, then back to the app signed in.
-- [ ] **Install:** Share, then Add to Home Screen. The installed app opens standalone, with the moon icon and "Baby tracker" under it. Check the status bar in light and dark.
+- [ ] **Install:** Share, then Add to Home Screen. On iOS 26, Share may sit under ⋯; from M5.1 the app's own card in a Safari tab says so. The installed app opens standalone, with the moon icon and "Baby tracker" under it, and Settings' Home Screen line reads "Installed." Check the status bar in light and dark.
 - [ ] **Offline:** open the installed app online once, so the service worker saves this build. Then cold-start it in airplane mode: the app opens with "No connection".
 - [ ] **Session expiry:** in Zero Trust (My Team, then Users), revoke that parent's sessions. Reopen the app, tap "Sign in to continue", sign in with Google, and land back in the app.
 - [ ] **Switching Google accounts:** sign out of Access first, at https://baby.andamonium.dev/cdn-cgi/access/logout.

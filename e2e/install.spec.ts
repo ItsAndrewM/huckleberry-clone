@@ -85,6 +85,28 @@ test.describe("install guidance on an iPhone", () => {
     await expect(installCard(page)).toHaveCount(0)
   })
 
+  test("Settings gives a browser tab the card's steps, even once the card is dismissed", async ({ page }) => {
+    await standalone(page, false)
+    await page.goto("/settings")
+    await installCard(page).getByRole("button", { name: "Not now" }).click()
+    await expect(page.getByRole("heading", { name: "Home Screen" })).toBeVisible()
+    await expect(page.getByText(/^In a browser tab\. Tap Share/)).toContainText("No Share button? Tap More first.")
+  })
+
+  test("Settings says the installed app is installed", async ({ page }) => {
+    await standalone(page, true)
+    await page.goto("/settings")
+    await expect(page.getByRole("heading", { name: "Home Screen" })).toBeVisible()
+    await expect(page.getByText("Installed.", { exact: true })).toBeVisible()
+  })
+
+  test("Settings has no Home Screen line without the iPhone's standalone flag", async ({ page }) => {
+    await standalone(page, undefined)
+    await page.goto("/settings")
+    await expect(page.getByRole("heading", { name: "Settings", level: 1 })).toBeVisible()
+    await expect(page.getByRole("heading", { name: "Home Screen" })).toHaveCount(0)
+  })
+
   test("Not now still hides the card for this visit when the browser blocks storage", async ({ page }) => {
     const errors: string[] = []
     page.on("pageerror", (error) => errors.push(error.message))
