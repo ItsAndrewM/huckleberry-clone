@@ -143,3 +143,37 @@ describe("optimistic Today", () => {
     expect(queryClient.getQueryData(queryKeys.growth)).toBe(growth)
   })
 })
+
+describe("a send before the first load", () => {
+  const firstLoad = <Data>(queryClient: QueryClient, queryKey: ReadonlyArray<string>, data: Data) => {
+    let answer = () => {}
+    const loaded = queryClient.fetchQuery({
+      queryKey,
+      queryFn: () =>
+        new Promise<Data>((resolve) => {
+          answer = () => resolve(data)
+        }),
+    })
+    return { loaded, answer: () => answer() }
+  }
+
+  it("leaves Today's first load running when nothing is shown yet, as a draft sent at startup is", async () => {
+    const queryClient = new QueryClient()
+    queryClient.setQueryData(queryKeys.me, meWith())
+    const today = firstLoad(queryClient, queryKeys.today, todayWith())
+    expect(await pendIn(queryClient, DIAPER, NOW)).toBeNull()
+    expect(queryClient.getQueryState(queryKeys.today)?.fetchStatus).toBe("fetching")
+    today.answer()
+    await expect(today.loaded).resolves.toEqual(todayWith())
+  })
+
+  it("leaves Growth's first load running too, for a measurement sent before Growth has loaded", async () => {
+    const queryClient = new QueryClient()
+    queryClient.setQueryData(queryKeys.me, meWith())
+    const growth = firstLoad(queryClient, queryKeys.growth, { measurements: MEASUREMENTS })
+    expect(await pendIn(queryClient, LOG, NOW)).toBeNull()
+    expect(queryClient.getQueryState(queryKeys.growth)?.fetchStatus).toBe("fetching")
+    growth.answer()
+    await expect(growth.loaded).resolves.toEqual({ measurements: MEASUREMENTS })
+  })
+})

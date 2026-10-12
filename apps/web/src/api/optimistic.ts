@@ -20,6 +20,7 @@ interface GrowthPended {
 export type Pended = TodayPended | GrowthPended
 
 const pendToday = async (queryClient: QueryClient, action: Action, now: number): Promise<Pended | null> => {
+  if (queryClient.getQueryData(queryKeys.today) === undefined) return null
   await queryClient.cancelQueries({ queryKey: queryKeys.today })
   const before = queryClient.getQueryData<Today>(queryKeys.today)
   const me = queryClient.getQueryData<Me>(queryKeys.me)
@@ -32,6 +33,7 @@ const pendToday = async (queryClient: QueryClient, action: Action, now: number):
 }
 
 const pendGrowth = async (queryClient: QueryClient, action: MeasurementAction, now: number): Promise<Pended | null> => {
+  if (queryClient.getQueryData(queryKeys.growth) === undefined) return null
   await queryClient.cancelQueries({ queryKey: queryKeys.growth })
   const before = queryClient.getQueryData<Growth>(queryKeys.growth)
   const me = queryClient.getQueryData<Me>(queryKeys.me)
