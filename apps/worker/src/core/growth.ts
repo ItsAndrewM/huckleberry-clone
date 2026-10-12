@@ -10,7 +10,7 @@ import {
   queryKeys,
   type VersionedAction,
 } from "@bt/contracts"
-import type { Instant } from "@bt/domain"
+import type { Instant, Interval } from "@bt/domain"
 import { type Calendar, calendarOf, changedKeys, timeIssue } from "./calendar.ts"
 import type { CoreResult, Stamp } from "./receipts.ts"
 
@@ -57,6 +57,17 @@ export const growthOf = (sql: SqlStorage): Growth => ({
     .toArray()
     .map(measurementOf),
 })
+
+export const liveMeasurementsIn = (sql: SqlStorage, period: Interval): Measurement[] =>
+  sql
+    .exec<MeasurementRow>(
+      `SELECT ${COLUMNS} FROM growth_measurements WHERE deleted_at IS NULL AND measured_at >= ? AND measured_at < ?
+       ORDER BY measured_at, rowid`,
+      period.start,
+      period.end,
+    )
+    .toArray()
+    .map(measurementOf)
 
 const moment = (at: Instant | null) => (at === null ? null : { start: at, end: at })
 

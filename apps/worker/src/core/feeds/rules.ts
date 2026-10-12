@@ -127,13 +127,17 @@ export const latestOf = (feed: Feed): Instant => {
   return Math.max(...times)
 }
 
-const spanOf = (feed: Feed, now: Instant): Interval => ({
+const spanIncludingItsEnd = (feed: Feed, now: Instant): Interval => ({
   start: feed.startedAt,
-  end: feed.endedAt ?? Math.max(now, latestOf(feed)),
+  end: (feed.endedAt ?? Math.max(now, latestOf(feed))) + 1,
 })
 
 export const feedChanges = (calendar: Calendar, before: Feed | null, after: Feed | null, now: Instant): Changed =>
-  changedKeys(calendar, before === null ? null : spanOf(before, now), after === null ? null : spanOf(after, now))
+  changedKeys(
+    calendar,
+    before === null ? null : spanIncludingItsEnd(before, now),
+    after === null ? null : spanIncludingItsEnd(after, now),
+  )
 
 export const savedFeed = (
   calendar: Calendar,

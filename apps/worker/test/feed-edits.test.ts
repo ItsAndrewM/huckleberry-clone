@@ -5,9 +5,17 @@ import { finishFeed, startFeed } from "../src/core/feeds/lifecycle.ts"
 import { logFeed } from "../src/core/feeds/log.ts"
 import { loadFeed } from "../src/core/feeds/store.ts"
 import type { Stamp } from "../src/core/receipts.ts"
-import { bottle, newFeed, segment } from "./feed-fixtures.ts"
+import {
+  bottle,
+  CHANGED_SUNDAY_AND_MONDAY,
+  newFeed,
+  PAST_FEED_WITH_ITS_BOTTLE_AT_MIDNIGHT,
+  segment,
+  WEDNESDAY_OCT_14_NOON,
+} from "./feed-fixtures.ts"
 import {
   ACTION_ID,
+  ANDREW,
   BIRTH_DATE_BEGINS,
   CHANGED_TODAY,
   caregiverId,
@@ -169,6 +177,15 @@ describe("deleting and restoring a feed", () => {
       response: { ...feed, version: 2, deletedAt: NOW },
       changed: [...CHANGED_TODAY, ["deleted"]],
     })
+  })
+
+  it("names Monday's day and week when it deletes a past feed from Sunday night whose bottle came at midnight", async () => {
+    const result = await inHousehold((sql) => {
+      const stamp = stampOf(sql, ANDREW.email, WEDNESDAY_OCT_14_NOON)
+      const feed = saved(logFeed(stamp, PAST_FEED_WITH_ITS_BOTTLE_AT_MIDNIGHT)(sql))
+      return deleteFeed(stamp, feed.id, versioned(feed))(sql)
+    })
+    expect(result.ok && result.changed).toEqual([...CHANGED_SUNDAY_AND_MONDAY, ["deleted"]])
   })
 
   it("restores it as it was, with a new version and no deletedAt (AC 19)", async () => {
