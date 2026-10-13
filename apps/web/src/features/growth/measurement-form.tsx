@@ -1,8 +1,8 @@
 import type { Measurement, Me } from "@bt/contracts"
 import { Button } from "../../components/ui/button.tsx"
+import { DeleteEntry } from "../../sheets/delete-entry.tsx"
 import { FailureNote } from "../../sheets/failure-note.tsx"
 import { WhenField } from "../../sheets/when-field.tsx"
-import { DeleteMeasurement } from "./delete-measurement.tsx"
 import { EntryField } from "./entry-field.tsx"
 import { entryMessage, LENGTH_UNITS, WEIGHT_UNITS } from "./entry-text.ts"
 import { useMeasurementForm } from "./use-measurement-form.ts"
@@ -44,7 +44,9 @@ export const MeasurementForm = ({ me, editing }: MeasurementFormProps) => {
           Save
         </Button>
       )}
-      {target === null ? null : <DeleteMeasurement cleared={cleared} onDelete={remove} />}
+      {target === null ? null : (
+        <DeleteEntry noun="measurement" emptied={cleared ? "Every value is cleared." : null} onDelete={remove} />
+      )}
     </>
   )
 }

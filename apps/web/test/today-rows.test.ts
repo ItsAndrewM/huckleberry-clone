@@ -92,6 +92,7 @@ describe("recentRows", () => {
         detail: ["Left 12 min", "Right 8 min", "60 mL"],
         by: "Andrew",
         saving: false,
+        opens: null,
       },
     ])
   })

@@ -1,6 +1,7 @@
 import type { Me, Today } from "@bt/contracts"
 import { useLast24h, useMe, useToday } from "../../api/hooks.ts"
 import { retryOf } from "../../api/retry.ts"
+import { useSheets } from "../../sheets/sheets-context.ts"
 import { NotLoaded } from "../../shell/not-loaded.tsx"
 import { Page } from "../../shell/page.tsx"
 import { useNow } from "../../timer/use-now.ts"
@@ -18,13 +19,17 @@ interface TodayCardsProps {
 }
 
 const TodayCards = ({ today, last24h, household }: TodayCardsProps) => {
+  const sheets = useSheets()
   const now = useNow()
   const display = displayOf(household)
   return (
     <>
       <FeedCard today={today} display={display} now={now} />
       <TotalsCard today={today.totals} last24h={last24h} volume={display.volume} />
-      <RecentList rows={recentRows(today.recent, display, now)} />
+      <RecentList
+        rows={recentRows(today.recent, display, now)}
+        onOpen={({ opens, id }) => opens !== null && sheets.show(opens, id)}
+      />
     </>
   )
 }
