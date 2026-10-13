@@ -1,4 +1,3 @@
-import { localDateTimeOf } from "@bt/domain"
 import { describe, expect, it } from "vitest"
 import { pendingId } from "../src/api/pending.ts"
 import { hiddenIn } from "../src/features/history/history-kinds.ts"
@@ -88,8 +87,8 @@ describe("listNote", () => {
 })
 
 describe("logTimeOn", () => {
-  it("logs at now on today", () => {
-    expect(logTimeOn("2026-10-09", DISPLAY.timeZone, NOW_ON_DAY + 45_000)).toBe(NOW_ON_DAY + 45_000)
+  it("leaves today to each sheet's own now, as Today's buttons do", () => {
+    expect(logTimeOn("2026-10-09", DISPLAY.timeZone, NOW_ON_DAY + 45_000)).toBeNull()
   })
 
   it("logs at the same clock time, to the minute, on an earlier day", () => {
@@ -104,7 +103,6 @@ describe("logTimeOn", () => {
 
   it("logs an hour on when the clocks skipped that time", () => {
     const now = Date.parse("2026-03-09T02:30:00-07:00")
-    const at = logTimeOn("2026-03-08", LOS_ANGELES, now)
-    expect(localDateTimeOf(at, LOS_ANGELES)).toBe("2026-03-08T03:30")
+    expect(logTimeOn("2026-03-08", LOS_ANGELES, now)).toBe(Date.parse("2026-03-08T03:30:00-07:00"))
   })
 })

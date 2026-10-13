@@ -44,7 +44,11 @@ export const DayView = ({ day, me, now, hidden, asList }: DayViewProps) => {
     setShown(ids)
     sheets.show("details")
   }
-  const logOnDay = () => sheets.showAt("logAt", logTimeOn(day.date, display.timeZone, tapTime()))
+  const logOnDay = () => {
+    const at = logTimeOn(day.date, display.timeZone, tapTime())
+    if (at === null) sheets.show("logAt")
+    else sheets.showAt("logAt", at)
+  }
   const rows = asList ? listRows(day, display, now, hidden) : []
   const detailsLeftFromAnotherDay = shown === null && sheets.open === "details"
   return (

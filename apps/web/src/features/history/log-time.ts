@@ -4,8 +4,8 @@ import { localDateOf, localDateTimeOf, resolveLocal, startOfDate } from "@bt/dom
 const wallMsIntoDay = (date: LocalDate, clock: string) =>
   Date.parse(`${date}T${clock}:00Z`) - Date.parse(`${date}T00:00:00Z`)
 
-export const logTimeOn = (date: LocalDate, zone: string, now: number) => {
-  if (localDateOf(now, zone) === date) return now
+export const logTimeOn = (date: LocalDate, zone: string, now: number): number | null => {
+  if (localDateOf(now, zone) === date) return null
   const clock = localDateTimeOf(now, zone).slice("YYYY-MM-DDT".length)
   const resolution = resolveLocal(`${date}T${clock}`, zone)
   if (resolution.kind === "ok") return resolution.instant

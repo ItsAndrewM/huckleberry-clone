@@ -144,7 +144,7 @@ test("hides a kind's rows with its chip, and keeps the list while stepping", asy
   await expect(page).toHaveURL(/\/history\?view=list&date=2026-10-08&hide=feeds(?:%2C|,)diapers$/u)
 })
 
-test("logs on an earlier day at the same clock time, and on today at now", async ({ page }) => {
+test("logs on an earlier day at the same clock time", async ({ page }) => {
   await playBusyDay(page)
   await playToday(page)
   await openHistory(page, "?view=list&date=2026-10-08")
@@ -154,6 +154,34 @@ test("logs on an earlier day at the same clock time, and on today at now", async
   await page.keyboard.press("Escape")
   await page.getByRole("link", { name: "Next day" }).click()
   await theList(page).getByRole("button", { name: "Log on this day…" }).click()
-  await page.getByRole("dialog", { name: "Log at 9:30 AM" }).getByRole("button", { name: "Bottle" }).click()
-  await expect(page.getByRole("dialog", { name: "Bottle" }).getByLabel("When")).toHaveValue("2026-10-09T09:30")
+  await page
+    .getByRole("dialog", { name: /^Log\b/u })
+    .getByRole("button", { name: "Bottle" })
+    .click()
+  await expect(page.getByRole("dialog", { name: "Bottle" }).getByLabel("When")).toHaveCount(0)
+})
+
+test("logs on today as Today's buttons do: a diaper now, and a past feed from half an hour back", async ({ page }) => {
+  await playBusyDay(page)
+  await playToday(page)
+  await openHistory(page, "?view=list")
+  await theList(page).getByRole("button", { name: "Log on this day…" }).click()
+  await page
+    .getByRole("dialog", { name: /^Log\b/u })
+    .getByRole("button", { name: "Diaper" })
+    .click()
+  const diaper = page.getByRole("dialog", { name: "Diaper" })
+  await expect(diaper.getByText("Now", { exact: true })).toBeVisible()
+  await expect(diaper.getByLabel("When")).toHaveCount(0)
+  await page.keyboard.press("Escape")
+  await expect(diaper).toBeHidden()
+  await theList(page).getByRole("button", { name: "Log on this day…" }).click()
+  await page
+    .getByRole("dialog", { name: /^Log\b/u })
+    .getByRole("button", { name: "Nursing" })
+    .click()
+  const pastFeed = page.getByRole("dialog", { name: "Past feed" })
+  await expect(pastFeed.getByLabel("Started")).toHaveValue("2026-10-09T09:00")
+  await pastFeed.getByRole("textbox", { name: "Left" }).fill("15")
+  await expect(pastFeed.getByRole("button", { name: "Save" })).toBeEnabled()
 })
