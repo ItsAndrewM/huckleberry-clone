@@ -6,6 +6,7 @@ import { lastFeed, liveFeedsSince, prefillOf } from "./feeds/reads.ts"
 import { activeFeed } from "./feeds/rules.ts"
 import { lastSleep, liveSleepsSince } from "./sleeps/reads.ts"
 import { activeSleep } from "./sleeps/rules.ts"
+import { liveDosesIn } from "./supplements/doses.ts"
 
 const timeOf = (entry: RecentEntry): Instant => (entry.kind === "feed" ? entry.feed.startedAt : entry.diaper.occurredAt)
 
@@ -35,6 +36,7 @@ export const todayOf = (sql: SqlStorage, now: Instant): Today => {
     lastSleep: lastSleep(sql),
     prefill: prefillOf(sql),
     recent: recentIn(last24h, feeds, diapers),
+    doses: liveDosesIn(sql, day),
   }
 }
 

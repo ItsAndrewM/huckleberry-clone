@@ -109,6 +109,7 @@ describe("Today's recent entries", () => {
       lastSleep: null,
       prefill: { lastBottle: null, lastSide: null },
       recent: [SLEEP, { kind: "diaper", diaper: DIAPER }],
+      doses: [],
     }
     expect(decodes(Today, today)).toBe(true)
   })

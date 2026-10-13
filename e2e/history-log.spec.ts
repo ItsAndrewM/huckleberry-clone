@@ -30,6 +30,7 @@ const playToday = (page: Page) =>
         lastSleep: null,
         prefill: { lastBottle: { breastMilkMl: 0, formulaMl: 90 }, lastSide: null },
         recent: [],
+        doses: [],
       },
     }),
   )

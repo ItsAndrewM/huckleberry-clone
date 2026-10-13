@@ -5,6 +5,7 @@ import { Diaper } from "./diapers.ts"
 import { Feed } from "./feeds.ts"
 import { Measurement } from "./growth.ts"
 import { Sleep } from "./sleeps.ts"
+import { Dose } from "./supplements.ts"
 import { Instant, IsoWeek, LocalDate, YearMonth } from "./time.ts"
 import { Totals } from "./today.ts"
 
@@ -28,6 +29,7 @@ const records = {
   diapers: Schema.Array(Diaper),
   sleeps: Schema.Array(Sleep),
   measurements: Schema.Array(Measurement),
+  doses: Schema.Array(Dose),
 }
 
 export const DayPeriod = Schema.Struct({

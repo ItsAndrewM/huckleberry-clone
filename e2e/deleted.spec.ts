@@ -43,6 +43,7 @@ interface Deleted {
   readonly diapers: ReadonlyArray<Diaper>
   readonly sleeps: ReadonlyArray<never>
   readonly measurements: ReadonlyArray<Measurement>
+  readonly doses: ReadonlyArray<never>
 }
 
 interface Sent {
@@ -63,7 +64,7 @@ type Answer =
     }
   | { readonly _tag: "ServiceUnavailable" }
 
-const NOTHING: Deleted = { feeds: [], diapers: [], sleeps: [], measurements: [] }
+const NOTHING: Deleted = { feeds: [], diapers: [], sleeps: [], measurements: [], doses: [] }
 
 const deletedBy = (by: string, at: number, version = 2): Audit => ({
   version,
@@ -169,6 +170,7 @@ test("lists each deleted entry, newest deletion first, with when it happened and
     diapers: [diaper(deletedBy(andrew, NOW - 5 * MINUTE))],
     sleeps: [],
     measurements: [weighed(deletedBy(emily, NOW - 20 * MINUTE))],
+    doses: [],
   }))
   await openDeleted(page)
   const rows = entries(page).getByRole("listitem")

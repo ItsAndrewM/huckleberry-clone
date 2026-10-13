@@ -101,6 +101,7 @@ export interface TodayAnswer {
   readonly lastSleep: null
   readonly prefill: Prefill
   readonly recent: ReadonlyArray<RecentAnswer>
+  readonly doses: ReadonlyArray<never>
 }
 
 export const todayWith = (activeFeed: FeedAnswer | null = null, prefill = NO_PREFILL): TodayAnswer => ({
@@ -112,6 +113,7 @@ export const todayWith = (activeFeed: FeedAnswer | null = null, prefill = NO_PRE
   lastSleep: null,
   prefill,
   recent: activeFeed === null ? [] : [{ kind: "feed", feed: activeFeed }],
+  doses: [],
 })
 
 interface SentSegment {

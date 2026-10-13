@@ -10,7 +10,9 @@ import { deleteSleep } from "../src/core/sleeps/edits.ts"
 import { startSleep } from "../src/core/sleeps/lifecycle.ts"
 import { logSleep } from "../src/core/sleeps/log.ts"
 import { lastSleep } from "../src/core/sleeps/reads.ts"
+import { deleteDose } from "../src/core/supplements/dose-writes.ts"
 import { last24hOf, todayOf } from "../src/core/today.ts"
+import { dosedAt } from "./dose-fixtures.ts"
 import { bottle, newFeed, segment } from "./feed-fixtures.ts"
 import {
   ACTION_ID,
@@ -60,6 +62,7 @@ describe("todayOf", () => {
       lastSleep: null,
       prefill: { lastBottle: null, lastSide: null },
       recent: [],
+      doses: [],
     })
   })
 
@@ -102,6 +105,7 @@ describe("todayOf", () => {
       lastSleep: null,
       prefill: { lastBottle: null, lastSide: "left" },
       recent: [{ kind: "feed", feed }],
+      doses: [],
     })
     expect(later.totals.leftSeconds).toBe(1800)
   })
@@ -230,6 +234,7 @@ describe("todayOf", () => {
       lastSleep: null,
       prefill: { lastBottle: { breastMilkMl: 40, formulaMl: 20 }, lastSide: "left" },
       recent: [{ kind: "feed", feed: kept }],
+      doses: [],
     })
   })
 
@@ -366,6 +371,20 @@ describe("todayOf, for sleep", () => {
     const few = await readsAfter(10)
     expect(few).toBeGreaterThan(0)
     expect(await readsAfter(150)).toBe(few)
+  })
+})
+
+describe("todayOf, for doses", () => {
+  it("answers today's doses oldest first, leaving out last night's and a deleted one, and counting none in the totals", async () => {
+    const { early, late, today } = await inHousehold((sql) => {
+      dosedAt(sql, ac4(-5))
+      const late = dosedAt(sql, minutesAgo(30))
+      const early = dosedAt(sql, minutesAgo(240))
+      const deleted = dosedAt(sql, minutesAgo(60))
+      saved(deleteDose(stampOf(sql), deleted.id, { actionId: crypto.randomUUID(), version: 1 })(sql))
+      return { early, late, today: todayOf(sql, NOW) }
+    })
+    expect(today).toMatchObject({ totals: NO_TOTALS, doses: [early, late] })
   })
 })
 

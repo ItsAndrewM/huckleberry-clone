@@ -33,6 +33,7 @@ export const withoutEntry = (deleted: Deleted, id: string): Deleted => ({
   diapers: deleted.diapers.filter((diaper) => diaper.id !== id),
   sleeps: deleted.sleeps.filter((sleep) => sleep.id !== id),
   measurements: deleted.measurements.filter((measurement) => measurement.id !== id),
+  doses: deleted.doses.filter((dose) => dose.id !== id),
 })
 
 export const restoreWaitReason = (connectivity: Connectivity): string | null => {

@@ -15,7 +15,7 @@ const ME = {
   },
 } satisfies Me
 
-const NOTHING = { feeds: [], diapers: [], sleeps: [], measurements: [] } satisfies Deleted
+const NOTHING = { feeds: [], diapers: [], sleeps: [], measurements: [], doses: [] } satisfies Deleted
 
 const deletedBy = (by: string, at: number) => ({ updatedBy: by, updatedAt: at, deletedAt: at })
 
@@ -38,6 +38,7 @@ describe("deletedRows", () => {
       measurements: [
         { ...measurement("m1", NOW - 120 * MINUTE, { weightG: 4210.5 }), ...deletedBy(ANDREW, NOW - 20 * MINUTE) },
       ],
+      doses: [],
     } satisfies Deleted
     expect(deletedRows(deleted, ME, "en-US").map(({ id }) => id)).toEqual(["diaper-1", "m1", "feed-1"])
   })

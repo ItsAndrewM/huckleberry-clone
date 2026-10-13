@@ -8,6 +8,8 @@ import { deleteMeasurement, logMeasurement } from "../src/core/growth.ts"
 import { deleteSleep } from "../src/core/sleeps/edits.ts"
 import { startSleep } from "../src/core/sleeps/lifecycle.ts"
 import { logSleep } from "../src/core/sleeps/log.ts"
+import { deleteDose } from "../src/core/supplements/dose-writes.ts"
+import { dosedAt } from "./dose-fixtures.ts"
 import { bottle, newFeed, segment } from "./feed-fixtures.ts"
 import {
   ACTION_ID,
@@ -50,7 +52,26 @@ describe("the household's recently deleted entries", () => {
         deleted: deletedOf(sql, NOW + 5),
       }
     })
-    expect(deleted).toEqual({ feeds: [feed], diapers: [second, first], sleeps: [], measurements: [measurement] })
+    expect(deleted).toEqual({
+      feeds: [feed],
+      diapers: [second, first],
+      sleeps: [],
+      measurements: [measurement],
+      doses: [],
+    })
+  })
+
+  it("list each deleted dose as it was deleted, the newest deletion first", async () => {
+    const { deletedFirst, deletedNext, deleted } = await inHousehold((sql) => {
+      const first = dosedAt(sql, minutesAgo(300))
+      const second = dosedAt(sql, minutesAgo(200))
+      return {
+        deletedFirst: saved(deleteDose(stampOf(sql, ANDREW.email, NOW + 1), second.id, VERSION_1)(sql)),
+        deletedNext: saved(deleteDose(stampOf(sql, ANDREW.email, NOW + 2), first.id, VERSION_1)(sql)),
+        deleted: deletedOf(sql, NOW + 3),
+      }
+    })
+    expect(deleted.doses).toEqual([deletedNext, deletedFirst])
   })
 
   it("list each deleted sleep as it was deleted, the newest deletion first, a running one with no end", async () => {
@@ -95,7 +116,7 @@ describe("the household's recently deleted entries", () => {
       saved(restoreDiaper(stampOf(sql), restored.id, { actionId: ACTION_ID, version: 2 })(sql))
       return deletedOf(sql, NOW)
     })
-    expect(deleted).toEqual({ feeds: [], diapers: [], sleeps: [], measurements: [] })
+    expect(deleted).toEqual({ feeds: [], diapers: [], sleeps: [], measurements: [], doses: [] })
   })
 
   it("reach back exactly 30 days from the household's clock", async () => {

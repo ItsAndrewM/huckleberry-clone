@@ -43,6 +43,7 @@ describe("GET /api/today", () => {
       lastSleep: null,
       prefill: { lastBottle: null, lastSide: null },
       recent: [],
+      doses: [],
     })
   })
 

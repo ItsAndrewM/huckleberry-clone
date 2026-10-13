@@ -107,6 +107,7 @@ const todayWith = (change: TodayChange) => ({
   lastSleep: null,
   prefill: { lastBottle: null, lastSide: null },
   recent: [],
+  doses: [],
   ...change,
 })
 

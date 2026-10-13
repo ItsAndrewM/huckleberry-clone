@@ -1,7 +1,14 @@
 const MINUTE_MS = 60_000
 const DAY_MS = 24 * 60 * MINUTE_MS
 
-export const TWO_YEARS = { days: 730, feedsADay: 12, diapersADay: 10, sleepsADay: 6, deletedFeedEvery: 50 } as const
+export const TWO_YEARS = {
+  days: 730,
+  feedsADay: 12,
+  diapersADay: 10,
+  sleepsADay: 6,
+  dosesADay: 1,
+  deletedFeedEvery: 50,
+} as const
 
 const insertFeed = (sql: SqlStorage, who: string, at: number, deletedAt: number | null) => {
   const feedId = crypto.randomUUID()
@@ -75,6 +82,20 @@ const insertSleep = (sql: SqlStorage, who: string, at: number, kind: "nap" | "ni
     at,
   )
 
+const insertDose = (sql: SqlStorage, who: string, at: number) =>
+  sql.exec(
+    `INSERT INTO supplement_logs
+       (id, supplement_id, occurred_at, local_date, dose, version, created_by, created_at, updated_by, updated_at)
+     VALUES (?, (SELECT id FROM supplements ORDER BY rowid LIMIT 1), ?, ?, '400 IU', 1, ?, ?, ?, ?)`,
+    crypto.randomUUID(),
+    at,
+    new Date(at).toISOString().slice(0, 10),
+    who,
+    at,
+    who,
+    at,
+  )
+
 const insertMeasurement = (sql: SqlStorage, who: string, at: number, day: number) =>
   sql.exec(
     `INSERT INTO growth_measurements (id, measured_at, weight_g, length_cm, head_cm, version, source, created_by, created_at, updated_by, updated_at)
@@ -102,6 +123,9 @@ const seedDay = (sql: SqlStorage, who: string, dayStart: number, day: number) =>
   for (let sleep = 0; sleep < TWO_YEARS.sleepsADay; sleep++) {
     insertSleep(sql, who, dayStart + sleep * 240 * MINUTE_MS + 30 * MINUTE_MS, sleep % 2 === 0 ? "night" : "nap")
   }
+  for (let dose = 0; dose < TWO_YEARS.dosesADay; dose++) {
+    insertDose(sql, who, dayStart + (9 * 60 + dose) * MINUTE_MS)
+  }
   if (day % 7 === 0) insertMeasurement(sql, who, dayStart + 10 * 60 * MINUTE_MS, day)
 }
 
@@ -112,6 +136,6 @@ export const seedTwoYears = (sql: SqlStorage, end: number) => {
 }
 
 export const rowCounts = (sql: SqlStorage) =>
-  ["feeds", "nursing_segments", "bottle_portions", "diapers", "sleeps", "growth_measurements"].map(
+  ["feeds", "nursing_segments", "bottle_portions", "diapers", "sleeps", "supplement_logs", "growth_measurements"].map(
     (table) => [table, sql.exec<{ n: number }>(`SELECT count(*) AS n FROM ${table}`).one().n] as const,
   )

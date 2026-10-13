@@ -4,6 +4,7 @@ import {
   Deleted,
   DeletedGroup,
   type Diaper,
+  type Dose,
   type Feed,
   type Measurement,
   RECENTLY_DELETED_DAYS,
@@ -69,12 +70,26 @@ const SLEEP: Sleep = {
   deletedAt: DELETED_AT,
 }
 
-const DELETED = { feeds: [FEED], diapers: [DIAPER], sleeps: [SLEEP], measurements: [MEASUREMENT] }
+const DOSE: Dose = {
+  id: "dose-1",
+  supplementId: "supplement-1",
+  occurredAt: AT - 60 * MINUTE_MS,
+  localDate: "2026-10-12",
+  dose: "400 IU",
+  version: 1,
+  createdBy: "caregiver-1",
+  createdAt: AT,
+  updatedBy: "caregiver-1",
+  updatedAt: AT,
+  deletedAt: DELETED_AT,
+}
+
+const DELETED = { feeds: [FEED], diapers: [DIAPER], sleeps: [SLEEP], measurements: [MEASUREMENT], doses: [DOSE] }
 
 const decodes = (input: Schema.Json) => Exit.isSuccess(Schema.decodeUnknownExit(Schema.toCodecJson(Deleted))(input))
 
 describe("the household's recently deleted entries", () => {
-  it("hold every deleted feed, diaper, sleep and measurement, each as it was when deleted", () => {
+  it("hold every deleted feed, diaper, sleep, measurement and dose, each as it was when deleted", () => {
     expect(decodes(DELETED)).toBe(true)
   })
 

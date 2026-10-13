@@ -1813,6 +1813,80 @@
                           {}
                         ]
                       }
+                    },
+                    "doses": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string"
+                          },
+                          "supplementId": {
+                            "type": "string"
+                          },
+                          "occurredAt": {
+                            "type": "integer",
+                            "minimum": 946684800000,
+                            "exclusiveMaximum": 4102444800000
+                          },
+                          "localDate": {
+                            "type": "string",
+                            "format": "date"
+                          },
+                          "dose": {
+                            "type": "string",
+                            "pattern": "^\\S[\\s\\S]*\\S$|^\\S$|^$",
+                            "maxLength": 40
+                          },
+                          "version": {
+                            "type": "integer",
+                            "minimum": 1
+                          },
+                          "createdBy": {
+                            "type": "string"
+                          },
+                          "createdAt": {
+                            "type": "integer",
+                            "minimum": 946684800000,
+                            "exclusiveMaximum": 4102444800000
+                          },
+                          "updatedBy": {
+                            "type": "string"
+                          },
+                          "updatedAt": {
+                            "type": "integer",
+                            "minimum": 946684800000,
+                            "exclusiveMaximum": 4102444800000
+                          },
+                          "deletedAt": {
+                            "anyOf": [
+                              {
+                                "type": "integer",
+                                "minimum": 946684800000,
+                                "exclusiveMaximum": 4102444800000
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "supplementId",
+                          "occurredAt",
+                          "localDate",
+                          "dose",
+                          "version",
+                          "createdBy",
+                          "createdAt",
+                          "updatedBy",
+                          "updatedAt",
+                          "deletedAt"
+                        ],
+                        "additionalProperties": false
+                      }
                     }
                   },
                   "required": [
@@ -1823,7 +1897,8 @@
                     "activeSleep",
                     "lastSleep",
                     "prefill",
-                    "recent"
+                    "recent",
+                    "doses"
                   ],
                   "additionalProperties": false
                 }
@@ -14895,6 +14970,80 @@
                         ],
                         "additionalProperties": false
                       }
+                    },
+                    "doses": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string"
+                          },
+                          "supplementId": {
+                            "type": "string"
+                          },
+                          "occurredAt": {
+                            "type": "integer",
+                            "minimum": 946684800000,
+                            "exclusiveMaximum": 4102444800000
+                          },
+                          "localDate": {
+                            "type": "string",
+                            "format": "date"
+                          },
+                          "dose": {
+                            "type": "string",
+                            "pattern": "^\\S[\\s\\S]*\\S$|^\\S$|^$",
+                            "maxLength": 40
+                          },
+                          "version": {
+                            "type": "integer",
+                            "minimum": 1
+                          },
+                          "createdBy": {
+                            "type": "string"
+                          },
+                          "createdAt": {
+                            "type": "integer",
+                            "minimum": 946684800000,
+                            "exclusiveMaximum": 4102444800000
+                          },
+                          "updatedBy": {
+                            "type": "string"
+                          },
+                          "updatedAt": {
+                            "type": "integer",
+                            "minimum": 946684800000,
+                            "exclusiveMaximum": 4102444800000
+                          },
+                          "deletedAt": {
+                            "anyOf": [
+                              {
+                                "type": "integer",
+                                "minimum": 946684800000,
+                                "exclusiveMaximum": 4102444800000
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "supplementId",
+                          "occurredAt",
+                          "localDate",
+                          "dose",
+                          "version",
+                          "createdBy",
+                          "createdAt",
+                          "updatedBy",
+                          "updatedAt",
+                          "deletedAt"
+                        ],
+                        "additionalProperties": false
+                      }
                     }
                   },
                   "required": [
@@ -14905,7 +15054,8 @@
                     "feeds",
                     "diapers",
                     "sleeps",
-                    "measurements"
+                    "measurements",
+                    "doses"
                   ],
                   "additionalProperties": false
                 }
@@ -15587,6 +15737,80 @@
                         ],
                         "additionalProperties": false
                       }
+                    },
+                    "doses": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string"
+                          },
+                          "supplementId": {
+                            "type": "string"
+                          },
+                          "occurredAt": {
+                            "type": "integer",
+                            "minimum": 946684800000,
+                            "exclusiveMaximum": 4102444800000
+                          },
+                          "localDate": {
+                            "type": "string",
+                            "format": "date"
+                          },
+                          "dose": {
+                            "type": "string",
+                            "pattern": "^\\S[\\s\\S]*\\S$|^\\S$|^$",
+                            "maxLength": 40
+                          },
+                          "version": {
+                            "type": "integer",
+                            "minimum": 1
+                          },
+                          "createdBy": {
+                            "type": "string"
+                          },
+                          "createdAt": {
+                            "type": "integer",
+                            "minimum": 946684800000,
+                            "exclusiveMaximum": 4102444800000
+                          },
+                          "updatedBy": {
+                            "type": "string"
+                          },
+                          "updatedAt": {
+                            "type": "integer",
+                            "minimum": 946684800000,
+                            "exclusiveMaximum": 4102444800000
+                          },
+                          "deletedAt": {
+                            "anyOf": [
+                              {
+                                "type": "integer",
+                                "minimum": 946684800000,
+                                "exclusiveMaximum": 4102444800000
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "supplementId",
+                          "occurredAt",
+                          "localDate",
+                          "dose",
+                          "version",
+                          "createdBy",
+                          "createdAt",
+                          "updatedBy",
+                          "updatedAt",
+                          "deletedAt"
+                        ],
+                        "additionalProperties": false
+                      }
                     }
                   },
                   "required": [
@@ -15598,7 +15822,8 @@
                     "feeds",
                     "diapers",
                     "sleeps",
-                    "measurements"
+                    "measurements",
+                    "doses"
                   ],
                   "additionalProperties": false
                 }
@@ -16280,6 +16505,80 @@
                         ],
                         "additionalProperties": false
                       }
+                    },
+                    "doses": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string"
+                          },
+                          "supplementId": {
+                            "type": "string"
+                          },
+                          "occurredAt": {
+                            "type": "integer",
+                            "minimum": 946684800000,
+                            "exclusiveMaximum": 4102444800000
+                          },
+                          "localDate": {
+                            "type": "string",
+                            "format": "date"
+                          },
+                          "dose": {
+                            "type": "string",
+                            "pattern": "^\\S[\\s\\S]*\\S$|^\\S$|^$",
+                            "maxLength": 40
+                          },
+                          "version": {
+                            "type": "integer",
+                            "minimum": 1
+                          },
+                          "createdBy": {
+                            "type": "string"
+                          },
+                          "createdAt": {
+                            "type": "integer",
+                            "minimum": 946684800000,
+                            "exclusiveMaximum": 4102444800000
+                          },
+                          "updatedBy": {
+                            "type": "string"
+                          },
+                          "updatedAt": {
+                            "type": "integer",
+                            "minimum": 946684800000,
+                            "exclusiveMaximum": 4102444800000
+                          },
+                          "deletedAt": {
+                            "anyOf": [
+                              {
+                                "type": "integer",
+                                "minimum": 946684800000,
+                                "exclusiveMaximum": 4102444800000
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "supplementId",
+                          "occurredAt",
+                          "localDate",
+                          "dose",
+                          "version",
+                          "createdBy",
+                          "createdAt",
+                          "updatedBy",
+                          "updatedAt",
+                          "deletedAt"
+                        ],
+                        "additionalProperties": false
+                      }
                     }
                   },
                   "required": [
@@ -16291,7 +16590,8 @@
                     "feeds",
                     "diapers",
                     "sleeps",
-                    "measurements"
+                    "measurements",
+                    "doses"
                   ],
                   "additionalProperties": false
                 }
@@ -16738,13 +17038,88 @@
                         ],
                         "additionalProperties": false
                       }
+                    },
+                    "doses": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string"
+                          },
+                          "supplementId": {
+                            "type": "string"
+                          },
+                          "occurredAt": {
+                            "type": "integer",
+                            "minimum": 946684800000,
+                            "exclusiveMaximum": 4102444800000
+                          },
+                          "localDate": {
+                            "type": "string",
+                            "format": "date"
+                          },
+                          "dose": {
+                            "type": "string",
+                            "pattern": "^\\S[\\s\\S]*\\S$|^\\S$|^$",
+                            "maxLength": 40
+                          },
+                          "version": {
+                            "type": "integer",
+                            "minimum": 1
+                          },
+                          "createdBy": {
+                            "type": "string"
+                          },
+                          "createdAt": {
+                            "type": "integer",
+                            "minimum": 946684800000,
+                            "exclusiveMaximum": 4102444800000
+                          },
+                          "updatedBy": {
+                            "type": "string"
+                          },
+                          "updatedAt": {
+                            "type": "integer",
+                            "minimum": 946684800000,
+                            "exclusiveMaximum": 4102444800000
+                          },
+                          "deletedAt": {
+                            "anyOf": [
+                              {
+                                "type": "integer",
+                                "minimum": 946684800000,
+                                "exclusiveMaximum": 4102444800000
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "supplementId",
+                          "occurredAt",
+                          "localDate",
+                          "dose",
+                          "version",
+                          "createdBy",
+                          "createdAt",
+                          "updatedBy",
+                          "updatedAt",
+                          "deletedAt"
+                        ],
+                        "additionalProperties": false
+                      }
                     }
                   },
                   "required": [
                     "feeds",
                     "diapers",
                     "sleeps",
-                    "measurements"
+                    "measurements",
+                    "doses"
                   ],
                   "additionalProperties": false
                 }

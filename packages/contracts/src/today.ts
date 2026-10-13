@@ -3,6 +3,7 @@ import { HttpApiEndpoint, HttpApiGroup } from "effect/http-api"
 import { Diaper } from "./diapers.ts"
 import { Feed, Millilitres, Side } from "./feeds.ts"
 import { Sleep } from "./sleeps.ts"
+import { Dose } from "./supplements.ts"
 import { Instant, LocalDate } from "./time.ts"
 
 const Count = Schema.Int.check(Schema.isGreaterThanOrEqualTo(0))
@@ -60,6 +61,7 @@ export const Today = Schema.Struct({
   lastSleep: Schema.NullOr(Sleep),
   prefill: Prefill,
   recent: RecentEntries,
+  doses: Schema.Array(Dose),
 })
 export type Today = typeof Today.Type
 

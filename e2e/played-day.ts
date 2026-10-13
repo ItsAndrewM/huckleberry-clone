@@ -88,6 +88,7 @@ export interface DayAnswer {
   readonly diapers: ReadonlyArray<ReturnType<typeof diaper>>
   readonly sleeps: ReadonlyArray<never>
   readonly measurements: ReadonlyArray<ReturnType<typeof measurement>>
+  readonly doses: ReadonlyArray<never>
 }
 
 export const emptyDay = (date: string, hours = 24, offset = "-07:00"): DayAnswer => {
@@ -101,6 +102,7 @@ export const emptyDay = (date: string, hours = 24, offset = "-07:00"): DayAnswer
     diapers: [],
     sleeps: [],
     measurements: [],
+    doses: [],
   }
 }
 

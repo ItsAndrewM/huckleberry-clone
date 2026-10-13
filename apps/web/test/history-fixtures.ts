@@ -73,5 +73,6 @@ export const dayWith = (change: Partial<DayPeriod> = {}): DayPeriod => ({
   diapers: [PEE, POO, BOTH],
   sleeps: [],
   measurements: [WEIGHED],
+  doses: [],
   ...change,
 })

@@ -1,5 +1,5 @@
 import type { Dose } from "@bt/contracts"
-import type { Instant } from "@bt/domain"
+import type { Instant, Interval } from "@bt/domain"
 
 export type DoseRow = {
   id: string
@@ -32,12 +32,22 @@ export const doseOf = (row: DoseRow): Dose => ({
   deletedAt: row.deleted_at,
 })
 
-export const liveDosesSince = (sql: SqlStorage, from: Instant): Dose[] =>
+const dosesWhere = (sql: SqlStorage, where: string, ...bindings: number[]): Dose[] =>
   sql
-    .exec<DoseRow>(
-      `SELECT ${DOSE_COLUMNS} FROM supplement_logs WHERE deleted_at IS NULL AND occurred_at >= ?
-       ORDER BY occurred_at, rowid`,
-      from,
-    )
+    .exec<DoseRow>(`SELECT ${DOSE_COLUMNS} FROM supplement_logs ${where}`, ...bindings)
     .toArray()
     .map(doseOf)
+
+export const liveDosesSince = (sql: SqlStorage, from: Instant): Dose[] =>
+  dosesWhere(sql, "WHERE deleted_at IS NULL AND occurred_at >= ? ORDER BY occurred_at, rowid", from)
+
+export const liveDosesIn = (sql: SqlStorage, period: Interval): Dose[] =>
+  dosesWhere(
+    sql,
+    "WHERE deleted_at IS NULL AND occurred_at >= ? AND occurred_at < ? ORDER BY occurred_at, rowid",
+    period.start,
+    period.end,
+  )
+
+export const deletedDosesSince = (sql: SqlStorage, since: Instant): Dose[] =>
+  dosesWhere(sql, "WHERE deleted_at >= ? ORDER BY deleted_at DESC, rowid DESC", since)
