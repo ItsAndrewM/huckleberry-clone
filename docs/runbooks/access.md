@@ -15,7 +15,7 @@ How the baby tracker runs in production, how it gets there, and what to do when 
 | Policies | "BT caregivers" (Allow): the two parents' Google emails. "BT admin service token" (Service Auth): the `baby-tracker-admin` token |
 | Admin token | Service token `baby-tracker-admin`. Its Client ID is the Worker's `ADMIN_SERVICE_TOKEN_CN`. The secret lives only in `.admin-token.env` on Andrew's Mac |
 | Deploys | `.github/workflows/deploy.yml` runs `pnpm release` once CI passes on a push to `main` (M5.7). See "Deploys" below |
-| Deploy token | A Cloudflare API token with the Workers Editor role on the `baby-tracker` Worker alone, kept as the GitHub repo secret `CLOUDFLARE_API_TOKEN`. See "The deploy token" below |
+| Deploy token | An account-owned Cloudflare API token, "baby-tracker deploy (GitHub Actions)", with the Individual Workers Editor role on the `baby-tracker` Worker alone, kept as the GitHub repo secret `CLOUDFLARE_API_TOKEN`. See "The deploy token" below |
 | Google side | Project "BT Access" (`bt-access-510920`) in Andrew's Google account. OAuth consent screen "Baby tracker" is External and in **Testing**, with both parents listed as test users. The web client "Cloudflare Access" has the team domain as its JavaScript origin and `<team domain>/cdn-cgi/access/callback` as its redirect URI |
 | Logs | Workers Logs keeps the app's own lines only. Cloudflare's per-request records (`invocation_logs`) are off, because they would store the Access JWT and the email |
 
@@ -39,7 +39,7 @@ CI deploys with a Cloudflare API token that can edit the `baby-tracker` Worker a
 
 To create it, or replace one that might have leaked:
 
-1. In the Cloudflare dashboard, create an API token with the Workers Editor role on the `baby-tracker` Worker alone (the per-Worker scope Cloudflare calls "Individual Workers"), and no expiry.
+1. In the Cloudflare dashboard, open Manage account › Account API tokens and choose Create Token. Create it there, not under My Profile: Wrangler honours a per-Worker scope only on an account-owned token. Start from scratch, set the scope to Specified Workers › `baby-tracker`, and tick Editor on Individual Workers. Keep No expiration, and leave the IP filter empty, since GitHub's runners change address. The review should read "Workers › baby-tracker" with "Individual Workers Editor". The dashboard shows the token only once, so copy it before you leave the page.
 2. In your own terminal, not through Claude, run `gh secret set CLOUDFLARE_API_TOKEN` and paste the token when it asks.
 3. Re-run the last deploy from its run's page, or wait for the next push. Check that the run's Deploy step ran and that its summary says "Released …". A run that only notes "main moved on" never used the token.
 4. If it's a replacement, delete the old token in the dashboard.
@@ -107,7 +107,7 @@ Every push to `main` deploys itself once CI passes (M5.7):
 4. The run's summary gives the restore point and the command that rewinds the household to it, before the version goes live. It then says "Released …" once the version is live.
 5. Open the app online on each phone once, so its offline copy moves to the new build. After a deploy whose PR says "device checklist after deploy", run the device checklist in `docs/implementation-plan.md` §6 too.
 
-- **The record:** `pnpm --filter @bt/web exec wrangler deployments list --config ../worker/wrangler.jsonc` shows the 10 most recent deploys with their messages, whether CI or your Mac ran them. For an older deploy, open its Deploy run (`gh run list --workflow deploy.yml`). Its summary and its log (`gh run view <run id> --log`) hold the restore point, and GitHub keeps them 90 days. `deploys.log` in the main checkout stopped growing with M5.7. Its bookmarks still restore until PITR ages them out, from about 10 November 2026.
+- **The record:** `pnpm --filter @bt/web exec wrangler deployments list --config ../worker/wrangler.jsonc` shows the 10 most recent deploys with their messages, whether CI or your Mac ran them. CI's deploys show no author, because the token belongs to the account rather than a person. Their message's `ci:<run id>` names the run instead, and a deploy from your Mac ends in `local`. For an older deploy, open its Deploy run (`gh run list --workflow deploy.yml`). Its summary and its log (`gh run view <run id> --log`) hold the restore point, and GitHub keeps them 90 days. `deploys.log` in the main checkout stopped growing with M5.7. Its bookmarks still restore until PITR ages them out, from about 10 November 2026.
 - **A failed deploy:** GitHub emails a failed run to the person it's attributed to, normally whoever merged.
   - A failed upload leaves production on the previous version.
   - A failed `versions deploy` usually does too, but one that timed out may have gone through. So before you re-run the job, deploy by hand or roll back, check what's live with `pnpm --filter @bt/web exec wrangler deployments status --config ../worker/wrangler.jsonc`.
