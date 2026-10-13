@@ -5,6 +5,7 @@ import {
   MeasurementConflict,
   NotFound,
   ServiceUnavailable,
+  SleepConflict,
   Unauthorized,
 } from "@bt/contracts"
 import { describe, expect, it } from "vitest"
@@ -13,7 +14,7 @@ import { StaleDraft } from "../src/sheets/drafts.ts"
 import { failureNote, type Household } from "../src/sheets/failure.ts"
 import { Unsaved } from "../src/sheets/kept.ts"
 import { measurement } from "./growth-fixtures.ts"
-import { ANDREW, diaperAt, EMILY, feedAt, MINUTE, NOW, ZONE } from "./today-fixtures.ts"
+import { ANDREW, diaperAt, EMILY, feedAt, MINUTE, NOW, sleptAt, ZONE } from "./today-fixtures.ts"
 
 const HOUSEHOLD: Household = {
   caregivers: [
@@ -105,6 +106,46 @@ describe("failureNote", () => {
     expect(refused("end_not_after_start")).toBe("Pick a time after this side started.")
     expect(refused("out_of_range")).toBe("A side can run for 4 hours at most.")
     expect(refused("invalid")).toBe("Check the times and amounts, then try again.")
+  })
+
+  it("names who started the running sleep, and when", () => {
+    const current = sleptAt(NOW - 20 * MINUTE, { createdBy: EMILY, endedAt: null })
+    expect(message(new SleepConflict({ code: "SLEEP_ALREADY_ACTIVE", current }))).toBe(
+      "Emily started a sleep at 9:10 AM.",
+    )
+  })
+
+  it("names the nap or night a sleep overlaps, running or not", () => {
+    const nap = sleptAt(NOW - 60 * MINUTE, { endedAt: NOW - 45 * MINUTE })
+    const night = sleptAt(NOW - 10 * MINUTE, { kind: "night", endedAt: null })
+    expect(message(new SleepConflict({ code: "SLEEP_OVERLAP", current: nap }))).toBe(
+      "This overlaps the nap at 8:30 AM–8:45 AM.",
+    )
+    expect(message(new SleepConflict({ code: "SLEEP_OVERLAP", current: night }))).toBe(
+      "This overlaps the night at 9:20 AM–now.",
+    )
+  })
+
+  it("says who changed or deleted a sleep a moment ago, or that it was already saved", () => {
+    const changed = sleptAt(NOW, { updatedBy: EMILY, version: 2 })
+    expect(message(new SleepConflict({ code: "STALE_VERSION", current: changed }))).toBe(
+      "Emily changed this sleep a moment ago.",
+    )
+    expect(message(new SleepConflict({ code: "STALE_VERSION", current: { ...changed, deletedAt: NOW } }))).toBe(
+      "Emily deleted this sleep a moment ago.",
+    )
+    expect(message(new SleepConflict({ code: "ACTION_REPLAY_MISMATCH", current: changed }))).toBe(
+      "This was already saved as you first entered it.",
+    )
+  })
+
+  it("explains a refused sleep time in a sleep's words", () => {
+    const refused = (issue: "end_not_after_start" | "out_of_range", sheet: "sleep" | "pastSleep" | "editSleep") =>
+      failureNote(new InvalidInput({ fieldErrors: [{ path: "endedAt", issue }] }), HOUSEHOLD, { keptOn: null, sheet })
+        .message
+    expect(refused("end_not_after_start", "sleep")).toBe("Pick a time after she fell asleep.")
+    expect(refused("out_of_range", "pastSleep")).toBe("A sleep can last a day at most.")
+    expect(refused("end_not_after_start", "editSleep")).toBe("Pick a time after she fell asleep.")
   })
 
   it("says the running feed changed when the household no longer has it as it was", () => {

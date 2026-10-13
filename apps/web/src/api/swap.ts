@@ -1,4 +1,4 @@
-import type { DayPeriod, Diaper, Feed, FeedEdit, RecentEntry, Today } from "@bt/contracts"
+import type { DayPeriod, Diaper, Feed, FeedEdit, RecentEntry, Sleep, SleepEdit, Today } from "@bt/contracts"
 import {
   contains,
   feedTouches,
@@ -18,9 +18,19 @@ export interface Swap {
   readonly after: RecentEntry | null
 }
 
-const SWAPS = new Set<Action["kind"]>(["editDiaper", "deleteDiaper", "editFeed", "deleteFeed"])
+const SWAPS = new Set<Action["kind"]>([
+  "editDiaper",
+  "deleteDiaper",
+  "editFeed",
+  "deleteFeed",
+  "editSleep",
+  "deleteSleep",
+])
 
-export type Swapping = Extract<Action, { readonly kind: "editDiaper" | "deleteDiaper" | "editFeed" | "deleteFeed" }>
+export type Swapping = Extract<
+  Action,
+  { readonly kind: "editDiaper" | "deleteDiaper" | "editFeed" | "deleteFeed" | "editSleep" | "deleteSleep" }
+>
 
 export const isSwapping = (action: Action): action is Swapping => SWAPS.has(action.kind)
 
@@ -39,7 +49,19 @@ const editedDiaper = (diaper: Diaper, action: Extract<Swapping, { kind: "editDia
   return { ...diaper, occurredAt, wet, dirty, updatedBy: author.by, updatedAt: author.now }
 }
 
+const editedSleep = (sleep: Sleep, { kind, startedAt, endedAt }: SleepEdit, author: Author): Sleep => ({
+  ...sleep,
+  kind,
+  startedAt,
+  endedAt,
+  updatedBy: author.by,
+  updatedAt: author.now,
+})
+
 export const swappedEntry = (entry: RecentEntry, action: Swapping, author: Author): RecentEntry | null => {
+  if (action.kind === "editSleep" && entry.kind === "sleep") {
+    return { kind: "sleep", sleep: editedSleep(entry.sleep, action.payload, author) }
+  }
   if (action.kind === "editDiaper" && entry.kind === "diaper") {
     return { kind: "diaper", diaper: editedDiaper(entry.diaper, action, author) }
   }
@@ -62,6 +84,19 @@ const activeAfter = (today: Today, id: string, feed: Feed | null) => {
   return today.activeFeed?.id === id ? null : today.activeFeed
 }
 
+const sleepsOf = (recent: ReadonlyArray<RecentEntry>) =>
+  recent.flatMap((entry) => (entry.kind === "sleep" ? [entry.sleep] : []))
+
+const lastSleepAfter = (today: Today, id: string, recent: ReadonlyArray<RecentEntry>, sleep: Sleep | null) => {
+  const other = today.lastSleep?.id === id ? null : today.lastSleep
+  return [...sleepsOf(recent), ...(sleep === null ? [] : [sleep])].reduce(later, other)
+}
+
+const activeSleepAfter = (today: Today, id: string, sleep: Sleep | null) => {
+  if (sleep?.endedAt === null) return sleep
+  return today.activeSleep?.id === id ? null : today.activeSleep
+}
+
 const swapId = ({ before, after }: Swap) => {
   const entry = before ?? after
   if (entry === null) throw new Error("A swap changes an entry, so it has one before or after it")
@@ -74,11 +109,14 @@ export const swappedToday = (today: Today, pending: Pending, swap: Swap, asOf: I
   const kept = without(today.recent, id)
   const recent = after !== null && contains(last24hPeriod(pending.now), timeOf(after)) ? withEntry(kept, after) : kept
   const feed = after?.kind === "feed" ? after.feed : null
+  const sleep = after?.kind === "sleep" ? after.sleep : null
   return {
     ...today,
     totals: shifted(today, { ...pending, now: asOf }, changeOf(swap.before), changeOf(after)),
     activeFeed: activeAfter(today, id, feed),
     lastFeed: lastFeedAfter(today, id, recent, feed),
+    activeSleep: activeSleepAfter(today, id, sleep),
+    lastSleep: lastSleepAfter(today, id, recent, sleep),
     recent,
   }
 }

@@ -28,7 +28,15 @@ export const CLOSED: SheetsState = {
   queued: false,
 }
 
-const NEW_ENTRIES = new Set<Action["kind"]>(["logDiaper", "logFeed", "startFeed", "addBottle", "logMeasurement"])
+const NEW_ENTRIES = new Set<Action["kind"]>([
+  "logDiaper",
+  "logFeed",
+  "startFeed",
+  "addBottle",
+  "logMeasurement",
+  "logSleep",
+  "startSleep",
+])
 
 export const isEntry = ({ action }: Sending) => NEW_ENTRIES.has(action.kind)
 

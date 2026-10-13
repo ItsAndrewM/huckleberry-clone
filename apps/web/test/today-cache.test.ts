@@ -1,9 +1,20 @@
 import { describe, expect, it } from "vitest"
 import type { Action } from "../src/api/actions.ts"
 import { pendingId } from "../src/api/pending.ts"
-import { pendingToday, savedToday } from "../src/api/today-cache.ts"
+import { pendingToday, savedToday, withdrawnToday } from "../src/api/today-cache.ts"
 import { measurement } from "./growth-fixtures.ts"
-import { ANDREW, diaperAt, feedAt, MINUTE, NO_TOTALS, NOW, nursedFor, todayWith, ZONE } from "./today-fixtures.ts"
+import {
+  ANDREW,
+  diaperAt,
+  feedAt,
+  MINUTE,
+  NO_TOTALS,
+  NOW,
+  nursedFor,
+  sleptAt,
+  todayWith,
+  ZONE,
+} from "./today-fixtures.ts"
 
 const ACTION_ID = "4b1c2a5e-8f3d-4c6b-9a7e-2d1f0e3c5b6a"
 const OTHER_ACTION_ID = "9d2e7f40-1a3b-4c5d-8e6f-7a8b9c0d1e2f"
@@ -279,5 +290,98 @@ describe("savedToday", () => {
       payload: { actionId: ACTION_ID, measuredAt: NOW, weightG: 4300, lengthCm: null, headCm: null },
     }
     expect(savedToday(today, { measurement: answer, changed: [] }, action, NOW)).toBe(today)
+  })
+})
+
+describe("a sleep on Today", () => {
+  const EARLIER = sleptAt(NOW - 5 * HOUR)
+  const BEFORE = todayWith({ lastSleep: EARLIER, recent: [{ kind: "sleep", sleep: EARLIER }] })
+  const START = {
+    kind: "startSleep" as const,
+    payload: { actionId: ACTION_ID, kind: "nap" as const, startedAt: NOW - 5 * MINUTE },
+  }
+  const PAST = {
+    kind: "logSleep" as const,
+    payload: { actionId: ACTION_ID, kind: "night" as const, startedAt: NOW - 3 * HOUR, endedAt: NOW - HOUR },
+  }
+  const STARTED = {
+    id: pendingId(ACTION_ID),
+    kind: "nap" as const,
+    startedAt: NOW - 5 * MINUTE,
+    endedAt: null,
+    version: 1,
+    createdBy: ANDREW,
+    createdAt: NOW,
+    updatedBy: ANDREW,
+    updatedAt: NOW,
+    deletedAt: null,
+  }
+
+  it("shows a sleep being started as the running and the last sleep, first on the list, leaving the totals to the household", () => {
+    expect(pendingToday(BEFORE, START, pending)).toEqual({
+      ...BEFORE,
+      activeSleep: STARTED,
+      lastSleep: STARTED,
+      recent: [
+        { kind: "sleep", sleep: STARTED },
+        { kind: "sleep", sleep: EARLIER },
+      ],
+    })
+  })
+
+  it("lists a past sleep and makes it the last sleep when it's the latest, without running it", () => {
+    const next = pendingToday(BEFORE, PAST, pending)
+    expect(next.activeSleep).toBeNull()
+    expect(next.lastSleep).toMatchObject({ id: pendingId(ACTION_ID), kind: "night", endedAt: NOW - HOUR })
+    expect(next.recent.map((entry) => entry.kind === "sleep" && entry.sleep.id)).toEqual([
+      pendingId(ACTION_ID),
+      EARLIER.id,
+    ])
+    expect(next.totals).toEqual(NO_TOTALS)
+  })
+
+  it("puts the running and the last sleep back when a start or a past sleep fails", () => {
+    for (const action of [START, PAST]) {
+      expect(withdrawnToday(pendingToday(BEFORE, action, pending), action, pending, BEFORE)).toEqual(BEFORE)
+    }
+  })
+
+  it("swaps a sleep being started for the household's answer in the running, last and recent slots", () => {
+    const saved = { ...STARTED, id: "sleep-1" }
+    const next = savedToday(pendingToday(BEFORE, START, pending), { sleep: saved, changed: [] }, START, NOW)
+    expect(next).toEqual({
+      ...BEFORE,
+      activeSleep: saved,
+      lastSleep: saved,
+      recent: [
+        { kind: "sleep", sleep: saved },
+        { kind: "sleep", sleep: EARLIER },
+      ],
+    })
+  })
+
+  it("clears the running sleep once she wakes, and keeps it as the last sleep", () => {
+    const running = sleptAt(NOW - 40 * MINUTE, { endedAt: null })
+    const woken = { ...running, endedAt: NOW, version: 2 }
+    const today = todayWith({ activeSleep: running, lastSleep: running, recent: [{ kind: "sleep", sleep: running }] })
+    const wake = {
+      kind: "wakeSleep" as const,
+      id: running.id,
+      payload: { actionId: ACTION_ID, version: 1, occurredAt: NOW },
+    }
+    expect(savedToday(today, { sleep: woken, changed: [] }, wake, NOW)).toEqual({
+      ...today,
+      activeSleep: null,
+      lastSleep: woken,
+      recent: [{ kind: "sleep", sleep: woken }],
+    })
+  })
+
+  it("drops a sleep the household answers as deleted from the list and the running slot", () => {
+    const running = sleptAt(NOW - 40 * MINUTE, { endedAt: null })
+    const today = todayWith({ activeSleep: running, lastSleep: running, recent: [{ kind: "sleep", sleep: running }] })
+    const remove = { kind: "deleteSleep" as const, id: running.id, payload: { actionId: ACTION_ID, version: 1 } }
+    const next = savedToday(today, { sleep: { ...running, deletedAt: NOW, version: 2 }, changed: [] }, remove, NOW)
+    expect([next.activeSleep, next.recent]).toEqual([null, []])
   })
 })

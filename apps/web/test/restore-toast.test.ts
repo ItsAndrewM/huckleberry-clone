@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest"
 import { announcedState, CLOSED } from "../src/sheets/sheets-state.ts"
 import { restoredToast, TOAST_MS } from "../src/sheets/undo.ts"
 import { measurement } from "./growth-fixtures.ts"
-import { diaperAt, feedAt, NOW, nursedFor } from "./today-fixtures.ts"
+import { diaperAt, feedAt, NOW, nursedFor, sleptAt } from "./today-fixtures.ts"
 
 const ACTION_ID = "4b1c2a5e-8f3d-4c6b-9a7e-2d1f0e3c5b6a"
 
@@ -33,6 +33,18 @@ describe("restoredToast", () => {
       { sheet: "undo", action: { kind: "deleteFeed", id: "feed-1", payload: { actionId: ACTION_ID, version: 5 } } },
       { sheet: "undo", action: { kind: "deleteFeed", id: "feed-2", payload: { actionId: ACTION_ID, version: 4 } } },
     ])
+  })
+
+  it("offers to delete a restored sleep again, from the version the restore answered", () => {
+    const sleep = sleptAt(NOW, { id: "sleep-1", version: 4 })
+    expect(restoredToast({ sleep, changed: [] }, NOW, ACTION_ID)).toEqual({
+      message: "Sleep restored",
+      undo: {
+        sheet: "undo",
+        action: { kind: "deleteSleep", id: "sleep-1", payload: { actionId: ACTION_ID, version: 4 } },
+      },
+      until: NOW + TOAST_MS,
+    })
   })
 
   it("offers no Undo for a measurement, which its card can delete at any time (M4.4)", () => {

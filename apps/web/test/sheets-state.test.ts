@@ -16,7 +16,7 @@ import {
 } from "../src/sheets/sheets-state.ts"
 import { TOAST_MS } from "../src/sheets/undo.ts"
 import { measurement } from "./growth-fixtures.ts"
-import { diaperAt, feedAt, NOW } from "./today-fixtures.ts"
+import { diaperAt, feedAt, NOW, sleptAt } from "./today-fixtures.ts"
 
 const ACTION_ID = "4b1c2a5e-8f3d-4c6b-9a7e-2d1f0e3c5b6a"
 const RENEWED = "9d2e1f3c-5b4a-4e6d-8c7b-1a0f2e3d4c5b"
@@ -180,7 +180,42 @@ const MEASUREMENT_DELETED: Sending = {
   action: { kind: "deleteMeasurement", id: "measurement-1", payload: { actionId: ACTION_ID, version: 2 } },
 }
 
-const restoring = (sheet: Sending["sheet"], kind: "restoreDiaper" | "restoreFeed" | "restoreMeasurement"): Sending => ({
+const SLEEP_LOGGED: Sending = {
+  sheet: "pastSleep",
+  action: {
+    kind: "logSleep",
+    payload: { actionId: ACTION_ID, kind: "night", startedAt: NOW - 3_600_000, endedAt: NOW },
+  },
+}
+
+const SLEEP_STARTED: Sending = {
+  sheet: "sleep",
+  action: { kind: "startSleep", payload: { actionId: ACTION_ID, kind: "nap", startedAt: NOW } },
+}
+
+const WOKE: Sending = {
+  sheet: "sleep",
+  action: { kind: "wakeSleep", id: "sleep-1", payload: { actionId: ACTION_ID, version: 1, occurredAt: NOW } },
+}
+
+const SLEEP_EDITED: Sending = {
+  sheet: "editSleep",
+  action: {
+    kind: "editSleep",
+    id: "sleep-1",
+    payload: { actionId: ACTION_ID, version: 1, kind: "nap", startedAt: NOW - 3_600_000, endedAt: NOW },
+  },
+}
+
+const SLEEP_DELETED: Sending = {
+  sheet: "sleep",
+  action: { kind: "deleteSleep", id: "sleep-1", payload: { actionId: ACTION_ID, version: 2 } },
+}
+
+const restoring = (
+  sheet: Sending["sheet"],
+  kind: "restoreDiaper" | "restoreFeed" | "restoreMeasurement" | "restoreSleep",
+): Sending => ({
   sheet,
   action: { kind, id: "record-1", payload: { actionId: ACTION_ID, version: 2 } },
 })
@@ -207,6 +242,12 @@ const CLOSING = {
   logMeasurement: { sending: MEASURED, closes: true, entry: true },
   editMeasurement: { sending: MEASUREMENT_EDITED, closes: true, entry: false },
   deleteMeasurement: { sending: MEASUREMENT_DELETED, closes: true, entry: false },
+  logSleep: { sending: SLEEP_LOGGED, closes: true, entry: true },
+  startSleep: { sending: SLEEP_STARTED, closes: true, entry: true },
+  wakeSleep: { sending: WOKE, closes: true, entry: false },
+  editSleep: { sending: SLEEP_EDITED, closes: true, entry: false },
+  deleteSleep: { sending: SLEEP_DELETED, closes: true, entry: false },
+  restoreSleep: { sending: restoring("sleep", "restoreSleep"), closes: false, entry: false },
 } satisfies Record<Action["kind"], { readonly sending: Sending; readonly closes: boolean; readonly entry: boolean }>
 
 describe("sending", () => {
@@ -283,6 +324,21 @@ describe("a saved entry", () => {
     const state = savedState(CLOSED, DIAPER, { diaper, changed: [] }, NOW)
     expect(expiredState(state, NOW + TOAST_MS - 1)).toBe(state)
     expect(expiredState(state, NOW + TOAST_MS).toast).toBeNull()
+  })
+
+  it("offers to undo a started or a past sleep by deleting it, and a deleted one by restoring it", () => {
+    const sleep = sleptAt(NOW, { id: "sleep-1", version: 2 })
+    const toastOf = (sending: Sending) => savedState(CLOSED, sending, { sleep, changed: [] }, NOW).toast
+    expect([toastOf(SLEEP_STARTED), toastOf(SLEEP_LOGGED), toastOf(SLEEP_DELETED)]).toMatchObject([
+      { message: "Sleep started", undo: { action: { kind: "deleteSleep", id: "sleep-1", payload: { version: 2 } } } },
+      { message: "Sleep saved", undo: { action: { kind: "deleteSleep", id: "sleep-1", payload: { version: 2 } } } },
+      { message: "Sleep deleted", undo: { action: { kind: "restoreSleep", id: "sleep-1", payload: { version: 2 } } } },
+    ])
+  })
+
+  it("has nothing to undo for a wake, which can't be taken back", () => {
+    const sleep = sleptAt(NOW - 600_000, { id: "sleep-1", endedAt: NOW, version: 2 })
+    expect(savedState(CLOSED, WOKE, { sleep, changed: [] }, NOW).toast).toBeNull()
   })
 
   it("has nothing to undo for a running feed's controls", () => {

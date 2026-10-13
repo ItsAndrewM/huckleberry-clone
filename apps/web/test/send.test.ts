@@ -4,7 +4,7 @@ import type { Action } from "../src/api/actions.ts"
 import { connectApi } from "../src/api/client.ts"
 import { send } from "../src/api/send.ts"
 import { measurement } from "./growth-fixtures.ts"
-import { diaperAt, feedAt, NOW } from "./today-fixtures.ts"
+import { diaperAt, feedAt, MINUTE, NOW, sleptAt } from "./today-fixtures.ts"
 
 const ORIGIN = "https://bt.example.test"
 const ACTION_ID = "4b1c2a5e-8f3d-4c6b-9a7e-2d1f0e3c5b6a"
@@ -85,7 +85,58 @@ const ROUTES: ReadonlyArray<readonly [Action, string, string, number]> = [
   ],
 ]
 
+const SAVED_SLEEP = JSON.stringify({ sleep: sleptAt(NOW, { id: "sleep-1" }), changed: [["today"]] })
+
+const SLEEP_ROUTES: ReadonlyArray<readonly [Action, string, string, number]> = [
+  [
+    { kind: "logSleep", payload: { actionId: ACTION_ID, kind: "nap", startedAt: NOW - 60 * MINUTE, endedAt: NOW } },
+    "POST",
+    "/api/sleeps",
+    201,
+  ],
+  [
+    { kind: "startSleep", payload: { actionId: ACTION_ID, kind: "night", startedAt: NOW } },
+    "POST",
+    "/api/sleeps/start",
+    201,
+  ],
+  [{ kind: "wakeSleep", id: "sleep-1", payload: AT }, "POST", "/api/sleeps/sleep-1/wake", 200],
+  [
+    {
+      kind: "editSleep",
+      id: "sleep-1",
+      payload: { actionId: ACTION_ID, version: 2, kind: "nap", startedAt: NOW - 60 * MINUTE, endedAt: null },
+    },
+    "PATCH",
+    "/api/sleeps/sleep-1",
+    200,
+  ],
+  [
+    { kind: "deleteSleep", id: "sleep-1", payload: { actionId: ACTION_ID, version: 2 } },
+    "DELETE",
+    "/api/sleeps/sleep-1",
+    200,
+  ],
+  [
+    { kind: "restoreSleep", id: "sleep-1", payload: { actionId: ACTION_ID, version: 2 } },
+    "POST",
+    "/api/sleeps/sleep-1/restore",
+    200,
+  ],
+]
+
 describe("send", () => {
+  it.each(SLEEP_ROUTES)(
+    "sends the sleep action %j to its endpoint with its payload",
+    async (action, method, path, status) => {
+      const { api, requests } = household(status, SAVED_SLEEP)
+      await expect(send(api, action)).resolves.toMatchObject({ sleep: { id: "sleep-1" } })
+      const [request] = requests
+      expect([request?.method, request?.url]).toEqual([method, `${ORIGIN}${path}`])
+      expect(await request?.json()).toEqual(action.payload)
+    },
+  )
+
   it.each(ROUTES)("sends %j to its endpoint with its payload", async (action, method, path, status) => {
     const { api, requests } = household(status, SAVED_FEED)
     await expect(send(api, action)).resolves.toMatchObject({ feed: { id: "feed-1" } })

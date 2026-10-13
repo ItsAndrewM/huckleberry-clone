@@ -302,3 +302,76 @@ describe("the copy of an entry an edit sheet opens on", () => {
     expect(queryClient.getQueryData<Today>(queryKeys.today)?.recent).toEqual([diaper(NEWER_PEE)])
   })
 })
+
+describe("a sleep edited or deleted before the household answers", () => {
+  const RUNNING_SLEEP = sleptAt(local("08:48"), { endedAt: null })
+  const NAP = sleptAt(local("01:10"), { endedAt: local("02:30") })
+  const DAY = "2026-10-09"
+
+  const cached = () => {
+    const queryClient = new QueryClient()
+    queryClient.setQueryData(queryKeys.me, meWith())
+    const recent = [
+      { kind: "sleep" as const, sleep: RUNNING_SLEEP },
+      { kind: "sleep" as const, sleep: NAP },
+    ]
+    queryClient.setQueryData(
+      queryKeys.today,
+      todayWith({ activeSleep: RUNNING_SLEEP, lastSleep: RUNNING_SLEEP, recent }),
+    )
+    const sleeps = [NAP, RUNNING_SLEEP]
+    const totals = totalsIn(BOUNDS, { feeds: [], diapers: [], sleeps }, NOW_ON_DAY)
+    queryClient.setQueryData(queryKeys.day(DAY), dayWith({ feeds: [], diapers: [], sleeps, totals }))
+    return queryClient
+  }
+
+  it("moves an edited sleep at once on Today and the cached day, with its label, and counts the day again", async () => {
+    const queryClient = cached()
+    const before = queryClient.getQueryData<DayPeriod>(queryKeys.day(DAY))
+    const edit: Action = {
+      kind: "editSleep",
+      id: NAP.id,
+      payload: { actionId: ACTION_ID, version: 1, kind: "night", startedAt: local("01:00"), endedAt: local("02:30") },
+    }
+    const pended = await pendIn(queryClient, edit, NOW_ON_DAY)
+    const edited = {
+      ...NAP,
+      kind: "night" as const,
+      startedAt: local("01:00"),
+      updatedBy: ANDREW,
+      updatedAt: NOW_ON_DAY,
+    }
+    expect(queryClient.getQueryData<Today>(queryKeys.today)?.recent).toContainEqual({ kind: "sleep", sleep: edited })
+    expect(queryClient.getQueryData<DayPeriod>(queryKeys.day(DAY))).toMatchObject({
+      sleeps: [edited, RUNNING_SLEEP],
+      totals: totalsIn(BOUNDS, { feeds: [], diapers: [], sleeps: [edited, RUNNING_SLEEP] }, NOW_ON_DAY),
+    })
+    rollBack(queryClient, edit, pended)
+    expect(queryClient.getQueryData<DayPeriod>(queryKeys.day(DAY))?.sleeps).toEqual(before?.sleeps)
+  })
+
+  it("keeps a running sleep running through an edit of its start", async () => {
+    const queryClient = cached()
+    const edit: Action = {
+      kind: "editSleep",
+      id: RUNNING_SLEEP.id,
+      payload: { actionId: ACTION_ID, version: 1, kind: "nap", startedAt: local("08:30"), endedAt: null },
+    }
+    await pendIn(queryClient, edit, NOW_ON_DAY)
+    const today = queryClient.getQueryData<Today>(queryKeys.today)
+    expect([today?.activeSleep?.startedAt, today?.lastSleep?.startedAt]).toEqual([local("08:30"), local("08:30")])
+  })
+
+  it("takes a deleted running sleep off Today and the cached day at once, the nap before it the last sleep again", async () => {
+    const queryClient = cached()
+    const remove: Action = {
+      kind: "deleteSleep",
+      id: RUNNING_SLEEP.id,
+      payload: { actionId: ACTION_ID, version: 1 },
+    }
+    await pendIn(queryClient, remove, NOW_ON_DAY)
+    const today = queryClient.getQueryData<Today>(queryKeys.today)
+    expect([today?.activeSleep, today?.lastSleep]).toEqual([null, NAP])
+    expect(queryClient.getQueryData<DayPeriod>(queryKeys.day(DAY))?.sleeps).toEqual([NAP])
+  })
+})

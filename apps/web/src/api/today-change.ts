@@ -57,8 +57,13 @@ export const without = (recent: ReadonlyArray<RecentEntry>, id: string) => recen
 export const withEntry = (recent: ReadonlyArray<RecentEntry>, entry: RecentEntry) =>
   [...without(recent, idOf(entry)), entry].toSorted((a, b) => timeOf(b) - timeOf(a))
 
-export const later = (current: Feed | null, feed: Feed) =>
-  current === null || current.id === feed.id || feed.startedAt >= current.startedAt ? feed : current
+interface Started {
+  readonly id: string
+  readonly startedAt: number
+}
+
+export const later = <Logged extends Started>(current: Logged | null, record: Logged) =>
+  current === null || current.id === record.id || record.startedAt >= current.startedAt ? record : current
 
 const shiftedTotals = (totals: Totals, period: Interval, now: Instant, before: Change, after: Change): Totals => {
   const added = totalsIn(period, { ...after, sleeps: [] }, now)

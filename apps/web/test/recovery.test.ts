@@ -1,11 +1,18 @@
-import { DiaperConflict, type Feed, FeedConflict, InvalidInput, MeasurementConflict } from "@bt/contracts"
+import {
+  DiaperConflict,
+  type Feed,
+  FeedConflict,
+  InvalidInput,
+  MeasurementConflict,
+  SleepConflict,
+} from "@bt/contracts"
 import { describe, expect, it } from "vitest"
 import { Offline } from "../src/api/errors.ts"
 import { settlesWithoutAsking } from "../src/sheets/held.ts"
 import { offersOk, recoveryOf } from "../src/sheets/recovery.ts"
 import type { Failed, Sending } from "../src/sheets/sending.ts"
 import { measurement } from "./growth-fixtures.ts"
-import { diaperAt, feedAt, MINUTE, NOW } from "./today-fixtures.ts"
+import { diaperAt, feedAt, MINUTE, NOW, sleptAt } from "./today-fixtures.ts"
 
 const ACTION_ID = "4b1c2a5e-8f3d-4c6b-9a7e-2d1f0e3c5b6a"
 const FRESH = "9d2e1f3c-5b4a-4e6d-8c7b-1a0f2e3d4c5b"
@@ -416,5 +423,84 @@ describe("a measurement the other phone got to first", () => {
     expect(offersOk(stale)).toBe(true)
     const gone = new MeasurementConflict({ code: "STALE_VERSION", current: { ...theirsNow, deletedAt: NOW } })
     expect(recoveryOf({ sending: edited, error: gone })).toBeNull()
+  })
+})
+
+describe("a sleep the other phone got to first", () => {
+  const RUNNING = sleptAt(STARTED, { id: "sleep-1", endedAt: null, version: 3 })
+  const sleepConflict = (sending: Sending, code: SleepConflict["code"], current = RUNNING): Failed => ({
+    sending,
+    error: new SleepConflict({ code, current }),
+  })
+  const WAKE: Sending = {
+    sheet: "sleep",
+    action: { kind: "wakeSleep", id: "sleep-1", payload: MINE },
+  }
+  const MOVED_START: Sending = {
+    sheet: "sleep",
+    action: {
+      kind: "editSleep",
+      id: "sleep-1",
+      payload: { actionId: ACTION_ID, version: 2, kind: "nap", startedAt: STARTED - 5 * MINUTE, endedAt: null },
+    },
+  }
+  const REMOVE: Sending = {
+    sheet: "sleep",
+    action: { kind: "deleteSleep", id: "sleep-1", payload: { actionId: ACTION_ID, version: 2 } },
+  }
+  const PAST: Sending = {
+    sheet: "pastSleep",
+    action: {
+      kind: "logSleep",
+      payload: { actionId: ACTION_ID, kind: "night", startedAt: STARTED, endedAt: NOW },
+    },
+  }
+  const START: Sending = {
+    sheet: "sleep",
+    action: { kind: "startSleep", payload: { actionId: ACTION_ID, kind: "nap", startedAt: NOW } },
+  }
+
+  it("wakes her anyway on their version while the sleep still runs, from before the tap", () => {
+    const recovery = recoveryOf(sleepConflict(WAKE, "STALE_VERSION"))
+    expect(recovery?.label).toBe("Wake anyway")
+    expect(recovery?.sendingAt(TAP)).toEqual({ ...WAKE, action: { ...WAKE.action, payload: { ...MINE, version: 3 } } })
+  })
+
+  it("offers nothing more once they've woken her or deleted it, so OK settles it", () => {
+    const woken = { ...RUNNING, endedAt: NOW - MINUTE }
+    expect(recoveryOf(sleepConflict(WAKE, "STALE_VERSION", woken))).toBeNull()
+    expect(recoveryOf(sleepConflict(REMOVE, "STALE_VERSION", { ...RUNNING, deletedAt: NOW }))).toBeNull()
+    expect(offersOk(sleepConflict(WAKE, "STALE_VERSION", woken))).toBe(true)
+  })
+
+  it("changes a running sleep's start, or deletes it, anyway on their version", () => {
+    expect(recoveryOf(sleepConflict(MOVED_START, "STALE_VERSION"))?.label).toBe("Change it anyway")
+    expect(recoveryOf(sleepConflict(REMOVE, "STALE_VERSION"))?.label).toBe("Delete anyway")
+  })
+
+  it("saves a past sleep's changes as an edit of the saved one, under a fresh actionId", () => {
+    const saved = sleptAt(STARTED, { id: "sleep-2", kind: "nap", endedAt: NOW - MINUTE, version: 1 })
+    const recovery = recoveryOf(sleepConflict(PAST, "ACTION_REPLAY_MISMATCH", saved))
+    expect(recovery?.label).toBe("Save my changes")
+    expect(recovery?.sendingAt(TAP)).toEqual({
+      sheet: "pastSleep",
+      action: {
+        kind: "editSleep",
+        id: "sleep-2",
+        payload: { actionId: FRESH, version: 1, kind: "night", startedAt: STARTED, endedAt: NOW },
+      },
+    })
+  })
+
+  it("settles a start that meets their running sleep with OK, without asking to keep it", () => {
+    const failed = sleepConflict(START, "SLEEP_ALREADY_ACTIVE")
+    expect(recoveryOf(failed)).toBeNull()
+    expect(offersOk(failed)).toBe(true)
+    expect(settlesWithoutAsking(failed.error)).toBe(true)
+  })
+
+  it("asks first after an overlap, and offers no way on but changing the times", () => {
+    const failed = sleepConflict(PAST, "SLEEP_OVERLAP")
+    expect([recoveryOf(failed), offersOk(failed), settlesWithoutAsking(failed.error)]).toEqual([null, false, false])
   })
 })

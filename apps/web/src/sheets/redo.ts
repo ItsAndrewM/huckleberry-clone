@@ -1,4 +1,4 @@
-import type { Feed, Measurement, Side } from "@bt/contracts"
+import type { Feed, Measurement, Side, Sleep } from "@bt/contracts"
 import type { Action } from "../api/actions.ts"
 import { SIDE_NAMES } from "../sides.ts"
 import type { Recovery, Sending } from "./sending.ts"
@@ -100,4 +100,22 @@ export const joined = ({ action }: Sending, feed: Feed): Recovery | null => {
 export const mineAnyway = ({ sheet, action }: Sending, current: Measurement): Recovery | null => {
   if (action.kind !== "editMeasurement" || current.deletedAt !== null) return null
   return { label: "Save mine anyway", sendingAt: () => ({ sheet, action: withVersion(action, current.version) }) }
+}
+
+const SLEEP_REDO_LABELS = new Map<Action["kind"], string>([
+  ["wakeSleep", "Wake anyway"],
+  ["editSleep", "Change it anyway"],
+  ["deleteSleep", "Delete anyway"],
+])
+
+const sleepFits = (action: Action, sleep: Sleep) => {
+  if (action.kind === "wakeSleep") return sleep.endedAt === null && action.payload.occurredAt > sleep.startedAt
+  if (action.kind === "editSleep") return sleep.endedAt === null || action.payload.endedAt !== null
+  return action.kind === "deleteSleep"
+}
+
+export const redoneSleep = ({ sheet, action }: Sending, sleep: Sleep): Recovery | null => {
+  const label = SLEEP_REDO_LABELS.get(action.kind)
+  if (label === undefined || sleep.deletedAt !== null || !sleepFits(action, sleep)) return null
+  return { label, sendingAt: () => ({ sheet, action: withVersion(action, sleep.version) }) }
 }

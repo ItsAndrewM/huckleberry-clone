@@ -1,12 +1,12 @@
 import {
   type CaregiverName,
   DiaperConflict,
-  type Feed,
   FeedConflict,
   type FieldIssue,
   InvalidInput,
   MeasurementConflict,
   NotFound,
+  SleepConflict,
   Unauthorized,
 } from "@bt/contracts"
 import { AuthRequired, Offline } from "../api/errors.ts"
@@ -36,19 +36,26 @@ export const nameOf = ({ caregivers }: Household, id: string) =>
 
 export const timeOf = ({ locale, timeZone }: Household, instant: number) => clockTime(instant, timeZone, locale)
 
-export const spanOf = (household: Household, feed: Feed) =>
-  `${timeOf(household, feed.startedAt)}–${feed.endedAt === null ? "now" : timeOf(household, feed.endedAt)}`
+interface Spanned {
+  readonly startedAt: number
+  readonly endedAt: number | null
+}
 
-const fieldMessage = (issue: FieldIssue, household: Household): string | null => {
+export const spanOf = (household: Household, { startedAt, endedAt }: Spanned) =>
+  `${timeOf(household, startedAt)}–${endedAt === null ? "now" : timeOf(household, endedAt)}`
+
+const SLEEP_SHEETS = new Set<SheetKind | undefined>(["sleep", "pastSleep", "editSleep"])
+
+const fieldMessage = (issue: FieldIssue, household: Household, sleeping: boolean): string | null => {
   switch (issue) {
     case "in_future":
       return "That time is in the future."
     case "before_birth":
       return `That's before ${household.childName} was born.`
     case "end_not_after_start":
-      return "Pick a time after this side started."
+      return sleeping ? "Pick a time after she fell asleep." : "Pick a time after this side started."
     case "out_of_range":
-      return "A side can run for 4 hours at most."
+      return sleeping ? "A sleep can last a day at most." : "A side can run for 4 hours at most."
     default:
       return null
   }
@@ -56,8 +63,9 @@ const fieldMessage = (issue: FieldIssue, household: Household): string | null =>
 
 const METRICS = new Set(["weightG", "lengthCm", "headCm"])
 
-const fieldNote = (error: InvalidInput, household: Household): Note => {
-  const messages = error.fieldErrors.map(({ issue }) => fieldMessage(issue, household))
+const fieldNote = (error: InvalidInput, household: Household, sheet: SheetKind | undefined): Note => {
+  const sleeping = SLEEP_SHEETS.has(sheet)
+  const messages = error.fieldErrors.map(({ issue }) => fieldMessage(issue, household, sleeping))
   const measured = error.fieldErrors.some(({ path }) => METRICS.has(path))
   const otherwise = measured
     ? "Check the measurements, then try again."
@@ -92,7 +100,23 @@ const measurementNote = ({ code, current }: MeasurementConflict, household: Hous
   return note(`${nameOf(household, current.updatedBy)} ${changed} this measurement a moment ago.`)
 }
 
+const sleepNote = ({ code, current }: SleepConflict, household: Household): Note => {
+  switch (code) {
+    case "SLEEP_ALREADY_ACTIVE":
+      return note(`${nameOf(household, current.createdBy)} started a sleep at ${timeOf(household, current.startedAt)}.`)
+    case "SLEEP_OVERLAP":
+      return note(`This overlaps the ${current.kind} at ${spanOf(household, current)}.`)
+    case "STALE_VERSION": {
+      const changed = current.deletedAt === null ? "changed" : "deleted"
+      return note(`${nameOf(household, current.updatedBy)} ${changed} this sleep a moment ago.`)
+    }
+    case "ACTION_REPLAY_MISMATCH":
+      return note("This was already saved as you first entered it.")
+  }
+}
+
 const conflictNote = (error: Error, household: Household): Note | null => {
+  if (error instanceof SleepConflict) return sleepNote(error, household)
   if (error instanceof FeedConflict) return feedNote(error, household)
   if (error instanceof DiaperConflict) return diaperNote(error, household)
   if (error instanceof MeasurementConflict) return measurementNote(error, household)
@@ -134,7 +158,7 @@ export const failureNote = (error: Error, household: Household, { keptOn, sheet 
   }
   const restored = restoredNote(error, household)
   if (restored !== null) return restored
-  if (error instanceof InvalidInput) return fieldNote(error, household)
+  if (error instanceof InvalidInput) return fieldNote(error, household, sheet)
   if (error instanceof NotFound) return goneNote(sheet)
   return conflictNote(error, household) ?? note("Not saved.", TRY_AGAIN)
 }
