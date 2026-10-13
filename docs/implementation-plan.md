@@ -288,7 +288,7 @@ Spec scenarios that become named fixtures: the 15+15 min / 50+50 mL feed (AC 4),
 | Static Assets and Access interaction (S4) | Assets get no `ctx.access`; the shell and `/sw.js` require sign-in | D5 verifies the JWT. The service worker installs and updates only while signed in. The installed app's cached shell opens offline (S4 pass) |
 | Import source unknown | M2 blocked | **Resolved:** M2 dropped (10 Oct 2026). The household starts fresh |
 | WHO extreme-value handling and dataset choice | Wrong percentiles | M4.2 gate, which passes (`docs/percentiles.md`). CI runs it on every pull request |
-| Two-person, single-environment ops | A bad migration hits live data | Migrations are forward-only, and each is tested against a fresh export of production data (`pnpm admin export`, M3.11) before it merges, since a merge to `main` deploys once CI passes (M5.7). Each deploy records its restore point, the UTC second before it, in its message in Cloudflare's deployment history, and `pnpm admin pitr:restore --at` rewinds to it (M1.16, M5.7) |
+| Two-person, single-environment ops | A bad migration hits live data | Migrations are forward-only, and each is tested against a fresh export of production data (`pnpm admin export`, M3.11, then `pnpm migrations:dry-run`, M3.1) before it merges, since a merge to `main` deploys once CI passes (M5.7). Each deploy records its restore point, the UTC second before it, in its message in Cloudflare's deployment history, and `pnpm admin pitr:restore --at` rewinds to it (M1.16, M5.7) |
 
 **Questions for Andrew and Emily before M1:**
 
