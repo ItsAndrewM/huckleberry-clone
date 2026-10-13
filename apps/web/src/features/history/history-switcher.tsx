@@ -6,8 +6,8 @@ import { buttonVariants } from "../../components/ui/button.tsx"
 import { GoToDate } from "./go-to-date.tsx"
 import type { HistorySearch } from "./history-date.ts"
 import type { Hidden } from "./history-kinds.ts"
-import { type HistoryNavigation, searchFor } from "./history-navigation.ts"
-import { firstDateOf, type HistoryView, periodOf } from "./history-period.ts"
+import { goToOpensOn, type HistoryNavigation, searchFor } from "./history-navigation.ts"
+import { type HistoryView, periodKey, periodOf } from "./history-period.ts"
 import { backLabel, currentLabel, periodTitle } from "./history-titles.ts"
 
 const NAMES = { day: "Days", week: "Weeks" } as const satisfies Record<HistoryView, string>
@@ -44,12 +44,15 @@ interface HistorySwitcherProps {
 }
 
 export const HistorySwitcher = ({ navigation, today, birthDate, hidden }: HistorySwitcherProps) => {
-  const [changing, setChanging] = useState(false)
   const navigate = useNavigate()
   const { period, isCurrent } = navigation
+  const key = periodKey(period)
+  const [changingFor, setChangingFor] = useState<string | null>(null)
+  if (changingFor !== null && changingFor !== key) setChangingFor(null)
+  const changing = changingFor === key
   const noun = period.view
   const goTo = (date: LocalDate) => {
-    setChanging(false)
+    setChangingFor(null)
     void navigate({ to: "/history", search: searchFor(periodOf(period.view, date), today, hidden) })
   }
   return (
@@ -69,14 +72,21 @@ export const HistorySwitcher = ({ navigation, today, birthDate, hidden }: Histor
             <span aria-hidden="true" className="text-muted-foreground">
               ·
             </span>
-            <button type="button" aria-expanded={changing} onClick={() => setChanging(!changing)} className={LINK_TEXT}>
+            <button
+              type="button"
+              aria-expanded={changing}
+              onClick={() => setChangingFor(changing ? null : key)}
+              className={LINK_TEXT}
+            >
               Change
             </button>
           </div>
         </div>
         <Step search={navigation.next} label={`Next ${noun}`} Icon={ChevronRightIcon} />
       </nav>
-      {changing ? <GoToDate shown={firstDateOf(period)} earliest={birthDate} latest={today} onPick={goTo} /> : null}
+      {changing ? (
+        <GoToDate shown={goToOpensOn(period, birthDate)} earliest={birthDate} latest={today} onPick={goTo} />
+      ) : null}
     </div>
   )
 }

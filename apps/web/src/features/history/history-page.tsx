@@ -9,7 +9,6 @@ import { useMinute } from "../../timer/use-now.ts"
 import { DayView } from "./day-view.tsx"
 import { type Hidden, hiddenIn } from "./history-kinds.ts"
 import { navigationOf, shownPeriod } from "./history-navigation.ts"
-import { periodKey } from "./history-period.ts"
 import { HistorySwitcher } from "./history-switcher.tsx"
 import { HistoryViewSwitch } from "./history-view-switch.tsx"
 import { KindChips } from "./kind-chips.tsx"
@@ -45,7 +44,6 @@ const HistoryScreen = ({ me, now }: { readonly me: Me; readonly now: number }) =
       action={<HistoryViewSwitch period={period} today={today} birthDate={me.child.birthDate} hidden={hidden} />}
     >
       <HistorySwitcher
-        key={periodKey(period)}
         navigation={navigationOf(period, today, me.child.birthDate, hidden)}
         today={today}
         birthDate={me.child.birthDate}

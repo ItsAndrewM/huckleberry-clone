@@ -68,6 +68,20 @@ test("steps back a week and comes back to this week", async ({ page }) => {
   await expect(page.getByRole("link", { name: "Next week" })).toHaveCount(0)
 })
 
+test("keeps focus on the arrow that stepped a day or a week", async ({ page }) => {
+  await playBusyWeek(page)
+  await openHistory(page, "?date=2026-10-07")
+  await page.getByRole("link", { name: "Previous day" }).focus()
+  await page.keyboard.press("Enter")
+  await expect(page).toHaveURL(/\/history\?date=2026-10-06$/u)
+  await expect(page.getByRole("link", { name: "Previous day" })).toBeFocused()
+  await openHistory(page, "?view=week")
+  await page.getByRole("link", { name: "Previous week" }).focus()
+  await page.keyboard.press("Enter")
+  await expect(page).toHaveURL(/\/history\?view=week&date=2026-09-28$/u)
+  await expect(page.getByRole("link", { name: "Previous week" })).toBeFocused()
+})
+
 test("doesn't call a day's column the current page", async ({ page }) => {
   await playBusyWeek(page)
   await openHistory(page, "?view=week")
@@ -180,7 +194,7 @@ test("keeps the hidden kinds when Go to opens a date", async ({ page }) => {
   await expect(page).toHaveURL(/\/history\?date=2026-10-06&hide=diapers$/u)
 })
 
-test("starts Go to on the shown day, or the shown week's Monday", async ({ page }) => {
+test("starts Go to on the shown day, the week's Monday, or her birth date in her first week", async ({ page }) => {
   await playBusyWeek(page)
   await openHistory(page, "?date=2026-10-06")
   await changeIn(page, "Days").click()
@@ -188,6 +202,9 @@ test("starts Go to on the shown day, or the shown week's Monday", async ({ page 
   await openHistory(page, "?view=week")
   await changeIn(page, "Weeks").click()
   await expect(page.getByLabel("Go to")).toHaveValue("2026-10-05")
+  await openHistory(page, "?view=week&date=2026-09-01")
+  await changeIn(page, "Weeks").click()
+  await expect(page.getByLabel("Go to")).toHaveValue("2026-09-01")
 })
 
 test("opens and closes Go to with Change, and closes it on the arrows and the Day | Week switch", async ({ page }) => {

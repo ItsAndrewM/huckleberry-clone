@@ -56,3 +56,8 @@ export const viewSearch = (
 
 export const daySearch = (date: LocalDate, today: LocalDate, hidden: Hidden) =>
   searchFor(periodOf("day", date), today, hidden)
+
+export const goToOpensOn = (period: HistoryPeriod, birthDate: LocalDate) => {
+  const first = firstDateOf(period)
+  return first < birthDate ? birthDate : first
+}

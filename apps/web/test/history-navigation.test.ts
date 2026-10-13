@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest"
 import { hiddenIn } from "../src/features/history/history-kinds.ts"
 import {
   daySearch,
+  goToOpensOn,
   navigationOf,
   searchFor,
   shownPeriod,
@@ -124,6 +125,14 @@ describe("viewSearch", () => {
       date: BIRTH,
       hide: undefined,
     })
+  })
+})
+
+describe("goToOpensOn", () => {
+  it("opens Go to on the day shown, or the week's Monday, or her birth date in her first week", () => {
+    expect(goToOpensOn(periodOf("day", "2026-10-06"), BIRTH)).toBe("2026-10-06")
+    expect(goToOpensOn(periodOf("week", "2026-09-30"), BIRTH)).toBe("2026-09-28")
+    expect(goToOpensOn(periodOf("week", BIRTH), BIRTH)).toBe(BIRTH)
   })
 })
 
