@@ -21,14 +21,15 @@ interface HistoryDayProps {
   readonly me: Me
   readonly now: number
   readonly hidden: Hidden
+  readonly asList: boolean
 }
 
-const HistoryDay = ({ date, me, now, hidden }: HistoryDayProps) => {
+const HistoryDay = ({ date, me, now, hidden, asList }: HistoryDayProps) => {
   const dayQuery = useDay(date)
   return dayQuery.data === undefined ? (
     <NotLoaded failed={dayQuery.isError} message="This day couldn't be loaded." retry={retryOf(dayQuery)} />
   ) : (
-    <DayView key={date} day={dayQuery.data} me={me} now={now} hidden={hidden} />
+    <DayView key={date} day={dayQuery.data} me={me} now={now} hidden={hidden} asList={asList} />
   )
 }
 
@@ -55,7 +56,7 @@ const HistoryScreen = ({ me, now }: { readonly me: Me; readonly now: number }) =
       {period.view === "week" ? (
         <WeekView key={period.week} week={period.week} me={me} now={now} today={today} hidden={hidden} />
       ) : (
-        <HistoryDay date={period.date} me={me} now={now} hidden={hidden} />
+        <HistoryDay date={period.date} me={me} now={now} hidden={hidden} asList={period.view === "list"} />
       )}
     </Page>
   )
