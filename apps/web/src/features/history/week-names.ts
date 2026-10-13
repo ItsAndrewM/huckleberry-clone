@@ -24,5 +24,6 @@ export const shownTotals = (totals: Totals, hidden: Hidden): Totals => {
 export const columnName = (column: WeekColumn, volume: VolumeUnit, hidden: Hidden, locale?: string) => {
   const lines = totalsLines(shownTotals(column.totals, hidden), volume).map((parts) => parts.join(", "))
   const said = column.measured ? [...lines, "a measurement"] : lines
-  return `${dayTitle(column.date, locale)}: ${said.length === 0 ? "nothing logged" : said.join("; ")}`
+  const nothing = column.logged ? "nothing shown" : "nothing logged"
+  return `${dayTitle(column.date, locale)}: ${said.length === 0 ? nothing : said.join("; ")}`
 }

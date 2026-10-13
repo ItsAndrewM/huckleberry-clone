@@ -3,6 +3,7 @@ import {
   type DayGrid,
   feedTouches,
   type GridScale,
+  hasEntries,
   type Interval,
   layoutDay,
   onWallClock,
@@ -21,6 +22,7 @@ export interface WeekColumn {
   readonly grid: DayGrid<Side>
   readonly diapers: ReadonlyArray<PlacedCluster>
   readonly measured: boolean
+  readonly logged: boolean
   readonly totals: Totals
 }
 
@@ -41,13 +43,15 @@ export const weekModel = (week: WeekPeriod, context: WeekContext): ReadonlyArray
     const slice = shownSlice({ date, bounds, feeds, diapers: week.diapers }, context.hidden)
     const { blocks, bottles, diapers } = piecesOf(slice)
     const day = { date, zone: context.zone, bounds, now: context.now, blocks, points: bottles }
+    const weighed = measuredIn(week.measurements, bounds)
     return {
       date,
       opens: context.birthDate <= date && date <= context.today,
       isToday: date === context.today,
       grid: layoutDay(onWallClock(day), WEEK_SCALE),
       diapers: layoutDay(onWallClock({ ...day, blocks: [], points: diapers }), WEEK_SCALE).clusters,
-      measured: !context.hidden.has("growth") && measuredIn(week.measurements, bounds),
+      measured: !context.hidden.has("growth") && weighed,
+      logged: hasEntries(totals) || weighed,
       totals,
     }
   })

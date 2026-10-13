@@ -187,6 +187,19 @@ describe("columnName", () => {
       "Fri, Oct 9: 3 diapers, 2 pee",
     )
   })
+
+  it("says nothing is shown when a day's entries are all hidden, and nothing logged only when nothing was", () => {
+    const all = hiddenIn("feeds,diapers,growth")
+    expect(columnName(columnOn(DATE, { ...CONTEXT, hidden: all }), "ml", all, LOCALE)).toBe("Fri, Oct 9: nothing shown")
+    expect(columnName(columnOn(THURSDAY, { ...CONTEXT, hidden: all }), "ml", all, LOCALE)).toBe(
+      "Thu, Oct 8: nothing logged",
+    )
+    const growth = hiddenIn("growth")
+    const weighed = weekWith({ measurements: [{ ...WEIGHED, measuredAt: local("08:00", THURSDAY) }] })
+    expect(columnName(columnOn(THURSDAY, { ...CONTEXT, hidden: growth }, weighed), "ml", growth, LOCALE)).toBe(
+      "Thu, Oct 8: nothing shown",
+    )
+  })
 })
 
 describe("shownTotals", () => {
