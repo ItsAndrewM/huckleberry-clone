@@ -30,6 +30,15 @@ describe("shownPeriod", () => {
     expect(shownPeriod({ view: "week", date: "2026-09-30" }, TODAY, BIRTH)).toEqual({ view: "week", week: "2026-W40" })
   })
 
+  it("shows a day as a list when the address asks for it", () => {
+    expect(shownPeriod({ view: "list" }, TODAY, BIRTH)).toEqual({ view: "list", date: TODAY })
+    expect(shownPeriod({ view: "list", date: "2026-10-09" }, TODAY, BIRTH)).toEqual({
+      view: "list",
+      date: "2026-10-09",
+    })
+    expect(shownPeriod({ view: "list", date: "2026-08-10" }, TODAY, BIRTH)).toEqual({ view: "list", date: BIRTH })
+  })
+
   it("shows her birth date, or the week that holds it, for an address naming an earlier day", () => {
     expect(shownPeriod({ date: "2026-08-10" }, TODAY, BIRTH)).toEqual({ view: "day", date: BIRTH })
     expect(shownPeriod({ view: "week", date: "2026-08-10" }, TODAY, BIRTH)).toEqual({ view: "week", week: "2026-W36" })
@@ -47,6 +56,15 @@ describe("searchFor", () => {
       view: "week",
       date: undefined,
       hide: undefined,
+    })
+  })
+
+  it("keeps the list in the address, today's included", () => {
+    expect(searchFor(periodOf("list", TODAY), TODAY, NONE)).toEqual({ view: "list", date: undefined, hide: undefined })
+    expect(searchFor(periodOf("list", "2026-10-09"), TODAY, NO_DIAPERS)).toEqual({
+      view: "list",
+      date: "2026-10-09",
+      hide: "diapers",
     })
   })
 
@@ -88,6 +106,17 @@ describe("navigationOf", () => {
     })
   })
 
+  it("steps a day at a time in the list, staying a list, with a way back to today's", () => {
+    expect(navigationOf(periodOf("list", "2026-10-09"), TODAY, BIRTH, NO_DIAPERS)).toMatchObject({
+      isCurrent: false,
+      previous: { view: "list", date: "2026-10-08", hide: "diapers" },
+      next: { view: "list", date: "2026-10-10", hide: "diapers" },
+      current: { view: "list", date: undefined, hide: "diapers" },
+    })
+    expect(navigationOf(periodOf("list", BIRTH), TODAY, BIRTH, NONE).previous).toBeNull()
+    expect(navigationOf(periodOf("list", TODAY), TODAY, BIRTH, NONE).next).toBeNull()
+  })
+
   it("steps a week at a time, keeping what's hidden, with a way back to this week", () => {
     const navigation = navigationOf(periodOf("week", "2026-09-30"), TODAY, BIRTH, NO_DIAPERS)
     expect(navigation).toMatchObject({
@@ -119,6 +148,35 @@ describe("viewSearch", () => {
     })
   })
 
+  it("lists the day shown, and brings the list's day back to the grid", () => {
+    expect(viewSearch("list", periodOf("day", "2026-09-30"), TODAY, BIRTH, NO_DIAPERS)).toEqual({
+      view: "list",
+      date: "2026-09-30",
+      hide: "diapers",
+    })
+    expect(viewSearch("day", periodOf("list", "2026-09-30"), TODAY, BIRTH, NONE)).toEqual({
+      view: undefined,
+      date: "2026-09-30",
+      hide: undefined,
+    })
+    expect(viewSearch("week", periodOf("list", "2026-09-30"), TODAY, BIRTH, NONE)).toMatchObject({
+      view: "week",
+      date: "2026-09-28",
+    })
+  })
+
+  it("lists today from this week, and Monday from an earlier week", () => {
+    expect(viewSearch("list", periodOf("week", TODAY), TODAY, BIRTH, NONE)).toEqual({
+      view: "list",
+      date: undefined,
+      hide: undefined,
+    })
+    expect(viewSearch("list", periodOf("week", "2026-09-30"), TODAY, BIRTH, NONE)).toMatchObject({
+      view: "list",
+      date: "2026-09-28",
+    })
+  })
+
   it("keeps a switch from her birth week inside her days", () => {
     expect(viewSearch("day", periodOf("week", BIRTH), TODAY, BIRTH, NONE)).toEqual({
       view: undefined,
@@ -131,6 +189,7 @@ describe("viewSearch", () => {
 describe("goToOpensOn", () => {
   it("opens Go to on the day shown, or the week's Monday, or her birth date in her first week", () => {
     expect(goToOpensOn(periodOf("day", "2026-10-06"), BIRTH)).toBe("2026-10-06")
+    expect(goToOpensOn(periodOf("list", "2026-10-06"), BIRTH)).toBe("2026-10-06")
     expect(goToOpensOn(periodOf("week", "2026-09-30"), BIRTH)).toBe("2026-09-28")
     expect(goToOpensOn(periodOf("week", BIRTH), BIRTH)).toBe(BIRTH)
   })
