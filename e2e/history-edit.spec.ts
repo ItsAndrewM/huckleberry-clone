@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test"
-import { busyDay, emptyDay, openHistory, playHistory } from "./played-day.ts"
+import { busyDay, DAY, diaper, emptyDay, feed, local, openHistory, playHistory } from "./played-day.ts"
 import { gate, holdRequests } from "./played-household.ts"
 
 const ACTION_ID = expect.stringMatching(/^[0-9a-f-]{36}$/u)
@@ -41,6 +41,21 @@ test("gives each entry gathered in one marker its own Edit", async ({ page }) =>
   const sheet = page.getByRole("dialog", { name: "Edit diaper" })
   await expect(sheet.getByRole("button", { name: "Poo" })).toHaveAttribute("aria-pressed", "true")
   await expect(sheet.getByLabel("When")).toHaveValue("2026-10-09T02:20")
+})
+
+test("opens the Nursing sheet, not the edit sheet, for a paused feed gathered into a marker", async ({ page }) => {
+  const { played, andrew, emily } = await playHistory(page, [])
+  const sides = [{ side: "left" as const, from: local("23:40", "2026-10-08"), to: local("23:55", "2026-10-08") }]
+  const paused = { ...feed("paused", andrew, sides, [[local("00:00"), 60, 0]]), status: "active", endedAt: null }
+  played.days.push({ ...emptyDay(DAY), feeds: [paused], diapers: [diaper("pee", local("00:10"), true, false, emily)] })
+  await openHistory(page)
+  await page.getByRole("button", { name: /^2 entries from/u }).click()
+  await page
+    .getByRole("dialog", { name: "2 entries" })
+    .getByRole("button", { name: /^Edit Nursing/u })
+    .click()
+  await expect(page.getByRole("dialog", { name: "Nursing" })).toBeVisible()
+  await expect(page.getByRole("dialog", { name: /^Edit/u })).toHaveCount(0)
 })
 
 test("edits a feed from its details in one Save", async ({ page }) => {
