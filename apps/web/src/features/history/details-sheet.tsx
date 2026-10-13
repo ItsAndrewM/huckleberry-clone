@@ -3,7 +3,7 @@ import { Button } from "../../components/ui/button.tsx"
 import { Sheet } from "../../sheets/sheet.tsx"
 import { useSheets } from "../../sheets/sheets-context.ts"
 import type { Display } from "../today/display.ts"
-import type { Entry } from "./day-model.ts"
+import { type Entry, editSheetOf } from "./day-model.ts"
 import { type EntryDetails, entryDetails } from "./entry-details.ts"
 import { entryName } from "./entry-labels.ts"
 
@@ -12,8 +12,6 @@ interface DetailsSheetProps {
   readonly display: Display
   readonly now: number
 }
-
-const editSheetOf = (entry: Entry) => (entry.kind === "diaper" ? "editDiaper" : "editFeed")
 
 interface DetailsItemProps {
   readonly details: EntryDetails
@@ -50,7 +48,14 @@ export const DetailsSheet = ({ entries, display, now }: DetailsSheetProps) => {
   const [only] = details
   const single = details.length === 1 && only !== undefined
   const title = single ? only.details.title : `${details.length} entries`
-  const edit = (entry: Entry, id: string) => () => sheets.show(editSheetOf(entry), id)
+  const edit = (entry: Entry, id: string) => () => {
+    const sheet = editSheetOf(entry)
+    if (sheet === "nursing") {
+      sheets.show(sheet)
+      return
+    }
+    sheets.show(sheet, id)
+  }
   return (
     <Sheet sheet="details" title={details.length === 0 ? "Deleted" : title}>
       {details.length === 0 ? <p className="text-sm text-muted-foreground">This entry was deleted.</p> : null}

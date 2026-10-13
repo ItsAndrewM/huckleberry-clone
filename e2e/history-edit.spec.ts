@@ -23,7 +23,8 @@ test("edits a diaper from its details, and the grid shows it before the househol
   await sheet.getByRole("button", { name: "Pee" }).click()
   await sheet.getByRole("button", { name: "Save" }).click()
   await expect(sheet).toBeHidden()
-  await expect(page.getByRole("button", { name: "Diaper at 5:30 AM: Pee" })).toBeVisible()
+  await expect(page.getByRole("button", { name: "Diaper at 5:30 AM: Pee", exact: true })).toBeVisible()
+  await expect(page.getByRole("button", { name: "Diaper at 5:30 AM: Pee and poo" })).toHaveCount(0)
   answered.open()
   await expect
     .poll(() => sent)

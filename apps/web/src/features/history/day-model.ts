@@ -73,6 +73,11 @@ export const isLiveFeed = (entries: ReadonlyArray<Entry>) => {
   return entries.length === 1 && only?.kind === "feed" && only.feed.status === "active"
 }
 
+export const editSheetOf = (entry: Entry): "editDiaper" | "editFeed" | "nursing" => {
+  if (entry.kind === "diaper") return "editDiaper"
+  return entry.feed.status === "active" ? "nursing" : "editFeed"
+}
+
 export const anchorOf = (model: DayModel): number => {
   if (model.grid.now !== null) return model.grid.now
   const tops = [...model.grid.blocks, ...model.grid.clusters].map(({ top }) => top)
