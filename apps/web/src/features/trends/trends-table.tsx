@@ -37,7 +37,7 @@ export const TrendsTable = ({ days, volume, today }: TrendsTableProps) => (
               <Link
                 to="/history"
                 search={historySearchOf(date, today)}
-                className="-my-3.5 inline-flex min-h-11 items-center text-primary underline-offset-4 hover:underline"
+                className="-my-2 flex min-h-11 items-center text-primary underline-offset-4 hover:underline"
               >
                 {name}
               </Link>

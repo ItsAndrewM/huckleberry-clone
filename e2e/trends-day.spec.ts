@@ -29,6 +29,13 @@ const spareWidth = (link: Locator) =>
     return anchor.getBoundingClientRect().width - contents.getBoundingClientRect().width
   })
 
+const overhangOf = async (table: Locator, day: string) => {
+  const row = table.getByRole("row", { name: day })
+  const [link, around] = await Promise.all([row.getByRole("link").boundingBox(), row.boundingBox()])
+  if (link === null || around === null) return Number.NaN
+  return Math.max(around.y - link.y, link.y + link.height - (around.y + around.height))
+}
+
 test("climbs through today so far, against her usual day over the seven days before", async ({ page }) => {
   await playDays(page)
   await openTrends(page, "?view=day")
@@ -113,9 +120,12 @@ test("opens a day in History from the table", async ({ page }) => {
   await playDays(page)
   await openTrends(page)
   await page.getByText("Show as a table", { exact: true }).click()
-  const link = page.getByRole("table").getByRole("link", { name: "Tue, Oct 6" })
+  const table = page.getByRole("table")
+  const link = table.getByRole("link", { name: "Tue, Oct 6" })
   await expect(link).toBeVisible()
   expect((await link.boundingBox())?.height).toBeGreaterThanOrEqual(44)
+  expect(await overhangOf(table, "Fri, Oct 9, so far")).toBeLessThanOrEqual(0.5)
+  expect(await overhangOf(table, "Tue, Oct 6")).toBeLessThanOrEqual(0.5)
   await link.click()
   await expect(page).toHaveURL(/\/history\?date=2026-10-06$/u)
   await expect(page.getByRole("navigation", { name: "Days" }).getByRole("heading")).toHaveText("Tue, Oct 6")
