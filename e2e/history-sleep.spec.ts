@@ -1,5 +1,6 @@
 import { expect, type Page, test } from "@playwright/test"
 import { busyDay, local, openHistory, playHistory, sleep } from "./played-day.ts"
+import { muteLiveUpdates } from "./played-household.ts"
 
 const grid = (page: Page) => page.getByRole("region", { name: "The day by hour" })
 
@@ -18,6 +19,7 @@ const playSleptDay = async (page: Page) => {
       sleep("nap", local("07:10"), local("08:20"), "nap", andrew),
     ],
   })
+  await muteLiveUpdates(page)
   return played
 }
 

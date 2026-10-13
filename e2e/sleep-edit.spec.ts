@@ -2,6 +2,7 @@ import { expect, type Page, test } from "@playwright/test"
 import {
   caregiversOf,
   MINUTE,
+  muteLiveUpdates,
   NOW,
   openToday,
   playHousehold,
@@ -37,6 +38,7 @@ test("logs a past sleep from the sleep sheet: the hour before now, a nap by its 
     played.today = sleepingToday(sleep)
     return { status: 201, json: { sleep, changed: [["today"]] } }
   })
+  await muteLiveUpdates(page)
   await openToday(page)
   await page.getByRole("region", { name: "Log", exact: true }).getByRole("button", { name: "Sleep" }).click()
   await page.getByRole("dialog", { name: "Sleep" }).getByRole("button", { name: "Log a past sleep" }).click()
@@ -66,6 +68,7 @@ test("edits a finished sleep from Today's list, keeping its start to the second,
     played.today = sleepingToday(sleep)
     return { status: 200, json: { sleep, changed: [["today"]] } }
   })
+  await muteLiveUpdates(page)
   await openToday(page)
   await recent(page).getByRole("button", { name: /Nap/u }).click()
   const sheet = page.getByRole("dialog", { name: "Edit sleep" })
@@ -105,6 +108,7 @@ test("says who changed the sleep first, and saves mine on top of theirs when ask
     played.today = sleepingToday(mine)
     return { status: 200, json: { sleep: mine, changed: [["today"]] } }
   })
+  await muteLiveUpdates(page)
   await openToday(page)
   await recent(page).getByRole("button", { name: /Nap/u }).click()
   const sheet = page.getByRole("dialog", { name: "Edit sleep" })
