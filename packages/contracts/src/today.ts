@@ -18,6 +18,11 @@ export const Totals = Schema.Struct({
   diapers: Count,
   wetDiapers: Count,
   dirtyDiapers: Count,
+  sleepsStarted: Count,
+  sleepSeconds: Count,
+  napSeconds: Count,
+  nightSeconds: Count,
+  longestSleepSeconds: Count,
 })
 export type Totals = typeof Totals.Type
 

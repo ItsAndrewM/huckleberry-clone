@@ -50,6 +50,11 @@ const sum = (all: ReadonlyArray<Totals>): Totals => ({
   diapers: all.reduce((total, totals) => total + totals.diapers, 0),
   wetDiapers: all.reduce((total, totals) => total + totals.wetDiapers, 0),
   dirtyDiapers: all.reduce((total, totals) => total + totals.dirtyDiapers, 0),
+  sleepsStarted: all.reduce((total, totals) => total + totals.sleepsStarted, 0),
+  sleepSeconds: all.reduce((total, totals) => total + totals.sleepSeconds, 0),
+  napSeconds: all.reduce((total, totals) => total + totals.napSeconds, 0),
+  nightSeconds: all.reduce((total, totals) => total + totals.nightSeconds, 0),
+  longestSleepSeconds: Math.max(0, ...all.map((totals) => totals.longestSleepSeconds)),
 })
 
 export const periodOf = (dates: ReadonlyArray<string>, days: Readonly<Record<string, Totals>>) => {

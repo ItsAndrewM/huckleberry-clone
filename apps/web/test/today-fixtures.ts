@@ -17,6 +17,11 @@ export const NO_TOTALS: Totals = {
   diapers: 0,
   wetDiapers: 0,
   dirtyDiapers: 0,
+  sleepsStarted: 0,
+  sleepSeconds: 0,
+  napSeconds: 0,
+  nightSeconds: 0,
+  longestSleepSeconds: 0,
 }
 
 const audit = (at: number, by: string) => ({

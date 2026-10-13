@@ -28,6 +28,11 @@ const TOTALS: Totals = {
   diapers: 1,
   wetDiapers: 1,
   dirtyDiapers: 0,
+  sleepsStarted: 0,
+  sleepSeconds: 0,
+  napSeconds: 0,
+  nightSeconds: 0,
+  longestSleepSeconds: 0,
 }
 
 const FEED: Feed = {

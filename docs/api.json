@@ -893,6 +893,26 @@
                         "dirtyDiapers": {
                           "type": "integer",
                           "minimum": 0
+                        },
+                        "sleepsStarted": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "sleepSeconds": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "napSeconds": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "nightSeconds": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "longestSleepSeconds": {
+                          "type": "integer",
+                          "minimum": 0
                         }
                       },
                       "required": [
@@ -905,7 +925,12 @@
                         "bottleMl",
                         "diapers",
                         "wetDiapers",
-                        "dirtyDiapers"
+                        "dirtyDiapers",
+                        "sleepsStarted",
+                        "sleepSeconds",
+                        "napSeconds",
+                        "nightSeconds",
+                        "longestSleepSeconds"
                       ],
                       "additionalProperties": false
                     },
@@ -1640,6 +1665,26 @@
                         "dirtyDiapers": {
                           "type": "integer",
                           "minimum": 0
+                        },
+                        "sleepsStarted": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "sleepSeconds": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "napSeconds": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "nightSeconds": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "longestSleepSeconds": {
+                          "type": "integer",
+                          "minimum": 0
                         }
                       },
                       "required": [
@@ -1652,7 +1697,12 @@
                         "bottleMl",
                         "diapers",
                         "wetDiapers",
-                        "dirtyDiapers"
+                        "dirtyDiapers",
+                        "sleepsStarted",
+                        "sleepSeconds",
+                        "napSeconds",
+                        "nightSeconds",
+                        "longestSleepSeconds"
                       ],
                       "additionalProperties": false
                     }
@@ -10501,6 +10551,26 @@
                         "dirtyDiapers": {
                           "type": "integer",
                           "minimum": 0
+                        },
+                        "sleepsStarted": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "sleepSeconds": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "napSeconds": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "nightSeconds": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "longestSleepSeconds": {
+                          "type": "integer",
+                          "minimum": 0
                         }
                       },
                       "required": [
@@ -10513,7 +10583,12 @@
                         "bottleMl",
                         "diapers",
                         "wetDiapers",
-                        "dirtyDiapers"
+                        "dirtyDiapers",
+                        "sleepsStarted",
+                        "sleepSeconds",
+                        "napSeconds",
+                        "nightSeconds",
+                        "longestSleepSeconds"
                       ],
                       "additionalProperties": false
                     },
@@ -10970,6 +11045,26 @@
                         "dirtyDiapers": {
                           "type": "integer",
                           "minimum": 0
+                        },
+                        "sleepsStarted": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "sleepSeconds": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "napSeconds": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "nightSeconds": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "longestSleepSeconds": {
+                          "type": "integer",
+                          "minimum": 0
                         }
                       },
                       "required": [
@@ -10982,7 +11077,12 @@
                         "bottleMl",
                         "diapers",
                         "wetDiapers",
-                        "dirtyDiapers"
+                        "dirtyDiapers",
+                        "sleepsStarted",
+                        "sleepSeconds",
+                        "napSeconds",
+                        "nightSeconds",
+                        "longestSleepSeconds"
                       ],
                       "additionalProperties": false
                     },
@@ -11053,6 +11153,26 @@
                               "dirtyDiapers": {
                                 "type": "integer",
                                 "minimum": 0
+                              },
+                              "sleepsStarted": {
+                                "type": "integer",
+                                "minimum": 0
+                              },
+                              "sleepSeconds": {
+                                "type": "integer",
+                                "minimum": 0
+                              },
+                              "napSeconds": {
+                                "type": "integer",
+                                "minimum": 0
+                              },
+                              "nightSeconds": {
+                                "type": "integer",
+                                "minimum": 0
+                              },
+                              "longestSleepSeconds": {
+                                "type": "integer",
+                                "minimum": 0
                               }
                             },
                             "required": [
@@ -11065,7 +11185,12 @@
                               "bottleMl",
                               "diapers",
                               "wetDiapers",
-                              "dirtyDiapers"
+                              "dirtyDiapers",
+                              "sleepsStarted",
+                              "sleepSeconds",
+                              "napSeconds",
+                              "nightSeconds",
+                              "longestSleepSeconds"
                             ],
                             "additionalProperties": false
                           }
@@ -11532,6 +11657,26 @@
                         "dirtyDiapers": {
                           "type": "integer",
                           "minimum": 0
+                        },
+                        "sleepsStarted": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "sleepSeconds": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "napSeconds": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "nightSeconds": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "longestSleepSeconds": {
+                          "type": "integer",
+                          "minimum": 0
                         }
                       },
                       "required": [
@@ -11544,7 +11689,12 @@
                         "bottleMl",
                         "diapers",
                         "wetDiapers",
-                        "dirtyDiapers"
+                        "dirtyDiapers",
+                        "sleepsStarted",
+                        "sleepSeconds",
+                        "napSeconds",
+                        "nightSeconds",
+                        "longestSleepSeconds"
                       ],
                       "additionalProperties": false
                     },
@@ -11615,6 +11765,26 @@
                               "dirtyDiapers": {
                                 "type": "integer",
                                 "minimum": 0
+                              },
+                              "sleepsStarted": {
+                                "type": "integer",
+                                "minimum": 0
+                              },
+                              "sleepSeconds": {
+                                "type": "integer",
+                                "minimum": 0
+                              },
+                              "napSeconds": {
+                                "type": "integer",
+                                "minimum": 0
+                              },
+                              "nightSeconds": {
+                                "type": "integer",
+                                "minimum": 0
+                              },
+                              "longestSleepSeconds": {
+                                "type": "integer",
+                                "minimum": 0
                               }
                             },
                             "required": [
@@ -11627,7 +11797,12 @@
                               "bottleMl",
                               "diapers",
                               "wetDiapers",
-                              "dirtyDiapers"
+                              "dirtyDiapers",
+                              "sleepsStarted",
+                              "sleepSeconds",
+                              "napSeconds",
+                              "nightSeconds",
+                              "longestSleepSeconds"
                             ],
                             "additionalProperties": false
                           }

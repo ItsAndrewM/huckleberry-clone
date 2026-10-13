@@ -42,7 +42,7 @@ const REDONE_NURSED = {
 }
 
 const countedDay = (records: Pick<DayPeriod, "feeds" | "diapers">) =>
-  dayWith({ ...records, measurements: [], totals: totalsIn(BOUNDS, records.feeds, records.diapers, NOW_ON_DAY) })
+  dayWith({ ...records, measurements: [], totals: totalsIn(BOUNDS, { ...records, sleeps: [] }, NOW_ON_DAY) })
 
 const recentOf = (entries: ReadonlyArray<RecentEntry>) => entries.toSorted((a, b) => timeOf(b) - timeOf(a))
 
@@ -52,7 +52,11 @@ const countedToday = (entries: ReadonlyArray<RecentEntry>) => {
   const feeds = entries.flatMap((entry) => (entry.kind === "feed" ? [entry.feed] : []))
   const diapers = entries.flatMap((entry) => (entry.kind === "diaper" ? [entry.diaper] : []))
   const lastFeed = feeds.toSorted((a, b) => b.startedAt - a.startedAt)[0] ?? null
-  return todayWith({ totals: totalsIn(BOUNDS, feeds, diapers, NOW_ON_DAY), lastFeed, recent: recentOf(entries) })
+  return todayWith({
+    totals: totalsIn(BOUNDS, { feeds, diapers, sleeps: [] }, NOW_ON_DAY),
+    lastFeed,
+    recent: recentOf(entries),
+  })
 }
 
 describe("an edit or delete swapped in before the household answers", () => {
@@ -178,7 +182,7 @@ describe("the caches an edit or delete changes at once", () => {
     const queryClient = new QueryClient()
     queryClient.setQueryData(queryKeys.me, meWith())
     const counted = todayWith({
-      totals: totalsIn(BOUNDS, [NURSED, RUNNING], [], COUNTED_AT),
+      totals: totalsIn(BOUNDS, { feeds: [NURSED, RUNNING], diapers: [], sleeps: [] }, COUNTED_AT),
       activeFeed: RUNNING,
       lastFeed: RUNNING,
       recent: [feed(RUNNING), feed(NURSED)],
@@ -186,7 +190,11 @@ describe("the caches an edit or delete changes at once", () => {
     queryClient.setQueryData(queryKeys.today, counted, { updatedAt: COUNTED_AT })
     const pended = await pendIn(queryClient, DELETE_RUNNING, DELETED_AT)
     expect(queryClient.getQueryData(queryKeys.today)).toEqual(
-      todayWith({ totals: totalsIn(BOUNDS, [NURSED], [], COUNTED_AT), lastFeed: NURSED, recent: [feed(NURSED)] }),
+      todayWith({
+        totals: totalsIn(BOUNDS, { feeds: [NURSED], diapers: [], sleeps: [] }, COUNTED_AT),
+        lastFeed: NURSED,
+        recent: [feed(NURSED)],
+      }),
     )
     rollBack(queryClient, DELETE_RUNNING, pended)
     expect(queryClient.getQueryData(queryKeys.today)).toEqual(counted)
@@ -198,12 +206,12 @@ describe("the caches an edit or delete changes at once", () => {
     const counted = dayWith({
       feeds: [NURSED, RUNNING],
       diapers: [],
-      totals: totalsIn(BOUNDS, [NURSED, RUNNING], [], COUNTED_AT),
+      totals: totalsIn(BOUNDS, { feeds: [NURSED, RUNNING], diapers: [], sleeps: [] }, COUNTED_AT),
     })
     queryClient.setQueryData(queryKeys.day("2026-10-09"), counted)
     const pended = await pendIn(queryClient, DELETE_RUNNING, DELETED_AT)
     expect(queryClient.getQueryData<DayPeriod>(queryKeys.day("2026-10-09"))?.totals).toEqual(
-      totalsIn(BOUNDS, [NURSED], [], DELETED_AT),
+      totalsIn(BOUNDS, { feeds: [NURSED], diapers: [], sleeps: [] }, DELETED_AT),
     )
     rollBack(queryClient, DELETE_RUNNING, pended)
     expect(queryClient.getQueryData<DayPeriod>(queryKeys.day("2026-10-09"))?.feeds).toEqual([NURSED, RUNNING])
