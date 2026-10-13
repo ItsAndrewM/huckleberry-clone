@@ -92,6 +92,49 @@ test("wakes her at the time she woke when the tap comes later, but not before sh
   await expect(page.getByText("20 min")).toBeVisible()
 })
 
+test("wakes her a second after the start, with Wake up ready, when the other phone's clock started her sleep ahead", async ({
+  page,
+}) => {
+  const { andrew } = await caregiversOf(page)
+  const sleep = runningSleep(andrew.id, NOW + 2 * MINUTE, "nap", 2)
+  const { played, answer } = await playHousehold(page, sleepingToday(sleep))
+  await answer("**/api/sleeps/sleep-1/wake", ({ body }) => {
+    const woken = { ...sleep, endedAt: body.occurredAt ?? NOW, version: 3 }
+    played.today = sleepingToday(woken)
+    return { status: 200, json: { sleep: woken, changed: [["today"]] } }
+  })
+  await openToday(page)
+  const sheet = await openSleep(page)
+  await expect(sheet.getByRole("button", { name: "Wake up" })).toBeEnabled()
+  await sheet.getByRole("button", { name: "Wake up" }).click()
+  await expect
+    .poll(() => played.sent)
+    .toEqual([
+      {
+        method: "POST",
+        path: "/api/sleeps/sleep-1/wake",
+        body: { actionId: ACTION_ID, version: 2, occurredAt: sleep.startedAt + 1000 },
+      },
+    ])
+})
+
+test("says who woke her, and when, when the other phone's wake reached the household first", async ({ page }) => {
+  const { andrew, emily } = await caregiversOf(page)
+  const sleep = runningSleep(andrew.id, FELL_ASLEEP, "nap", 2)
+  const theirs = { ...sleep, endedAt: NOW - 5 * MINUTE, version: 3, updatedBy: emily.id }
+  const { played, answer } = await playHousehold(page, sleepingToday(sleep))
+  await answer("**/api/sleeps/sleep-1/wake", () => {
+    played.today = sleepingToday(theirs)
+    return { status: 409, json: { _tag: "Conflict", code: "STALE_VERSION", current: theirs } }
+  })
+  await openToday(page)
+  const sheet = await openSleep(page)
+  await sheet.getByRole("button", { name: "Wake up" }).click()
+  await expect(sheet.getByRole("alert")).toContainText(`${emily.displayName} woke her at`)
+  await expect(sheet.getByRole("alert")).toContainText(/woke her at 9:25\sAM\./u)
+  await expect(sheet.getByRole("button", { name: "Wake anyway" })).toHaveCount(0)
+})
+
 test("calls a sleep that fell at 6:30 AM a night, until a parent picks nap", async ({ page }) => {
   const { andrew } = await caregiversOf(page)
   const { played, answer } = await playHousehold(page, todayWith())

@@ -7,10 +7,9 @@ import { FailureNote } from "../../sheets/failure-note.tsx"
 import { failedFor, useSheets } from "../../sheets/sheets-context.ts"
 import { tapTime } from "../../sheets/tap-time.ts"
 import { WhenField } from "../../sheets/when-field.tsx"
-import { resolveWhen } from "../../sheets/when.ts"
 import { useNow } from "../../timer/use-now.ts"
 import { SleepKindToggle } from "./sleep-kind-toggle.tsx"
-import { AFTER_SLEEP, sentWake } from "./sleep-session.ts"
+import { AFTER_SLEEP, sentWake, wakeAt } from "./sleep-session.ts"
 import { SleepStart } from "./sleep-start.tsx"
 import { deleteAction, runningEdit, sleepWaits, wakeAction } from "./sleep-state.ts"
 import { SleepTimer } from "./sleep-timer.tsx"
@@ -27,7 +26,7 @@ export const RunningSleepView = ({ sleep, zone }: RunningSleepViewProps) => {
   const busy = sleepWaits(sheets.busy)
   const act = (action: SleepAction) => sheets.send({ sheet: "sleep", action })
   const wake = () => {
-    const resolved = resolveWhen(woke, zone, tapTime(), sleep.startedAt + 1)
+    const resolved = wakeAt(woke, zone, tapTime(), sleep.startedAt)
     if (resolved.ok) act(wakeAction(sleep, resolved.instant))
   }
   return (
@@ -48,13 +47,13 @@ export const RunningSleepView = ({ sleep, zone }: RunningSleepViewProps) => {
         onChange={setWoke}
         zone={zone}
         now={now}
-        earliest={sleep.startedAt + 1}
+        earliest={sleep.startedAt}
         tooEarly={AFTER_SLEEP}
       />
       <Button
         size="lg"
         className="h-14 text-lg"
-        disabled={busy || !resolveWhen(woke, zone, now, sleep.startedAt + 1).ok}
+        disabled={busy || !wakeAt(woke, zone, now, sleep.startedAt).ok}
         onClick={wake}
       >
         Wake up

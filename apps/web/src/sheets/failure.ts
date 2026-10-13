@@ -6,9 +6,11 @@ import {
   InvalidInput,
   MeasurementConflict,
   NotFound,
+  type Sleep,
   SleepConflict,
   Unauthorized,
 } from "@bt/contracts"
+import type { Action } from "../api/actions.ts"
 import { AuthRequired, Offline } from "../api/errors.ts"
 import { clockTime } from "../clock-time.ts"
 import { restoredNote } from "./restored-note.ts"
@@ -100,23 +102,28 @@ const measurementNote = ({ code, current }: MeasurementConflict, household: Hous
   return note(`${nameOf(household, current.updatedBy)} ${changed} this measurement a moment ago.`)
 }
 
-const sleepNote = ({ code, current }: SleepConflict, household: Household): Note => {
+const staleSleepSentence = (current: Sleep, household: Household, action: NoteOptions["action"]) => {
+  const name = nameOf(household, current.updatedBy)
+  if (current.deletedAt !== null) return `${name} deleted this sleep a moment ago.`
+  if (action !== "wakeSleep" || current.endedAt === null) return `${name} changed this sleep a moment ago.`
+  return `${name} woke her at ${timeOf(household, current.endedAt)}.`
+}
+
+const sleepNote = ({ code, current }: SleepConflict, household: Household, action: NoteOptions["action"]): Note => {
   switch (code) {
     case "SLEEP_ALREADY_ACTIVE":
       return note(`${nameOf(household, current.createdBy)} started a sleep at ${timeOf(household, current.startedAt)}.`)
     case "SLEEP_OVERLAP":
       return note(`This overlaps the ${current.kind} at ${spanOf(household, current)}.`)
-    case "STALE_VERSION": {
-      const changed = current.deletedAt === null ? "changed" : "deleted"
-      return note(`${nameOf(household, current.updatedBy)} ${changed} this sleep a moment ago.`)
-    }
+    case "STALE_VERSION":
+      return note(staleSleepSentence(current, household, action))
     case "ACTION_REPLAY_MISMATCH":
       return note("This was already saved as you first entered it.")
   }
 }
 
-const conflictNote = (error: Error, household: Household): Note | null => {
-  if (error instanceof SleepConflict) return sleepNote(error, household)
+const conflictNote = (error: Error, household: Household, action: NoteOptions["action"]): Note | null => {
+  if (error instanceof SleepConflict) return sleepNote(error, household, action)
   if (error instanceof FeedConflict) return feedNote(error, household)
   if (error instanceof DiaperConflict) return diaperNote(error, household)
   if (error instanceof MeasurementConflict) return measurementNote(error, household)
@@ -132,6 +139,7 @@ export type KeptOn = "phone" | "app" | null
 export interface NoteOptions {
   readonly keptOn: KeptOn
   readonly sheet?: SheetKind
+  readonly action?: Action["kind"]
 }
 
 const OFFLINE = {
@@ -151,7 +159,7 @@ const goneMessage = (sheet: SheetKind | undefined) => {
 
 const goneNote = (sheet: SheetKind | undefined): Note => note(goneMessage(sheet))
 
-export const failureNote = (error: Error, household: Household, { keptOn, sheet }: NoteOptions): Note => {
+export const failureNote = (error: Error, household: Household, { keptOn, sheet, action }: NoteOptions): Note => {
   if (error instanceof Offline) return offlineNote(keptOn)
   if (error instanceof AuthRequired || error instanceof Unauthorized) {
     return { message: "Your sign-in has expired. Sign in, and this will be saved.", retry: null, signIn: true }
@@ -160,5 +168,5 @@ export const failureNote = (error: Error, household: Household, { keptOn, sheet 
   if (restored !== null) return restored
   if (error instanceof InvalidInput) return fieldNote(error, household, sheet)
   if (error instanceof NotFound) return goneNote(sheet)
-  return conflictNote(error, household) ?? note("Not saved.", TRY_AGAIN)
+  return conflictNote(error, household, action) ?? note("Not saved.", TRY_AGAIN)
 }

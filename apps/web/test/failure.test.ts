@@ -5,10 +5,12 @@ import {
   MeasurementConflict,
   NotFound,
   ServiceUnavailable,
+  type Sleep,
   SleepConflict,
   Unauthorized,
 } from "@bt/contracts"
 import { describe, expect, it } from "vitest"
+import type { Action } from "../src/api/actions.ts"
 import { AuthRequired, Offline } from "../src/api/errors.ts"
 import { StaleDraft } from "../src/sheets/drafts.ts"
 import { failureNote, type Household } from "../src/sheets/failure.ts"
@@ -27,6 +29,11 @@ const HOUSEHOLD: Household = {
 }
 
 const message = (error: Error) => failureNote(error, HOUSEHOLD, { keptOn: "phone" }).message.replace(/\s/gu, " ")
+
+const staleSleep = (current: Sleep, action: Action["kind"]) => {
+  const error = new SleepConflict({ code: "STALE_VERSION", current })
+  return failureNote(error, HOUSEHOLD, { keptOn: null, sheet: "sleep", action }).message.replace(/\s/gu, " ")
+}
 
 describe("failureNote", () => {
   it("says an entry with no connection is kept on this phone, and offers to try again", () => {
@@ -137,6 +144,19 @@ describe("failureNote", () => {
     expect(message(new SleepConflict({ code: "ACTION_REPLAY_MISMATCH", current: changed }))).toBe(
       "This was already saved as you first entered it.",
     )
+  })
+
+  it("says who woke her, and when, when the other phone's wake reached the household first", () => {
+    const woken = sleptAt(NOW - 60 * MINUTE, { updatedBy: EMILY, endedAt: NOW - 20 * MINUTE, version: 3 })
+    expect(staleSleep(woken, "wakeSleep")).toBe("Emily woke her at 9:10 AM.")
+  })
+
+  it("keeps changed and deleted for a stale edit or delete, for a wake that finds her asleep, and for a deleted sleep", () => {
+    const woken = sleptAt(NOW - 60 * MINUTE, { updatedBy: EMILY, endedAt: NOW - 20 * MINUTE, version: 3 })
+    expect(staleSleep(woken, "editSleep")).toBe("Emily changed this sleep a moment ago.")
+    expect(staleSleep(woken, "deleteSleep")).toBe("Emily changed this sleep a moment ago.")
+    expect(staleSleep({ ...woken, endedAt: null }, "wakeSleep")).toBe("Emily changed this sleep a moment ago.")
+    expect(staleSleep({ ...woken, deletedAt: NOW }, "wakeSleep")).toBe("Emily deleted this sleep a moment ago.")
   })
 
   it("explains a refused sleep time in a sleep's words", () => {
