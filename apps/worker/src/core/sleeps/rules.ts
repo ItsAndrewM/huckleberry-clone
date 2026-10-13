@@ -1,6 +1,15 @@
-import { type Changed, NotFound, type Sleep, SleepConflict } from "@bt/contracts"
-import { FUTURE_TOLERANCE_MS, type Instant, type Interval, type Span } from "@bt/domain"
-import { type Calendar, changedKeys } from "../calendar.ts"
+import { type Changed, type FieldError, MAX_SLEEP_MS, NotFound, type Sleep, SleepConflict } from "@bt/contracts"
+import {
+  FUTURE_TOLERANCE_MS,
+  type Instant,
+  type Interval,
+  type Span,
+  type ValidationIssue,
+  validateEndAfterStart,
+  validateNotInFuture,
+} from "@bt/domain"
+import { type Calendar, changedKeys, timeIssue } from "../calendar.ts"
+import { errorAt } from "../fields.ts"
 import type { CoreResult } from "../receipts.ts"
 import { loadSleep, sleepsWhere } from "./store.ts"
 
@@ -47,6 +56,22 @@ export const overlappedSleep = (
     runningUntil,
     span.startedAt,
   )[0]
+}
+
+const endIssue = (startedAt: Instant, endedAt: Instant, now: Instant): ValidationIssue | null =>
+  validateEndAfterStart(startedAt, endedAt) ??
+  validateNotInFuture(endedAt, now) ??
+  (endedAt - startedAt > MAX_SLEEP_MS ? "out_of_range" : null)
+
+const sameTimes = (a: Span, b: Span) => a.startedAt === b.startedAt && a.endedAt === b.endedAt
+
+export const timesErrors = (calendar: Calendar, times: Span, now: Instant, before: Span | null): FieldError[] => {
+  if (before !== null && sameTimes(times, before)) return []
+  const keptStart = before !== null && times.startedAt === before.startedAt
+  return [
+    ...errorAt("startedAt", keptStart ? null : timeIssue(calendar, times.startedAt, now)),
+    ...errorAt("endedAt", times.endedAt === null ? null : endIssue(times.startedAt, times.endedAt, now)),
+  ]
 }
 
 export const overlapConflict = (sleep: Sleep) => new SleepConflict({ code: "SLEEP_OVERLAP", current: sleep })
