@@ -10,7 +10,7 @@ import { WhenField } from "../../sheets/when-field.tsx"
 import { resolveWhen } from "../../sheets/when.ts"
 import { useNow } from "../../timer/use-now.ts"
 import { AmountField } from "./amount-field.tsx"
-import { bottleAction, bottleSession, canSaveBottle, toppedUpFeed } from "./bottle-entry.ts"
+import { bottleAction, bottleSession, canSaveBottle, toppedUpFor } from "./bottle-entry.ts"
 
 interface BottleFormProps {
   readonly prefill: Prefill | undefined
@@ -26,13 +26,14 @@ export const BottleForm = ({ prefill, active, unit, zone }: BottleFormProps) => 
   const [when, setWhen] = useState(session.when)
   const now = useNow()
   const picked = resolveWhen(when, zone, now)
-  const toppedUp = picked.ok ? toppedUpFeed(active, picked.instant) : null
+  const toppedUp = picked.ok ? toppedUpFor(active, picked.instant, session.held) : null
   const ready = picked.ok && canSaveBottle(amounts, toppedUp)
   const save = () => {
     if (sheets.open !== "bottle") return
     const resolved = resolveWhen(when, zone, tapTime())
-    if (!resolved.ok || !canSaveBottle(amounts, toppedUpFeed(active, resolved.instant))) return
-    sheets.send({ sheet: "bottle", action: bottleAction(session.actionId, amounts, resolved.instant, active) })
+    if (!resolved.ok || !canSaveBottle(amounts, toppedUpFor(active, resolved.instant, session.held))) return
+    const action = bottleAction(session.actionId, amounts, resolved.instant, active, session.held)
+    sheets.send({ sheet: "bottle", action })
   }
   return (
     <>

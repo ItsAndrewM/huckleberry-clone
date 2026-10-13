@@ -7,6 +7,7 @@ export {
   ComponentDelete,
   Feed,
   FeedConflict,
+  FeedEdit,
   FeedFinish,
   FeedMove,
   FeedResume,

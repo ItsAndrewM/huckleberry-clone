@@ -1,8 +1,10 @@
 import { type Growth, type Me, queryKeys, type Today } from "@bt/contracts"
 import type { QueryClient, QueryKey } from "@tanstack/react-query"
 import { type Action, isMeasurementAction, type MeasurementAction } from "./actions.ts"
+import { DAYS, type EntriesPended, pendEntries, unswapped } from "./entry-cache.ts"
 import { pendingGrowth, savedGrowth, withdrawnGrowth } from "./growth-cache.ts"
 import type { Saved } from "./send.ts"
+import { isSwapping } from "./swap.ts"
 import { pendingToday, savedToday, withdrawnToday } from "./today-cache.ts"
 import type { Pending } from "./today-change.ts"
 
@@ -17,7 +19,7 @@ interface GrowthPended {
   readonly before: Growth
 }
 
-export type Pended = TodayPended | GrowthPended
+export type Pended = TodayPended | GrowthPended | EntriesPended
 
 const pendToday = async (queryClient: QueryClient, action: Action, now: number): Promise<Pended | null> => {
   if (queryClient.getQueryData(queryKeys.today) === undefined) return null
@@ -44,10 +46,16 @@ const pendGrowth = async (queryClient: QueryClient, action: MeasurementAction, n
   return { cache: "growth", before }
 }
 
-export const pendIn = (queryClient: QueryClient, action: Action, now: number) =>
-  isMeasurementAction(action) ? pendGrowth(queryClient, action, now) : pendToday(queryClient, action, now)
+export const pendIn = (queryClient: QueryClient, action: Action, now: number): Promise<Pended | null> => {
+  if (isMeasurementAction(action)) return pendGrowth(queryClient, action, now)
+  return isSwapping(action) ? pendEntries(queryClient, action, now) : pendToday(queryClient, action, now)
+}
 
 const withdraw = (queryClient: QueryClient, action: Action, pended: Pended) => {
+  if (pended.cache === "entries") {
+    unswapped(queryClient, pended)
+    return
+  }
   if (pended.cache === "today") {
     const { before, pending } = pended
     queryClient.setQueryData<Today>(queryKeys.today, (today) =>
@@ -65,6 +73,7 @@ const withdraw = (queryClient: QueryClient, action: Action, pended: Pended) => {
 export const rollBack = (queryClient: QueryClient, action: Action, pended: Pended | null | undefined) => {
   if (pended !== null && pended !== undefined) withdraw(queryClient, action, pended)
   void queryClient.invalidateQueries({ queryKey: isMeasurementAction(action) ? queryKeys.growth : queryKeys.today })
+  if (isSwapping(action)) void queryClient.invalidateQueries(DAYS)
 }
 
 const refetchAfterSave = async (queryClient: QueryClient, queryKey: QueryKey) => {
@@ -73,14 +82,14 @@ const refetchAfterSave = async (queryClient: QueryClient, queryKey: QueryKey) =>
   await queryClient.invalidateQueries({ queryKey })
 }
 
-export const settle = (queryClient: QueryClient, saved: Saved, action: Action) => {
+export const settle = (queryClient: QueryClient, saved: Saved, action: Action, now: number) => {
   if (isMeasurementAction(action) && "measurement" in saved) {
     queryClient.setQueryData<Growth>(queryKeys.growth, (growth) =>
       growth === undefined ? growth : savedGrowth(growth, saved, action),
     )
   } else {
     queryClient.setQueryData<Today>(queryKeys.today, (today) =>
-      today === undefined ? today : savedToday(today, saved, action),
+      today === undefined ? today : savedToday(today, saved, action, now),
     )
   }
   for (const queryKey of saved.changed) void refetchAfterSave(queryClient, queryKey)

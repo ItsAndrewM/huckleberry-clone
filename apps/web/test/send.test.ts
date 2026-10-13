@@ -50,6 +50,22 @@ const ROUTES: ReadonlyArray<readonly [Action, string, string, number]> = [
     200,
   ],
   [
+    { kind: "editFeed", id: "feed-1", payload: { actionId: ACTION_ID, version: 2, segments: [], portions: [BOTTLE] } },
+    "PUT",
+    "/api/feeds/feed-1",
+    200,
+  ],
+  [
+    {
+      kind: "editSegment",
+      id: "segment-1",
+      payload: { actionId: ACTION_ID, version: 2, side: "left", startedAt: NOW, endedAt: null },
+    },
+    "PATCH",
+    "/api/segments/segment-1",
+    200,
+  ],
+  [
     { kind: "deleteFeed", id: "feed-1", payload: { actionId: ACTION_ID, version: 2 } },
     "DELETE",
     "/api/feeds/feed-1",

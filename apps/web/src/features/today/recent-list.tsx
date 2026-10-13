@@ -3,30 +3,56 @@ import { KIND_ICONS } from "./kind-icons.ts"
 import { Parts } from "./parts.tsx"
 import type { RecentRow } from "./recent-rows.ts"
 
-const RecentItem = ({ row }: { readonly row: RecentRow }) => {
+const RowContent = ({ row }: { readonly row: RecentRow }) => {
   const Icon = KIND_ICONS[row.kind]
   return (
-    <li className="flex items-center gap-3 px-4 py-3">
+    <>
       <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-muted">
         <Icon aria-hidden="true" className="size-4" />
       </span>
-      <div className="flex min-w-0 flex-1 flex-col">
-        <p className="font-medium">{row.title}</p>
-        <p className="text-sm tabular-nums text-muted-foreground">
+      <span className="flex min-w-0 flex-1 flex-col">
+        <span className="font-medium">{row.title}</span>
+        <span className="text-sm tabular-nums text-muted-foreground">
           <Parts parts={row.detail} />
-        </p>
-      </div>
-      <div className="flex shrink-0 flex-col items-end">
+        </span>
+      </span>
+      <span className="flex shrink-0 flex-col items-end">
         <time dateTime={new Date(row.at).toISOString()} className="text-sm tabular-nums">
           {row.time}
         </time>
-        <p className="text-xs text-muted-foreground">{row.saving ? "Saving…" : row.by}</p>
-      </div>
-    </li>
+        <span className="text-xs text-muted-foreground">{row.saving ? "Saving…" : row.by}</span>
+      </span>
+    </>
   )
 }
 
-export const RecentList = ({ rows }: { readonly rows: ReadonlyArray<RecentRow> }) => (
+const ROW = "flex w-full items-center gap-3 px-4 py-3 text-left"
+
+interface RecentItemProps {
+  readonly row: RecentRow
+  readonly onOpen: (row: RecentRow) => void
+}
+
+const RecentItem = ({ row, onOpen }: RecentItemProps) => (
+  <li>
+    {row.opens === null ? (
+      <div className={ROW}>
+        <RowContent row={row} />
+      </div>
+    ) : (
+      <button type="button" className={`${ROW} hover:bg-muted/50 active:bg-muted`} onClick={() => onOpen(row)}>
+        <RowContent row={row} />
+      </button>
+    )}
+  </li>
+)
+
+interface RecentListProps {
+  readonly rows: ReadonlyArray<RecentRow>
+  readonly onOpen: (row: RecentRow) => void
+}
+
+export const RecentList = ({ rows, onOpen }: RecentListProps) => (
   <section aria-labelledby="recent-title" className="flex flex-col gap-3">
     <h2 id="recent-title" className="text-sm font-medium text-muted-foreground">
       Last 24 hours
@@ -37,7 +63,7 @@ export const RecentList = ({ rows }: { readonly rows: ReadonlyArray<RecentRow> }
       <Card className="py-0">
         <ol aria-labelledby="recent-title" className="divide-y">
           {rows.map((row) => (
-            <RecentItem key={row.id} row={row} />
+            <RecentItem key={row.id} row={row} onOpen={onOpen} />
           ))}
         </ol>
       </Card>

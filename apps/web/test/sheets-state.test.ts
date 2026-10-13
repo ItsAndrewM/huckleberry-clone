@@ -99,17 +99,17 @@ const FINISH: Sending = {
 }
 
 const UNDO_DIAPER: Sending = {
-  sheet: "diaper",
+  sheet: "undo",
   action: { kind: "deleteDiaper", id: "diaper-1", payload: { actionId: ACTION_ID, version: 1 } },
 }
 
 const UNDO_FEED: Sending = {
-  sheet: "nursing",
+  sheet: "undo",
   action: { kind: "deleteFeed", id: "feed-7", payload: { actionId: ACTION_ID, version: 2 } },
 }
 
 const UNDO_PORTION: Sending = {
-  sheet: "bottle",
+  sheet: "undo",
   action: {
     kind: "deletePortion",
     id: "portion-9",
@@ -132,6 +132,29 @@ const EDIT_PORTION: Sending = {
     kind: "editPortion",
     id: "portion-9",
     payload: { actionId: RENEWED, version: 2, occurredAt: NOW, breastMilkMl: 90, formulaMl: 0 },
+  },
+}
+
+const STARTED_EARLIER: Sending = {
+  sheet: "nursing",
+  action: {
+    kind: "editSegment",
+    id: "segment-1",
+    payload: { actionId: ACTION_ID, version: 1, side: "left", startedAt: NOW - 600_000, endedAt: null },
+  },
+}
+
+const FEED_REDONE: Sending = {
+  sheet: "pastFeed",
+  action: {
+    kind: "editFeed",
+    id: "feed-1",
+    payload: {
+      actionId: ACTION_ID,
+      version: 2,
+      segments: [],
+      portions: [{ occurredAt: NOW, breastMilkMl: 90, formulaMl: 0 }],
+    },
   },
 }
 
@@ -179,6 +202,8 @@ const CLOSING = {
   deletePortion: { sending: UNDO_PORTION, closes: false, entry: false },
   editDiaper: { sending: EDIT_DIAPER, closes: false, entry: false },
   editPortion: { sending: EDIT_PORTION, closes: false, entry: false },
+  editSegment: { sending: STARTED_EARLIER, closes: false, entry: false },
+  editFeed: { sending: FEED_REDONE, closes: false, entry: false },
   logMeasurement: { sending: MEASURED, closes: true, entry: true },
   editMeasurement: { sending: MEASUREMENT_EDITED, closes: true, entry: false },
   deleteMeasurement: { sending: MEASUREMENT_DELETED, closes: true, entry: false },
@@ -216,7 +241,7 @@ describe("a failed send", () => {
 
   it("says so in a toast when it was an undo", () => {
     const undo: Sending = {
-      sheet: "diaper",
+      sheet: "undo",
       action: { kind: "deleteDiaper", id: "d1", payload: { actionId: ACTION_ID, version: 1 } },
     }
     const state = failedState(CLOSED, { sending: undo, error: new Offline() }, NOW)
@@ -234,7 +259,7 @@ describe("a saved entry", () => {
     expect(toast).toMatchObject({
       message: "Diaper saved",
       until: NOW + TOAST_MS,
-      undo: { sheet: "diaper", action: { kind: "deleteDiaper", id: "diaper-1", payload: { version: 1 } } },
+      undo: { sheet: "undo", action: { kind: "deleteDiaper", id: "diaper-1", payload: { version: 1 } } },
     })
   })
 
@@ -326,7 +351,7 @@ describe("the Undo for a new feed", () => {
     const { toast } = savedState(CLOSED, sending, { feed, changed: [] }, NOW)
     expect(toast).toMatchObject({
       message,
-      undo: { sheet: sending.sheet, action: { kind: "deleteFeed", id: "feed-7", payload: { version: 2 } } },
+      undo: { sheet: "undo", action: { kind: "deleteFeed", id: "feed-7", payload: { version: 2 } } },
     })
   })
 })
@@ -427,7 +452,7 @@ describe("a failed Undo", () => {
   it("says it wasn't undone when the error is not being offline", () => {
     const current = feedAt(NOW, { id: "feed-1", version: 4 })
     const undo: Sending = {
-      sheet: "nursing",
+      sheet: "undo",
       action: { kind: "deleteFeed", id: "feed-1", payload: { actionId: ACTION_ID, version: 3 } },
     }
     const error = new FeedConflict({ code: "STALE_VERSION", current })

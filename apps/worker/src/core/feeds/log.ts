@@ -20,10 +20,15 @@ const overlapEachOther = (segments: ReadonlyArray<SegmentEntry>) =>
     segments.slice(index + 1).some((second) => overlaps(intervalOf(first), intervalOf(second))),
   )
 
-const invalidEntry = (calendar: Calendar, entry: NewFeed, now: Instant): InvalidInput | null => {
+export const invalidParts = (
+  calendar: Calendar,
+  entry: Pick<NewFeed, "segments" | "portions">,
+  now: Instant,
+  kept?: ReadonlySet<Instant>,
+): InvalidInput | null => {
   const invalid = invalidUnless([
-    ...entry.segments.flatMap((segment, index) => segmentErrors(calendar, segment, now, `segments.${index}.`)),
-    ...entry.portions.flatMap((portion, index) => portionErrors(calendar, portion, now, `portions.${index}.`)),
+    ...entry.segments.flatMap((segment, index) => segmentErrors(calendar, segment, now, `segments.${index}.`, kept)),
+    ...entry.portions.flatMap((portion, index) => portionErrors(calendar, portion, now, `portions.${index}.`, kept)),
   ])
   if (invalid !== null || !overlapEachOther(entry.segments)) return invalid
   return new InvalidInput({ fieldErrors: [{ path: "segments", issue: "invalid" }] })
@@ -33,7 +38,7 @@ export const logFeed =
   (stamp: Stamp, entry: NewFeed) =>
   (sql: SqlStorage): CoreResult<Feed, InvalidInput | FeedConflict> => {
     const calendar = calendarOf(sql)
-    const invalid = invalidEntry(calendar, entry, stamp.now)
+    const invalid = invalidParts(calendar, entry, stamp.now)
     if (invalid !== null) return { ok: false, error: invalid }
     const overlapped = overlappedFeed(sql, entry.segments, stamp.now, NO_EXCLUSION)
     if (overlapped !== undefined) return { ok: false, error: overlapConflict(overlapped) }

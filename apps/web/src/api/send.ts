@@ -36,7 +36,26 @@ const sendNewFeed = (api: HouseholdApi, action: NewFeed): Promise<SavedFeed> =>
     ? api.request((client) => client.feeds.logFeed({ payload: action.payload }))
     : api.request((client) => client.feeds.startFeed({ payload: action.payload }))
 
+type OnPart = Extract<OnFeed, { readonly kind: "editSegment" | "deletePortion" | "editPortion" }>
+
+const PART_KINDS = new Set<Action["kind"]>(["editSegment", "deletePortion", "editPortion"])
+
+const isOnPart = (action: OnFeed): action is OnPart => PART_KINDS.has(action.kind)
+
+const sendOnPart = (api: HouseholdApi, action: OnPart): Promise<SavedFeed> => {
+  const params = { id: action.id }
+  switch (action.kind) {
+    case "editSegment":
+      return api.request((client) => client.segments.editSegment({ params, payload: action.payload }))
+    case "deletePortion":
+      return api.request((client) => client.portions.deletePortion({ params, payload: action.payload }))
+    case "editPortion":
+      return api.request((client) => client.portions.editPortion({ params, payload: action.payload }))
+  }
+}
+
 const sendOnFeed = (api: HouseholdApi, action: OnFeed): Promise<SavedFeed> => {
+  if (isOnPart(action)) return sendOnPart(api, action)
   const params = { id: action.id }
   switch (action.kind) {
     case "switchSide":
@@ -49,12 +68,10 @@ const sendOnFeed = (api: HouseholdApi, action: OnFeed): Promise<SavedFeed> => {
       return api.request((client) => client.feeds.addBottle({ params, payload: action.payload }))
     case "finishFeed":
       return api.request((client) => client.feeds.finishFeed({ params, payload: action.payload }))
+    case "editFeed":
+      return api.request((client) => client.feeds.editFeed({ params, payload: action.payload }))
     case "deleteFeed":
       return api.request((client) => client.feeds.deleteFeed({ params, payload: action.payload }))
-    case "deletePortion":
-      return api.request((client) => client.portions.deletePortion({ params, payload: action.payload }))
-    case "editPortion":
-      return api.request((client) => client.portions.editPortion({ params, payload: action.payload }))
     case "restoreFeed":
       return api.request((client) => client.feeds.restoreFeed({ params, payload: action.payload }))
   }

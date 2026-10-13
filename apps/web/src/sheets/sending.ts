@@ -1,7 +1,18 @@
 import { Schema } from "effect"
 import { Action } from "../api/actions.ts"
 
-export const SheetKind = Schema.Literals(["diaper", "bottle", "nursing", "pastFeed", "measurement", "details", "logAt"])
+export const SheetKind = Schema.Literals([
+  "diaper",
+  "bottle",
+  "nursing",
+  "pastFeed",
+  "measurement",
+  "details",
+  "logAt",
+  "editDiaper",
+  "editFeed",
+  "undo",
+])
 export type SheetKind = typeof SheetKind.Type
 
 export const Sending = Schema.Struct({ sheet: SheetKind, action: Action })
@@ -31,10 +42,20 @@ const CLOSES_ON_SEND = new Set<Action["kind"]>([
   "logMeasurement",
   "editMeasurement",
   "deleteMeasurement",
+  "deleteDiaper",
+  "deleteFeed",
 ])
 
-const CLOSES_ON_SAVE = new Set<Action["kind"]>(["editDiaper", "editPortion"])
+const CLOSES_ON_SAVE = new Set<Action["kind"]>(["editDiaper", "editPortion", "editFeed"])
 
-export const closesOnSend = ({ action }: Sending) => CLOSES_ON_SEND.has(action.kind)
+const EDIT_SHEETS = new Set<SheetKind>(["editDiaper", "editFeed"])
 
-export const closesOnSave = ({ action }: Sending) => CLOSES_ON_SAVE.has(action.kind)
+export const editsARecord = (sheet: SheetKind) => EDIT_SHEETS.has(sheet)
+
+export const isUndo = ({ sheet }: Sending) => sheet === "undo"
+
+export const closesOnSend = (sending: Sending) =>
+  !isUndo(sending) && (editsARecord(sending.sheet) || CLOSES_ON_SEND.has(sending.action.kind))
+
+export const closesOnSave = (sending: Sending) =>
+  !editsARecord(sending.sheet) && CLOSES_ON_SAVE.has(sending.action.kind)

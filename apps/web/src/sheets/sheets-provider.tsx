@@ -1,11 +1,12 @@
 import { type ReactNode, useState } from "react"
 import { useConnectivity } from "../api/hooks.ts"
 import type { Restored } from "./restored.ts"
-import type { Sending } from "./sending.ts"
+import type { Sending, SheetKind } from "./sending.ts"
 import { type Sheets, SheetsContext } from "./sheets-context.ts"
 import {
   announcedState,
   discardedState,
+  dismissedKindState,
   dismissedState,
   expiredState,
   failedState,
@@ -30,8 +31,7 @@ interface SheetsProviderProps {
 
 export const SheetsProvider = ({ restored, children }: SheetsProviderProps) => {
   const [state, setState] = useState(() => restoredState(restored.held))
-  const [editing, setEditing] = useState<string | null>(null)
-  const [at, setAt] = useState<number | null>(null)
+  const [dismiss] = useState(() => (sheet: SheetKind) => setState((current) => dismissedKindState(current, sheet)))
   const kept = useKeptEntries(restored)
   const online = useConnectivity() === "online"
   useHeldDrafts(state.held)
@@ -60,21 +60,12 @@ export const SheetsProvider = ({ restored, children }: SheetsProviderProps) => {
   useResumedDraft(restored.resend, send)
   const sheets: Sheets = {
     ...state,
-    editing,
-    at,
     keeping: kept.keeping,
     busy: mutation.isPending ? (mutation.variables ?? null) : null,
-    show: (sheet, record) => {
-      setEditing(record ?? null)
-      setAt(null)
-      setState((current) => shownState(current, sheet))
-    },
-    showAt: (sheet, time) => {
-      setEditing(null)
-      setAt(time)
-      setState((current) => shownState(current, sheet))
-    },
+    show: (sheet, record) => setState((current) => shownState(current, sheet, record ?? null)),
+    showAt: (sheet, time) => setState((current) => shownState(current, sheet, null, time)),
     close: () => setState(dismissedState),
+    dismiss,
     keep: () => setState(keptState),
     discard: (failed) => {
       kept.done(failed.sending)

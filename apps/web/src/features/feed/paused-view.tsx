@@ -1,19 +1,22 @@
 import type { Feed, Side } from "@bt/contracts"
 import { Button } from "../../components/ui/button.tsx"
+import { DeleteEntry } from "../../sheets/delete-entry.tsx"
 import { FailureNote } from "../../sheets/failure-note.tsx"
 import { useSheets } from "../../sheets/sheets-context.ts"
 import { tapTime } from "../../sheets/tap-time.ts"
 import { useNow } from "../../timer/use-now.ts"
+import { FeedStart } from "./feed-start.tsx"
 import { FeedTimer } from "./feed-timer.tsx"
-import { controlsWait, finishAction, resumeAction } from "./nursing-state.ts"
+import { controlsWait, deleteAction, finishAction, resumeAction } from "./nursing-state.ts"
 import { SidePicker } from "./side-picker.tsx"
 
 interface PausedViewProps {
   readonly feed: Feed
   readonly lastSide: Side | null
+  readonly zone: string
 }
 
-export const PausedView = ({ feed, lastSide }: PausedViewProps) => {
+export const PausedView = ({ feed, lastSide, zone }: PausedViewProps) => {
   const sheets = useSheets()
   const now = useNow()
   const busy = controlsWait(sheets.busy, feed)
@@ -21,6 +24,7 @@ export const PausedView = ({ feed, lastSide }: PausedViewProps) => {
     <>
       <FailureNote sheet="nursing" />
       <FeedTimer feed={feed} now={now} status="Paused" running={false} />
+      <FeedStart feed={feed} zone={zone} busy={busy} />
       <SidePicker
         label="Resume on"
         lastSide={lastSide}
@@ -40,6 +44,12 @@ export const PausedView = ({ feed, lastSide }: PausedViewProps) => {
           Finish
         </Button>
       </div>
+      <DeleteEntry
+        noun="feed"
+        emptied={null}
+        disabled={busy}
+        onDelete={() => sheets.send({ sheet: "nursing", action: deleteAction(feed) })}
+      />
     </>
   )
 }

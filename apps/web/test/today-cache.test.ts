@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest"
+import type { Action } from "../src/api/actions.ts"
 import { pendingId } from "../src/api/pending.ts"
 import { pendingToday, savedToday } from "../src/api/today-cache.ts"
 import { measurement } from "./growth-fixtures.ts"
@@ -8,6 +9,7 @@ const ACTION_ID = "4b1c2a5e-8f3d-4c6b-9a7e-2d1f0e3c5b6a"
 const OTHER_ACTION_ID = "9d2e7f40-1a3b-4c5d-8e6f-7a8b9c0d1e2f"
 const pending = { by: ANDREW, now: NOW, zone: ZONE }
 const MIDNIGHT = Date.UTC(2026, 9, 9, 7)
+const HOUR = 60 * MINUTE
 
 describe("pendingToday", () => {
   it("lists a diaper being saved first, and counts it in today's totals", () => {
@@ -139,7 +141,7 @@ describe("savedToday", () => {
     }
     const shown = pendingToday(todayWith(), action, pending)
     const diaper = diaperAt(NOW, { id: "diaper-1" })
-    const next = savedToday(shown, { diaper, changed: [] }, action)
+    const next = savedToday(shown, { diaper, changed: [] }, action, NOW)
     expect(next.recent).toEqual([{ kind: "diaper", diaper }])
   })
 
@@ -152,7 +154,7 @@ describe("savedToday", () => {
       id: running.id,
       payload: { actionId: ACTION_ID, version: 1, occurredAt: NOW, deleteIfEmpty: false },
     }
-    const next = savedToday(today, { feed: finished, changed: [] }, action)
+    const next = savedToday(today, { feed: finished, changed: [] }, action, NOW)
     expect(next.activeFeed).toBeNull()
     expect(next.lastFeed).toEqual(finished)
     expect(next.recent).toEqual([{ kind: "feed", feed: finished }])
@@ -166,8 +168,69 @@ describe("savedToday", () => {
       id: feed.id,
       payload: { actionId: ACTION_ID, version: 1 },
     }
-    const next = savedToday(today, { feed: { ...feed, deletedAt: NOW, version: 2 }, changed: [] }, action)
+    const next = savedToday(today, { feed: { ...feed, deletedAt: NOW, version: 2 }, changed: [] }, action, NOW)
     expect(next.recent).toEqual([])
+  })
+
+  describe("a restored entry", () => {
+    const restoreDiaper = (id: string) =>
+      ({ kind: "restoreDiaper", id, payload: { actionId: ACTION_ID, version: 2 } }) satisfies Action
+    const restoreFeed = (id: string) =>
+      ({ kind: "restoreFeed", id, payload: { actionId: ACTION_ID, version: 2 } }) satisfies Action
+
+    it("is listed again when it falls in the last 24 hours", () => {
+      const diaper = diaperAt(NOW - 23 * HOUR, { id: "diaper-restored", version: 3 })
+      const feed = feedAt(NOW - 23 * HOUR, { id: "feed-restored", version: 3 })
+      expect(savedToday(todayWith(), { diaper, changed: [] }, restoreDiaper(diaper.id), NOW).recent).toEqual([
+        { kind: "diaper", diaper },
+      ])
+      expect(savedToday(todayWith(), { feed, changed: [] }, restoreFeed(feed.id), NOW).recent).toEqual([
+        { kind: "feed", feed },
+      ])
+    })
+
+    it("leaves Today's list alone when it is older than 24 hours", () => {
+      const today = todayWith({ recent: [{ kind: "diaper", diaper: diaperAt(NOW - 5 * MINUTE) }] })
+      const diaper = diaperAt(NOW - 25 * HOUR, { id: "diaper-restored", version: 3 })
+      const feed = feedAt(NOW - 25 * HOUR, { id: "feed-restored", version: 3 })
+      expect(savedToday(today, { diaper, changed: [] }, restoreDiaper(diaper.id), NOW).recent).toEqual(today.recent)
+      expect(savedToday(today, { feed, changed: [] }, restoreFeed(feed.id), NOW).recent).toEqual(today.recent)
+    })
+  })
+
+  describe("an edited diaper", () => {
+    const earlier = diaperAt(NOW - 10 * MINUTE, { id: "diaper-edited" })
+    const edited = { ...earlier, dirty: true, version: 2 }
+    const edit = {
+      kind: "editDiaper",
+      id: earlier.id,
+      payload: { actionId: ACTION_ID, version: 1, occurredAt: earlier.occurredAt, wet: true, dirty: true },
+    } satisfies Action
+
+    it("is swapped for the household's answer when Today lists it", () => {
+      const today = todayWith({ recent: [{ kind: "diaper", diaper: earlier }] })
+      expect(savedToday(today, { diaper: edited, changed: [] }, edit, NOW).recent).toEqual([
+        { kind: "diaper", diaper: edited },
+      ])
+    })
+
+    it("stays off Today's list when Today doesn't list it, even inside the last 24 hours", () => {
+      expect(savedToday(todayWith(), { diaper: edited, changed: [] }, edit, NOW).recent).toEqual([])
+    })
+  })
+
+  it("keeps listing an entry Today already shows as it passes the 24-hour mark", () => {
+    const running = { ...nursedFor(feedAt(NOW - 24 * HOUR - MINUTE), "left", 10), status: "active" as const }
+    const finished = { ...running, status: "completed" as const, version: 2 }
+    const today = todayWith({ activeFeed: running, lastFeed: running, recent: [{ kind: "feed", feed: running }] })
+    const action = {
+      kind: "finishFeed" as const,
+      id: running.id,
+      payload: { actionId: ACTION_ID, version: 1, occurredAt: NOW, deleteIfEmpty: false },
+    }
+    expect(savedToday(today, { feed: finished, changed: [] }, action, NOW).recent).toEqual([
+      { kind: "feed", feed: finished },
+    ])
   })
 
   it("swaps a feed being started for the household's answer in the running, last and recent slots", () => {
@@ -178,7 +241,7 @@ describe("savedToday", () => {
       endedAt: null,
       segments: [{ id: "feed-real-0", side: "left", startedAt: NOW - 2 * MINUTE, endedAt: null }],
     })
-    const next = savedToday(started, { feed: answered, changed: [] }, start)
+    const next = savedToday(started, { feed: answered, changed: [] }, start, NOW)
     expect(next.activeFeed).toEqual(answered)
     expect(next.lastFeed).toEqual(answered)
     expect(next.recent).toEqual([{ kind: "feed", feed: answered }])
@@ -192,7 +255,7 @@ describe("savedToday", () => {
       id: other.id,
       payload: { actionId: OTHER_ACTION_ID, version: 1 },
     }
-    const next = savedToday(started, { feed: { ...other, deletedAt: NOW, version: 2 }, changed: [] }, action)
+    const next = savedToday(started, { feed: { ...other, deletedAt: NOW, version: 2 }, changed: [] }, action, NOW)
     expect(next.activeFeed?.id).toBe(pendingId(ACTION_ID))
   })
 
@@ -204,7 +267,7 @@ describe("savedToday", () => {
       id: other.id,
       payload: { actionId: OTHER_ACTION_ID, version: 1, occurredAt: NOW - 20 * MINUTE, deleteIfEmpty: false },
     }
-    const next = savedToday(started, { feed: other, changed: [] }, action)
+    const next = savedToday(started, { feed: other, changed: [] }, action, NOW)
     expect(next.activeFeed?.id).toBe(pendingId(ACTION_ID))
   })
 
@@ -215,6 +278,6 @@ describe("savedToday", () => {
       kind: "logMeasurement" as const,
       payload: { actionId: ACTION_ID, measuredAt: NOW, weightG: 4300, lengthCm: null, headCm: null },
     }
-    expect(savedToday(today, { measurement: answer, changed: [] }, action)).toBe(today)
+    expect(savedToday(today, { measurement: answer, changed: [] }, action, NOW)).toBe(today)
   })
 })

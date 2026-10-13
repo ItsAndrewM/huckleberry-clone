@@ -28,12 +28,12 @@ const NursingContent = () => {
     case "starting":
       return <output className="text-muted-foreground">Starting the feed…</output>
     case "paused":
-      return <PausedView feed={state.feed} lastSide={state.lastSide} />
+      return <PausedView feed={state.feed} lastSide={state.lastSide} zone={zone} />
     case "running":
       return finishing ? (
         <FinishView feed={state.feed} segment={state.segment} zone={zone} onBack={back} />
       ) : (
-        <RunningView feed={state.feed} segment={state.segment} onFinish={() => setFinishing(true)} />
+        <RunningView feed={state.feed} segment={state.segment} zone={zone} onFinish={() => setFinishing(true)} />
       )
   }
 }

@@ -25,6 +25,7 @@ describe("the API the household serves", () => {
       "POST /api/feeds/:id/bottle",
       "POST /api/feeds/:id/finish",
       "PATCH /api/feeds/:id",
+      "PUT /api/feeds/:id",
       "DELETE /api/feeds/:id",
       "POST /api/feeds/:id/restore",
       "PATCH /api/segments/:id",

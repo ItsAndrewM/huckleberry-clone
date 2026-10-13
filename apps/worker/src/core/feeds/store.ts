@@ -207,6 +207,18 @@ export const removePortion = (sql: SqlStorage, stamp: Stamp, portionId: string):
   )
 }
 
+export const replaceParts = (
+  sql: SqlStorage,
+  stamp: Stamp,
+  feed: Feed,
+  parts: { readonly segments: ReadonlyArray<SegmentTimes>; readonly portions: ReadonlyArray<PortionEntry> },
+): void => {
+  for (const segment of feed.segments) removeSegment(sql, stamp, segment.id)
+  for (const portion of feed.portions) removePortion(sql, stamp, portion.id)
+  for (const segment of parts.segments) insertSegment(sql, stamp, feed.id, segment)
+  for (const portion of parts.portions) insertPortion(sql, stamp, feed.id, portion)
+}
+
 export const shiftFeed = (sql: SqlStorage, stamp: Stamp, feedId: string, offsetMs: number): void => {
   sql.exec(
     `UPDATE nursing_segments SET started_at = started_at + ?, ended_at = ended_at + ?, updated_by = ?, updated_at = ?
