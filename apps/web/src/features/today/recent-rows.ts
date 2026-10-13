@@ -63,5 +63,8 @@ const diaperRow = (diaper: Diaper, display: Display): RecentRow => ({
   opens: isPending(diaper.id) ? null : "editDiaper",
 })
 
+export const recentRow = (entry: RecentEntry, display: Display, now: number) =>
+  entry.kind === "feed" ? feedRow(entry.feed, display, now) : diaperRow(entry.diaper, display)
+
 export const recentRows = (recent: ReadonlyArray<RecentEntry>, display: Display, now: number) =>
-  recent.map((entry) => (entry.kind === "feed" ? feedRow(entry.feed, display, now) : diaperRow(entry.diaper, display)))
+  recent.map((entry) => recentRow(entry, display, now))
