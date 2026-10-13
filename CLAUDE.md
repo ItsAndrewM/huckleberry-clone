@@ -13,7 +13,7 @@ Work is tracked in GitHub issues. The Baby Tracker Roadmap artifact was frozen o
 - **Branches and PRs:** a branch ends with the plan ID (`feature/<title>.M3.1`), or `GH-<number>` for an issue without one. A PR's description says `Closes #<number>`, so the merge closes the issue.
 - **Andrew's to-dos:** checks on the phones and decisions are issues labelled `andrew` and assigned to him.
 - **Bugs and debt:** anything found along the way gets an issue of its own, labelled `bug`, `enhancement` or `tech debt`.
-- **Household values:** the child's name and birth date, the parents' emails, and the household's name and time zone never go in issues, PRs, commits or the repo. They're passed as arguments.
+- **Household values:** the child's name and birth date, the parents' emails, and the household's name and time zone never go in issues, PRs, commits or the repo.
 
 ## Cross-cutting rules
 
