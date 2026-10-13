@@ -2,6 +2,7 @@ import type { Feed, RecentEntry, Today } from "@bt/contracts"
 import type { Action } from "./actions.ts"
 import { isPending, pendingDiaper, pendingFeed, pendingId, startedFeed, withBottle } from "./pending.ts"
 import type { Saved } from "./send.ts"
+import { isSwapping } from "./swap.ts"
 import { idOf, later, NOTHING, type Pending, shifted, without, withEntry, withFeed } from "./today-change.ts"
 
 export const pendingToday = (today: Today, action: Action, pending: Pending): Today => {
@@ -78,21 +79,24 @@ const activeAfter = (active: Feed | null, feed: Feed): Feed | null => {
   return active !== null && active.id === feed.id ? null : active
 }
 
-const savedFeed = (today: Today, feed: Feed, recent: ReadonlyArray<RecentEntry>): Today => {
+const savedFeed = (today: Today, feed: Feed, recent: ReadonlyArray<RecentEntry>, shown: boolean): Today => {
   const live = feed.deletedAt === null
   return {
     ...today,
     activeFeed: activeAfter(today.activeFeed, feed),
     lastFeed: live ? later(today.lastFeed, feed) : today.lastFeed,
-    recent: live ? withEntry(recent, { kind: "feed", feed }) : without(recent, feed.id),
+    recent: live && shown ? withEntry(recent, { kind: "feed", feed }) : without(recent, feed.id),
   }
 }
+
+const isShown = (today: Today, action: Action, id: string) =>
+  !isSwapping(action) || today.recent.some((entry) => idOf(entry) === id)
 
 export const savedToday = (today: Today, saved: Saved, action: Action): Today => {
   if ("measurement" in saved) return today
   const recent = without(today.recent, pendingId(action.payload.actionId))
-  if ("feed" in saved) return savedFeed(today, saved.feed, recent)
+  if ("feed" in saved) return savedFeed(today, saved.feed, recent, isShown(today, action, saved.feed.id))
   const { diaper } = saved
-  const live = diaper.deletedAt === null
+  const live = diaper.deletedAt === null && isShown(today, action, diaper.id)
   return { ...today, recent: live ? withEntry(recent, { kind: "diaper", diaper }) : without(recent, diaper.id) }
 }

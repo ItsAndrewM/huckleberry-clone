@@ -1,5 +1,13 @@
 import type { Feed, RecentEntry, Today, Totals } from "@bt/contracts"
-import { type DiaperChange, roundTo, type StartedFeed, totalsIn, zonedDayBounds } from "@bt/domain"
+import {
+  type DiaperChange,
+  type Instant,
+  type Interval,
+  roundTo,
+  type StartedFeed,
+  totalsIn,
+  zonedDayBounds,
+} from "@bt/domain"
 import type { Author } from "./pending.ts"
 
 export interface Pending extends Author {
@@ -15,7 +23,12 @@ export const NOTHING: Change = { feeds: [], diapers: [] }
 
 export const idOf = (entry: RecentEntry) => (entry.kind === "feed" ? entry.feed.id : entry.diaper.id)
 
-const timeOf = (entry: RecentEntry) => (entry.kind === "feed" ? entry.feed.startedAt : entry.diaper.occurredAt)
+export const timeOf = (entry: RecentEntry) => (entry.kind === "feed" ? entry.feed.startedAt : entry.diaper.occurredAt)
+
+export const changeOf = (entry: RecentEntry | null): Change => {
+  if (entry === null) return NOTHING
+  return entry.kind === "feed" ? { feeds: [entry.feed], diapers: [] } : { feeds: [], diapers: [entry.diaper] }
+}
 
 export const without = (recent: ReadonlyArray<RecentEntry>, id: string) => recent.filter((entry) => idOf(entry) !== id)
 
@@ -25,11 +38,16 @@ export const withEntry = (recent: ReadonlyArray<RecentEntry>, entry: RecentEntry
 export const later = (current: Feed | null, feed: Feed) =>
   current === null || current.id === feed.id || feed.startedAt >= current.startedAt ? feed : current
 
-export const shifted = (today: Today, pending: Pending, before: Change, after: Change): Totals => {
-  const day = zonedDayBounds(today.date, pending.zone)
-  const added = totalsIn(day, after.feeds, after.diapers, pending.now)
-  const removed = totalsIn(day, before.feeds, before.diapers, pending.now)
-  const sum = (key: keyof Totals) => roundTo(today.totals[key] + added[key] - removed[key], 1)
+export const shiftedTotals = (
+  totals: Totals,
+  period: Interval,
+  now: Instant,
+  before: Change,
+  after: Change,
+): Totals => {
+  const added = totalsIn(period, after.feeds, after.diapers, now)
+  const removed = totalsIn(period, before.feeds, before.diapers, now)
+  const sum = (key: keyof Totals) => roundTo(totals[key] + added[key] - removed[key], 1)
   return {
     feedsStarted: sum("feedsStarted"),
     leftSeconds: sum("leftSeconds"),
@@ -43,6 +61,9 @@ export const shifted = (today: Today, pending: Pending, before: Change, after: C
     dirtyDiapers: sum("dirtyDiapers"),
   }
 }
+
+export const shifted = (today: Today, pending: Pending, before: Change, after: Change): Totals =>
+  shiftedTotals(today.totals, zonedDayBounds(today.date, pending.zone), pending.now, before, after)
 
 export const withFeed = (today: Today, pending: Pending, feed: Feed, before: Feed | null): Today => ({
   ...today,

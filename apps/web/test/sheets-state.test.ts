@@ -135,6 +135,29 @@ const EDIT_PORTION: Sending = {
   },
 }
 
+const STARTED_EARLIER: Sending = {
+  sheet: "nursing",
+  action: {
+    kind: "editSegment",
+    id: "segment-1",
+    payload: { actionId: ACTION_ID, version: 1, side: "left", startedAt: NOW - 600_000, endedAt: null },
+  },
+}
+
+const FEED_REDONE: Sending = {
+  sheet: "pastFeed",
+  action: {
+    kind: "editFeed",
+    id: "feed-1",
+    payload: {
+      actionId: ACTION_ID,
+      version: 2,
+      segments: [],
+      portions: [{ occurredAt: NOW, breastMilkMl: 90, formulaMl: 0 }],
+    },
+  },
+}
+
 const MEASURED: Sending = {
   sheet: "measurement",
   action: {
@@ -179,6 +202,8 @@ const CLOSING = {
   deletePortion: { sending: UNDO_PORTION, closes: false, entry: false },
   editDiaper: { sending: EDIT_DIAPER, closes: false, entry: false },
   editPortion: { sending: EDIT_PORTION, closes: false, entry: false },
+  editSegment: { sending: STARTED_EARLIER, closes: false, entry: false },
+  editFeed: { sending: FEED_REDONE, closes: false, entry: false },
   logMeasurement: { sending: MEASURED, closes: true, entry: true },
   editMeasurement: { sending: MEASUREMENT_EDITED, closes: true, entry: false },
   deleteMeasurement: { sending: MEASUREMENT_DELETED, closes: true, entry: false },
