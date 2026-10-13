@@ -1,4 +1,4 @@
-import { FeedConflict, InvalidInput, NotFound } from "@bt/contracts"
+import { type Feed, FeedConflict, InvalidInput, NotFound } from "@bt/contracts"
 import { describe, expect, it } from "vitest"
 import { AuthRequired, Offline, Unexpected } from "../src/api/errors.ts"
 import { pendingId } from "../src/api/pending.ts"
@@ -6,10 +6,13 @@ import {
   bottleAction,
   bottleSession,
   canSaveBottle,
+  type HeldRoute,
   hasMilk,
   toppedUpFeed,
   toppedUpFor,
+  topUpNote,
 } from "../src/features/feed/bottle-entry.ts"
+import { clockOf } from "../src/sheets/clock.ts"
 import { StaleDraft } from "../src/sheets/drafts.ts"
 import { Unsaved } from "../src/sheets/kept.ts"
 import { feedAt, MINUTE, NOW, ZONE } from "./today-fixtures.ts"
@@ -248,5 +251,33 @@ describe("a bottle's held route after the household answers", () => {
     },
   ])("keeps a top-up on its own feed after $case, since the household may hold a receipt", ({ error }) => {
     expect(reopenedAfter(error).held).toEqual({ kind: "addBottle", id: "feed-1", version: 2 })
+  })
+})
+
+describe("the note on where a bottle is saved", () => {
+  const running = feedAt(NOW - 10 * MINUTE, { id: "feed-1", status: "active", endedAt: null, version: 3 })
+  const another = feedAt(NOW - 20 * MINUTE, { id: "feed-9", status: "active", endedAt: null, version: 4 })
+  const heldTopUp = { kind: "addBottle", id: "feed-1", version: 2 } as const
+  const startNote = `Adds to the feed that started at ${clockOf(running.startedAt, ZONE)}.`
+  const noteFor = (active: Feed | null, held: HeldRoute) => topUpNote(toppedUpFor(active, NOW, held), held, ZONE)
+
+  it("names when the feed being topped up started", () => {
+    expect(noteFor(running, null)).toBe(startNote)
+  })
+
+  it("names it for a held top-up too, while its feed is still active", () => {
+    expect(noteFor(running, heldTopUp)).toBe(startNote)
+  })
+
+  it.each([
+    { case: "no feed is active", active: null },
+    { case: "another feed is the active one", active: another },
+  ])("says a held top-up still goes to the feed it was first added to when $case", ({ active }) => {
+    expect(noteFor(active, heldTopUp)).toBe("Adds to the feed it was first added to.")
+  })
+
+  it("says nothing of a bottle that's its own feed", () => {
+    expect(noteFor(null, null)).toBeNull()
+    expect(noteFor(running, { kind: "logFeed" })).toBeNull()
   })
 })

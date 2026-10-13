@@ -2,7 +2,6 @@ import type { Feed, Prefill, VolumeUnit } from "@bt/contracts"
 import { useState } from "react"
 import { Button } from "../../components/ui/button.tsx"
 import { DrawerDescription } from "../../components/ui/drawer.tsx"
-import { clockOf } from "../../sheets/clock.ts"
 import { FailureNote } from "../../sheets/failure-note.tsx"
 import { failedFor, useSheets } from "../../sheets/sheets-context.ts"
 import { tapTime } from "../../sheets/tap-time.ts"
@@ -10,7 +9,7 @@ import { WhenField } from "../../sheets/when-field.tsx"
 import { resolveWhen } from "../../sheets/when.ts"
 import { useNow } from "../../timer/use-now.ts"
 import { AmountField } from "./amount-field.tsx"
-import { bottleAction, bottleSession, canSaveBottle, toppedUpFor } from "./bottle-entry.ts"
+import { bottleAction, bottleSession, canSaveBottle, toppedUpFor, topUpNote } from "./bottle-entry.ts"
 
 interface BottleFormProps {
   readonly prefill: Prefill | undefined
@@ -27,6 +26,7 @@ export const BottleForm = ({ prefill, active, unit, zone }: BottleFormProps) => 
   const now = useNow()
   const picked = resolveWhen(when, zone, now)
   const toppedUp = picked.ok ? toppedUpFor(active, picked.instant, session.held) : null
+  const note = topUpNote(toppedUp, session.held, zone)
   const ready = picked.ok && canSaveBottle(amounts, toppedUp)
   const save = () => {
     if (sheets.open !== "bottle") return
@@ -37,11 +37,7 @@ export const BottleForm = ({ prefill, active, unit, zone }: BottleFormProps) => 
   }
   return (
     <>
-      {toppedUp === null ? null : (
-        <DrawerDescription className="-mt-3">
-          Adds to the feed that started at {clockOf(toppedUp.startedAt, zone)}.
-        </DrawerDescription>
-      )}
+      {note === null ? null : <DrawerDescription className="-mt-3">{note}</DrawerDescription>}
       <AmountField
         label="Breast milk"
         ml={amounts.breastMilkMl}

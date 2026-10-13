@@ -1,6 +1,7 @@
 import type { Feed, Prefill } from "@bt/contracts"
 import type { FeedAction } from "../../api/actions.ts"
 import { isSaving } from "../../api/pending.ts"
+import { clockOf } from "../../sheets/clock.ts"
 import { mayHoldReceipt } from "../../sheets/held.ts"
 import type { Failed } from "../../sheets/sending.ts"
 import { inStartMinute, NOW, type When, whenAt } from "../../sheets/when.ts"
@@ -66,6 +67,11 @@ export const toppedUpFor = (active: Feed | null, occurredAt: number, held: HeldR
   if (held?.kind === "logFeed") return null
   if (held?.kind === "addBottle") return active?.id === held.id ? active : null
   return toppedUpFeed(active, occurredAt)
+}
+
+export const topUpNote = (toppedUp: Feed | null, held: HeldRoute, zone: string) => {
+  if (toppedUp !== null) return `Adds to the feed that started at ${clockOf(toppedUp.startedAt, zone)}.`
+  return held?.kind === "addBottle" ? "Adds to the feed it was first added to." : null
 }
 
 export const canSaveBottle = (amounts: Amounts, toppedUp: Feed | null) =>
