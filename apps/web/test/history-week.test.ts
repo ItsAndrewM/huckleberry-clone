@@ -18,7 +18,7 @@ import {
   RUNNING,
   WEIGHED,
 } from "./history-fixtures.ts"
-import { feedAt, NO_TOTALS, ZONE } from "./today-fixtures.ts"
+import { diaperAt, feedAt, NO_TOTALS, ZONE } from "./today-fixtures.ts"
 
 const WEEK = "2026-W41"
 const THURSDAY = "2026-10-08"
@@ -121,7 +121,7 @@ describe("weekModel", () => {
       totals: NO_TOTALS,
       days,
       feeds: [nursedAt("first", Date.UTC(2026, 10, 1, 8, 30)), nursedAt("second", Date.UTC(2026, 10, 1, 9, 30))],
-      diapers: [],
+      diapers: [diaperAt(Date.UTC(2026, 10, 1, 8, 30)), diaperAt(Date.UTC(2026, 10, 1, 9, 30), { dirty: true })],
       measurements: [],
     }
     const context = { ...CONTEXT, zone: LOS_ANGELES, now: Date.UTC(2026, 10, 2, 12), today: "2026-11-02" }
@@ -131,6 +131,7 @@ describe("weekModel", () => {
       [9, 0, 2],
       [9, 1, 2],
     ])
+    expect(sunday?.diapers.map(({ top, ids }) => [top, ids.length])).toEqual([[9, 2]])
   })
 
   it("marks a day with a measurement", () => {
