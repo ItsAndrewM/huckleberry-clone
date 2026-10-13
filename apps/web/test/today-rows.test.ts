@@ -211,7 +211,7 @@ describe("recentRows", () => {
         detail: ["1 h 20 min", "Woke 3:30 AM"],
         by: "Andrew",
         saving: false,
-        opens: null,
+        opens: "editSleep",
       },
     ])
   })
@@ -219,7 +219,7 @@ describe("recentRows", () => {
   it("says she's asleep now while a sleep runs, counting up to now", () => {
     const night = sleptAt(NOW - 42 * MINUTE, { kind: "night", endedAt: null })
     const [row] = recentRows([{ kind: "sleep", sleep: night }], DISPLAY, NOW)
-    expect([row?.title, row?.detail]).toEqual(["Night", ["Asleep now", "42 min"]])
+    expect([row?.title, row?.detail, row?.opens]).toEqual(["Night", ["Asleep now", "42 min"], "sleep"])
   })
 
   it("says a feed or a diaper is saving until the household gives it an id of its own", () => {

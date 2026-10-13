@@ -1,4 +1,4 @@
-import { DiaperConflict, FeedConflict, type RecentEntry } from "@bt/contracts"
+import { DiaperConflict, FeedConflict, type RecentEntry, SleepConflict } from "@bt/contracts"
 import type { Action } from "../../api/actions.ts"
 import { recordOf } from "../../api/today-change.ts"
 import type { Failed, Sending } from "../../sheets/sending.ts"
@@ -10,7 +10,7 @@ export interface Stale {
   readonly deleting: boolean
 }
 
-const DELETES = new Set<Action["kind"]>(["deleteDiaper", "deleteFeed"])
+const DELETES = new Set<Action["kind"]>(["deleteDiaper", "deleteFeed", "deleteSleep"])
 
 export const staleOf = ({ sending, error }: Failed): Stale | null => {
   const deleting = DELETES.has(sending.action.kind)
@@ -19,6 +19,9 @@ export const staleOf = ({ sending, error }: Failed): Stale | null => {
   }
   if (error instanceof FeedConflict && error.code === "STALE_VERSION") {
     return { current: { kind: "feed", feed: error.current }, deleting }
+  }
+  if (error instanceof SleepConflict && error.code === "STALE_VERSION") {
+    return { current: { kind: "sleep", sleep: error.current }, deleting }
   }
   return null
 }

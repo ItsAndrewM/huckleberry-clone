@@ -8,7 +8,7 @@ import { sleepParts, sleepTitle } from "./sleep-parts.ts"
 
 export type RowKind = "nursing" | "bottle" | "diaper" | "sleep"
 
-export type RowSheet = "editDiaper" | "editFeed" | "nursing"
+export type RowSheet = "editDiaper" | "editFeed" | "nursing" | "editSleep" | "sleep"
 
 export interface RecentRow {
   readonly id: string
@@ -64,6 +64,11 @@ const diaperRow = (diaper: Diaper, display: Display): RecentRow => ({
   opens: isPending(diaper.id) ? null : "editDiaper",
 })
 
+const sleepOpens = (sleep: Sleep): RowSheet | null => {
+  if (isPending(sleep.id)) return null
+  return sleep.endedAt === null ? "sleep" : "editSleep"
+}
+
 const sleepRow = (sleep: Sleep, display: Display, now: number): RecentRow => ({
   id: sleep.id,
   kind: "sleep",
@@ -73,7 +78,7 @@ const sleepRow = (sleep: Sleep, display: Display, now: number): RecentRow => ({
   detail: sleepParts(sleep, display.timeZone, now, display.locale),
   by: nameOf(display, sleep.createdBy),
   saving: isPending(sleep.id),
-  opens: null,
+  opens: sleepOpens(sleep),
 })
 
 const rowOf = (entry: RecentEntry, display: Display, now: number) => {

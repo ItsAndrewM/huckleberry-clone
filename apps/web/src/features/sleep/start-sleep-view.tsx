@@ -33,6 +33,9 @@ export const StartSleepView = ({ zone }: { readonly zone: string }) => {
         Start sleep
       </Button>
       <FailureNote sheet="sleep" />
+      <Button variant="ghost" size="lg" onClick={() => sheets.show("pastSleep")}>
+        Log a past sleep
+      </Button>
     </>
   )
 }
