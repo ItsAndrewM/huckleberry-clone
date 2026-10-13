@@ -6,6 +6,7 @@ export type { HourRow } from "./calendar/hours.ts"
 export { type DayGrid, type DayInput, layoutDay } from "./calendar/layout.ts"
 export { QUARTER_HOUR_MS, slotIn } from "./calendar/slot.ts"
 export type { GridScale } from "./calendar/steps.ts"
+export { onWallClock } from "./calendar/wall-clock-day.ts"
 export {
   type BottlePortion,
   type FeedComponents,
