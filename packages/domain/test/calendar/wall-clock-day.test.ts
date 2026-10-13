@@ -80,6 +80,25 @@ describe("onWallClock", () => {
     expect(wall?.bands[0]?.endedAt).toBe(wall?.bands[0]?.startedAt)
   })
 
+  it("stretches a feed whose second side crosses the clocks going back over both sides' clock times", () => {
+    const day = dayIn("2026-11-01", LOS_ANGELES)
+    const across = block("across", [
+      {
+        kind: "left",
+        startedAt: Date.parse("2026-11-01T01:40:00-07:00"),
+        endedAt: Date.parse("2026-11-01T01:55:00-07:00"),
+      },
+      {
+        kind: "right",
+        startedAt: Date.parse("2026-11-01T01:55:00-07:00"),
+        endedAt: Date.parse("2026-11-01T01:20:00-08:00"),
+      },
+    ])
+    const [placed] = layoutDay(onWallClock({ ...day, blocks: [across] }), SCALE).blocks
+    expect(placed).toMatchObject({ top: 20, height: 4 })
+    expect(placed?.bands.map(({ kind, top, height }) => [kind, top, height])).toEqual([["left", 0, 4]])
+  })
+
   it("keeps a running side running, and moves now onto the clock", () => {
     const day = dayOf([block("running", [side("left", 600, null)])], dayOf([]).bounds.start + 610 * MINUTE)
     const wall = onWallClock(day)
