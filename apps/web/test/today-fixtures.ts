@@ -65,6 +65,8 @@ export const todayWith = (change: Partial<Today> = {}): Today => ({
   totals: NO_TOTALS,
   activeFeed: null,
   lastFeed: null,
+  activeSleep: null,
+  lastSleep: null,
   prefill: { lastBottle: null, lastSide: null },
   recent: [],
   ...change,

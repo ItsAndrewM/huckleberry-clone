@@ -70,6 +70,7 @@ export const periodOf = (dates: ReadonlyArray<string>, days: Readonly<Record<str
     days: answers,
     feeds: [],
     diapers: [],
+    sleeps: [],
     measurements: [],
   }
 }

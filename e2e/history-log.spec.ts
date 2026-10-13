@@ -26,6 +26,8 @@ const playToday = (page: Page) =>
         totals: NO_TOTALS,
         activeFeed: null,
         lastFeed: null,
+        activeSleep: null,
+        lastSleep: null,
         prefill: { lastBottle: { breastMilkMl: 0, formulaMl: 90 }, lastSide: null },
         recent: [],
       },

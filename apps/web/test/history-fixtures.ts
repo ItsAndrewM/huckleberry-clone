@@ -71,6 +71,7 @@ export const dayWith = (change: Partial<DayPeriod> = {}): DayPeriod => ({
   totals: NO_TOTALS,
   feeds: [NURSED, PAUSED, BOTTLE, RUNNING],
   diapers: [PEE, POO, BOTH],
+  sleeps: [],
   measurements: [WEIGHED],
   ...change,
 })

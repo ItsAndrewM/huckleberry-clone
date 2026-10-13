@@ -94,7 +94,7 @@ export const swappedDay = (day: DayPeriod, now: Instant, swap: Swap): DayPeriod 
     after?.kind === "diaper" ? after.diaper : null,
     (diaper) => diaper.occurredAt,
   )
-  return { ...day, totals: totalsIn(day.bounds, { feeds, diapers, sleeps: [] }, now), feeds, diapers }
+  return { ...day, totals: totalsIn(day.bounds, { feeds, diapers, sleeps: day.sleeps }, now), feeds, diapers }
 }
 
 export const todayCopy = (today: Today, id: string): RecentEntry | null =>

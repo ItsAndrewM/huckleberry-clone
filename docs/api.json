@@ -1256,6 +1256,174 @@
                         }
                       ]
                     },
+                    "activeSleep": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string"
+                            },
+                            "kind": {
+                              "type": "string",
+                              "enum": [
+                                "nap",
+                                "night"
+                              ]
+                            },
+                            "startedAt": {
+                              "type": "integer",
+                              "minimum": 946684800000,
+                              "exclusiveMaximum": 4102444800000
+                            },
+                            "endedAt": {
+                              "anyOf": [
+                                {
+                                  "type": "integer",
+                                  "minimum": 946684800000,
+                                  "exclusiveMaximum": 4102444800000
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            },
+                            "version": {
+                              "type": "integer",
+                              "minimum": 1
+                            },
+                            "createdBy": {
+                              "type": "string"
+                            },
+                            "createdAt": {
+                              "type": "integer",
+                              "minimum": 946684800000,
+                              "exclusiveMaximum": 4102444800000
+                            },
+                            "updatedBy": {
+                              "type": "string"
+                            },
+                            "updatedAt": {
+                              "type": "integer",
+                              "minimum": 946684800000,
+                              "exclusiveMaximum": 4102444800000
+                            },
+                            "deletedAt": {
+                              "anyOf": [
+                                {
+                                  "type": "integer",
+                                  "minimum": 946684800000,
+                                  "exclusiveMaximum": 4102444800000
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            }
+                          },
+                          "required": [
+                            "id",
+                            "kind",
+                            "startedAt",
+                            "endedAt",
+                            "version",
+                            "createdBy",
+                            "createdAt",
+                            "updatedBy",
+                            "updatedAt",
+                            "deletedAt"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "lastSleep": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string"
+                            },
+                            "kind": {
+                              "type": "string",
+                              "enum": [
+                                "nap",
+                                "night"
+                              ]
+                            },
+                            "startedAt": {
+                              "type": "integer",
+                              "minimum": 946684800000,
+                              "exclusiveMaximum": 4102444800000
+                            },
+                            "endedAt": {
+                              "anyOf": [
+                                {
+                                  "type": "integer",
+                                  "minimum": 946684800000,
+                                  "exclusiveMaximum": 4102444800000
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            },
+                            "version": {
+                              "type": "integer",
+                              "minimum": 1
+                            },
+                            "createdBy": {
+                              "type": "string"
+                            },
+                            "createdAt": {
+                              "type": "integer",
+                              "minimum": 946684800000,
+                              "exclusiveMaximum": 4102444800000
+                            },
+                            "updatedBy": {
+                              "type": "string"
+                            },
+                            "updatedAt": {
+                              "type": "integer",
+                              "minimum": 946684800000,
+                              "exclusiveMaximum": 4102444800000
+                            },
+                            "deletedAt": {
+                              "anyOf": [
+                                {
+                                  "type": "integer",
+                                  "minimum": 946684800000,
+                                  "exclusiveMaximum": 4102444800000
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            }
+                          },
+                          "required": [
+                            "id",
+                            "kind",
+                            "startedAt",
+                            "endedAt",
+                            "version",
+                            "createdBy",
+                            "createdAt",
+                            "updatedBy",
+                            "updatedAt",
+                            "deletedAt"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
                     "prefill": {
                       "type": "object",
                       "properties": {
@@ -1571,6 +1739,8 @@
                     "totals",
                     "activeFeed",
                     "lastFeed",
+                    "activeSleep",
+                    "lastSleep",
                     "prefill",
                     "recent"
                   ],
@@ -12657,6 +12827,86 @@
                         "additionalProperties": false
                       }
                     },
+                    "sleeps": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string"
+                          },
+                          "kind": {
+                            "type": "string",
+                            "enum": [
+                              "nap",
+                              "night"
+                            ]
+                          },
+                          "startedAt": {
+                            "type": "integer",
+                            "minimum": 946684800000,
+                            "exclusiveMaximum": 4102444800000
+                          },
+                          "endedAt": {
+                            "anyOf": [
+                              {
+                                "type": "integer",
+                                "minimum": 946684800000,
+                                "exclusiveMaximum": 4102444800000
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "version": {
+                            "type": "integer",
+                            "minimum": 1
+                          },
+                          "createdBy": {
+                            "type": "string"
+                          },
+                          "createdAt": {
+                            "type": "integer",
+                            "minimum": 946684800000,
+                            "exclusiveMaximum": 4102444800000
+                          },
+                          "updatedBy": {
+                            "type": "string"
+                          },
+                          "updatedAt": {
+                            "type": "integer",
+                            "minimum": 946684800000,
+                            "exclusiveMaximum": 4102444800000
+                          },
+                          "deletedAt": {
+                            "anyOf": [
+                              {
+                                "type": "integer",
+                                "minimum": 946684800000,
+                                "exclusiveMaximum": 4102444800000
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "kind",
+                          "startedAt",
+                          "endedAt",
+                          "version",
+                          "createdBy",
+                          "createdAt",
+                          "updatedBy",
+                          "updatedAt",
+                          "deletedAt"
+                        ],
+                        "additionalProperties": false
+                      }
+                    },
                     "measurements": {
                       "type": "array",
                       "items": {
@@ -12763,6 +13013,7 @@
                     "totals",
                     "feeds",
                     "diapers",
+                    "sleeps",
                     "measurements"
                   ],
                   "additionalProperties": false
@@ -13268,6 +13519,86 @@
                         "additionalProperties": false
                       }
                     },
+                    "sleeps": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string"
+                          },
+                          "kind": {
+                            "type": "string",
+                            "enum": [
+                              "nap",
+                              "night"
+                            ]
+                          },
+                          "startedAt": {
+                            "type": "integer",
+                            "minimum": 946684800000,
+                            "exclusiveMaximum": 4102444800000
+                          },
+                          "endedAt": {
+                            "anyOf": [
+                              {
+                                "type": "integer",
+                                "minimum": 946684800000,
+                                "exclusiveMaximum": 4102444800000
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "version": {
+                            "type": "integer",
+                            "minimum": 1
+                          },
+                          "createdBy": {
+                            "type": "string"
+                          },
+                          "createdAt": {
+                            "type": "integer",
+                            "minimum": 946684800000,
+                            "exclusiveMaximum": 4102444800000
+                          },
+                          "updatedBy": {
+                            "type": "string"
+                          },
+                          "updatedAt": {
+                            "type": "integer",
+                            "minimum": 946684800000,
+                            "exclusiveMaximum": 4102444800000
+                          },
+                          "deletedAt": {
+                            "anyOf": [
+                              {
+                                "type": "integer",
+                                "minimum": 946684800000,
+                                "exclusiveMaximum": 4102444800000
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "kind",
+                          "startedAt",
+                          "endedAt",
+                          "version",
+                          "createdBy",
+                          "createdAt",
+                          "updatedBy",
+                          "updatedAt",
+                          "deletedAt"
+                        ],
+                        "additionalProperties": false
+                      }
+                    },
                     "measurements": {
                       "type": "array",
                       "items": {
@@ -13375,6 +13706,7 @@
                     "days",
                     "feeds",
                     "diapers",
+                    "sleeps",
                     "measurements"
                   ],
                   "additionalProperties": false
@@ -13880,6 +14212,86 @@
                         "additionalProperties": false
                       }
                     },
+                    "sleeps": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string"
+                          },
+                          "kind": {
+                            "type": "string",
+                            "enum": [
+                              "nap",
+                              "night"
+                            ]
+                          },
+                          "startedAt": {
+                            "type": "integer",
+                            "minimum": 946684800000,
+                            "exclusiveMaximum": 4102444800000
+                          },
+                          "endedAt": {
+                            "anyOf": [
+                              {
+                                "type": "integer",
+                                "minimum": 946684800000,
+                                "exclusiveMaximum": 4102444800000
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "version": {
+                            "type": "integer",
+                            "minimum": 1
+                          },
+                          "createdBy": {
+                            "type": "string"
+                          },
+                          "createdAt": {
+                            "type": "integer",
+                            "minimum": 946684800000,
+                            "exclusiveMaximum": 4102444800000
+                          },
+                          "updatedBy": {
+                            "type": "string"
+                          },
+                          "updatedAt": {
+                            "type": "integer",
+                            "minimum": 946684800000,
+                            "exclusiveMaximum": 4102444800000
+                          },
+                          "deletedAt": {
+                            "anyOf": [
+                              {
+                                "type": "integer",
+                                "minimum": 946684800000,
+                                "exclusiveMaximum": 4102444800000
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "kind",
+                          "startedAt",
+                          "endedAt",
+                          "version",
+                          "createdBy",
+                          "createdAt",
+                          "updatedBy",
+                          "updatedAt",
+                          "deletedAt"
+                        ],
+                        "additionalProperties": false
+                      }
+                    },
                     "measurements": {
                       "type": "array",
                       "items": {
@@ -13987,6 +14399,7 @@
                     "days",
                     "feeds",
                     "diapers",
+                    "sleeps",
                     "measurements"
                   ],
                   "additionalProperties": false

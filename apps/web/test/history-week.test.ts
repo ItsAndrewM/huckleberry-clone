@@ -57,6 +57,7 @@ const weekWith = (change: Partial<WeekPeriod> = {}): WeekPeriod => {
     days,
     feeds: [ACROSS_MIDNIGHT, NURSED, PAUSED, BOTTLE, RUNNING],
     diapers: [PEE, POO, BOTH],
+    sleeps: [],
     measurements: [WEIGHED],
     ...change,
   }
@@ -142,6 +143,7 @@ describe("weekModel", () => {
       days,
       feeds: [nursedAt("first", Date.UTC(2026, 10, 1, 8, 30)), nursedAt("second", Date.UTC(2026, 10, 1, 9, 30))],
       diapers: [diaperAt(Date.UTC(2026, 10, 1, 8, 30)), diaperAt(Date.UTC(2026, 10, 1, 9, 30), { dirty: true })],
+      sleeps: [],
       measurements: [],
     }
     const context = { ...CONTEXT, zone: LOS_ANGELES, now: Date.UTC(2026, 10, 2, 12), today: "2026-11-02" }

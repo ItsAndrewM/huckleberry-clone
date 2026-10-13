@@ -105,6 +105,8 @@ describe("Today's recent entries", () => {
       totals: TOTALS,
       activeFeed: null,
       lastFeed: null,
+      activeSleep: null,
+      lastSleep: null,
       prefill: { lastBottle: null, lastSide: null },
       recent: [SLEEP, { kind: "diaper", diaper: DIAPER }],
     }
