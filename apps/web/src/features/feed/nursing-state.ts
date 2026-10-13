@@ -48,3 +48,24 @@ export const finishAction = (feed: Feed, occurredAt: number, deleteIfEmpty: bool
   id: feed.id,
   payload: { actionId: crypto.randomUUID(), version: feed.version, occurredAt, deleteIfEmpty },
 })
+
+export const firstSideOf = (feed: Feed): NursingSegment | undefined =>
+  feed.segments.toSorted((a, b) => a.startedAt - b.startedAt)[0]
+
+export const startAction = (feed: Feed, first: NursingSegment, startedAt: number): FeedAction => ({
+  kind: "editSegment",
+  id: first.id,
+  payload: {
+    actionId: crypto.randomUUID(),
+    version: feed.version,
+    side: first.side,
+    startedAt,
+    endedAt: first.endedAt,
+  },
+})
+
+export const deleteAction = (feed: Feed): FeedAction => ({
+  kind: "deleteFeed",
+  id: feed.id,
+  payload: { actionId: crypto.randomUUID(), version: feed.version },
+})

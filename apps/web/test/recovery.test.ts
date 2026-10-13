@@ -76,6 +76,20 @@ const start = (side: "left" | "right"): Sending => ({
   action: { kind: "startFeed", payload: { actionId: ACTION_ID, side, startedAt: NOW } },
 })
 
+const changeStart = (startedAt: number, segmentId = `segment-${STARTED}`): Sending => ({
+  sheet: "nursing",
+  action: {
+    kind: "editSegment",
+    id: segmentId,
+    payload: { actionId: ACTION_ID, version: 2, side: "left", startedAt, endedAt: null },
+  },
+})
+
+const DELETE_RUNNING: Sending = {
+  sheet: "nursing",
+  action: { kind: "deleteFeed", id: "feed-1", payload: { actionId: ACTION_ID, version: 2 } },
+}
+
 const BOTTLE_FEED: Sending = {
   sheet: "bottle",
   action: {
@@ -127,6 +141,8 @@ describe("a redo after the other phone's change", () => {
     { label: "Finish anyway", sending: finish(NOW), current: theirs() },
     { label: "Add it anyway", sending: addBottle(NOW), current: theirs() },
     { label: "Add it anyway", sending: addBottle(STARTED), current: theirs() },
+    { label: "Change it anyway", sending: changeStart(STARTED - 5 * MINUTE), current: SWITCHED_EARLIER },
+    { label: "Delete anyway", sending: DELETE_RUNNING, current: PAUSED },
   ])("offers $label when the tap still fits the feed", ({ label, sending, current }) => {
     const recovery = recoveryOf(feedConflict(sending, "STALE_VERSION", current))
     expect(recovery?.label).toBe(label)
@@ -155,6 +171,13 @@ describe("a redo after the other phone's change", () => {
     { case: "a switch on a completed feed", sending: SWITCH, current: theirs({ status: "completed" }) },
     { case: "a switch on a deleted feed", sending: SWITCH, current: theirs({ deletedAt: NOW }) },
     { case: "a start", sending: start("left"), current: theirs() },
+    {
+      case: "a start moved past where their switch now ends that side",
+      sending: changeStart(NOW - 4 * MINUTE),
+      current: SWITCHED_EARLIER,
+    },
+    { case: "a start for a side that's gone", sending: changeStart(STARTED, "segment-gone"), current: theirs() },
+    { case: "a delete of a feed they finished", sending: DELETE_RUNNING, current: theirs({ status: "completed" }) },
   ])("doesn't redo $case", ({ sending, current }) => {
     expect(recoveryOf(feedConflict(sending, "STALE_VERSION", current))).toBeNull()
   })

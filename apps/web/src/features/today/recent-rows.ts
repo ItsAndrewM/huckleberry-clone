@@ -34,6 +34,11 @@ const diaperDetail = ({ wet, dirty }: Diaper) => {
   return wet ? "Pee" : "Poo"
 }
 
+const opensFor = (feed: Feed): RowSheet | null => {
+  if (isSaving(feed)) return null
+  return feed.status === "completed" ? "editFeed" : "nursing"
+}
+
 const feedRow = (feed: Feed, display: Display, now: number): RecentRow => ({
   id: feed.id,
   kind: feed.segments.length === 0 ? "bottle" : "nursing",
@@ -43,7 +48,7 @@ const feedRow = (feed: Feed, display: Display, now: number): RecentRow => ({
   detail: [...progressOf(feed), ...feedParts(feed, display.volume, now)],
   by: nameOf(display, feed.createdBy),
   saving: isSaving(feed),
-  opens: feed.status === "completed" && !isSaving(feed) ? "editFeed" : null,
+  opens: opensFor(feed),
 })
 
 const diaperRow = (diaper: Diaper, display: Display): RecentRow => ({

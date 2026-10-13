@@ -9,6 +9,8 @@ const REDO_LABELS = new Map<Action["kind"], string>([
   ["resumeFeed", "Resume anyway"],
   ["finishFeed", "Finish anyway"],
   ["addBottle", "Add it anyway"],
+  ["editSegment", "Change it anyway"],
+  ["deleteFeed", "Delete anyway"],
 ])
 
 const openSideOf = (feed: Feed) => feed.segments.find(({ endedAt }) => endedAt === null) ?? null
@@ -20,6 +22,11 @@ const runningSince = (feed: Feed, at: number) => {
 
 const switchFits = (feed: Feed, to: Side | undefined, at: number) =>
   to !== undefined && runningSince(feed, at) && openSideOf(feed)?.side !== to
+
+const startStillFits = (feed: Feed, segmentId: string, startedAt: number) => {
+  const segment = feed.segments.find(({ id }) => id === segmentId)
+  return segment !== undefined && (segment.endedAt === null || startedAt < segment.endedAt)
+}
 
 const fits = (action: Action, feed: Feed) => {
   switch (action.kind) {
@@ -35,6 +42,10 @@ const fits = (action: Action, feed: Feed) => {
       )
     case "addBottle":
       return action.payload.occurredAt >= feed.startedAt
+    case "editSegment":
+      return startStillFits(feed, action.id, action.payload.startedAt)
+    case "deleteFeed":
+      return true
     default:
       return false
   }
