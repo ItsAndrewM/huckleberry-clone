@@ -49,7 +49,7 @@ const HistoryScreen = ({ me, now }: { readonly me: Me; readonly now: number }) =
         birthDate={me.child.birthDate}
         hidden={hidden}
       />
-      <div className="-mt-5">
+      <div className="isolate -mt-5">
         <KindChips search={search} />
       </div>
       {period.view === "day" ? (

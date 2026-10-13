@@ -8,7 +8,7 @@ const SIDE_FILL = { left: "bg-primary/45", right: "bg-primary/20" } as const sat
 const Bar = ({ block }: { readonly block: PlacedBlock<Side> }) => (
   <span
     className={cn(
-      "absolute overflow-hidden rounded-[3px] border border-primary/50 bg-card",
+      "absolute overflow-hidden rounded-[3px] border border-primary/65 bg-card",
       atStep(block.top),
       stepsTall(block.height),
       inLane(block.lane, block.lanes),

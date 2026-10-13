@@ -173,8 +173,8 @@ test("says which kinds are hidden at the top while the day scrolls, and nothing 
   await expect(page.getByText(/ hidden$/u)).toHaveCount(0)
 })
 
-const controlAt = (page: Page, x: number, y: number) =>
-  page.evaluate<string>(`document.elementFromPoint(${x}, ${y})?.closest("a, button")?.textContent ?? "nothing"`)
+const topmostAt = (page: Page, among: string, x: number, y: number) =>
+  page.evaluate<string>(`document.elementFromPoint(${x}, ${y})?.closest("${among}")?.textContent ?? "nothing"`)
 
 test("leaves Change and Back to today their whole 44 px over the line saying what's hidden", async ({ page }) => {
   await playBusyWeek(page)
@@ -182,9 +182,31 @@ test("leaves Change and Back to today their whole 44 px over the line saying wha
   await expect(page.getByText("Diapers hidden", { exact: true })).toBeVisible()
   const days = page.getByRole("navigation", { name: "Days" })
   const change = await boxOf(days.getByRole("button", { name: "Change" }))
-  expect(await controlAt(page, change.x + change.width / 2, change.y + change.height - 1)).toBe("Change")
+  expect(await topmostAt(page, "a, button", change.x + change.width / 2, change.y + change.height - 1)).toBe("Change")
   const back = await boxOf(days.getByRole("link", { name: "Back to today" }))
-  expect(await controlAt(page, back.x + back.width / 2, back.y + back.height - 1)).toBe("Back to today")
+  expect(await topmostAt(page, "a, button", back.x + back.width / 2, back.y + back.height - 1)).toBe("Back to today")
+})
+
+test("keeps a focused chip under the switcher once the page scrolls", async ({ page }) => {
+  await playBusyWeek(page)
+  await openHistory(page, "?date=2026-10-06")
+  await expect(page.getByRole("region", { name: "The day by hour" })).toBeVisible()
+  const chip = page.getByRole("group", { name: "Show" }).getByRole("button", { name: "Diapers" })
+  await chip.focus()
+  const nav = await boxOf(page.getByRole("navigation", { name: "Days" }))
+  const title = await boxOf(dayHeading(page))
+  const below = await boxOf(chip)
+  const scrolled = await page.evaluate<number>("window.scrollY")
+  const lift = below.y + below.height / 2 - (title.y + title.height / 2)
+  await page.evaluate(`window.scrollTo(0, ${scrolled + nav.y + lift})`)
+  await expect.poll(async () => (await boxOf(chip)).y).toBeLessThan(below.y - lift / 2)
+  const stuck = await boxOf(dayHeading(page))
+  const under = await boxOf(chip)
+  expect(Math.abs(under.y + under.height / 2 - (stuck.y + stuck.height / 2))).toBeLessThan(2)
+  const left = Math.max(stuck.x, under.x)
+  const right = Math.min(stuck.x + stuck.width, under.x + under.width)
+  expect(right - left).toBeGreaterThan(4)
+  expect(await topmostAt(page, "h2, button", (left + right) / 2, stuck.y + stuck.height / 4)).toBe("Tue, Oct 6")
 })
 
 test("goes to the day or the week of a date picked under Change", async ({ page }) => {
