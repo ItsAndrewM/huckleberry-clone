@@ -4,6 +4,7 @@ import { HttpApiEndpoint, HttpApiGroup } from "effect/http-api"
 import { Diaper } from "./diapers.ts"
 import { Feed } from "./feeds.ts"
 import { Measurement } from "./growth.ts"
+import { Sleep } from "./sleeps.ts"
 import { Instant, IsoWeek, LocalDate, YearMonth } from "./time.ts"
 import { Totals } from "./today.ts"
 
@@ -25,6 +26,7 @@ export type DayTotals = typeof DayTotals.Type
 const records = {
   feeds: Schema.Array(Feed),
   diapers: Schema.Array(Diaper),
+  sleeps: Schema.Array(Sleep),
   measurements: Schema.Array(Measurement),
 }
 

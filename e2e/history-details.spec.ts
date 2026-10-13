@@ -40,6 +40,8 @@ test("opens the Nursing sheet for a feed that's still going, as Today does", asy
         totals: day.totals,
         activeFeed: running,
         lastFeed: running,
+        activeSleep: null,
+        lastSleep: null,
         prefill: { lastBottle: null, lastSide: "left" },
         recent: [],
       },

@@ -23,7 +23,7 @@ export const DayView = ({ day, usual, me, now, today }: DayViewProps) => {
   const { volume } = me.household.units
   const { birthDate } = me.child
   const { shown, charts } = useMemo(() => {
-    const totals = totalsIn(day.bounds, { feeds: day.feeds, diapers: day.diapers, sleeps: [] }, now)
+    const totals = totalsIn(day.bounds, day, now)
     const trend = trendDay({ date: day.date, totals }, today, birthDate)
     const input = {
       running: runningTotals(day.bounds, day.feeds, day.diapers, now),

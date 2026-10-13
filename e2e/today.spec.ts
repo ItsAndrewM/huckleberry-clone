@@ -103,6 +103,8 @@ const todayWith = (change: TodayChange) => ({
   totals: NO_TOTALS,
   activeFeed: null,
   lastFeed: null,
+  activeSleep: null,
+  lastSleep: null,
   prefill: { lastBottle: null, lastSide: null },
   recent: [],
   ...change,

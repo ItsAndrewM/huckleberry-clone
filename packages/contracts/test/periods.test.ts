@@ -9,6 +9,7 @@ import {
   MonthPeriod,
   PeriodBounds,
   PeriodsGroup,
+  type Sleep,
   type Totals,
   WeekPeriod,
 } from "../src/index.ts"
@@ -77,12 +78,26 @@ const MEASUREMENT: Measurement = {
   deletedAt: null,
 }
 
+const SLEEP: Sleep = {
+  id: "sleep-1",
+  kind: "nap",
+  startedAt: AT - 90 * MINUTE_MS,
+  endedAt: AT - 30 * MINUTE_MS,
+  version: 2,
+  createdBy: "caregiver-1",
+  createdAt: AT - 90 * MINUTE_MS,
+  updatedBy: "caregiver-1",
+  updatedAt: AT - 30 * MINUTE_MS,
+  deletedAt: null,
+}
+
 const PERIOD = {
   bounds: OCT_12,
   asOf: AT + 15 * MINUTE_MS,
   totals: TOTALS,
   feeds: [FEED],
   diapers: [DIAPER],
+  sleeps: [SLEEP],
   measurements: [MEASUREMENT],
 }
 
