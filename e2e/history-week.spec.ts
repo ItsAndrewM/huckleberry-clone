@@ -31,6 +31,18 @@ test("shows the week as seven days, each one up to today opening its Day view", 
   await expect(dayHeading(page)).toHaveText("Fri, Oct 9")
 })
 
+test("fits all 24 hours of the week on the screen, above the tab bar", async ({ page }) => {
+  await playBusyWeek(page)
+  await openHistory(page, "?view=week")
+  await expect(weekGrid(page).getByRole("link")).toHaveCount(5)
+  const grid = await weekGrid(page).boundingBox()
+  const tabs = await page.getByRole("navigation", { name: "Main" }).boundingBox()
+  expect((grid?.y ?? 0) + (grid?.height ?? 0)).toBeLessThanOrEqual(tabs?.y ?? 0)
+  expect(await page.evaluate<number>("document.documentElement.scrollHeight - window.innerHeight")).toBeLessThanOrEqual(
+    1,
+  )
+})
+
 test("steps back a week and comes back to this week", async ({ page }) => {
   const { asked } = await playBusyWeek(page)
   await openHistory(page, "?view=week")
@@ -63,6 +75,23 @@ test("switches from a day to the week that holds it, and back to today", async (
   await page.getByRole("group", { name: "History by" }).getByRole("button", { name: "Day" }).click()
   await expect(page).toHaveURL(/\/history$/u)
   await expect(dayHeading(page)).toHaveText("Fri, Oct 9")
+})
+
+test.describe("on a narrow screen", () => {
+  test.use({ viewport: { width: 320, height: 640 } })
+
+  test("scrolls the week sideways, keeping the hours in view", async ({ page }) => {
+    await playBusyWeek(page)
+    await openHistory(page, "?view=week")
+    const scroller = weekGrid(page).locator("ol").locator("..")
+    const sizes = await scroller.evaluate((node) => ({ scroll: node.scrollWidth, client: node.clientWidth }))
+    expect(sizes.scroll).toBeGreaterThan(sizes.client)
+    const hours = page.getByText("6 AM", { exact: true })
+    const before = await hours.boundingBox()
+    await scroller.evaluate((node) => node.scrollBy({ left: 200 }))
+    await expect.poll(async () => (await hours.boundingBox())?.x).toBe(before?.x)
+    await expect(weekGrid(page).getByRole("link", { name: /^Fri, Oct 9/u })).toBeInViewport()
+  })
 })
 
 test("keeps the day switcher at the top while the day scrolls", async ({ page }) => {

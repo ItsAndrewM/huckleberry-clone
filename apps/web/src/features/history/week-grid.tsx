@@ -3,6 +3,8 @@ import type { Display } from "../today/display.ts"
 import type { Hidden } from "./history-kinds.ts"
 import { daySearch } from "./history-navigation.ts"
 import { WeekColumnView } from "./week-column.tsx"
+import { WeekHours } from "./week-hours.tsx"
+import { WeekLegend } from "./week-legend.tsx"
 import type { WeekColumn } from "./week-model.ts"
 import { columnName } from "./week-names.ts"
 
@@ -15,16 +17,20 @@ interface WeekGridProps {
 
 export const WeekGrid = ({ columns, display, today, hidden }: WeekGridProps) => (
   <section aria-label="The week by hour" className="flex min-h-72 flex-1 flex-col gap-2">
-    <ol className="flex flex-1 gap-0.5">
-      {columns.map((column) => (
-        <WeekColumnView
-          key={column.date}
-          column={column}
-          name={columnName(column, display.volume, hidden, display.locale)}
-          search={daySearch(column.date, today, hidden)}
-          locale={display.locale}
-        />
-      ))}
-    </ol>
+    <div className="flex flex-1 overflow-x-auto overscroll-x-contain">
+      <WeekHours locale={display.locale} />
+      <ol className="flex flex-1 gap-0.5">
+        {columns.map((column) => (
+          <WeekColumnView
+            key={column.date}
+            column={column}
+            name={columnName(column, display.volume, hidden, display.locale)}
+            search={daySearch(column.date, today, hidden)}
+            locale={display.locale}
+          />
+        ))}
+      </ol>
+    </div>
+    <WeekLegend hidden={hidden} />
   </section>
 )
