@@ -214,7 +214,7 @@ describe("runningTotals across any day", () => {
       fc.property(days, ([zone, { feeds, diapers, now }]) => {
         const bounds = zonedDayBounds(localDateOf(now, zone), zone)
         const running = runningTotals(bounds, feeds, diapers, now)
-        const totals = totalsIn(bounds, feeds, diapers, now)
+        const totals = totalsIn(bounds, { feeds, diapers, sleeps: [] }, now)
         const series = [running.feedsStarted, running.nursingSeconds, running.bottleMl, running.diapers]
         expect({
           starts: series.map((points) => points[0]),

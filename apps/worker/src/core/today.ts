@@ -25,7 +25,7 @@ export const todayOf = (sql: SqlStorage, now: Instant): Today => {
   const diapers = liveDiapersSince(sql, from)
   return {
     date,
-    totals: totalsIn(day, feeds, diapers, now),
+    totals: totalsIn(day, { feeds, diapers, sleeps: [] }, now),
     activeFeed: activeFeed(sql) ?? null,
     lastFeed: lastFeed(sql),
     prefill: prefillOf(sql),
@@ -35,6 +35,7 @@ export const todayOf = (sql: SqlStorage, now: Instant): Today => {
 
 export const last24hOf = (sql: SqlStorage, now: Instant): Last24h => {
   const period = last24hPeriod(now)
-  const totals = totalsIn(period, liveFeedsSince(sql, period.start), liveDiapersSince(sql, period.start), now)
+  const entries = { feeds: liveFeedsSince(sql, period.start), diapers: liveDiapersSince(sql, period.start), sleeps: [] }
+  const totals = totalsIn(period, entries, now)
   return { from: period.start, totals }
 }

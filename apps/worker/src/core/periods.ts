@@ -22,7 +22,7 @@ import { liveMeasurementsIn } from "./growth.ts"
 const read = (sql: SqlStorage, zone: TimeZone, bounds: Interval, dates: ReadonlyArray<LocalDate>, now: Instant) => {
   const feeds = liveFeedsTouching(sql, bounds, now)
   const diapers = liveDiapersIn(sql, bounds)
-  const days = totalsByDay(dates, zone, feeds, diapers, now)
+  const days = totalsByDay(dates, zone, { feeds, diapers, sleeps: [] }, now)
   const totals = sumTotals(days.map((day) => day.totals))
   return { days, period: { bounds, asOf: now, totals, feeds, diapers, measurements: liveMeasurementsIn(sql, bounds) } }
 }

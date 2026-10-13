@@ -15,6 +15,11 @@ const TOTALS: Totals = {
   diapers: 3,
   wetDiapers: 2,
   dirtyDiapers: 2,
+  sleepsStarted: 2,
+  sleepSeconds: 7200,
+  napSeconds: 5400,
+  nightSeconds: 1800,
+  longestSleepSeconds: 5400,
 }
 
 const DIAPER: Diaper = {
@@ -43,6 +48,9 @@ describe("Totals", () => {
     ["part of a feed", { feedsStarted: 1.5 }],
     ["part of a second", { leftSeconds: 0.5 }],
     ["a negative amount", { formulaMl: -0.1 }],
+    ["part of a sleep", { sleepsStarted: 0.5 }],
+    ["part of a second asleep", { napSeconds: 0.5 }],
+    ["a negative longest sleep", { longestSleepSeconds: -1 }],
   ])("refuses %s", (_label, change) => {
     expect(decodes(Totals, { ...TOTALS, ...change })).toBe(false)
   })

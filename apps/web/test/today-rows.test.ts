@@ -40,6 +40,7 @@ describe("a feed's title and parts", () => {
 
 describe("totalsRows", () => {
   const TOTALS = {
+    ...NO_TOTALS,
     feedsStarted: 6,
     leftSeconds: 42 * 60,
     rightSeconds: 38 * 60,
