@@ -1,4 +1,8 @@
-import { readFileSync } from "node:fs"
+import { spawnSync } from "node:child_process"
+import { mkdtempSync, readFileSync, writeFileSync } from "node:fs"
+import { tmpdir } from "node:os"
+import { join } from "node:path"
+import { fileURLToPath } from "node:url"
 import { describe, expect, it } from "vitest"
 import type { ExportRow, HouseholdExport } from "../packages/contracts/src/export.ts"
 import { dryRun, dryRunSummary, migrationsOnDisk } from "./migration-dry-run.ts"
@@ -11,6 +15,7 @@ const EMILY = "caregiver-emily"
 const MIGRATIONS = migrationsOnDisk()
 const BEFORE_SLEEPS = MIGRATIONS.slice(0, 6)
 const REGISTRY = readFileSync(new URL("../apps/worker/src/db/migrations.ts", import.meta.url), "utf8")
+const CLI = fileURLToPath(new URL("./dry-run-migrations.ts", import.meta.url))
 
 const REBUILD_CAREGIVERS = [
   "CREATE TABLE caregivers_rebuilt (id TEXT PRIMARY KEY, email TEXT NOT NULL UNIQUE, display_name TEXT NOT NULL, active INTEGER NOT NULL, created_at INTEGER NOT NULL, updated_at INTEGER NOT NULL) STRICT",
@@ -297,5 +302,49 @@ describe("dryRunSummary", () => {
     expect(dryRunSummary({ applied: ["0007-sleeps"], rows: 5, tables: 8 })).toBe(
       "Applied 0007-sleeps on top of the export: all 5 rows of its 8 tables are still there, and every reference still holds.",
     )
+  })
+})
+
+describe("pnpm migrations:dry-run", () => {
+  const homeHolding = (file: string, body: string) => {
+    const home = mkdtempSync(join(tmpdir(), "bt-dry-run-"))
+    writeFileSync(join(home, file), body)
+    return home
+  }
+
+  const inHome = (home: string, ...args: ReadonlyArray<string>) =>
+    spawnSync(process.execPath, [CLI, ...args], { env: { ...process.env, HOME: home }, encoding: "utf8" })
+
+  it("reads a leading ~ as the home folder, as the shell does only for an unquoted path, and says what it applied", () => {
+    const home = homeHolding("baby-tracker.json", JSON.stringify(exportOf(names(BEFORE_SLEEPS))))
+    const { status, stdout } = inHome(home, "~/baby-tracker.json")
+    expect(stdout).toBe(`${dryRunSummary({ applied: ["0007-sleeps"], rows: 5, tables: 8 })}\n`)
+    expect(status).toBe(0)
+  })
+
+  it("exits 1 and says why when the export already has every migration", () => {
+    const tables = { ...tablesWith([diaper(EMILY)]), sleeps: [] }
+    const home = homeHolding("baby-tracker.json", JSON.stringify(exportOf(names(MIGRATIONS), tables)))
+    const { status, stdout, stderr } = inHome(home, "~/baby-tracker.json")
+    expect(stderr).toContain("The export already has every migration, so there was nothing to apply.")
+    expect(stdout).toBe("")
+    expect(status).toBe(1)
+  })
+
+  it("exits 1 for a file that isn't an export, without repeating what's in it", () => {
+    const home = homeHolding("notes.json", JSON.stringify({ secret: "Robin" }))
+    const { status, stderr } = inHome(home, "~/notes.json")
+    expect(stderr).toContain(`${join(home, "notes.json")} isn't a household export`)
+    expect(stderr).not.toContain("Robin")
+    expect(status).toBe(1)
+  })
+
+  it.each([
+    ["no file", []],
+    ["two files", ["~/a.json", "~/b.json"]],
+  ])("exits 1 and says how to call it, given %s", (_label, args) => {
+    const { status, stderr } = inHome(mkdtempSync(join(tmpdir(), "bt-dry-run-")), ...args)
+    expect(stderr).toContain("Give one export, like: pnpm migrations:dry-run ~/baby-tracker.json")
+    expect(status).toBe(1)
   })
 })
