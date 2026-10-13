@@ -50,6 +50,18 @@ test("sets an earlier start on a running feed, for a timer started late", async 
   ])
 })
 
+test("keeps Save start off until the start is changed", async ({ page }) => {
+  await playRunning(page)
+  const sheet = nursing(page)
+  const save = sheet.getByRole("button", { name: "Save start" })
+  await sheet.getByRole("button", { name: "Change" }).click()
+  await expect(save).toBeDisabled()
+  await sheet.getByLabel("Started").fill("2026-10-09T08:50")
+  await expect(save).toBeEnabled()
+  await sheet.getByLabel("Started").fill("2026-10-09T09:00")
+  await expect(save).toBeDisabled()
+})
+
 test("won't start the side after now", async ({ page }) => {
   await playRunning(page)
   const sheet = nursing(page)

@@ -5,9 +5,9 @@ import { clockOf } from "../../sheets/clock.ts"
 import { useSheets } from "../../sheets/sheets-context.ts"
 import { tapTime } from "../../sheets/tap-time.ts"
 import { WhenField } from "../../sheets/when-field.tsx"
-import { resolveWhen, type When, whenAt } from "../../sheets/when.ts"
+import { type When, whenAt } from "../../sheets/when.ts"
 import { useNow } from "../../timer/use-now.ts"
-import { firstSideOf, startAction } from "./nursing-state.ts"
+import { firstSideOf, startAction, startChanged, startedAtOf } from "./nursing-state.ts"
 
 interface FeedStartProps {
   readonly feed: Feed
@@ -35,11 +35,12 @@ export const FeedStart = ({ feed, zone, busy }: FeedStartProps) => {
     )
   }
   const fits = (at: number, latest: number) => at < (first.endedAt ?? latest)
-  const picked = resolveWhen(when, zone, now)
-  const tooLate = picked.ok && !fits(picked.instant, now)
+  const changed = startChanged(first, when, zone)
+  const picked = startedAtOf(first, when, zone, now)
+  const tooLate = changed && picked.ok && !fits(picked.instant, now)
   const save = () => {
     const tap = tapTime()
-    const resolved = resolveWhen(when, zone, tap)
+    const resolved = startedAtOf(first, when, zone, tap)
     if (!resolved.ok || !fits(resolved.instant, tap)) return
     sheets.send({ sheet: "nursing", action: startAction(feed, first, resolved.instant) })
     setWhen(null)
@@ -53,7 +54,7 @@ export const FeedStart = ({ feed, zone, busy }: FeedStartProps) => {
         </p>
       ) : null}
       <div className="grid grid-cols-2 gap-2">
-        <Button size="lg" disabled={busy || !picked.ok || tooLate} onClick={save}>
+        <Button size="lg" disabled={busy || !changed || !picked.ok || tooLate} onClick={save}>
           Save start
         </Button>
         <Button variant="ghost" size="lg" onClick={() => setWhen(null)}>

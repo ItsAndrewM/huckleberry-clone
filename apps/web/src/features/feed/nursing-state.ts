@@ -2,6 +2,7 @@ import type { Feed, NursingSegment, Side } from "@bt/contracts"
 import type { FeedAction } from "../../api/actions.ts"
 import { isPending, isSaving } from "../../api/pending.ts"
 import type { Sending } from "../../sheets/sending.ts"
+import { type Resolved, resolveWhen, sameWhen, type When, whenAt } from "../../sheets/when.ts"
 import { OTHER_SIDE } from "../../sides.ts"
 
 export type NursingState =
@@ -51,6 +52,12 @@ export const finishAction = (feed: Feed, occurredAt: number, deleteIfEmpty: bool
 
 export const firstSideOf = (feed: Feed): NursingSegment | undefined =>
   feed.segments.toSorted((a, b) => a.startedAt - b.startedAt)[0]
+
+export const startChanged = (first: NursingSegment, when: When, zone: string) =>
+  !sameWhen(when, whenAt(first.startedAt, zone))
+
+export const startedAtOf = (first: NursingSegment, when: When, zone: string, now: number): Resolved =>
+  startChanged(first, when, zone) ? resolveWhen(when, zone, now) : { ok: true, instant: first.startedAt }
 
 export const startAction = (feed: Feed, first: NursingSegment, startedAt: number): FeedAction => ({
   kind: "editSegment",
