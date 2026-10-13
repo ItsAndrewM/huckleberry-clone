@@ -52,10 +52,10 @@ const HistoryScreen = ({ me, now }: { readonly me: Me; readonly now: number }) =
       <div className="isolate -mt-5">
         <KindChips search={search} />
       </div>
-      {period.view === "day" ? (
-        <HistoryDay date={period.date} me={me} now={now} hidden={hidden} />
-      ) : (
+      {period.view === "week" ? (
         <WeekView key={period.week} week={period.week} me={me} now={now} today={today} hidden={hidden} />
+      ) : (
+        <HistoryDay date={period.date} me={me} now={now} hidden={hidden} />
       )}
     </Page>
   )
