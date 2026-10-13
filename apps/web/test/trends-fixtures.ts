@@ -7,6 +7,7 @@ export const BIRTH = "2026-09-01"
 export const LOCALE = "en-US"
 
 export const MONDAY: Totals = {
+  ...NO_TOTALS,
   feedsStarted: 8,
   leftSeconds: 3120,
   rightSeconds: 2880,
@@ -20,6 +21,7 @@ export const MONDAY: Totals = {
 }
 
 export const TUESDAY: Totals = {
+  ...NO_TOTALS,
   feedsStarted: 7,
   leftSeconds: 2400,
   rightSeconds: 2400,

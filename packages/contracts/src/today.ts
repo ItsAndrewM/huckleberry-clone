@@ -2,6 +2,7 @@ import { Schema, SchemaTransformation } from "effect"
 import { HttpApiEndpoint, HttpApiGroup } from "effect/http-api"
 import { Diaper } from "./diapers.ts"
 import { Feed, Millilitres, Side } from "./feeds.ts"
+import { Sleep } from "./sleeps.ts"
 import { Instant, LocalDate } from "./time.ts"
 
 const Count = Schema.Int.check(Schema.isGreaterThanOrEqualTo(0))
@@ -18,6 +19,11 @@ export const Totals = Schema.Struct({
   diapers: Count,
   wetDiapers: Count,
   dirtyDiapers: Count,
+  sleepsStarted: Count,
+  sleepSeconds: Count,
+  napSeconds: Count,
+  nightSeconds: Count,
+  longestSleepSeconds: Count,
 })
 export type Totals = typeof Totals.Type
 
@@ -50,6 +56,8 @@ export const Today = Schema.Struct({
   totals: Totals,
   activeFeed: Schema.NullOr(Feed),
   lastFeed: Schema.NullOr(Feed),
+  activeSleep: Schema.NullOr(Sleep),
+  lastSleep: Schema.NullOr(Sleep),
   prefill: Prefill,
   recent: RecentEntries,
 })

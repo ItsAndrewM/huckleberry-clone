@@ -72,6 +72,11 @@ export const NO_TOTALS = {
   diapers: 0,
   wetDiapers: 0,
   dirtyDiapers: 0,
+  sleepsStarted: 0,
+  sleepSeconds: 0,
+  napSeconds: 0,
+  nightSeconds: 0,
+  longestSleepSeconds: 0,
 }
 
 export interface DayAnswer {
@@ -81,6 +86,7 @@ export interface DayAnswer {
   readonly totals: typeof NO_TOTALS
   readonly feeds: ReadonlyArray<ReturnType<typeof feed>>
   readonly diapers: ReadonlyArray<ReturnType<typeof diaper>>
+  readonly sleeps: ReadonlyArray<never>
   readonly measurements: ReadonlyArray<ReturnType<typeof measurement>>
 }
 
@@ -93,6 +99,7 @@ export const emptyDay = (date: string, hours = 24, offset = "-07:00"): DayAnswer
     totals: NO_TOTALS,
     feeds: [],
     diapers: [],
+    sleeps: [],
     measurements: [],
   }
 }

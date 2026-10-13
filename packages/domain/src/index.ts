@@ -1,5 +1,13 @@
-export { type DayTotals, feedTouches, sumTotals, totalsByDay } from "./aggregate/periods.ts"
-export { type DiaperChange, last24hPeriod, type StartedFeed, type Totals, totalsIn } from "./aggregate/totals.ts"
+export { type DayTotals, feedTouches, sleepTouches, sumTotals, totalsByDay } from "./aggregate/periods.ts"
+export {
+  type DiaperChange,
+  type Entries,
+  last24hPeriod,
+  type SleepTotals,
+  type StartedFeed,
+  type Totals,
+  totalsIn,
+} from "./aggregate/totals.ts"
 export type { CalendarBand, CalendarBlock, PlacedBand, PlacedBlock } from "./calendar/blocks.ts"
 export type { CalendarPoint, PlacedCluster } from "./calendar/clusters.ts"
 export type { HourRow } from "./calendar/hours.ts"
@@ -29,6 +37,7 @@ export { girlsLms, type GrowthMetric, type Lms, WHO_LAST_DAY } from "./growth/wh
 export { zScoreLMS } from "./growth/z-score.ts"
 export { clipTo, contains, type DayPiece, durationMs, overlaps, splitByDays } from "./interval/interval.ts"
 export { affectedPeriods, type PeriodKey } from "./invalidation/affected-periods.ts"
+export { SLEEP_KINDS, type SleepKind, sleepKindAt, type SleepSession } from "./sleep/sleep.ts"
 export {
   addDaysToDate,
   datesBetween,

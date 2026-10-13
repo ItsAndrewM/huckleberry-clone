@@ -1,4 +1,4 @@
-import type { PortionEntry, SegmentEntry } from "@bt/contracts"
+import type { PortionEntry, SegmentEntry, SleepKind } from "@bt/contracts"
 import { describe, expect, it } from "vitest"
 import { deleteDiaper, logDiaper } from "../src/core/diapers.ts"
 import { deletePortion, deleteSegment } from "../src/core/feeds/components.ts"
@@ -6,6 +6,10 @@ import { deleteFeed } from "../src/core/feeds/feed-edits.ts"
 import { pauseFeed, startFeed } from "../src/core/feeds/lifecycle.ts"
 import { logFeed } from "../src/core/feeds/log.ts"
 import { lastFeed, prefillOf } from "../src/core/feeds/reads.ts"
+import { deleteSleep } from "../src/core/sleeps/edits.ts"
+import { startSleep } from "../src/core/sleeps/lifecycle.ts"
+import { logSleep } from "../src/core/sleeps/log.ts"
+import { lastSleep } from "../src/core/sleeps/reads.ts"
 import { last24hOf, todayOf } from "../src/core/today.ts"
 import { bottle, newFeed, segment } from "./feed-fixtures.ts"
 import {
@@ -40,6 +44,9 @@ const fed = (sql: SqlStorage, segments: SegmentEntry[], portions: PortionEntry[]
 const diaperAt = (sql: SqlStorage, occurredAt: number, dirty = false) =>
   saved(logDiaper(stampOf(sql), { actionId: ACTION_ID, occurredAt, wet: true, dirty })(sql))
 
+const slept = (sql: SqlStorage, startedAt: number, endedAt: number, kind: SleepKind = "nap") =>
+  saved(logSleep(stampOf(sql), { actionId: crypto.randomUUID(), kind, startedAt, endedAt })(sql))
+
 const idAt = (parts: ReadonlyArray<{ readonly id: string }>, index: number) => parts[index]?.id ?? "missing"
 
 describe("todayOf", () => {
@@ -49,6 +56,8 @@ describe("todayOf", () => {
       totals: NO_TOTALS,
       activeFeed: null,
       lastFeed: null,
+      activeSleep: null,
+      lastSleep: null,
       prefill: { lastBottle: null, lastSide: null },
       recent: [],
     })
@@ -89,6 +98,8 @@ describe("todayOf", () => {
       totals: { ...NO_TOTALS, feedsStarted: 1, leftSeconds: 1200, nursingSeconds: 1200 },
       activeFeed: feed,
       lastFeed: feed,
+      activeSleep: null,
+      lastSleep: null,
       prefill: { lastBottle: null, lastSide: "left" },
       recent: [{ kind: "feed", feed }],
     })
@@ -215,6 +226,8 @@ describe("todayOf", () => {
       },
       activeFeed: null,
       lastFeed: kept,
+      activeSleep: null,
+      lastSleep: null,
       prefill: { lastBottle: { breastMilkMl: 40, formulaMl: 20 }, lastSide: "left" },
       recent: [{ kind: "feed", feed: kept }],
     })
@@ -295,6 +308,67 @@ describe("todayOf", () => {
   })
 })
 
+describe("todayOf, for sleep", () => {
+  it("answers a running sleep as the active and the last sleep, counting it in today's totals up to now", async () => {
+    const { sleep, today } = await inHousehold((sql) => {
+      const start = { actionId: ACTION_ID, kind: "nap" as const, startedAt: minutesAgo(40) }
+      const sleep = saved(startSleep(stampOf(sql), start)(sql))
+      return { sleep, today: todayOf(sql, NOW) }
+    })
+    expect(today).toMatchObject({
+      totals: { ...NO_TOTALS, sleepsStarted: 1, sleepSeconds: 2400, napSeconds: 2400, longestSleepSeconds: 2400 },
+      activeSleep: sleep,
+      lastSleep: sleep,
+    })
+  })
+
+  it("answers the latest finished sleep as the last sleep, by when it started, with no active sleep", async () => {
+    const { latest, today } = await inHousehold((sql) => {
+      const latest = slept(sql, minutesAgo(120), minutesAgo(60))
+      slept(sql, minutesAgo(300), minutesAgo(200), "night")
+      return { latest, today: todayOf(sql, NOW) }
+    })
+    expect(today).toMatchObject({ activeSleep: null, lastSleep: latest })
+  })
+
+  it("gives today only the part of a sleep after midnight, though its whole length counts on the day it started (AC 12)", async () => {
+    const today = await inHousehold((sql) => {
+      slept(sql, ac4(-20), ac4(70), "night")
+      return todayOf(sql, NOW)
+    })
+    expect(today.totals).toEqual({ ...NO_TOTALS, sleepSeconds: 3600, nightSeconds: 3600 })
+  })
+
+  it("leaves a deleted sleep out of the totals, the active sleep and the last sleep", async () => {
+    const { kept, today } = await inHousehold((sql) => {
+      const kept = slept(sql, minutesAgo(200), minutesAgo(150))
+      const start = { actionId: ACTION_ID, kind: "nap" as const, startedAt: minutesAgo(40) }
+      const running = saved(startSleep(stampOf(sql), start)(sql))
+      saved(deleteSleep(stampOf(sql), running.id, { actionId: crypto.randomUUID(), version: running.version })(sql))
+      return { kept, today: todayOf(sql, NOW) }
+    })
+    expect(today).toMatchObject({
+      totals: { ...NO_TOTALS, sleepsStarted: 1, sleepSeconds: 3000, napSeconds: 3000, longestSleepSeconds: 3000 },
+      activeSleep: null,
+      lastSleep: kept,
+    })
+  })
+
+  it("reads the same few rows for the last sleep however long the history, since it walks the sleeps' time index", async () => {
+    const readsAfter = (sleeps: number) =>
+      inHousehold((sql) => {
+        for (let sleep = 0; sleep < sleeps; sleep++)
+          slept(sql, minutesAgo(70 + sleep * 90), minutesAgo(10 + sleep * 90))
+        const counted = countingRowsRead(sql)
+        lastSleep(counted.sql)
+        return counted.rowsRead()
+      })
+    const few = await readsAfter(10)
+    expect(few).toBeGreaterThan(0)
+    expect(await readsAfter(150)).toBe(few)
+  })
+})
+
 describe("last24hOf", () => {
   it("totals what happened from 24 hours before now, across midnight, and only the part of a feed after then", async () => {
     const last24h = await inHousehold((sql) => {
@@ -318,6 +392,14 @@ describe("last24hOf", () => {
         dirtyDiapers: 1,
       },
     })
+  })
+
+  it("counts only the part of a sleep after 24 hours before now, and not the sleep itself", async () => {
+    const last24h = await inHousehold((sql) => {
+      slept(sql, minutesAgo(24 * 60 + 30), minutesAgo(24 * 60 - 45), "night")
+      return last24hOf(sql, NOW)
+    })
+    expect(last24h.totals).toEqual({ ...NO_TOTALS, sleepSeconds: 2700, nightSeconds: 2700 })
   })
 
   it("counts a time a phone logged ahead of the clock at once (AC 21)", async () => {

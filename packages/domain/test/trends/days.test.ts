@@ -12,6 +12,11 @@ const NOTHING: Totals = {
   diapers: 0,
   wetDiapers: 0,
   dirtyDiapers: 0,
+  sleepsStarted: 0,
+  sleepSeconds: 0,
+  napSeconds: 0,
+  nightSeconds: 0,
+  longestSleepSeconds: 0,
 }
 
 const TODAY = "2026-10-14"
@@ -22,6 +27,13 @@ const day = (date: string, change: Partial<Totals> = {}): DatedTotals => ({ date
 const FED = { feedsStarted: 8, leftSeconds: 3000, rightSeconds: 2400, nursingSeconds: 5400 }
 const BOTTLED = { breastMilkMl: 400, formulaMl: 210, bottleMl: 610 }
 const CHANGED = { diapers: 8, wetDiapers: 6, dirtyDiapers: 3 }
+const SLEPT = {
+  sleepsStarted: 6,
+  sleepSeconds: 50_400,
+  napSeconds: 14_400,
+  nightSeconds: 36_000,
+  longestSleepSeconds: 10_800,
+}
 
 describe("hasEntries", () => {
   it("is false for a day with nothing logged", () => {
@@ -33,6 +45,8 @@ describe("hasEntries", () => {
     ["only nursing carried over from a feed that started the day before", { leftSeconds: 900, nursingSeconds: 900 }],
     ["only a bottle", { breastMilkMl: 0.1, bottleMl: 0.1 }],
     ["only a diaper", { diapers: 1, dirtyDiapers: 1 }],
+    ["only a sleep that started that day, still too new to have a second", { sleepsStarted: 1 }],
+    ["only sleep carried over from the night before", { sleepSeconds: 3600, nightSeconds: 3600 }],
   ])("is true for a day with %s", (_label, change) => {
     expect(hasEntries({ ...NOTHING, ...change })).toBe(true)
   })
@@ -66,9 +80,9 @@ describe("averageDay", () => {
   it("averages only finished days with entries, and says how many", () => {
     const days = [
       day("2026-08-31", FED),
-      day("2026-10-11", { ...FED, ...BOTTLED, ...CHANGED }),
+      day("2026-10-11", { ...FED, ...BOTTLED, ...CHANGED, ...SLEPT }),
       day("2026-10-12"),
-      day("2026-10-13", { ...FED, feedsStarted: 7, ...CHANGED }),
+      day("2026-10-13", { ...FED, feedsStarted: 7, ...CHANGED, ...SLEPT, longestSleepSeconds: 7200 }),
       day(TODAY, { ...FED, ...BOTTLED }),
       day("2026-10-15", FED),
     ]
@@ -85,6 +99,11 @@ describe("averageDay", () => {
         diapers: 8,
         wetDiapers: 6,
         dirtyDiapers: 3,
+        sleepsStarted: 6,
+        sleepSeconds: 50_400,
+        napSeconds: 14_400,
+        nightSeconds: 36_000,
+        longestSleepSeconds: 9000,
       },
     })
   })

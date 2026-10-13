@@ -15,6 +15,11 @@ const NO_TOTALS = {
   diapers: 0,
   wetDiapers: 0,
   dirtyDiapers: 0,
+  sleepsStarted: 0,
+  sleepSeconds: 0,
+  napSeconds: 0,
+  nightSeconds: 0,
+  longestSleepSeconds: 0,
 }
 
 type Side = "left" | "right"
@@ -92,6 +97,8 @@ export interface TodayAnswer {
   readonly totals: typeof NO_TOTALS
   readonly activeFeed: FeedAnswer | null
   readonly lastFeed: FeedAnswer | null
+  readonly activeSleep: null
+  readonly lastSleep: null
   readonly prefill: Prefill
   readonly recent: ReadonlyArray<RecentAnswer>
 }
@@ -101,6 +108,8 @@ export const todayWith = (activeFeed: FeedAnswer | null = null, prefill = NO_PRE
   totals: NO_TOTALS,
   activeFeed,
   lastFeed: activeFeed,
+  activeSleep: null,
+  lastSleep: null,
   prefill,
   recent: activeFeed === null ? [] : [{ kind: "feed", feed: activeFeed }],
 })

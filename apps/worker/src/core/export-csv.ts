@@ -1,9 +1,10 @@
-import type { Diaper, Feed, Measurement } from "@bt/contracts"
-import { feedSummary, type Instant, localDateTimeOf, type TimeZone } from "@bt/domain"
+import type { Diaper, Feed, Measurement, Sleep } from "@bt/contracts"
+import { feedSummary, type Instant, localDateTimeOf, sleepElapsed, type TimeZone } from "@bt/domain"
 import { calendarOf } from "./calendar.ts"
 import { liveDiapersSince } from "./diapers.ts"
 import { liveFeedsSince } from "./feeds/reads.ts"
 import { growthOf } from "./growth.ts"
+import { liveSleepsSince } from "./sleeps/reads.ts"
 
 const COLUMNS = [
   "Kind",
@@ -15,6 +16,8 @@ const COLUMNS = [
   "Formula (mL)",
   "Wet",
   "Dirty",
+  "Asleep (min)",
+  "Nap or night",
   "Weight (g)",
   "Length (cm)",
   "Head (cm)",
@@ -74,6 +77,18 @@ const diaperLine = (diaper: Diaper, { zone, names }: Context): Line => ({
   },
 })
 
+const sleepLine = (sleep: Sleep, { zone, names, now }: Context): Line => ({
+  at: sleep.startedAt,
+  cells: {
+    Kind: "Sleep",
+    Start: timeOf(sleep.startedAt, zone),
+    End: sleep.endedAt === null ? "" : timeOf(sleep.endedAt, zone),
+    "Asleep (min)": minutesOf(sleepElapsed(sleep, now)),
+    "Nap or night": sleep.kind === "nap" ? "Nap" : "Night",
+    "Logged by": names.get(sleep.createdBy) ?? "",
+  },
+})
+
 const measurementLine = (measurement: Measurement, { zone, names }: Context): Line => ({
   at: measurement.measuredAt,
   cells: {
@@ -106,6 +121,7 @@ export const householdCsvOf = (sql: SqlStorage, now: Instant): string => {
   const lines = [
     ...liveFeedsSince(sql, BEGINNING).map((feed) => feedLine(feed, context)),
     ...liveDiapersSince(sql, BEGINNING).map((diaper) => diaperLine(diaper, context)),
+    ...liveSleepsSince(sql, BEGINNING).map((sleep) => sleepLine(sleep, context)),
     ...growthOf(sql)
       .measurements.toReversed()
       .map((measurement) => measurementLine(measurement, context)),

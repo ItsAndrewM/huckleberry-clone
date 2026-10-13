@@ -48,6 +48,7 @@ describe("GET /api/export.json", () => {
       "growth_measurements",
       "household",
       "nursing_segments",
+      "sleeps",
     ])
   })
 
@@ -106,11 +107,11 @@ describe("GET /api/export.json", () => {
   it("takes in a table a later migration adds, with no change to the export", async () => {
     const household = await seededHousehold()
     await inStorage(household, (sql) => {
-      sql.exec("CREATE TABLE sleeps (id TEXT PRIMARY KEY, started_at INTEGER NOT NULL) STRICT")
-      sql.exec("INSERT INTO sleeps (id, started_at) VALUES ('s1', ?)", NOW)
+      sql.exec("CREATE TABLE later_entries (id TEXT PRIMARY KEY, occurred_at INTEGER NOT NULL) STRICT")
+      sql.exec("INSERT INTO later_entries (id, occurred_at) VALUES ('e1', ?)", NOW)
     })
     const { body } = await exported(household)
-    expect(body.tables.sleeps).toEqual([{ id: "s1", started_at: NOW }])
+    expect(body.tables.later_entries).toEqual([{ id: "e1", occurred_at: NOW }])
   })
 
   it("is the same export the admin route takes through the household's RPC", async () => {
@@ -136,7 +137,7 @@ describe("GET /api/export.csv", () => {
     expect(response.headers.get("content-type")).toBe("text/csv; charset=utf-8")
     const [header, diaper] = (await response.text()).split("\r\n")
     expect(header?.startsWith("Kind,Start,End,")).toBe(true)
-    expect(diaper).toBe("Diaper,2026-10-08 11:00,,,,,,yes,,,,,Andrew")
+    expect(diaper).toBe("Diaper,2026-10-08 11:00,,,,,,yes,,,,,,,Andrew")
   })
 
   it("is refused to someone who isn't a caregiver", async () => {

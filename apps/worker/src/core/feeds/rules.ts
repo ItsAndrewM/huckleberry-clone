@@ -3,7 +3,6 @@ import {
   type Feed,
   FeedConflict,
   type FieldError,
-  InvalidInput,
   MAX_SEGMENT_MS,
   NotFound,
   type NursingSegment,
@@ -20,6 +19,7 @@ import {
   validateNotInFuture,
 } from "@bt/domain"
 import { type Calendar, changedKeys, timeIssue } from "../calendar.ts"
+import { errorAt } from "../fields.ts"
 import type { CoreResult, Stamp } from "../receipts.ts"
 import { loadFeed, saveFeed } from "./store.ts"
 
@@ -39,12 +39,6 @@ interface Exclusion {
 }
 
 export const NO_EXCLUSION: Exclusion = { feedId: null, segmentId: null }
-
-export const errorAt = (path: string, issue: ValidationIssue | null): FieldError[] =>
-  issue === null ? [] : [{ path, issue }]
-
-export const invalidUnless = (errors: ReadonlyArray<FieldError>): InvalidInput | null =>
-  errors.length === 0 ? null : new InvalidInput({ fieldErrors: errors })
 
 const endIssue = (startedAt: Instant, endedAt: Instant, now: Instant): ValidationIssue | null =>
   validateEndAfterStart(startedAt, endedAt) ??

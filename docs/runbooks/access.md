@@ -120,7 +120,7 @@ Every push to `main` deploys itself once CI passes (M5.7):
   4. Enable deploys again.
 
   Its PR should say so.
-- **Exports:** a deploy saves none. Run `pnpm admin export` before merging a migration (see Exports).
+- **Exports:** a deploy saves none. Before merging a migration, run `pnpm admin export`, then `pnpm migrations:dry-run` on that file (see Exports).
 
 ## Deploying by hand
 
@@ -146,6 +146,7 @@ Roll back the code before you restore the data. The order matters: a restore res
 ## Exports
 
 - **From your Mac:** `pnpm admin export <file>` saves the household's JSON export to a new file. It never writes over a file that's already there, and it prints only how many tables and rows the export holds. Deploys don't save one (M5.7), so take one before merging a migration, or whenever you want a copy older than PITR's 30 days. The releases before M5.7 saved theirs to `exports/`. Each holds every row, her name and birth date included, so keep the folder on this Mac.
+- **Before merging a migration:** `pnpm migrations:dry-run <file>` rebuilds the tables a fresh export was taken under in an in-memory SQLite, loads every row, and applies the migrations the export hasn't seen. It fails if one of them fails, leaves a table with fewer rows, or breaks a reference, and it writes nothing (M3.1).
 - **Where it may go:** outside the checkout, like `~/baby-tracker.json` (a leading `~` is your home folder, quoted or not), or under the checkout's `exports/`. It refuses anywhere else in the checkout, where git would see the file, even by way of a symlink.
 - **From a phone:** Settings › Export shares the CSV or the JSON through the share sheet. A browser that can't share files downloads them instead.
 - **What's in them:** the JSON keeps every table as stored: every row and column, deleted rows and audit columns included, with the migrations applied. It leaves out the receipts, which expire after a day. The CSV has a row per live feed, diaper and measurement, at the household's local time.

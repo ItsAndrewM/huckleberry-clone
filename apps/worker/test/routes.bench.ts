@@ -51,6 +51,21 @@ const timeFeedWrites = async (household: Household, end: number): Promise<Timing
   return { label: "A feed write, with D9's overlap check", times, bytes: null }
 }
 
+const pastSleep = (startedAt: number) =>
+  JSON.stringify({ actionId: crypto.randomUUID(), kind: "nap", startedAt, endedAt: startedAt + 5 * MINUTE_MS })
+
+const timeSleepWrites = async (household: Household, end: number): Promise<Timing> => {
+  const times: number[] = []
+  for (let run = 0; run < RUNS; run++) {
+    const begun = performance.now()
+    const response = await send(household, "POST", "/api/sleeps", pastSleep(end - (50 - run * 6) * MINUTE_MS))
+    const body = await response.text()
+    times.push(performance.now() - begun)
+    if (!response.ok) throw new Error(`POST /api/sleeps answered ${response.status}: ${body}`)
+  }
+  return { label: "A sleep write, with its overlap check", times, bytes: null }
+}
+
 const milliseconds = (value: number) => `${value.toFixed(0)} ms`
 
 const row = (timing: Timing) =>
@@ -69,7 +84,7 @@ const report = (counts: ReadonlyArray<readonly [string, number]>, timings: Reado
     ...timings.map(row),
   ].join("\n")
 
-it("times each read and a feed write over two years of heavy logging", { timeout: 600_000 }, async () => {
+it("times the reads and two writes over two years of heavy logging", { timeout: 600_000 }, async () => {
   const household = await seededHousehold({ ...SEED, child: { ...SEED.child, birthDate: "2024-10-01" } })
   const end = Date.now()
   const { zone, counts } = await runInDurableObject(household, (_instance, state) => {
@@ -82,6 +97,7 @@ it("times each read and a feed write over two years of heavy logging", { timeout
     ["nursing_segments", 2 * feeds],
     ["bottle_portions", feeds],
     ["diapers", TWO_YEARS.days * TWO_YEARS.diapersADay],
+    ["sleeps", TWO_YEARS.days * TWO_YEARS.sleepsADay],
     ["growth_measurements", Math.ceil(TWO_YEARS.days / 7)],
   ])
   const today = localDateOf(end, zone)
@@ -100,6 +116,7 @@ it("times each read and a feed write over two years of heavy logging", { timeout
     await timeRead(household, "Export, CSV", "/api/export.csv"),
     await timeRead(household, "Export, JSON", "/api/export.json"),
     await timeFeedWrites(household, end),
+    await timeSleepWrites(household, end),
   ]
   console.log(report(counts, timings))
 })

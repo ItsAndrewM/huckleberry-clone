@@ -10,10 +10,10 @@ import {
   type VersionedPortion,
 } from "@bt/contracts"
 import { calendarOf } from "../calendar.ts"
+import { invalidUnless } from "../fields.ts"
 import type { CoreResult, Stamp } from "../receipts.ts"
 import {
   feedFor,
-  invalidUnless,
   onlyComponent,
   overlapConflict,
   overlappedFeed,
