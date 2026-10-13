@@ -19,10 +19,8 @@ export const diaperEdit = ({ sheet, action }: Sending, saved: Diaper): Recovery 
   }
 }
 
-const UNTOUCHED = 1
-
 export const feedReplay = ({ sheet, action }: Sending, saved: Feed): Recovery | null => {
-  if (action.kind !== "logFeed" || saved.version !== UNTOUCHED || saved.status !== "completed") return null
+  if (action.kind !== "logFeed") return null
   const { segments, portions } = action.payload
   return {
     label: SAVE_CHANGES,
@@ -34,7 +32,7 @@ export const feedReplay = ({ sheet, action }: Sending, saved: Feed): Recovery | 
 }
 
 export const measurementReplay = ({ sheet, action }: Sending, saved: Measurement): Recovery | null => {
-  if (action.kind !== "logMeasurement" || saved.version !== UNTOUCHED) return null
+  if (action.kind !== "logMeasurement") return null
   const { measuredAt, weightG, lengthCm, headCm } = action.payload
   return {
     label: SAVE_CHANGES,

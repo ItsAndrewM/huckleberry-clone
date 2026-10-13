@@ -285,13 +285,19 @@ describe("an entry that was saved before, as first entered", () => {
   })
 
   it.each([
+    { case: "a bottle", sending: BOTTLE_FEED },
+    { case: "a past feed with sides", sending: PAST_FEED },
+  ])("offers OK and no redo for $case's PUT, when the saved feed has changed again", ({ sending }) => {
+    const putting = recoveryOf(feedConflict(sending, "ACTION_REPLAY_MISMATCH", SAVED_BOTTLE))?.sendingAt(TAP)
+    if (putting === undefined) throw new Error("a replayed PUT")
+    const stale = feedConflict(putting, "STALE_VERSION", { ...SAVED_BOTTLE, version: 2 })
+    expect(recoveryOf(stale)).toBeNull()
+    expect(offersOk(stale)).toBe(true)
+  })
+
+  it.each([
     { case: "a start", sending: start("left"), current: theirs() },
     { case: "a bottle added to a running feed", sending: addBottle(NOW), current: theirs() },
-    {
-      case: "a feed the other phone has changed since",
-      sending: BOTTLE_FEED,
-      current: { ...SAVED_BOTTLE, version: 2 },
-    },
   ])("offers nothing to save for $case", ({ sending, current }) => {
     expect(recoveryOf(feedConflict(sending, "ACTION_REPLAY_MISMATCH", current))).toBeNull()
   })

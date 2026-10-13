@@ -1,4 +1,6 @@
+import { FeedConflict, InvalidInput, NotFound } from "@bt/contracts"
 import { describe, expect, it } from "vitest"
+import { AuthRequired, Offline, Unexpected } from "../src/api/errors.ts"
 import { pendingId } from "../src/api/pending.ts"
 import {
   bottleAction,
@@ -9,6 +11,7 @@ import {
   toppedUpFor,
 } from "../src/features/feed/bottle-entry.ts"
 import { StaleDraft } from "../src/sheets/drafts.ts"
+import { Unsaved } from "../src/sheets/kept.ts"
 import { feedAt, MINUTE, NOW, ZONE } from "./today-fixtures.ts"
 
 const ACTION_ID = "4b1c2a5e-8f3d-4c6b-9a7e-2d1f0e3c5b6a"
@@ -180,5 +183,42 @@ describe("a bottle's held route", () => {
     })
     const stale = { ...UNSAVED_BOTTLE, error: new StaleDraft({ createdAt: NOW - 13 * 60 * MINUTE }) }
     expect(bottleSession(stale, undefined, ZONE, null).held).toBeNull()
+  })
+})
+
+describe("a bottle's held route after the household answers", () => {
+  const running = feedAt(NOW - 20 * MINUTE, { id: "feed-9", status: "active", endedAt: null, version: 4 })
+  const saved = feedAt(NOW - 30 * MINUTE, { id: "feed-1", version: 3 })
+  const reopenedAfter = (error: Error) => bottleSession({ ...UNSAVED_BOTTLE, error }, undefined, ZONE, null)
+
+  it.each([
+    { case: "a stale version", error: new FeedConflict({ code: "STALE_VERSION", current: saved }) },
+    { case: "no feed to add to", error: new NotFound() },
+  ])("lets a top-up go back to today's rule when the household answers $case, since nothing was saved", ({ error }) => {
+    const { actionId, held } = reopenedAfter(error)
+    expect(held).toBeNull()
+    expect(bottleAction(actionId, AMOUNTS, NOW, null, held)).toMatchObject({ kind: "logFeed" })
+    expect(bottleAction(actionId, AMOUNTS, NOW, running, held)).toMatchObject({
+      kind: "addBottle",
+      id: "feed-9",
+      payload: { actionId: ACTION_ID, version: 4 },
+    })
+  })
+
+  it.each([
+    { case: "no connection", error: new Offline() },
+    { case: "an unexpected answer", error: new Unexpected({ status: 500 }) },
+    { case: "a sign-in that ran out", error: new AuthRequired() },
+    { case: "a copy kept unsaved", error: new Unsaved({ keptAt: NOW, failed: true }) },
+    {
+      case: "a receipt for another request",
+      error: new FeedConflict({ code: "ACTION_REPLAY_MISMATCH", current: saved }),
+    },
+    {
+      case: "an invalid input, which is also how a receipt on another route answers",
+      error: new InvalidInput({ fieldErrors: [{ path: "actionId", issue: "invalid" }] }),
+    },
+  ])("keeps a top-up on its own feed after $case, since the household may hold a receipt", ({ error }) => {
+    expect(reopenedAfter(error).held).toEqual({ kind: "addBottle", id: "feed-1", version: 2 })
   })
 })

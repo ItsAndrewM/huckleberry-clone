@@ -1,3 +1,5 @@
+import { FeedConflict, NotFound } from "@bt/contracts"
+import { StaleDraft } from "./drafts.ts"
 import { editsARecord, type Failed, type Sending, type SheetKind } from "./sending.ts"
 
 const CANT_SAVE_AS_IS = new Set(["ACTION_REPLAY_MISMATCH", "FEED_ALREADY_ACTIVE"])
@@ -19,3 +21,8 @@ export const isHeld = (held: ReadonlyArray<Failed>, sending: Sending) =>
   held.some((failed) => actionIdOf(failed.sending) === actionIdOf(sending))
 
 export const settlesWithoutAsking = (error: Error) => "code" in error && CANT_SAVE_AS_IS.has(String(error.code))
+
+const refusedByTheCore = (error: Error) =>
+  error instanceof NotFound || (error instanceof FeedConflict && error.code !== "ACTION_REPLAY_MISMATCH")
+
+export const mayHoldReceipt = (error: Error) => !(error instanceof StaleDraft) && !refusedByTheCore(error)

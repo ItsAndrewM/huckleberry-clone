@@ -1,7 +1,7 @@
 import type { Feed, Prefill } from "@bt/contracts"
 import type { FeedAction } from "../../api/actions.ts"
 import { isSaving } from "../../api/pending.ts"
-import { StaleDraft } from "../../sheets/drafts.ts"
+import { mayHoldReceipt } from "../../sheets/held.ts"
 import type { Failed } from "../../sheets/sending.ts"
 import { inStartMinute, NOW, type When, whenAt } from "../../sheets/when.ts"
 
@@ -24,7 +24,7 @@ export interface BottleSession extends Amounts {
 const sentBottle = (failed: Failed | null) => {
   const action = failed?.sending.action
   if (failed === null || action === undefined) return undefined
-  const keeps = !(failed.error instanceof StaleDraft)
+  const keeps = mayHoldReceipt(failed.error)
   if (action.kind === "addBottle") {
     const held: HeldRoute = keeps ? { kind: "addBottle", id: action.id, version: action.payload.version } : null
     return { ...action.payload, held }
