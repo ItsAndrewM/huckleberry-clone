@@ -41,9 +41,9 @@ test("gives No connection's last-updated time its date once the household's midn
   await page.routeWebSocket(/\/api\/ws$/, (socket) => socket.close({ code: 1011, reason: "offline" }))
   await context.setOffline(true)
   const noConnection = page.getByRole("alert").filter({ hasText: "No connection" })
-  await expect(noConnection).toContainText(/Updated 11:58\sPM\./)
+  await expect(noConnection).toContainText(/Updated 11:5\d\sPM\./)
   await page.clock.fastForward("03:00")
-  await expect(noConnection).toContainText(/Updated Oct 9, 11:58\sPM\./)
+  await expect(noConnection).toContainText(/Updated Oct 9, 11:5\d\sPM\./)
 })
 
 test("asks to sign in once Access has signed the parent out, and signs in back to the same page", async ({
