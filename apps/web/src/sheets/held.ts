@@ -1,4 +1,4 @@
-import type { Failed, Sending, SheetKind } from "./sending.ts"
+import { editsARecord, type Failed, type Sending, type SheetKind } from "./sending.ts"
 
 const CANT_SAVE_AS_IS = new Set(["ACTION_REPLAY_MISMATCH", "FEED_ALREADY_ACTIVE"])
 
@@ -7,8 +7,13 @@ export const actionIdOf = ({ action }: Sending) => action.payload.actionId
 export const withoutAction = (held: ReadonlyArray<Failed>, actionId: string) =>
   held.filter(({ sending }) => actionIdOf(sending) !== actionId)
 
-export const heldFor = (held: ReadonlyArray<Failed>, sheet: SheetKind) =>
-  held.find(({ sending }) => sending.sheet === sheet) ?? null
+export const recordOf = ({ action }: Sending): string | null => ("id" in action ? action.id : null)
+
+export const isOnOpening = ({ sending }: Failed, sheet: SheetKind | null, editing: string | null) =>
+  sending.sheet === sheet && (!editsARecord(sending.sheet) || recordOf(sending) === editing)
+
+export const heldFor = (held: ReadonlyArray<Failed>, sheet: SheetKind, editing: string | null = null) =>
+  held.find((failed) => isOnOpening(failed, sheet, editing)) ?? null
 
 export const isHeld = (held: ReadonlyArray<Failed>, sending: Sending) =>
   held.some((failed) => actionIdOf(failed.sending) === actionIdOf(sending))

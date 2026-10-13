@@ -19,6 +19,7 @@ export interface Sheets {
   readonly show: (sheet: SheetKind, editing?: string) => void
   readonly showAt: (sheet: TimedSheet, at: number) => void
   readonly close: () => void
+  readonly dismiss: (sheet: SheetKind) => void
   readonly keep: () => void
   readonly discard: (failed: Failed) => void
   readonly send: (sending: Sending) => void
@@ -33,4 +34,4 @@ export const useSheets = () => {
   return sheets
 }
 
-export const failedFor = (sheets: Sheets, sheet: SheetKind) => heldFor(sheets.held, sheet)
+export const failedFor = (sheets: Sheets, sheet: SheetKind) => heldFor(sheets.held, sheet, sheets.editing)

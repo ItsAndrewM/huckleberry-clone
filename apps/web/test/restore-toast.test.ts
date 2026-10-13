@@ -14,7 +14,7 @@ describe("restoredToast", () => {
     expect(restoredToast({ diaper, changed: [] }, NOW, ACTION_ID)).toEqual({
       message: "Diaper restored",
       undo: {
-        sheet: "diaper",
+        sheet: "undo",
         action: { kind: "deleteDiaper", id: "diaper-1", payload: { actionId: ACTION_ID, version: 3 } },
       },
       until: NOW + TOAST_MS,
@@ -30,8 +30,8 @@ describe("restoredToast", () => {
     ]
     expect(toasts.map(({ message }) => message)).toEqual(["Bottle restored", "Feed restored"])
     expect(toasts.map(({ undo }) => undo)).toEqual([
-      { sheet: "pastFeed", action: { kind: "deleteFeed", id: "feed-1", payload: { actionId: ACTION_ID, version: 5 } } },
-      { sheet: "pastFeed", action: { kind: "deleteFeed", id: "feed-2", payload: { actionId: ACTION_ID, version: 4 } } },
+      { sheet: "undo", action: { kind: "deleteFeed", id: "feed-1", payload: { actionId: ACTION_ID, version: 5 } } },
+      { sheet: "undo", action: { kind: "deleteFeed", id: "feed-2", payload: { actionId: ACTION_ID, version: 4 } } },
     ])
   })
 
