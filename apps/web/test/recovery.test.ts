@@ -153,6 +153,33 @@ describe("a redo after the other phone's change", () => {
   })
 
   it.each([
+    { case: "their switch ended it", current: SWITCHED_EARLIER, side: "left", endedAt: NOW - 5 * MINUTE },
+    { case: "their pause ended it", current: PAUSED, side: "left", endedAt: NOW - 5 * MINUTE },
+    {
+      case: "they added a bottle and it's still running",
+      current: theirs({ portions: SAVED_BOTTLE.portions }),
+      side: "left",
+      endedAt: null,
+    },
+    {
+      case: "they moved it to the right",
+      current: theirs({ segments: [segment("right", STARTED, null)] }),
+      side: "right",
+      endedAt: null,
+    },
+  ])("resends the new start on the side as it is now, when $case", ({ current, side, endedAt }) => {
+    const recovery = recoveryOf(feedConflict(changeStart(STARTED - 5 * MINUTE), "STALE_VERSION", current))
+    expect(recovery?.sendingAt(TAP)).toEqual({
+      sheet: "nursing",
+      action: {
+        kind: "editSegment",
+        id: `segment-${STARTED}`,
+        payload: { actionId: ACTION_ID, version: 3, side, startedAt: STARTED - 5 * MINUTE, endedAt },
+      },
+    })
+  })
+
+  it.each([
     { case: "a switch after theirs", sending: SWITCH, current: SWITCHED_AFTER_TAP },
     { case: "a switch to the side theirs had already reached, unseen", sending: SWITCH, current: SWITCHED_EARLIER },
     { case: "a join's switch that meets the feed already on its side", sending: JOINING, current: theirs() },

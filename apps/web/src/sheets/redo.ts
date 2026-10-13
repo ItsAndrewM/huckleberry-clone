@@ -23,8 +23,10 @@ const runningSince = (feed: Feed, at: number) => {
 const switchFits = (feed: Feed, to: Side | undefined, at: number) =>
   to !== undefined && runningSince(feed, at) && openSideOf(feed)?.side !== to
 
+const segmentOf = (feed: Feed, segmentId: string) => feed.segments.find(({ id }) => id === segmentId)
+
 const startStillFits = (feed: Feed, segmentId: string, startedAt: number) => {
-  const segment = feed.segments.find(({ id }) => id === segmentId)
+  const segment = segmentOf(feed, segmentId)
   return segment !== undefined && (segment.endedAt === null || startedAt < segment.endedAt)
 }
 
@@ -56,11 +58,18 @@ const withVersion = <Sent extends Action>(action: Sent, version: number): Sent =
   payload: { ...action.payload, version },
 })
 
+const resent = (action: Action, feed: Feed): Action => {
+  const versioned = withVersion(action, feed.version)
+  if (versioned.kind !== "editSegment") return versioned
+  const { side, endedAt } = segmentOf(feed, versioned.id) ?? versioned.payload
+  return { ...versioned, payload: { ...versioned.payload, side, endedAt } }
+}
+
 export const redone = ({ sheet, action }: Sending, feed: Feed): Recovery | null => {
   const label = REDO_LABELS.get(action.kind)
   const live = feed.status === "active" && feed.deletedAt === null
   if (label === undefined || !live || !fits(action, feed)) return null
-  return { label, sendingAt: () => ({ sheet, action: withVersion(action, feed.version) }) }
+  return { label, sendingAt: () => ({ sheet, action: resent(action, feed) }) }
 }
 
 export const joined = ({ action }: Sending, feed: Feed): Recovery | null => {
