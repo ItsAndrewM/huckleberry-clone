@@ -2,6 +2,7 @@ import { parseArgs } from "node:util"
 
 export const PRODUCTION_NAME = "baby-tracker"
 export const PRODUCTION_HOSTNAME = "baby.andamonium.dev"
+export const PRODUCTION_ACCOUNT_ID = "6624f09210327baade61004af0d9be84"
 export const CI_WORKFLOW = "CI"
 
 export interface DeployConfig {
@@ -61,7 +62,10 @@ const DEPLOY_CHECKS: ReadonlyArray<Check<DeployConfig>> = [
     `the Worker is ${PRODUCTION_NAME}, not a local build (rebuild without CLOUDFLARE_ENV)`,
     (config) => config.name === PRODUCTION_NAME,
   ],
-  ["account_id is pinned", (config) => (config.account_id ?? "") !== ""],
+  [
+    `account_id is ${PRODUCTION_ACCOUNT_ID}, the production account`,
+    (config) => config.account_id === PRODUCTION_ACCOUNT_ID,
+  ],
   [`its only route is the Custom Domain ${PRODUCTION_HOSTNAME}`, onlyRouteIsTheHostname],
   ["workers.dev is off", (config) => config.workers_dev === false],
   ["preview URLs are off", (config) => config.preview_urls === false],

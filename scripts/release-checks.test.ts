@@ -60,7 +60,12 @@ describe("the Worker config a release deploys", () => {
     [
       "an empty account_id, which CI's token for one Worker can't look up",
       { account_id: "" },
-      ["account_id is pinned"],
+      ["account_id is 6624f09210327baade61004af0d9be84, the production account"],
+    ],
+    [
+      "another account's id, where a deploy from a Mac logged into both would land",
+      { account_id: "0000000000000000000000000000beef" },
+      ["account_id is 6624f09210327baade61004af0d9be84, the production account"],
     ],
     [
       "workers.dev or preview URLs, which Access doesn't cover",
