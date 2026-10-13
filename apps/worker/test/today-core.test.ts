@@ -28,6 +28,8 @@ import { countingRowsRead } from "./rows-read.ts"
 const OCT_7_AT_23_50 = Date.UTC(2026, 9, 8, 6, 50)
 const ac4 = (minutes: number) => OCT_7_AT_23_50 + minutes * MINUTE_MS
 
+const FEED_ID_SCANS_THAT_CAN_END_EARLY = 2
+
 const OCT_25_AT_00_15_BST = Date.UTC(2026, 9, 24, 23, 15)
 const OCT_25_AT_23_20_GMT = Date.UTC(2026, 9, 25, 23, 20)
 const OCT_25_AT_23_30_GMT = Date.UTC(2026, 9, 25, 23, 30)
@@ -133,7 +135,7 @@ describe("todayOf", () => {
     expect(today.lastFeed).toEqual(running)
   })
 
-  it("reads a handful of rows for the last feed and the prefill, however long the history", async () => {
+  it("reads a handful of rows for the last feed and the prefill, however long the history, give or take the newest feed's random id", async () => {
     const readsAfter = (feeds: number) =>
       inHousehold((sql) => {
         for (let feed = 0; feed < feeds; feed++) {
@@ -154,9 +156,11 @@ describe("todayOf", () => {
         return { lastFeed: forLastFeed.rowsRead(), prefill: forPrefill.rowsRead() }
       })
     const few = await readsAfter(10)
-    expect(few.lastFeed).toBeGreaterThan(0)
+    const many = await readsAfter(150)
+    expect(few.lastFeed).toBeGreaterThan(FEED_ID_SCANS_THAT_CAN_END_EARLY)
     expect(few.prefill).toBeGreaterThan(0)
-    expect(await readsAfter(150)).toEqual(few)
+    expect(Math.abs(many.lastFeed - few.lastFeed)).toBeLessThanOrEqual(FEED_ID_SCANS_THAT_CAN_END_EARLY)
+    expect(many.prefill).toBe(few.prefill)
   })
 
   it("lists every feed and diaper from the last 24 hours, newest first, though yesterday's aren't in today's totals", async () => {
