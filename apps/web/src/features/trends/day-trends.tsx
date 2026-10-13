@@ -23,9 +23,19 @@ export const DayTrends = ({ date, me, now, today }: DayTrendsProps) => {
     () => usualDay([earlierWeek.data?.days, laterWeek.data?.days], date, today, birthDate),
     [earlierWeek.data, laterWeek.data, date, today, birthDate],
   )
+  const usualFailed = [earlierWeek, laterWeek].some((week) => week.isError && week.data === undefined)
   return dayQuery.data === undefined ? (
-    <NotLoaded failed={dayQuery.isError} message="This day couldn't be loaded." retry={retryOf(dayQuery)} />
+    <NotLoaded
+      failed={dayQuery.isError}
+      message="This day couldn't be loaded."
+      retry={retryOf(dayQuery, earlierWeek, laterWeek)}
+    />
   ) : (
-    <DayView day={dayQuery.data} usual={usual} me={me} now={now} today={today} />
+    <>
+      {usualFailed ? (
+        <NotLoaded failed message="Her usual day couldn't be loaded." retry={retryOf(earlierWeek, laterWeek)} />
+      ) : null}
+      <DayView day={dayQuery.data} usual={usual} me={me} now={now} today={today} />
+    </>
   )
 }

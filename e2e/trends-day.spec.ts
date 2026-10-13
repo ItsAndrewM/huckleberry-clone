@@ -87,6 +87,25 @@ test("loads the day on Try again, once the household answers", async ({ page }) 
   await expect(chart(page, "Feeds started")).toContainText("4 so far")
 })
 
+test("says her usual day couldn't be loaded while still charting today, and draws its line on Try again", async ({
+  page,
+}) => {
+  await playDays(page)
+  let refusing = true
+  await page.route("**/api/weeks/2026-W40", (route) => (refusing ? route.fulfill({ status: 404 }) : route.fallback()))
+  await openTrends(page, "?view=day")
+  const main = page.getByRole("main")
+  const message = main.getByText("Her usual day couldn't be loaded.")
+  await expect(message).toBeVisible()
+  await expect(chart(page, "Feeds started")).toContainText("4 so far")
+  await expect(main.locator('[data-ts-key^="usual:"]')).toHaveCount(0)
+  refusing = false
+  await page.getByRole("button", { name: "Try again" }).click()
+  await expect(message).toHaveCount(0)
+  await expect(chart(page, "Feeds started")).toContainText("Usual 8.2, over 6 days")
+  await expect(chart(page, "Bottles").locator('[data-ts-key^="usual:"]').first()).toBeAttached()
+})
+
 test("opens the day it shows in History", async ({ page }) => {
   await playDays(page)
   await openTrends(page, "?view=day")
