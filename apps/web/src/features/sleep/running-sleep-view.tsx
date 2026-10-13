@@ -38,7 +38,9 @@ export const RunningSleepView = ({ sleep, zone }: RunningSleepViewProps) => {
       <SleepKindToggle
         kind={sleep.kind}
         disabled={busy}
-        onChange={(kind) => act(runningEdit(sleep, kind, sleep.startedAt))}
+        onChange={(kind) => {
+          if (kind !== sleep.kind) act(runningEdit(sleep, kind, sleep.startedAt))
+        }}
       />
       <WhenField
         label="Woke"

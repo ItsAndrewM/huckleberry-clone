@@ -20,10 +20,7 @@ export const SleepKindToggle = ({ kind, disabled = false, onChange }: SleepKindT
       <ToggleGroup
         aria-labelledby={labelId}
         value={[kind]}
-        onValueChange={([next]) => {
-          const picked = SLEEP_KINDS.find((candidate) => candidate === next)
-          if (picked !== undefined) onChange(picked)
-        }}
+        onValueChange={([next]) => onChange(SLEEP_KINDS.find((candidate) => candidate === next) ?? kind)}
         disabled={disabled}
         variant="outline"
         size="lg"

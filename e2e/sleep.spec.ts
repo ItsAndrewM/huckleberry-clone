@@ -112,6 +112,28 @@ test("calls a sleep that fell at 6:30 AM a night, until a parent picks nap", asy
     .toEqual([["nap", Date.UTC(2026, 9, 9, 13, 30)]])
 })
 
+test("keeps Nap once a parent taps it, even when the start then moves into the night", async ({ page }) => {
+  const { andrew } = await caregiversOf(page)
+  const { played, answer } = await playHousehold(page, todayWith())
+  await answer("**/api/sleeps/start", ({ body }) => {
+    const sleep = runningSleep(andrew.id, body.startedAt ?? NOW, body.kind ?? "nap")
+    played.today = sleepingToday(sleep)
+    return { status: 201, json: { sleep, changed: [["today"]] } }
+  })
+  await openToday(page)
+  const sheet = await openSleep(page)
+  const nap = sheet.getByRole("button", { name: "Nap", exact: true })
+  await expect(nap).toHaveAttribute("aria-pressed", "true")
+  await nap.click()
+  await sheet.getByRole("button", { name: "Change" }).click()
+  await sheet.getByLabel("Fell asleep").fill("2026-10-08T19:30")
+  await expect(nap).toHaveAttribute("aria-pressed", "true")
+  await sheet.getByRole("button", { name: "Start sleep" }).click()
+  await expect
+    .poll(() => played.sent.map(({ body }) => [body.kind, body.startedAt]))
+    .toEqual([["nap", Date.UTC(2026, 9, 9, 2, 30)]])
+})
+
 test("moves a running sleep's start, and changes it to a night, each with its version", async ({ page }) => {
   const { andrew } = await caregiversOf(page)
   let sleep = runningSleep(andrew.id, FELL_ASLEEP, "nap", 2)
@@ -139,6 +161,29 @@ test("moves a running sleep's start, and changes it to a night, each with its ve
       ["PATCH", 2, "night", FELL_ASLEEP, null],
       ["PATCH", 3, "night", Date.UTC(2026, 9, 9, 15, 30), null],
     ])
+})
+
+test("sends nothing when a parent taps the label a running sleep already has", async ({ page }) => {
+  const { andrew } = await caregiversOf(page)
+  let sleep = runningSleep(andrew.id, FELL_ASLEEP, "nap", 2)
+  const { played, answer } = await playHousehold(page, sleepingToday(sleep))
+  await answer("**/api/sleeps/sleep-1", ({ body }) => {
+    sleep = {
+      ...sleep,
+      kind: body.kind ?? sleep.kind,
+      startedAt: body.startedAt ?? sleep.startedAt,
+      version: sleep.version + 1,
+    }
+    played.today = sleepingToday(sleep)
+    return { status: 200, json: { sleep, changed: [["today"]] } }
+  })
+  await openToday(page)
+  const sheet = await openSleep(page)
+  await sheet.getByRole("button", { name: "Nap", exact: true }).click()
+  await sheet.getByRole("button", { name: "Night", exact: true }).click()
+  await expect
+    .poll(() => played.sent.map(({ method, body }) => [method, body.version, body.kind]))
+    .toEqual([["PATCH", 2, "night"]])
 })
 
 test("deletes a running sleep after asking, and offers Undo", async ({ page }) => {
