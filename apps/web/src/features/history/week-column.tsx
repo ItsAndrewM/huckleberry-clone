@@ -14,11 +14,17 @@ interface WeekColumnProps {
 export const WeekColumnView = ({ column, name, search, locale }: WeekColumnProps) => (
   <li className="flex min-w-10 flex-1 flex-col">
     <WeekDayHeader date={column.date} isToday={column.isToday} measured={column.measured} locale={locale} />
-    <div className={cn("relative flex-1 overflow-hidden rounded-md", column.opens ? "bg-card" : "bg-muted/50")}>
+    <div
+      className={cn(
+        "relative flex-1 overflow-hidden rounded-md",
+        column.opens ? "bg-card" : "border border-dashed border-border",
+      )}
+    >
       {column.opens ? (
         <Link
           to="/history"
           search={search}
+          activeOptions={{ exact: true }}
           aria-label={name}
           className="absolute inset-0 rounded-md outline-none focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:ring-inset"
         />

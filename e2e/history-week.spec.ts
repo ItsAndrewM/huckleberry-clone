@@ -44,6 +44,16 @@ test("steps back a week and comes back to this week", async ({ page }) => {
   await expect(page.getByRole("link", { name: "Next week" })).toHaveCount(0)
 })
 
+test("doesn't call a day's column the current page", async ({ page }) => {
+  await playBusyWeek(page)
+  await openHistory(page, "?view=week")
+  await expect(weekGrid(page).getByRole("link")).toHaveCount(5)
+  await expect(weekGrid(page).locator('[aria-current="page"]')).toHaveCount(0)
+  await page.getByRole("link", { name: "Previous week" }).click()
+  await expect(weekGrid(page).getByRole("link")).toHaveCount(7)
+  await expect(weekGrid(page).locator('[aria-current="page"]')).toHaveCount(0)
+})
+
 test("switches from a day to the week that holds it, and back to today", async ({ page }) => {
   await playBusyWeek(page)
   await openHistory(page, "?date=2026-09-28")
