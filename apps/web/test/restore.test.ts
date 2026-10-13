@@ -169,6 +169,14 @@ describe("a deleted sleep's restore", () => {
     )
   })
 
+  it("says a sleep still running when it was deleted can't come back over a nap that started and ended since", () => {
+    const logged = sleptAt(NOW - 25 * MINUTE, { id: "sleep-4", endedAt: NOW - 10 * MINUTE })
+    const error = new SleepConflict({ code: "SLEEP_OVERLAP", current: logged })
+    expect(plain(restoreFailure(error, HOUSEHOLD, { kind: "sleep", sleep: RUNNING }))).toBe(
+      "It was still running when it was deleted, so it would run on over the nap at 9:05 AM–9:20 AM. It can't come back.",
+    )
+  })
+
   it("says the other parent restored it already", () => {
     const error = new SleepConflict({ code: "STALE_VERSION", current: { ...NAP, deletedAt: null, updatedBy: EMILY } })
     expect(restoreFailure(error, HOUSEHOLD, { kind: "sleep", sleep: NAP })).toBe("Emily restored this a moment ago.")
