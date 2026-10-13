@@ -129,8 +129,8 @@ describe("runningTotals", () => {
   })
 
   it("climbs in time order when the feeds list their segments out of start order", () => {
-    const later = sides(local("01:19"), ["right", local("01:19"), local("01:28")])
-    const earlier = sides(local("01:05"), ["left", local("01:05"), local("01:19")])
+    const later = sides(local("01:19"), ["left", local("01:19"), local("01:28")])
+    const earlier = sides(local("01:05"), ["right", local("01:05"), local("01:19")])
     expect(runningTotals(DAY, [later, earlier], [], AFTER).nursingSeconds).toEqual([
       { at: DAY.start, value: 0 },
       { at: local("01:05"), value: 0 },
