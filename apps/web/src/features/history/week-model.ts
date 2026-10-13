@@ -7,6 +7,7 @@ import {
   type Interval,
   layoutDay,
   onWallClock,
+  type PlacedBlock,
   type PlacedCluster,
   type Side,
   sleepTouches,
@@ -22,6 +23,7 @@ export interface WeekColumn {
   readonly isToday: boolean
   readonly grid: DayGrid<Side>
   readonly diapers: ReadonlyArray<PlacedCluster>
+  readonly sleeps: ReadonlyArray<PlacedBlock<Side>>
   readonly measured: boolean
   readonly logged: boolean
   readonly totals: Totals
@@ -43,7 +45,7 @@ export const weekModel = (week: WeekPeriod, context: WeekContext): ReadonlyArray
     const feeds = week.feeds.filter((feed) => feedTouches(bounds, feed, context.now))
     const sleeps = week.sleeps.filter((sleep) => sleepTouches(bounds, sleep, context.now))
     const slice = shownSlice({ date, bounds, feeds, diapers: week.diapers, sleeps }, context.hidden)
-    const { blocks, bottles, diapers } = piecesOf(slice)
+    const { blocks, bottles, diapers, sleeps: slept } = piecesOf(slice)
     const day = { date, zone: context.zone, bounds, now: context.now, blocks, points: bottles }
     const weighed = measuredIn(week.measurements, bounds)
     return {
@@ -52,6 +54,7 @@ export const weekModel = (week: WeekPeriod, context: WeekContext): ReadonlyArray
       isToday: date === context.today,
       grid: layoutDay(onWallClock(day), WEEK_SCALE),
       diapers: layoutDay(onWallClock({ ...day, blocks: [], points: diapers }), WEEK_SCALE).clusters,
+      sleeps: layoutDay(onWallClock({ ...day, blocks: slept, points: [] }), WEEK_SCALE).blocks,
       measured: !context.hidden.has("growth") && weighed,
       logged: hasEntries(totals) || weighed,
       totals,

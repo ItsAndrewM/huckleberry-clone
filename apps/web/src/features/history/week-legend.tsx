@@ -23,6 +23,12 @@ export const WeekLegend = ({ hidden }: { readonly hidden: Hidden }) => (
         Diaper
       </span>
     )}
+    {hidden.has("sleep") ? null : (
+      <span className="inline-flex items-center gap-1">
+        <Swatch className="h-3 w-1 rounded-[1px] bg-muted-foreground/45" />
+        Sleep
+      </span>
+    )}
     {hidden.has("growth") ? null : (
       <span className="inline-flex items-center gap-1">
         <RulerIcon aria-hidden="true" className="size-3" />
