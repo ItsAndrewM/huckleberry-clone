@@ -1,4 +1,4 @@
-import { expect, type Page, test } from "@playwright/test"
+import { expect, type Locator, type Page, test } from "@playwright/test"
 import { datesFrom, openTrends, periodOf, playTrends, TRENDS_DAYS } from "./played-period.ts"
 
 test.use({ timezoneId: "America/Vancouver" })
@@ -6,6 +6,7 @@ test.use({ timezoneId: "America/Vancouver" })
 const WEEK = periodOf(datesFrom("2026-10-05", 7), TRENDS_DAYS)
 const LAST_WEEK = periodOf(datesFrom("2026-09-28", 7), TRENDS_DAYS)
 const OCTOBER = periodOf(datesFrom("2026-10-01", 31), TRENDS_DAYS)
+const HINT = "Tap a day to see its numbers"
 
 const playWeeks = (page: Page) =>
   playTrends(page, { weeks: { "2026-W41": WEEK, "2026-W40": LAST_WEEK }, months: { "2026-10": OCTOBER } })
@@ -13,11 +14,19 @@ const playWeeks = (page: Page) =>
 const chart = (page: Page, name: string) => page.getByRole("region", { name })
 const periods = (page: Page) => page.getByRole("navigation", { name: /weeks|months/u })
 
+const barOf = (page: Page, name: string, date: string) =>
+  chart(page, name).locator(`[data-ts-key^="days:"][data-ts-key*=":${date}:"]`).first()
+
+const rectOf = (target: Locator) =>
+  target.evaluate((element) => {
+    const { x, y, width, height } = element.getBoundingClientRect()
+    return { x, y, width, height }
+  })
+
 const tapDay = async (page: Page, name: string, date: string) => {
-  const bar = chart(page, name).locator(`[data-ts-key^="days:"][data-ts-key*=":${date}:"]`).first()
+  const bar = barOf(page, name, date)
   await bar.scrollIntoViewIfNeeded()
-  const box = await bar.boundingBox()
-  if (box === null) throw new Error(`No bar for ${date} on ${name}`)
+  const box = await rectOf(bar)
   await page.touchscreen.tap(box.x + box.width / 2, box.y + box.height / 2)
 }
 
@@ -36,6 +45,7 @@ const tapColumn = async (page: Page, name: string, weekday: string) => {
 }
 
 const pickedDay = (page: Page) => page.getByRole("main").getByRole("status")
+const pickedLine = (page: Page) => pickedDay(page).locator("..")
 const clearPick = (page: Page) => page.getByRole("button", { name: "Back to the averages" })
 
 const expectTuesday = async (page: Page) => {
@@ -73,23 +83,44 @@ test("leaves a day with nothing logged out of the averages, and says so in the t
   ])
 })
 
-test("picks a day on all four charts with one tap, and goes back to the averages", async ({ page }) => {
+test("picks a day on all four charts with one tap, without moving them, and goes back to the averages", async ({
+  page,
+}) => {
   await playWeeks(page)
   await openTrends(page)
   await expect(chart(page, "Bottles")).toContainText("543 mL a day, over 4 days")
   await expect(pickedDay(page)).toBeAttached()
-  await expect(pickedDay(page)).toBeEmpty()
+  await expect(pickedDay(page)).toHaveText(HINT)
   await expect(clearPick(page)).toHaveCount(0)
-  await tapDay(page, "Bottles", "2026-10-06")
+  const tuesday = barOf(page, "Diapers", "2026-10-06")
+  await tuesday.scrollIntoViewIfNeeded()
+  const before = await rectOf(tuesday)
+  await page.touchscreen.tap(before.x + before.width / 2, before.y + 4)
   await expect(pickedDay(page)).toHaveText("Tue, Oct 6")
   await expectTuesday(page)
+  expect(Math.abs((await rectOf(tuesday)).y - before.y)).toBeLessThanOrEqual(1)
   const box = await clearPick(page).boundingBox()
   expect(box?.width).toBeGreaterThanOrEqual(44)
   expect(box?.height).toBeGreaterThanOrEqual(44)
   await clearPick(page).click()
   await expect(chart(page, "Bottles")).toContainText("543 mL a day, over 4 days")
-  await expect(pickedDay(page)).toBeEmpty()
+  await expect(pickedDay(page)).toHaveText(HINT)
   await expect(clearPick(page)).toHaveCount(0)
+})
+
+test("keeps the picked line one row tall, picked or not, from 393 px down to 320 px wide", async ({ page }) => {
+  await playWeeks(page)
+  await openTrends(page)
+  for (const width of [393, 320]) {
+    await page.setViewportSize({ width, height: 659 })
+    await expect(pickedDay(page)).toHaveText(HINT)
+    const empty = (await pickedLine(page).boundingBox())?.height
+    await tapDay(page, "Bottles", "2026-10-06")
+    await expect(pickedDay(page)).toHaveText("Tue, Oct 6")
+    expect([width, empty, (await pickedLine(page).boundingBox())?.height]).toEqual([width, 44, 44])
+    await clearPick(page).click()
+    await expect(clearPick(page)).toHaveCount(0)
+  }
 })
 
 test("picks today, and a finished day with nothing logged, each with its own numbers", async ({ page }) => {
@@ -118,15 +149,18 @@ test("picks a day from the keyboard", async ({ page }) => {
   await expectTuesday(page)
 })
 
-test("puts the averages back when the picked day is tapped again", async ({ page }) => {
+test("puts the averages back when the picked day is tapped again at the same spot", async ({ page }) => {
   await playWeeks(page)
   await openTrends(page)
-  await tapDay(page, "Bottles", "2026-10-06")
+  const tuesday = barOf(page, "Diapers", "2026-10-06")
+  await tuesday.scrollIntoViewIfNeeded()
+  const { x, y, width } = await rectOf(tuesday)
+  await page.touchscreen.tap(x + width / 2, y + 4)
   await expect(pickedDay(page)).toHaveText("Tue, Oct 6")
-  await tapDay(page, "Bottles", "2026-10-06")
+  await page.touchscreen.tap(x + width / 2, y + 4)
   await expect(chart(page, "Bottles")).toContainText("543 mL a day, over 4 days")
   await expect(clearPick(page)).toHaveCount(0)
-  await expect(pickedDay(page)).toBeEmpty()
+  await expect(pickedDay(page)).toHaveText(HINT)
 })
 
 test("lets a picked day go when stepping to another week, and does not bring it back", async ({ page }) => {
@@ -142,7 +176,7 @@ test("lets a picked day go when stepping to another week, and does not bring it 
   await expect(page).toHaveURL(/\/trends$/u)
   await expect(chart(page, "Bottles")).toContainText("543 mL a day, over 4 days")
   await expect(clearPick(page)).toHaveCount(0)
-  await expect(pickedDay(page)).toBeEmpty()
+  await expect(pickedDay(page)).toHaveText(HINT)
 })
 
 test("lets a picked day go when switching to the month and back to the week", async ({ page }) => {
@@ -158,7 +192,7 @@ test("lets a picked day go when switching to the month and back to the week", as
   await expect(page).toHaveURL(/\/trends$/u)
   await expect(chart(page, "Bottles")).toContainText("543 mL a day, over 4 days")
   await expect(clearPick(page)).toHaveCount(0)
-  await expect(pickedDay(page)).toBeEmpty()
+  await expect(pickedDay(page)).toHaveText(HINT)
 })
 
 test("steps back a week and forward again, and never past this week", async ({ page }) => {
