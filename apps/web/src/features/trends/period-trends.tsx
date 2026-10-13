@@ -52,7 +52,11 @@ const MonthTrends = ({ month, ...shown }: Shown & { readonly month: YearMonth })
   )
 }
 
-export const PeriodTrends = ({ period, ...shown }: Shown & { readonly period: TrendsPeriod }) => {
-  if (period.view === "week") return <WeekTrends week={period.week} {...shown} />
-  return period.view === "month" ? <MonthTrends month={period.month} {...shown} /> : null
-}
+type WeekOrMonth = Exclude<TrendsPeriod, { readonly view: "day" }>
+
+export const PeriodTrends = ({ period, ...shown }: Shown & { readonly period: WeekOrMonth }) =>
+  period.view === "week" ? (
+    <WeekTrends week={period.week} {...shown} />
+  ) : (
+    <MonthTrends month={period.month} {...shown} />
+  )

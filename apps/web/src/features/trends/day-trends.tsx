@@ -1,4 +1,5 @@
 import type { LocalDate, Me } from "@bt/contracts"
+import { useMemo } from "react"
 import { useDay, useWeek } from "../../api/hooks.ts"
 import { retryOf } from "../../api/retry.ts"
 import { NotLoaded } from "../../shell/not-loaded.tsx"
@@ -17,7 +18,11 @@ export const DayTrends = ({ date, me, now, today }: DayTrendsProps) => {
   const [earlier, later] = usualWeeks(date)
   const earlierWeek = useWeek(earlier)
   const laterWeek = useWeek(later)
-  const usual = usualDay([earlierWeek.data?.days, laterWeek.data?.days], date, today, me.child.birthDate)
+  const { birthDate } = me.child
+  const usual = useMemo(
+    () => usualDay([earlierWeek.data?.days, laterWeek.data?.days], date, today, birthDate),
+    [earlierWeek.data, laterWeek.data, date, today, birthDate],
+  )
   return dayQuery.data === undefined ? (
     <NotLoaded failed={dayQuery.isError} message="This day couldn't be loaded." retry={retryOf(dayQuery)} />
   ) : (

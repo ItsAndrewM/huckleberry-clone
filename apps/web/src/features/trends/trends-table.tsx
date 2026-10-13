@@ -34,7 +34,11 @@ export const TrendsTable = ({ days, volume, today }: TrendsTableProps) => (
         {tableRows(days, volume).map(({ date, name, cells }) => (
           <tr key={date} className="border-t">
             <th scope="row" className="py-2 pr-2 font-normal">
-              <Link to="/history" search={historySearchOf(date, today)} className="text-primary underline-offset-4">
+              <Link
+                to="/history"
+                search={historySearchOf(date, today)}
+                className="-my-3.5 inline-flex min-h-11 items-center text-primary underline-offset-4 hover:underline"
+              >
                 {name}
               </Link>
             </th>

@@ -1,6 +1,6 @@
-import { expect, type Page, test } from "@playwright/test"
+import { expect, type Locator, type Page, test } from "@playwright/test"
 import { busyDay, emptyDay, playHistory } from "./played-day.ts"
-import { datesFrom, openTrends, periodOf, playTrends, TRENDS_DAYS } from "./played-period.ts"
+import { datesFrom, NOW, openTrends, periodOf, playTrends, TRENDS_DAYS } from "./played-period.ts"
 
 test.use({ timezoneId: "America/Vancouver" })
 
@@ -19,6 +19,15 @@ const playDays = async (page: Page) => {
 
 const chart = (page: Page, name: string) => page.getByRole("region", { name })
 const days = (page: Page) => page.getByRole("navigation", { name: "days" })
+const pickedDay = (page: Page) => page.getByRole("main").getByRole("status")
+const historyLink = (page: Page) => page.getByRole("link", { name: "Open in History" })
+
+const spareWidth = (link: Locator) =>
+  link.evaluate((anchor) => {
+    const contents = anchor.ownerDocument.createRange()
+    contents.selectNodeContents(anchor)
+    return anchor.getBoundingClientRect().width - contents.getBoundingClientRect().width
+  })
 
 test("climbs through today so far, against her usual day over the seven days before", async ({ page }) => {
   await playDays(page)
@@ -40,10 +49,37 @@ test("says there's no usual day yet when nothing was logged in the seven days be
   await expect(chart(page, "Diapers").locator('[data-ts-key^="usual:"]')).toHaveCount(0)
 })
 
+test("lengthens today's line as the minutes pass", async ({ page }) => {
+  await playDays(page)
+  await page.clock.install({ time: NOW })
+  await page.goto("/trends?view=day")
+  const line = chart(page, "Bottles").locator('[data-ts-key^="so-far:"]').first()
+  const lengthOf = () => line.evaluate((mark) => mark.getBoundingClientRect().width)
+  await expect(line).toBeAttached()
+  const before = await lengthOf()
+  await page.clock.fastForward("01:00:00")
+  await expect.poll(lengthOf).toBeGreaterThan(before + 1)
+})
+
+test("loads the day on Try again, once the household answers", async ({ page }) => {
+  await playDays(page)
+  let refusing = true
+  await page.route(/\/api\/days\/2026-10-09$/u, (route) =>
+    refusing ? route.fulfill({ status: 404 }) : route.fallback(),
+  )
+  await openTrends(page, "?view=day")
+  await expect(page.getByText("This day couldn't be loaded.")).toBeVisible()
+  refusing = false
+  await page.getByRole("button", { name: "Try again" }).click()
+  await expect(chart(page, "Feeds started")).toContainText("4 so far")
+})
+
 test("opens the day it shows in History", async ({ page }) => {
   await playDays(page)
   await openTrends(page, "?view=day")
-  await page.getByRole("link", { name: "Open in History" }).click()
+  await expect(historyLink(page)).toBeVisible()
+  expect(await spareWidth(historyLink(page))).toBeLessThan(1)
+  await historyLink(page).click()
   await expect(page).toHaveURL(/\/history$/u)
   await expect(page.getByRole("navigation", { name: "Days" }).getByRole("heading")).toHaveText("Fri, Oct 9")
 })
@@ -52,21 +88,35 @@ test("opens the picked day in History, and switches to its Day view", async ({ p
   await playDays(page)
   await openTrends(page)
   await chart(page, "Diapers").getByRole("img").focus()
-  await expect(page.getByRole("link", { name: "Open in History" })).toHaveCount(0)
+  await expect(historyLink(page)).toHaveCount(0)
   await page.keyboard.press("ArrowRight")
   await page.keyboard.press("Enter")
+  await expect(historyLink(page)).toHaveAttribute("href", /\/history\?date=2026-10-06$/u)
+  expect(await spareWidth(historyLink(page))).toBeLessThan(1)
   await page.getByRole("button", { name: "Day" }).click()
   await expect(page).toHaveURL(/\/trends\?view=day&date=2026-10-06$/u)
-  await page.getByRole("link", { name: "Open in History" }).click()
+  await historyLink(page).click()
   await expect(page).toHaveURL(/\/history\?date=2026-10-06$/u)
   await expect(page.getByRole("navigation", { name: "Days" }).getByRole("heading")).toHaveText("Tue, Oct 6")
+})
+
+test("opens History's today, with no date, from the picked line when today is picked", async ({ page }) => {
+  await playDays(page)
+  await openTrends(page)
+  await chart(page, "Diapers").getByRole("img").focus()
+  for (const key of ["ArrowRight", "ArrowRight", "ArrowRight", "ArrowRight", "Enter"]) await page.keyboard.press(key)
+  await expect(pickedDay(page)).toHaveText("Fri, Oct 9")
+  await expect(historyLink(page)).toHaveAttribute("href", /\/history$/u)
 })
 
 test("opens a day in History from the table", async ({ page }) => {
   await playDays(page)
   await openTrends(page)
   await page.getByText("Show as a table", { exact: true }).click()
-  await page.getByRole("table").getByRole("link", { name: "Tue, Oct 6" }).click()
+  const link = page.getByRole("table").getByRole("link", { name: "Tue, Oct 6" })
+  await expect(link).toBeVisible()
+  expect((await link.boundingBox())?.height).toBeGreaterThanOrEqual(44)
+  await link.click()
   await expect(page).toHaveURL(/\/history\?date=2026-10-06$/u)
   await expect(page.getByRole("navigation", { name: "Days" }).getByRole("heading")).toHaveText("Tue, Oct 6")
 })
