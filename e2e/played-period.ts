@@ -1,22 +1,10 @@
 import type { Page } from "@playwright/test"
+import { BIRTH_DATE, NO_TOTALS, NOW } from "./played-day.ts"
 
-export const NOW = Date.UTC(2026, 9, 9, 16, 30)
-export const BIRTH_DATE = "2026-09-01"
+export { NOW }
+
 const HOUR = 3_600_000
 const DAY_MS = 24 * HOUR
-
-export const NO_TOTALS = {
-  feedsStarted: 0,
-  leftSeconds: 0,
-  rightSeconds: 0,
-  nursingSeconds: 0,
-  breastMilkMl: 0,
-  formulaMl: 0,
-  bottleMl: 0,
-  diapers: 0,
-  wetDiapers: 0,
-  dirtyDiapers: 0,
-}
 
 export type Totals = typeof NO_TOTALS
 
