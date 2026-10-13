@@ -24,6 +24,12 @@ const boxOf = async (locator: Locator) => {
   return box
 }
 
+const columnBody = (page: Page, day: RegExp) =>
+  weekGrid(page)
+    .getByRole("listitem")
+    .filter({ has: page.getByRole("link", { name: day }) })
+    .locator(".week-hours")
+
 test("shows the week as seven days, each one up to today opening its Day view", async ({ page }) => {
   await playBusyWeek(page)
   await openHistory(page, "?view=week")
@@ -37,20 +43,30 @@ test("shows the week as seven days, each one up to today opening its Day view", 
   await expect(dayHeading(page)).toHaveText("Fri, Oct 9")
 })
 
+test("opens a day from the date at the head of its column too", async ({ page }) => {
+  await playBusyWeek(page)
+  await openHistory(page, "?view=week")
+  await expect(weekGrid(page).getByRole("link")).toHaveCount(5)
+  const tuesday = await boxOf(weekGrid(page).getByText("Tue", { exact: true }))
+  await page.mouse.click(tuesday.x + tuesday.width / 2, tuesday.y + tuesday.height / 2)
+  await expect(page).toHaveURL(/\/history\?date=2026-10-06$/u)
+  await expect(dayHeading(page)).toHaveText("Tue, Oct 6")
+})
+
 test("fits all 24 hours of the week on the screen, above the tab bar", async ({ page }) => {
   await playBusyWeek(page)
   await openHistory(page, "?view=week")
   await expect(weekGrid(page).getByRole("link")).toHaveCount(5)
-  const grid = await weekGrid(page).boundingBox()
-  const tabs = await page.getByRole("navigation", { name: "Main" }).boundingBox()
-  expect((grid?.y ?? 0) + (grid?.height ?? 0)).toBeLessThanOrEqual(tabs?.y ?? 0)
+  const grid = await boxOf(weekGrid(page))
+  const tabs = await boxOf(page.getByRole("navigation", { name: "Main" }))
+  expect(grid.y + grid.height).toBeLessThanOrEqual(tabs.y)
   expect(await page.evaluate<number>("document.documentElement.scrollHeight - window.innerHeight")).toBeLessThanOrEqual(
     1,
   )
-  const column = await boxOf(weekGrid(page).getByRole("link").first())
+  const monday = await boxOf(columnBody(page, /^Mon, Oct 5/u))
   const sixPm = await boxOf(page.getByText("6 PM", { exact: true }))
-  expect(sixPm.y + sixPm.height / 2 - column.y).toBeCloseTo(0.75 * column.height, 0)
-  const friday = await boxOf(weekGrid(page).getByRole("link", { name: /^Fri, Oct 9/u }))
+  expect(sixPm.y + sixPm.height / 2 - monday.y).toBeCloseTo(0.75 * monday.height, 0)
+  const friday = await boxOf(columnBody(page, /^Fri, Oct 9/u))
   const now = await boxOf(weekGrid(page).locator(".border-t-2"))
   expect(now.y - friday.y).toBeCloseTo((57 / 144) * friday.height, 0)
 })
