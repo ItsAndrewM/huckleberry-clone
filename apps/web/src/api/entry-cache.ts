@@ -1,7 +1,7 @@
 import { type DayPeriod, type Me, queryKeys, type RecentEntry, type Today } from "@bt/contracts"
 import type { QueryClient } from "@tanstack/react-query"
 import { dayCopy, swappedDay, swappedEntry, swappedToday, type Swapping, todayCopy } from "./swap.ts"
-import type { Pending } from "./today-change.ts"
+import { type Pending, versionOf } from "./today-change.ts"
 
 export const DAYS = { queryKey: ["day"] } as const
 
@@ -18,11 +18,13 @@ const todayOf = (queryClient: QueryClient) => queryClient.getQueryData<Today>(qu
 const cachedDays = (queryClient: QueryClient) =>
   queryClient.getQueriesData<DayPeriod>(DAYS).flatMap(([key, day]) => (day === undefined ? [] : [{ key, day }]))
 
+const newer = (current: RecentEntry | null, copy: RecentEntry | null) =>
+  copy !== null && (current === null || versionOf(copy) > versionOf(current)) ? copy : current
+
 export const cachedEntry = (queryClient: QueryClient, id: string): RecentEntry | null => {
   const today = todayOf(queryClient)
   const inToday = today === undefined ? null : todayCopy(today, id)
-  if (inToday !== null) return inToday
-  return cachedDays(queryClient).reduce<RecentEntry | null>((found, { day }) => found ?? dayCopy(day, id), null)
+  return cachedDays(queryClient).reduce((found, { day }) => newer(found, dayCopy(day, id)), inToday)
 }
 
 const swapEverywhere = (

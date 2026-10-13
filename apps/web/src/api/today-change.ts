@@ -25,6 +25,8 @@ export const idOf = (entry: RecentEntry) => (entry.kind === "feed" ? entry.feed.
 
 export const timeOf = (entry: RecentEntry) => (entry.kind === "feed" ? entry.feed.startedAt : entry.diaper.occurredAt)
 
+export const versionOf = (entry: RecentEntry) => (entry.kind === "feed" ? entry.feed.version : entry.diaper.version)
+
 export const changeOf = (entry: RecentEntry | null): Change => {
   if (entry === null) return NOTHING
   return entry.kind === "feed" ? { feeds: [entry.feed], diapers: [] } : { feeds: [], diapers: [entry.diaper] }

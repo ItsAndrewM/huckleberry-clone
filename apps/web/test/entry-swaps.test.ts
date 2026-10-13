@@ -3,6 +3,7 @@ import { totalsIn } from "@bt/domain"
 import { QueryClient } from "@tanstack/react-query"
 import { describe, expect, it } from "vitest"
 import type { Action } from "../src/api/actions.ts"
+import { cachedEntry } from "../src/api/entry-cache.ts"
 import { pendIn, rollBack, settle } from "../src/api/optimistic.ts"
 import { pendingId } from "../src/api/pending.ts"
 import { type Swap, swappedDay, swappedEntry, swappedToday } from "../src/api/swap.ts"
@@ -198,5 +199,54 @@ describe("the caches an edit or delete changes at once", () => {
     )
     rollBack(queryClient, DELETE_RUNNING, pended)
     expect(queryClient.getQueryData<DayPeriod>(queryKeys.day("2026-10-09"))?.feeds).toEqual([NURSED, RUNNING])
+  })
+})
+
+describe("the copy of an entry an edit sheet opens on", () => {
+  const NEWER_PEE = { ...PEE, dirty: true, version: 2 }
+  const NEWER_NURSED = { ...NURSED, endedAt: local("01:30"), version: 2 }
+
+  const cachedWith = (todayEntries: ReadonlyArray<RecentEntry>, day: Pick<DayPeriod, "feeds" | "diapers">) => {
+    const queryClient = new QueryClient()
+    queryClient.setQueryData(queryKeys.me, meWith())
+    queryClient.setQueryData(queryKeys.today, countedToday(todayEntries))
+    queryClient.setQueryData(queryKeys.day("2026-10-09"), countedDay(day))
+    return queryClient
+  }
+
+  it("is the newer version of a diaper or a feed a cached day holds when Today still holds an older one", () => {
+    const queryClient = cachedWith([diaper(PEE), feed(NURSED)], { feeds: [NEWER_NURSED], diapers: [NEWER_PEE] })
+    expect(cachedEntry(queryClient, PEE.id)).toEqual(diaper(NEWER_PEE))
+    expect(cachedEntry(queryClient, NURSED.id)).toEqual(feed(NEWER_NURSED))
+  })
+
+  it("is the newest of the days a feed crossing midnight is cached on", () => {
+    const queryClient = cachedWith([], { feeds: [NURSED], diapers: [] })
+    queryClient.setQueryData(queryKeys.day(YESTERDAY), countedDay({ feeds: [NEWER_NURSED], diapers: [] }))
+    expect(cachedEntry(queryClient, NURSED.id)).toEqual(feed(NEWER_NURSED))
+  })
+
+  it("is Today's copy when a cached day holds the same version", () => {
+    const queryClient = cachedWith([diaper(PEE), feed(NURSED)], {
+      feeds: [{ ...NURSED, endedAt: local("01:30") }],
+      diapers: [{ ...PEE, dirty: true }],
+    })
+    expect(cachedEntry(queryClient, PEE.id)).toEqual(diaper(PEE))
+    expect(cachedEntry(queryClient, NURSED.id)).toEqual(feed(NURSED))
+  })
+
+  it("is the only copy there is, from a cached day when Today holds none", () => {
+    const queryClient = cachedWith([], { feeds: [], diapers: [POO] })
+    expect(cachedEntry(queryClient, POO.id)).toEqual(diaper(POO))
+    expect(cachedEntry(queryClient, PEE.id)).toBeNull()
+  })
+
+  it("puts the newest copy back in the fresh day when an edit made over a stale Today fails", async () => {
+    const queryClient = cachedWith([diaper(PEE)], { feeds: [], diapers: [NEWER_PEE] })
+    const fresh = queryClient.getQueryData<DayPeriod>(queryKeys.day("2026-10-09"))
+    const pended = await pendIn(queryClient, EDIT_PEE_TO_BOTH, NOW_ON_DAY)
+    rollBack(queryClient, EDIT_PEE_TO_BOTH, pended)
+    expect(queryClient.getQueryData(queryKeys.day("2026-10-09"))).toEqual(fresh)
+    expect(queryClient.getQueryData<Today>(queryKeys.today)?.recent).toEqual([diaper(NEWER_PEE)])
   })
 })
