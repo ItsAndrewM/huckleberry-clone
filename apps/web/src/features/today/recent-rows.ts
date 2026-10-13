@@ -43,7 +43,7 @@ const feedRow = (feed: Feed, display: Display, now: number): RecentRow => ({
   detail: [...progressOf(feed), ...feedParts(feed, display.volume, now)],
   by: nameOf(display, feed.createdBy),
   saving: isSaving(feed),
-  opens: null,
+  opens: feed.status === "completed" && !isSaving(feed) ? "editFeed" : null,
 })
 
 const diaperRow = (diaper: Diaper, display: Display): RecentRow => ({
