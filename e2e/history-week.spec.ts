@@ -140,6 +140,37 @@ test("hides Growth's strip on the Day view, and says nothing was logged only whe
   await expect(page.getByRole("button", { name: "Edit the measurement from 8:00 AM" })).toBeVisible()
 })
 
+test("says which kinds are hidden at the top while the day scrolls, and nothing once all show", async ({ page }) => {
+  await playBusyWeek(page)
+  await openHistory(page)
+  await expect(page.getByRole("region", { name: "The day by hour" })).toBeVisible()
+  await expect(page.getByText(/ hidden$/u)).toHaveCount(0)
+  await openHistory(page, "?hide=diapers")
+  await expect(page.getByRole("region", { name: "The day by hour" })).toBeVisible()
+  await page.evaluate("window.scrollTo(0, 800)")
+  const chips = page.getByRole("group", { name: "Show" })
+  await expect(chips).not.toBeInViewport()
+  await expect(page.getByText("Diapers hidden", { exact: true })).toBeInViewport()
+  await page.evaluate("window.scrollTo(0, 0)")
+  await chips.getByRole("button", { name: "Diapers" }).click()
+  await expect(page).toHaveURL(/\/history$/u)
+  await expect(page.getByText(/ hidden$/u)).toHaveCount(0)
+})
+
+const controlAt = (page: Page, x: number, y: number) =>
+  page.evaluate<string>(`document.elementFromPoint(${x}, ${y})?.closest("a, button")?.textContent ?? "nothing"`)
+
+test("leaves Change and Back to today their whole 44 px over the line saying what's hidden", async ({ page }) => {
+  await playBusyWeek(page)
+  await openHistory(page, "?date=2026-10-06&hide=diapers")
+  await expect(page.getByText("Diapers hidden", { exact: true })).toBeVisible()
+  const days = page.getByRole("navigation", { name: "Days" })
+  const change = await boxOf(days.getByRole("button", { name: "Change" }))
+  expect(await controlAt(page, change.x + change.width / 2, change.y + change.height - 1)).toBe("Change")
+  const back = await boxOf(days.getByRole("link", { name: "Back to today" }))
+  expect(await controlAt(page, back.x + back.width / 2, back.y + back.height - 1)).toBe("Back to today")
+})
+
 test("goes to the day or the week of a date picked under Change", async ({ page }) => {
   await playBusyWeek(page)
   await openHistory(page)

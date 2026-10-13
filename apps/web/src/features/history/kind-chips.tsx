@@ -1,13 +1,7 @@
 import { useNavigate } from "@tanstack/react-router"
 import { ToggleGroup, ToggleGroupItem } from "../../components/ui/toggle-group.tsx"
 import type { HistorySearch } from "./history-date.ts"
-import { hiddenExcept, hiddenIn, hideOf, SHOWN_KINDS, type ShownKind } from "./history-kinds.ts"
-
-const CHIPS = [
-  { kind: "feeds", label: "Feeds" },
-  { kind: "diapers", label: "Diapers" },
-  { kind: "growth", label: "Growth" },
-] as const satisfies ReadonlyArray<{ kind: ShownKind; label: string }>
+import { hiddenExcept, hiddenIn, hideOf, KIND_LABELS, SHOWN_KINDS } from "./history-kinds.ts"
 
 export const KindChips = ({ search }: { readonly search: HistorySearch }) => {
   const navigate = useNavigate()
@@ -23,9 +17,9 @@ export const KindChips = ({ search }: { readonly search: HistorySearch }) => {
       variant="outline"
       size="lg"
     >
-      {CHIPS.map(({ kind, label }) => (
+      {SHOWN_KINDS.map((kind) => (
         <ToggleGroupItem key={kind} value={kind}>
-          {label}
+          {KIND_LABELS[kind]}
         </ToggleGroupItem>
       ))}
     </ToggleGroup>

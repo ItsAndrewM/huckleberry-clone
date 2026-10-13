@@ -5,7 +5,7 @@ import { useState } from "react"
 import { buttonVariants } from "../../components/ui/button.tsx"
 import { GoToDate } from "./go-to-date.tsx"
 import type { HistorySearch } from "./history-date.ts"
-import type { Hidden } from "./history-kinds.ts"
+import { type Hidden, hiddenNotice } from "./history-kinds.ts"
 import { goToOpensOn, type HistoryNavigation, searchFor } from "./history-navigation.ts"
 import { type HistoryView, periodKey, periodOf } from "./history-period.ts"
 import { backLabel, currentLabel, periodTitle } from "./history-titles.ts"
@@ -50,6 +50,7 @@ export const HistorySwitcher = ({ navigation, today, birthDate, hidden }: Histor
   const [changingFor, setChangingFor] = useState<string | null>(null)
   if (changingFor !== null && changingFor !== key) setChangingFor(null)
   const changing = changingFor === key
+  const notice = hiddenNotice(hidden)
   const noun = period.view
   const goTo = (date: LocalDate) => {
     setChangingFor(null)
@@ -84,6 +85,9 @@ export const HistorySwitcher = ({ navigation, today, birthDate, hidden }: Histor
         </div>
         <Step search={navigation.next} label={`Next ${noun}`} Icon={ChevronRightIcon} />
       </nav>
+      {notice === undefined ? null : (
+        <p className="pointer-events-none text-center text-xs text-muted-foreground">{notice}</p>
+      )}
       {changing ? (
         <GoToDate shown={goToOpensOn(period, birthDate)} earliest={birthDate} latest={today} onPick={goTo} />
       ) : null}
