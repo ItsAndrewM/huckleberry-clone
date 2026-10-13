@@ -106,6 +106,7 @@ test("picks a day on all four charts with one tap, without moving them, and goes
   await expect(chart(page, "Bottles")).toContainText("543 mL a day, over 4 days")
   await expect(pickedDay(page)).toHaveText(HINT)
   await expect(clearPick(page)).toHaveCount(0)
+  await expect(pickedLine(page)).toBeFocused()
 })
 
 test("keeps the picked line one row tall, picked or not, from 393 px down to 320 px wide", async ({ page }) => {
@@ -139,7 +140,7 @@ test("picks today, and a finished day with nothing logged, each with its own num
   await expect(chart(page, "Feeds started")).toContainText("3 so far")
 })
 
-test("picks a day from the keyboard", async ({ page }) => {
+test("picks a day from the keyboard, and keeps focus on the picked line when × lets it go", async ({ page }) => {
   await playWeeks(page)
   await openTrends(page)
   await chart(page, "Diapers").getByRole("img").focus()
@@ -147,6 +148,10 @@ test("picks a day from the keyboard", async ({ page }) => {
   await page.keyboard.press("Enter")
   await expect(pickedDay(page)).toHaveText("Tue, Oct 6")
   await expectTuesday(page)
+  await clearPick(page).focus()
+  await page.keyboard.press("Enter")
+  await expect(pickedDay(page)).toHaveText(HINT)
+  await expect(pickedLine(page)).toBeFocused()
 })
 
 test("puts the averages back when the picked day is tapped again at the same spot", async ({ page }) => {
