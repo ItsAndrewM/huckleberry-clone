@@ -155,8 +155,10 @@ describe("listNote", () => {
     expect(listNote(dayWith({ feeds: [], diapers: [BOTH] }), [])).toBe("Nothing shown.")
   })
 
-  it("says there were no feeds or diapers on a day with only a measurement", () => {
-    expect(listNote(dayWith({ feeds: [], diapers: [], measurements: [WEIGHED] }), [])).toBe("No feeds or diapers.")
+  it("says there were no feeds, diapers or sleep on a day with only a measurement", () => {
+    expect(listNote(dayWith({ feeds: [], diapers: [], measurements: [WEIGHED] }), [])).toBe(
+      "No feeds, diapers or sleep.",
+    )
   })
 
   it("counts a day's sleeps: nothing to say while they show, and nothing shown when the Sleep chip hides them", () => {

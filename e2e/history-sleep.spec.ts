@@ -10,6 +10,17 @@ const boxOf = async (page: Page, name: RegExp) => {
   return box
 }
 
+const chipTops = async (page: Page) => {
+  const chips = await page.getByRole("group", { name: "Show" }).getByRole("button").all()
+  return Promise.all(
+    chips.map(async (chip) => {
+      const box = await chip.boundingBox()
+      if (box === null) throw new Error("A chip has no box")
+      return box.y
+    }),
+  )
+}
+
 const playSleptDay = async (page: Page) => {
   const { played, andrew, emily } = await playHistory(page, [])
   played.days.push({
@@ -61,7 +72,9 @@ test("hides the sleeps behind the Sleep chip, and says so", async ({ page }) => 
   await expect(page).toHaveURL(/hide=sleep/u)
 })
 
-test("fits all four chips on a 360-pixel-wide phone, without scrolling the page sideways", async ({ page }) => {
+test("fits all four chips on a 360-pixel-wide phone, on one row, without scrolling the page sideways", async ({
+  page,
+}) => {
   await page.setViewportSize({ width: 360, height: 640 })
   await playSleptDay(page)
   await openHistory(page)
@@ -71,5 +84,8 @@ test("fits all four chips on a 360-pixel-wide phone, without scrolling the page 
     "Sleep",
     "Growth",
   ])
+  await expect(grid(page)).toBeVisible()
+  const tops = await chipTops(page)
+  expect(new Set(tops).size, `the chips' tops are ${tops.join(", ")}`).toBe(1)
   expect(await page.evaluate("document.documentElement.scrollWidth <= window.innerWidth")).toBe(true)
 })

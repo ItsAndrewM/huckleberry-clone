@@ -206,3 +206,16 @@ test("logs on today as Today's buttons do: a diaper now, and a past feed from ha
   await pastFeed.getByRole("textbox", { name: "Left" }).fill("15")
   await expect(pastFeed.getByRole("button", { name: "Save" })).toBeEnabled()
 })
+
+test("logs a sleep on today as the Sleep sheet's Log a past sleep does: from an hour back to now", async ({ page }) => {
+  await playBusyDay(page)
+  await openHistory(page, "?view=list")
+  await theList(page).getByRole("button", { name: "Log on this day…" }).click()
+  await page
+    .getByRole("dialog", { name: /^Log\b/u })
+    .getByRole("button", { name: "Sleep" })
+    .click()
+  const pastSleep = page.getByRole("dialog", { name: "Past sleep" })
+  await expect(pastSleep.getByLabel("Fell asleep")).toHaveValue("2026-10-09T08:30")
+  await expect(pastSleep.getByLabel("Woke")).toHaveValue("2026-10-09T09:30")
+})

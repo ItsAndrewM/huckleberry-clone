@@ -71,5 +71,5 @@ export const listRows = (day: DayPeriod, display: Display, now: number, hidden: 
 export const listNote = (day: DayPeriod, rows: ReadonlyArray<RecentRow>) => {
   if (rows.length > 0) return null
   if (day.feeds.length > 0 || day.diapers.length > 0 || day.sleeps.length > 0) return "Nothing shown."
-  return day.measurements.length > 0 ? "No feeds or diapers." : null
+  return day.measurements.length > 0 ? "No feeds, diapers or sleep." : null
 }
