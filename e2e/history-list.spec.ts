@@ -32,6 +32,8 @@ const playToday = (page: Page, activeFeed: DayAnswer["feeds"][number] | null = n
         totals: NO_TOTALS,
         activeFeed,
         lastFeed: activeFeed,
+        activeSleep: null,
+        lastSleep: null,
         prefill: { lastBottle: { breastMilkMl: 0, formulaMl: 90 }, lastSide: "left" },
         recent: [],
       },
