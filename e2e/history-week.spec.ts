@@ -126,6 +126,24 @@ test("hides Growth's strip on the Day view, and says nothing was logged only whe
   await expect(page.getByRole("button", { name: "Edit the measurement from 8:00 AM" })).toBeVisible()
 })
 
+test("goes to the day or the week of a date picked under Change", async ({ page }) => {
+  await playBusyWeek(page)
+  await openHistory(page)
+  const days = page.getByRole("navigation", { name: "Days" })
+  await days.getByRole("button", { name: "Change" }).click()
+  const goTo = page.getByLabel("Go to")
+  await expect(goTo).toBeFocused()
+  await expect(goTo).toHaveAttribute("min", "2026-09-01")
+  await expect(goTo).toHaveAttribute("max", DAY)
+  await goTo.fill("2026-10-06")
+  await expect(page).toHaveURL(/\/history\?date=2026-10-06$/u)
+  await expect(page.getByLabel("Go to")).toHaveCount(0)
+  await page.getByRole("group", { name: "History by" }).getByRole("button", { name: "Week" }).click()
+  await page.getByRole("navigation", { name: "Weeks" }).getByRole("button", { name: "Change" }).click()
+  await page.getByLabel("Go to").fill("2026-09-16")
+  await expect(page).toHaveURL(/\/history\?view=week&date=2026-09-14$/u)
+})
+
 test.describe("on a narrow screen", () => {
   test.use({ viewport: { width: 320, height: 640 } })
 

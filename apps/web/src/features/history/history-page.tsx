@@ -44,7 +44,13 @@ const HistoryScreen = ({ me, now }: { readonly me: Me; readonly now: number }) =
       subtitle={me.child.name}
       action={<HistoryViewSwitch period={period} today={today} birthDate={me.child.birthDate} hidden={hidden} />}
     >
-      <HistorySwitcher key={periodKey(period)} navigation={navigationOf(period, today, me.child.birthDate, hidden)} />
+      <HistorySwitcher
+        key={periodKey(period)}
+        navigation={navigationOf(period, today, me.child.birthDate, hidden)}
+        today={today}
+        birthDate={me.child.birthDate}
+        hidden={hidden}
+      />
       <div className="-mt-5">
         <KindChips search={search} />
       </div>
