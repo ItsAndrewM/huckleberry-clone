@@ -51,13 +51,32 @@ const endIssue = (startedAt: Instant, endedAt: Instant, now: Instant): Validatio
   validateNotInFuture(endedAt, now) ??
   (endedAt - startedAt > MAX_SEGMENT_MS ? "out_of_range" : null)
 
-export const segmentErrors = (calendar: Calendar, segment: Span, now: Instant, prefix: string): FieldError[] => [
-  ...errorAt(`${prefix}startedAt`, timeIssue(calendar, segment.startedAt, now)),
+const NO_KEPT_TIMES: ReadonlySet<Instant> = new Set()
+
+const newTimeIssue = (calendar: Calendar, at: Instant, now: Instant, kept: ReadonlySet<Instant>) =>
+  kept.has(at) ? null : timeIssue(calendar, at, now)
+
+export const segmentErrors = (
+  calendar: Calendar,
+  segment: Span,
+  now: Instant,
+  prefix: string,
+  kept = NO_KEPT_TIMES,
+): FieldError[] => [
+  ...errorAt(`${prefix}startedAt`, newTimeIssue(calendar, segment.startedAt, now, kept)),
   ...errorAt(`${prefix}endedAt`, segment.endedAt === null ? null : endIssue(segment.startedAt, segment.endedAt, now)),
 ]
 
-export const portionErrors = (calendar: Calendar, portion: PortionEntry, now: Instant, prefix: string): FieldError[] =>
-  errorAt(`${prefix}occurredAt`, timeIssue(calendar, portion.occurredAt, now))
+export const portionErrors = (
+  calendar: Calendar,
+  portion: PortionEntry,
+  now: Instant,
+  prefix: string,
+  kept = NO_KEPT_TIMES,
+): FieldError[] => errorAt(`${prefix}occurredAt`, newTimeIssue(calendar, portion.occurredAt, now, kept))
+
+export const timesOf = (feed: Feed): ReadonlySet<Instant> =>
+  new Set([...feed.segments.map(({ startedAt }) => startedAt), ...feed.portions.map(({ occurredAt }) => occurredAt)])
 
 export const runningSegment = (feed: Feed) => feed.segments.find((segment) => segment.endedAt === null)
 

@@ -24,6 +24,7 @@ import {
   overlapConflict,
   overlappedFeed,
   savedFeed,
+  timesOf,
 } from "./rules.ts"
 import { replaceParts, saveFeed, shiftFeed } from "./store.ts"
 
@@ -59,7 +60,7 @@ export const editFeed =
     if (!found.ok) return found
     const { feed } = found
     const calendar = calendarOf(sql)
-    const invalid = invalidParts(calendar, edit, stamp.now)
+    const invalid = invalidParts(calendar, edit, stamp.now, timesOf(feed))
     if (invalid !== null) return { ok: false, error: invalid }
     const overlapped = overlappedFeed(sql, edit.segments, stamp.now, { feedId: feed.id, segmentId: null })
     if (overlapped !== undefined) return { ok: false, error: overlapConflict(overlapped) }

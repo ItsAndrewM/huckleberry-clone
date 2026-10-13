@@ -26,6 +26,7 @@ import {
   MINUTE_MS,
   minutesAgo,
   movedBirthDate,
+  movedZone,
   NOW,
   SEP_3_BEGINS,
   saved,
@@ -276,6 +277,31 @@ describe("editing a whole feed", () => {
     })
     expect(result).toMatchObject({ ok: false, error: { fieldErrors } })
     expect(after).toEqual(before)
+  })
+
+  it("edits a feed a zone change left before the birth date while each time stays, but won't move a part to another time there", async () => {
+    const results = await inHousehold((sql) => {
+      const atBirth = newFeed(
+        [segment("left", BIRTH_DATE_BEGINS, BIRTH_DATE_BEGINS + 10 * MINUTE_MS)],
+        [bottle(BIRTH_DATE_BEGINS + 15 * MINUTE_MS)],
+      )
+      const before = saved(logFeed(stampOf(sql), atBirth)(sql))
+      movedZone(sql, "Pacific/Honolulu")
+      const longer = newFeed(
+        [segment("left", BIRTH_DATE_BEGINS, BIRTH_DATE_BEGINS + 12 * MINUTE_MS)],
+        [bottle(BIRTH_DATE_BEGINS + 15 * MINUTE_MS, 80)],
+      )
+      const kept = editFeed(stampOf(sql), before.id, edit(before, longer))(sql)
+      const later = newFeed([segment("left", BIRTH_DATE_BEGINS + MINUTE_MS, BIRTH_DATE_BEGINS + 12 * MINUTE_MS)])
+      return [kept, editFeed(stampOf(sql), before.id, { ...later, version: 2 })(sql)]
+    })
+    expect(results).toMatchObject([
+      { ok: true, response: { version: 2, portions: [{ breastMilkMl: 80 }] } },
+      {
+        ok: false,
+        error: { _tag: "InvalidInput", fieldErrors: [{ path: "segments.0.startedAt", issue: "before_birth" }] },
+      },
+    ])
   })
 
   it("refuses sides over another feed's, with SEGMENT_OVERLAP and that feed, changing nothing (D9)", async () => {

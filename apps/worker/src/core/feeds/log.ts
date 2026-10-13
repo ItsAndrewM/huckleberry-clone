@@ -24,10 +24,11 @@ export const invalidParts = (
   calendar: Calendar,
   entry: Pick<NewFeed, "segments" | "portions">,
   now: Instant,
+  kept?: ReadonlySet<Instant>,
 ): InvalidInput | null => {
   const invalid = invalidUnless([
-    ...entry.segments.flatMap((segment, index) => segmentErrors(calendar, segment, now, `segments.${index}.`)),
-    ...entry.portions.flatMap((portion, index) => portionErrors(calendar, portion, now, `portions.${index}.`)),
+    ...entry.segments.flatMap((segment, index) => segmentErrors(calendar, segment, now, `segments.${index}.`, kept)),
+    ...entry.portions.flatMap((portion, index) => portionErrors(calendar, portion, now, `portions.${index}.`, kept)),
   ])
   if (invalid !== null || !overlapEachOther(entry.segments)) return invalid
   return new InvalidInput({ fieldErrors: [{ path: "segments", issue: "invalid" }] })

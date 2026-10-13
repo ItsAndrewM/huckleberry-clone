@@ -64,6 +64,10 @@ export const saved = <A, E>(result: CoreResult<A, E>): A => {
 
 export const SEP_3_BEGINS = Date.UTC(2026, 8, 3, 7)
 
+export const movedZone = (sql: SqlStorage, timeZone: string) => {
+  sql.exec("UPDATE household SET time_zone = ?", timeZone)
+}
+
 export const movedBirthDate = (sql: SqlStorage, birthDate: string) => {
   const { version } = sql.exec<{ version: number }>("SELECT version FROM child").one()
   return saved(editChild(stampOf(sql), { actionId: ACTION_ID, version, ...SEED.child, birthDate })(sql))
