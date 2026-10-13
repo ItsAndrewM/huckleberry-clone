@@ -1,12 +1,11 @@
-import { tz } from "@date-fns/tz"
-import { getISOWeek, getISOWeekYear, setISOWeek, startOfISOWeek } from "date-fns"
 import { DAY_MS } from "./instant.ts"
 
 export type LocalDate = string
 export type IsoWeek = string
 export type YearMonth = string
 
-const utc = tz("UTC")
+const WEEK_MS = 7 * DAY_MS
+const MONDAY_TO_THURSDAY = 3
 
 export const utcDateOf = (ms: number): LocalDate => new Date(ms).toISOString().slice(0, 10)
 
@@ -45,15 +44,22 @@ export const nextMonth = (month: YearMonth): YearMonth => {
   return monthOfDate(utcDateOf(Date.UTC(first.getUTCFullYear(), first.getUTCMonth() + 1, 1)))
 }
 
+const daysSinceMonday = (ms: number) => (new Date(ms).getUTCDay() + 6) % 7
+
 export const isoWeekOfDate = (date: LocalDate): IsoWeek => {
-  const day = utc(utcMidnightOf(date))
-  return `${getISOWeekYear(day)}-W${String(getISOWeek(day)).padStart(2, "0")}`
+  const midnight = utcMidnightOf(date)
+  const thursday = midnight + (MONDAY_TO_THURSDAY - daysSinceMonday(midnight)) * DAY_MS
+  const year = new Date(thursday).getUTCFullYear()
+  const week = Math.floor((thursday - new Date(0).setUTCFullYear(year, 0, 1)) / WEEK_MS) + 1
+  return `${year}-W${String(week).padStart(2, "0")}`
 }
 
 const mondayOf = (week: string): LocalDate | null => {
   const [, year, weekNumber] = ISO_WEEK_FORMAT.exec(week) ?? []
   if (weekNumber === undefined) return null
-  const monday = utcDateOf(startOfISOWeek(setISOWeek(utc(Date.UTC(Number(year), 0, 4)), Number(weekNumber))).getTime())
+  const fourthOfJanuary = new Date(0).setUTCFullYear(Number(year), 0, 4)
+  const firstMonday = fourthOfJanuary - daysSinceMonday(fourthOfJanuary) * DAY_MS
+  const monday = utcDateOf(firstMonday + (Number(weekNumber) - 1) * WEEK_MS)
   return isLocalDate(monday) && isoWeekOfDate(monday) === week ? monday : null
 }
 

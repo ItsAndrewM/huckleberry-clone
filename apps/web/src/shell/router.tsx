@@ -4,8 +4,9 @@ import { GrowthPage } from "../features/growth/growth-page.tsx"
 import { dateInSearch, type HistorySearch } from "../features/history/history-date.ts"
 import { HistoryPage } from "../features/history/history-page.tsx"
 import { SettingsPage } from "../features/settings/settings-page.tsx"
-import { TrendsPage } from "../features/stubs.tsx"
 import { TodayPage } from "../features/today/today-page.tsx"
+import { TrendsPage } from "../features/trends/trends-page.tsx"
+import { dateInTrends, type TrendsSearch, viewInTrends } from "../features/trends/trends-search.ts"
 import { NotFoundPage } from "./not-found-page.tsx"
 import { Shell } from "./shell.tsx"
 
@@ -20,7 +21,12 @@ const routeTree = rootRoute.addChildren([
     component: HistoryPage,
     validateSearch: (search): HistorySearch => ({ date: dateInSearch(search.date) }),
   }),
-  createRoute({ getParentRoute, path: "/trends", component: TrendsPage }),
+  createRoute({
+    getParentRoute,
+    path: "/trends",
+    component: TrendsPage,
+    validateSearch: (search): TrendsSearch => ({ view: viewInTrends(search.view), date: dateInTrends(search.date) }),
+  }),
   createRoute({ getParentRoute, path: "/growth", component: GrowthPage }),
   createRoute({ getParentRoute, path: "/settings", component: SettingsPage }),
   createRoute({ getParentRoute, path: "/settings/deleted", component: DeletedPage }),

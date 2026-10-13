@@ -55,6 +55,8 @@ export {
 export { canonicalTimeZone, type TimeZone } from "./time/zone.ts"
 export { isoWeekBounds, localDateOf, monthBounds, zonedDayBounds } from "./time/zoned.ts"
 export { formatElapsed, nursingElapsed, sleepElapsed, type Span } from "./timer/timer.ts"
+export { averageDay, type DatedTotals, type DayAverage, type DayStatus, dayStatus, hasEntries } from "./trends/days.ts"
+export { type RunningPoint, type RunningTotals, runningTotals } from "./trends/running.ts"
 export {
   CM_PER_INCH,
   cmFromInches,
