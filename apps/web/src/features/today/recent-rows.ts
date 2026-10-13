@@ -7,7 +7,7 @@ import { runningSide } from "./feed-status.ts"
 
 export type RowKind = "nursing" | "bottle" | "diaper" | "dose"
 
-export type RowSheet = "editDiaper" | "editFeed" | "nursing"
+export type RowSheet = "editDiaper" | "editFeed" | "nursing" | "editDose"
 
 export interface RecentRow {
   readonly id: string
@@ -72,7 +72,7 @@ const doseRow = (dose: Dose, display: Display): RecentRow => ({
   detail: dose.dose === "" ? [] : [dose.dose],
   by: nameOf(display, dose.createdBy),
   saving: isPending(dose.id),
-  opens: null,
+  opens: isPending(dose.id) ? null : "editDose",
 })
 
 const rowOf = (entry: RecentEntry, display: Display, now: number) => {

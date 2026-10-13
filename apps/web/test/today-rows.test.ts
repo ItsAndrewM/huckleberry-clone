@@ -186,10 +186,10 @@ describe("recentRows", () => {
       display,
       NOW,
     )
-    expect(rows.map(({ kind, title, detail, by, saving }) => [kind, title, detail, by, saving])).toEqual([
-      ["dose", "Vitamin D3", ["400 IU"], "Emily", false],
-      ["dose", "Vitamin D3", [], "Emily", true],
-      ["dose", "Supplement", ["400 IU"], "Emily", false],
+    expect(rows.map(({ kind, title, detail, by, saving, opens }) => [kind, title, detail, by, saving, opens])).toEqual([
+      ["dose", "Vitamin D3", ["400 IU"], "Emily", false, "editDose"],
+      ["dose", "Vitamin D3", [], "Emily", true, null],
+      ["dose", "Supplement", ["400 IU"], "Emily", false, "editDose"],
     ])
   })
 
