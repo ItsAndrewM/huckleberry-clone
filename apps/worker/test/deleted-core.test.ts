@@ -35,6 +35,12 @@ const weighedAt = (measuredAt: number) => ({
   headCm: null,
 })
 
+const slept = (sql: SqlStorage, startedAt: number, endedAt: number) =>
+  saved(logSleep(stampOf(sql), { actionId: crypto.randomUUID(), kind: "nap", startedAt, endedAt })(sql))
+
+const sleeping = (sql: SqlStorage, startedAt: number) =>
+  saved(startSleep(stampOf(sql), { actionId: crypto.randomUUID(), kind: "night", startedAt })(sql))
+
 describe("the household's recently deleted entries", () => {
   it("list every deleted feed, diaper and measurement as each was deleted, the newest deletion first", async () => {
     const { first, second, feed, measurement, deleted } = await inHousehold((sql) => {
@@ -53,25 +59,43 @@ describe("the household's recently deleted entries", () => {
     expect(deleted).toEqual({ feeds: [feed], diapers: [second, first], sleeps: [], measurements: [measurement] })
   })
 
-  it("list each deleted sleep as it was deleted, the newest deletion first, a running one with no end", async () => {
-    const { finished, running, deleted } = await inHousehold((sql) => {
-      const logged = (startedAt: number, endedAt: number) =>
-        saved(logSleep(stampOf(sql), { actionId: crypto.randomUUID(), kind: "nap", startedAt, endedAt })(sql))
-      const started = (startedAt: number) =>
-        saved(startSleep(stampOf(sql), { actionId: crypto.randomUUID(), kind: "night", startedAt })(sql))
-      const finishedId = logged(minutesAgo(300), minutesAgo(240)).id
-      const runningId = started(minutesAgo(200)).id
+  it("list each deleted sleep as it was deleted, the newest deletion first whatever order they started or were logged in, a running one with no end", async () => {
+    const { finished, running, between, deleted } = await inHousehold((sql) => {
+      const finishedId = slept(sql, minutesAgo(300), minutesAgo(240)).id
+      const runningId = sleeping(sql, minutesAgo(200)).id
+      const betweenId = slept(sql, minutesAgo(230), minutesAgo(210)).id
       return {
         running: saved(deleteSleep(stampOf(sql, ANDREW.email, NOW + 1), runningId, VERSION_1)(sql)),
         finished: saved(deleteSleep(stampOf(sql, ANDREW.email, NOW + 2), finishedId, VERSION_1)(sql)),
-        deleted: deletedOf(sql, NOW + 3),
+        between: saved(deleteSleep(stampOf(sql, ANDREW.email, NOW + 3), betweenId, VERSION_1)(sql)),
+        deleted: deletedOf(sql, NOW + 4),
       }
     })
-    expect(deleted.sleeps).toEqual([finished, running])
+    expect(deleted.sleeps).toEqual([between, finished, running])
     expect(deleted.sleeps).toMatchObject([
+      { kind: "nap", endedAt: minutesAgo(210) },
       { kind: "nap", endedAt: minutesAgo(240) },
       { kind: "night", endedAt: null },
     ])
+  })
+
+  it("leave out a live sleep, finished or running", async () => {
+    const deleted = await inHousehold((sql) => {
+      slept(sql, minutesAgo(300), minutesAgo(240))
+      sleeping(sql, minutesAgo(200))
+      return deletedOf(sql, NOW)
+    })
+    expect(deleted.sleeps).toEqual([])
+  })
+
+  it("reach back exactly 30 days for a sleep too, listing one deleted at the edge and not one a millisecond past it", async () => {
+    const { atTheEdge, pastIt } = await inHousehold((sql) => {
+      const logged = slept(sql, minutesAgo(90), minutesAgo(30))
+      saved(deleteSleep(stampOf(sql), logged.id, VERSION_1)(sql))
+      return { atTheEdge: deletedOf(sql, NOW + 30 * DAY_MS), pastIt: deletedOf(sql, NOW + 30 * DAY_MS + 1) }
+    })
+    expect(atTheEdge.sleeps).toHaveLength(1)
+    expect(pastIt.sleeps).toEqual([])
   })
 
   it("name who deleted each entry in its updatedBy, beside who logged it", async () => {

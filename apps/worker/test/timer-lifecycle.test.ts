@@ -1,6 +1,7 @@
 import type { ConflictCode, FeedConflict, InvalidInput, NotFound, SleepConflict, Totals } from "@bt/contracts"
 import { describe, expect, it } from "vitest"
 import { finishFeed, startFeed } from "../src/core/feeds/lifecycle.ts"
+import { dayOf } from "../src/core/periods.ts"
 import type { CoreResult, Stamp } from "../src/core/receipts.ts"
 import { startSleep, wakeSleep } from "../src/core/sleeps/lifecycle.ts"
 import { todayOf } from "../src/core/today.ts"
@@ -78,25 +79,25 @@ describe.each([
     })
   })
 
-  it("takes a start exactly 5 minutes ahead of the server's clock, and refuses one a moment later (AC 21)", async () => {
-    const { edge, past } = await inHousehold((sql) => ({
-      edge: kind.start(sql, at(sql, NOW), EDGE).ok,
-      past: kind.start(sql, at(sql, NOW), EDGE + 1),
-    }))
-    expect(edge).toBe(true)
-    expect(past).toMatchObject({ ok: false, error: { _tag: "InvalidInput" } })
+  it("takes a start exactly 5 minutes ahead of the server's clock, and refuses one a moment later naming startedAt, though the first is running (AC 21)", async () => {
+    const { edge, past } = await inHousehold((sql) => {
+      const edge = kind.start(sql, at(sql, NOW), EDGE)
+      const past = kind.start(sql, at(sql, NOW), EDGE + 1)
+      return { edge, past }
+    })
+    expect(edge).toMatchObject({ ok: true, response: { startedAt: EDGE } })
+    expect(past).toMatchObject({ ok: false, error: { fieldErrors: [{ path: "startedAt", issue: "in_future" }] } })
   })
 
   it("takes a stop exactly 5 minutes ahead of the server's clock, and refuses one a moment later (AC 21)", async () => {
     const { edge, past } = await inHousehold((sql) => {
       const running = saved(kind.start(sql, at(sql, NOW), minutesAgo(30)))
-      return {
-        past: kind.stop(sql, at(sql, NOW), running, EDGE + 1),
-        edge: kind.stop(sql, at(sql, NOW), running, EDGE).ok,
-      }
+      const past = kind.stop(sql, at(sql, NOW), running, EDGE + 1)
+      const edge = kind.stop(sql, at(sql, NOW), running, EDGE)
+      return { edge, past }
     })
     expect(past).toMatchObject({ ok: false, error: { fieldErrors: [{ path: "occurredAt", issue: "in_future" }] } })
-    expect(edge).toBe(true)
+    expect(edge).toMatchObject({ ok: true, response: { endedAt: EDGE } })
   })
 
   it("refuses a stop before its start, naming occurredAt", async () => {
@@ -120,10 +121,10 @@ describe.each([
   })
 
   it("gives each day its own part of a timer that ran from 23:30 to 01:00, and changes both days' keys (AC 4, AC 12)", async () => {
-    const { stop, today } = await inHousehold((sql) => {
+    const { stop, yesterday, today } = await inHousehold((sql) => {
       const running = saved(kind.start(sql, at(sql, OCT_7_AT_23_30), OCT_7_AT_23_30))
       const stop = kind.stop(sql, at(sql, OCT_8_AT_01_00), running, OCT_8_AT_01_00)
-      return { stop, today: todayOf(sql, NOW) }
+      return { stop, yesterday: dayOf(sql, "2026-10-07", NOW), today: todayOf(sql, NOW) }
     })
     expect(stop).toMatchObject({
       ok: true,
@@ -136,6 +137,7 @@ describe.each([
         ["month", "2026-10"],
       ],
     })
+    expect(kind.secondsOn(yesterday.totals)).toBe(1800)
     expect(kind.secondsOn(today.totals)).toBe(3600)
   })
 })

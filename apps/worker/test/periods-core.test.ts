@@ -36,6 +36,7 @@ const WEDNESDAY_OCT_14_NOON = Date.UTC(2026, 9, 14, 19)
 const SUNDAY_OCT_11_AT_23_50 = Date.UTC(2026, 9, 12, 6, 50)
 const sundayNight = (minutes: number) => SUNDAY_OCT_11_AT_23_50 + minutes * MINUTE_MS
 
+const OCT_7_AT_20_00 = Date.UTC(2026, 9, 8, 3)
 const OCT_7_AT_23_30 = Date.UTC(2026, 9, 8, 6, 30)
 const OCT_8_AT_00_15 = Date.UTC(2026, 9, 8, 7, 15)
 const OCT_8_AT_03_00 = Date.UTC(2026, 9, 8, 10)
@@ -245,14 +246,22 @@ describe("dayOf, for sleep", () => {
   })
 
   it("leaves a sleep that ended as the day began to the day before, and a deleted one out of both", async () => {
-    const day = await inHousehold((sql) => {
-      slept(sql, OCT_8.start - HOUR_MS, OCT_8.start, "night")
+    const { ended, yesterday, today } = await inHousehold((sql) => {
+      const ended = slept(sql, OCT_8.start - HOUR_MS, OCT_8.start, "night")
       const deleted = slept(sql, OCT_8.start + HOUR_MS, OCT_8.start + 2 * HOUR_MS, "night")
       saved(deleteSleep(stampOf(sql), deleted.id, { actionId: crypto.randomUUID(), version: deleted.version })(sql))
-      return dayOf(sql, "2026-10-08", NOW)
+      return { ended, yesterday: dayOf(sql, "2026-10-07", NOW), today: dayOf(sql, "2026-10-08", NOW) }
     })
-    expect(day.sleeps).toEqual([])
-    expect(day.totals).toEqual(NO_TOTALS)
+    expect(yesterday.sleeps).toEqual([ended])
+    expect(yesterday.totals).toEqual({
+      ...NO_TOTALS,
+      sleepsStarted: 1,
+      sleepSeconds: 3600,
+      nightSeconds: 3600,
+      longestSleepSeconds: 3600,
+    })
+    expect(today.sleeps).toEqual([])
+    expect(today.totals).toEqual(NO_TOTALS)
   })
 
   it("lists sleeps in time order, not in the order they were logged", async () => {
@@ -293,6 +302,30 @@ describe("at 3 AM, with a feed from before midnight still running", () => {
       rightSeconds: 9900,
       nursingSeconds: 12600,
     })
+  })
+})
+
+describe("at 3 AM, with a sleep from the evening before still running", () => {
+  it("holds it whole in yesterday and today, each day counting its own part, and the longest where it started, up to now", async () => {
+    const { sleep, yesterday, today } = await inHousehold((sql) => {
+      const start = { actionId: ACTION_ID, kind: "night" as const, startedAt: OCT_7_AT_20_00 }
+      const sleep = saved(startSleep(stampOf(sql, ANDREW.email, OCT_7_AT_20_00), start)(sql))
+      return {
+        sleep,
+        yesterday: dayOf(sql, "2026-10-07", OCT_8_AT_03_00),
+        today: dayOf(sql, "2026-10-08", OCT_8_AT_03_00),
+      }
+    })
+    expect(yesterday.sleeps).toEqual([sleep])
+    expect(yesterday.totals).toEqual({
+      ...NO_TOTALS,
+      sleepsStarted: 1,
+      sleepSeconds: 14400,
+      nightSeconds: 14400,
+      longestSleepSeconds: 25200,
+    })
+    expect(today.sleeps).toEqual([sleep])
+    expect(today.totals).toEqual({ ...NO_TOTALS, sleepSeconds: 10800, nightSeconds: 10800 })
   })
 })
 
