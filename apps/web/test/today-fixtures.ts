@@ -1,4 +1,4 @@
-import type { Diaper, Feed, Today, Totals } from "@bt/contracts"
+import type { Diaper, Feed, Sleep, Today, Totals } from "@bt/contracts"
 
 export const ZONE = "America/Vancouver"
 export const MINUTE = 60_000
@@ -39,6 +39,15 @@ export const diaperAt = (occurredAt: number, change: Partial<Diaper> = {}): Diap
   wet: true,
   dirty: false,
   ...audit(occurredAt, EMILY),
+  ...change,
+})
+
+export const sleptAt = (startedAt: number, change: Partial<Sleep> = {}): Sleep => ({
+  id: `sleep-${startedAt}`,
+  kind: "nap",
+  startedAt,
+  endedAt: startedAt + 60 * MINUTE,
+  ...audit(startedAt, ANDREW),
   ...change,
 })
 

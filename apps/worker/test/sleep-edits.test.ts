@@ -5,6 +5,7 @@ import { startSleep, wakeSleep } from "../src/core/sleeps/lifecycle.ts"
 import { logSleep } from "../src/core/sleeps/log.ts"
 import {
   ACTION_ID,
+  BIRTH_DATE_BEGINS,
   caregiverId,
   CHANGED_TODAY,
   EMILY,
@@ -13,6 +14,7 @@ import {
   MINUTE_MS,
   minutesAgo,
   movedBirthDate,
+  movedZone,
   NOW,
   saved,
   SEP_3_BEGINS,
@@ -20,7 +22,6 @@ import {
 } from "./fixtures.ts"
 
 const SEP_2_NOON = Date.UTC(2026, 8, 2, 19)
-const CHANGED_SEP_2 = [["today"], ["last24h"], ["day", "2026-09-02"], ["week", "2026-W36"], ["month", "2026-09"]]
 
 const version = (sleep: Sleep) => ({ actionId: ACTION_ID, version: sleep.version })
 
@@ -149,17 +150,18 @@ describe("editing a sleep", () => {
     expect(result).toMatchObject({ ok: false, error: { _tag: "NotFound" } })
   })
 
-  it("changes only the kind of a sleep whose times now sit before a later birth date, since kept times skip the checks", async () => {
-    const result = await inHousehold((sql) => {
-      const sleep = logged(sql, SEP_2_NOON, SEP_2_NOON + HOUR_MS)
-      movedBirthDate(sql, "2026-09-03")
-      return editSleep(stampOf(sql), sleep.id, editOf(sleep, { kind: "night" }))(sql)
+  it("edits a sleep a zone change left before the birth date while its times stay, but won't move its start there", async () => {
+    const results = await inHousehold((sql) => {
+      const sleep = logged(sql, BIRTH_DATE_BEGINS, BIRTH_DATE_BEGINS + HOUR_MS)
+      movedZone(sql, "Pacific/Honolulu")
+      const kept = editSleep(stampOf(sql), sleep.id, editOf(sleep, { kind: "night" }))(sql)
+      const moved = { ...editOf(sleep, { kind: "night" }), version: 2, startedAt: BIRTH_DATE_BEGINS + MINUTE_MS }
+      return [kept, editSleep(stampOf(sql), sleep.id, moved)(sql)]
     })
-    expect(result).toMatchObject({
-      ok: true,
-      response: { kind: "night", startedAt: SEP_2_NOON },
-      changed: CHANGED_SEP_2,
-    })
+    expect(results).toMatchObject([
+      { ok: true, response: { kind: "night", startedAt: BIRTH_DATE_BEGINS, version: 2 } },
+      { ok: false, error: { _tag: "InvalidInput", fieldErrors: [{ path: "startedAt", issue: "before_birth" }] } },
+    ])
   })
 
   it("relabels a sleep woken after more than a day, since its kept times skip the checks", async () => {

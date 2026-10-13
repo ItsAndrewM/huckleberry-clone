@@ -13,6 +13,9 @@ export const liveSleepsTouching = (sql: SqlStorage, period: Interval, now: Insta
     period.start,
   ).filter((sleep) => sleepTouches(period, sleep, now))
 
+export const deletedSleepsSince = (sql: SqlStorage, since: Instant): Sleep[] =>
+  sleepsWhere(sql, "WHERE deleted_at >= ? ORDER BY deleted_at DESC, rowid DESC", since)
+
 export const lastSleep = (sql: SqlStorage): Sleep | null =>
   sleepsWhere(
     sql,

@@ -41,6 +41,7 @@ interface Measurement extends Audit {
 interface Deleted {
   readonly feeds: ReadonlyArray<Feed>
   readonly diapers: ReadonlyArray<Diaper>
+  readonly sleeps: ReadonlyArray<never>
   readonly measurements: ReadonlyArray<Measurement>
 }
 
@@ -62,7 +63,7 @@ type Answer =
     }
   | { readonly _tag: "ServiceUnavailable" }
 
-const NOTHING: Deleted = { feeds: [], diapers: [], measurements: [] }
+const NOTHING: Deleted = { feeds: [], diapers: [], sleeps: [], measurements: [] }
 
 const deletedBy = (by: string, at: number, version = 2): Audit => ({
   version,
@@ -166,6 +167,7 @@ test("lists each deleted entry, newest deletion first, with when it happened and
   await playDeleted(page, (andrew, emily) => ({
     feeds: [bottle(deletedBy(emily, NOW - 30 * MINUTE))],
     diapers: [diaper(deletedBy(andrew, NOW - 5 * MINUTE))],
+    sleeps: [],
     measurements: [weighed(deletedBy(emily, NOW - 20 * MINUTE))],
   }))
   await openDeleted(page)
@@ -262,6 +264,7 @@ test("refuses an entry from before her birth date, saying why", async ({ page })
 test("restores a measurement with no Undo, since its card can delete it", async ({ page }) => {
   const { answer, emily } = await playDeleted(page, (_andrew, emily) => ({
     ...NOTHING,
+    sleeps: [],
     measurements: [weighed(deletedBy(emily, NOW - 5 * MINUTE))],
   }))
   await openDeleted(page)
