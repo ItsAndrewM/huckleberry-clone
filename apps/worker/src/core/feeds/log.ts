@@ -1,16 +1,9 @@
 import { type Feed, type FeedConflict, InvalidInput, type NewFeed, type SegmentEntry } from "@bt/contracts"
 import { type Instant, overlaps } from "@bt/domain"
 import { type Calendar, calendarOf } from "../calendar.ts"
+import { invalidUnless } from "../fields.ts"
 import type { CoreResult, Stamp } from "../receipts.ts"
-import {
-  feedChanges,
-  invalidUnless,
-  NO_EXCLUSION,
-  overlapConflict,
-  overlappedFeed,
-  portionErrors,
-  segmentErrors,
-} from "./rules.ts"
+import { feedChanges, NO_EXCLUSION, overlapConflict, overlappedFeed, portionErrors, segmentErrors } from "./rules.ts"
 import { createFeed } from "./store.ts"
 
 const intervalOf = (segment: SegmentEntry) => ({ start: segment.startedAt, end: segment.endedAt })

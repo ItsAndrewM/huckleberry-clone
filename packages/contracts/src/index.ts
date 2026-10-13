@@ -80,6 +80,17 @@ export {
 export { Caregiver, CaregiverName, Me } from "./me.ts"
 export { DayPeriod, DayTotals, MonthPeriod, PeriodBounds, PeriodsGroup, WeekPeriod } from "./periods.ts"
 export { Changed, QueryKey, queryKeys } from "./query-keys.ts"
+export {
+  MAX_SLEEP_MS,
+  NewSleep,
+  SavedSleep,
+  Sleep,
+  SleepConflict,
+  SleepEdit,
+  SleepKind,
+  SleepsGroup,
+  SleepStart,
+} from "./sleeps.ts"
 export { CAREGIVER_DISABLED, ChangedMessage, HEARTBEAT, SOCKET_PATH } from "./socket.ts"
 export { Instant, IsoWeek, LocalDate, TimeZone, YearMonth } from "./time.ts"
 export { Last24h, Prefill, RecentEntries, RecentEntry, Today, TodayGroup, Totals } from "./today.ts"

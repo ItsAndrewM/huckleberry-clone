@@ -15,7 +15,7 @@ const ME = {
   },
 } satisfies Me
 
-const NOTHING = { feeds: [], diapers: [], measurements: [] } satisfies Deleted
+const NOTHING = { feeds: [], diapers: [], sleeps: [], measurements: [] } satisfies Deleted
 
 const deletedBy = (by: string, at: number) => ({ updatedBy: by, updatedAt: at, deletedAt: at })
 
@@ -34,6 +34,7 @@ describe("deletedRows", () => {
     const deleted = {
       feeds: [feedAt(NOW - 90 * MINUTE, { id: "feed-1", ...deletedBy(ANDREW, NOW - 30 * MINUTE) })],
       diapers: [diaperAt(NOW - 60 * MINUTE, { id: "diaper-1", ...deletedBy(EMILY, NOW - 10 * MINUTE) })],
+      sleeps: [],
       measurements: [
         { ...measurement("m1", NOW - 120 * MINUTE, { weightG: 4210.5 }), ...deletedBy(ANDREW, NOW - 20 * MINUTE) },
       ],

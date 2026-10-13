@@ -8,6 +8,8 @@ import { deletePortion } from "../src/core/feeds/components.ts"
 import { pauseFeed, startFeed } from "../src/core/feeds/lifecycle.ts"
 import { logFeed } from "../src/core/feeds/log.ts"
 import { deleteMeasurement, logMeasurement } from "../src/core/growth.ts"
+import { startSleep } from "../src/core/sleeps/lifecycle.ts"
+import { createSleep, saveSleep } from "../src/core/sleeps/store.ts"
 import type { HouseholdSeed } from "../src/seed.ts"
 import { bottle, newFeed, segment } from "./feed-fixtures.ts"
 import {
@@ -24,7 +26,7 @@ import {
 } from "./fixtures.ts"
 
 const HEADER =
-  "Kind,Start,End,Left (min),Right (min),Breast milk (mL),Formula (mL),Wet,Dirty,Weight (g),Length (cm),Head (cm),Logged by"
+  "Kind,Start,End,Left (min),Right (min),Breast milk (mL),Formula (mL),Wet,Dirty,Asleep (min),Nap or night,Weight (g),Length (cm),Head (cm),Logged by"
 
 type Metrics = Record<"weightG" | "lengthCm" | "headCm", number | null>
 
@@ -44,7 +46,7 @@ const linesOf = (csv: string) => csv.split("\r\n")
 const inSeeded = async <R>(seed: HouseholdSeed, run: (sql: SqlStorage) => R) =>
   runInDurableObject(await seededHousehold(seed), (_instance, state) => run(state.storage.sql))
 
-const ON_THE_SHEET = ["bottle_portions", "diapers", "feeds", "growth_measurements", "nursing_segments"]
+const ON_THE_SHEET = ["bottle_portions", "diapers", "feeds", "growth_measurements", "nursing_segments", "sleeps"]
 const NOT_ENTRIES = ["caregivers", "child", "household"]
 
 describe("householdCsvOf", () => {
@@ -69,9 +71,9 @@ describe("householdCsvOf", () => {
     })
     expect(linesOf(csv)).toEqual([
       HEADER,
-      "Feed,2026-10-08 10:00,2026-10-08 10:30,15,12,30,0,,,,,,Andrew",
-      "Diaper,2026-10-08 11:00,,,,,,yes,yes,,,,Emily",
-      "Growth,2026-10-08 11:30,,,,,,,,4310.5,,38.1,Andrew",
+      "Feed,2026-10-08 10:00,2026-10-08 10:30,15,12,30,0,,,,,,,,Andrew",
+      "Diaper,2026-10-08 11:00,,,,,,yes,yes,,,,,,Emily",
+      "Growth,2026-10-08 11:30,,,,,,,,,,4310.5,,38.1,Andrew",
       "",
     ])
   })
@@ -83,8 +85,8 @@ describe("householdCsvOf", () => {
       return householdCsvOf(sql, NOW)
     })
     expect(linesOf(csv).slice(1, 3)).toEqual([
-      "Feed,2026-10-08 10:30,2026-10-08 10:30,,,0,60,,,,,,Andrew",
-      "Feed,2026-10-08 11:00,2026-10-08 11:10,10,0,,,,,,,,Andrew",
+      "Feed,2026-10-08 10:30,2026-10-08 10:30,,,0,60,,,,,,,,Andrew",
+      "Feed,2026-10-08 11:00,2026-10-08 11:10,10,0,,,,,,,,,,Andrew",
     ])
   })
 
@@ -93,7 +95,7 @@ describe("householdCsvOf", () => {
       saved(startFeed(stampOf(sql), { actionId: ACTION_ID, side: "right", startedAt: minutesAgo(20) - 30_000 })(sql))
       return householdCsvOf(sql, NOW)
     })
-    expect(linesOf(csv)[1]).toBe("Feed,2026-10-08 11:39,,0,20.5,,,,,,,,Andrew")
+    expect(linesOf(csv)[1]).toBe("Feed,2026-10-08 11:39,,0,20.5,,,,,,,,,,Andrew")
   })
 
   it("leaves a paused feed's End blank too, since it can still resume", async () => {
@@ -105,7 +107,7 @@ describe("householdCsvOf", () => {
       saved(pauseFeed(stampOf(sql), started.id, pause)(sql))
       return householdCsvOf(sql, NOW)
     })
-    expect(linesOf(csv)[1]).toBe("Feed,2026-10-08 11:40,,15,0,,,,,,,,Andrew")
+    expect(linesOf(csv)[1]).toBe("Feed,2026-10-08 11:40,,15,0,,,,,,,,,,Andrew")
   })
 
   it("leaves out deleted entries, and the deleted parts of a feed", async () => {
@@ -123,7 +125,42 @@ describe("householdCsvOf", () => {
       )
       return householdCsvOf(sql, NOW)
     })
-    expect(linesOf(csv)).toEqual([HEADER, "Feed,2026-10-08 11:30,2026-10-08 11:40,10,0,,,,,,,,Andrew", ""])
+    expect(linesOf(csv)).toEqual([HEADER, "Feed,2026-10-08 11:30,2026-10-08 11:40,10,0,,,,,,,,,,Andrew", ""])
+  })
+
+  it("lists a sleep with its minutes asleep and whether it was a nap or a night, in time order", async () => {
+    const csv = await inHousehold((sql) => {
+      createSleep(sql, stampOf(sql, EMILY.email), {
+        kind: "night",
+        startedAt: minutesAgo(300),
+        endedAt: minutesAgo(210),
+      })
+      diapered(sql, minutesAgo(200))
+      createSleep(sql, stampOf(sql), { kind: "nap", startedAt: minutesAgo(120), endedAt: minutesAgo(75) })
+      return householdCsvOf(sql, NOW)
+    })
+    expect(linesOf(csv).slice(1, 4)).toEqual([
+      "Sleep,2026-10-08 07:00,2026-10-08 08:30,,,,,,,90,Night,,,,Emily",
+      "Diaper,2026-10-08 08:40,,,,,,yes,yes,,,,,,Andrew",
+      "Sleep,2026-10-08 10:00,2026-10-08 10:45,,,,,,,45,Nap,,,,Andrew",
+    ])
+  })
+
+  it("counts a running sleep's minutes up to the export, to a tenth, and leaves its End blank", async () => {
+    const csv = await inHousehold((sql) => {
+      saved(startSleep(stampOf(sql), { actionId: ACTION_ID, kind: "nap", startedAt: minutesAgo(40) - 30_000 })(sql))
+      return householdCsvOf(sql, NOW)
+    })
+    expect(linesOf(csv)[1]).toBe("Sleep,2026-10-08 11:19,,,,,,,,40.5,Nap,,,,Andrew")
+  })
+
+  it("leaves out a deleted sleep", async () => {
+    const csv = await inHousehold((sql) => {
+      const sleep = createSleep(sql, stampOf(sql), { kind: "nap", startedAt: minutesAgo(90), endedAt: minutesAgo(60) })
+      saveSleep(sql, stampOf(sql), { ...sleep, deletedAt: NOW })
+      return householdCsvOf(sql, NOW)
+    })
+    expect(csv).toBe(`${HEADER}\r\n`)
   })
 
   it("quotes a name holding a comma, a quote or a line break, and makes one starting =, +, - or @ inert", async () => {
@@ -139,7 +176,7 @@ describe("householdCsvOf", () => {
       caregivers.forEach(({ email }, index) => diapered(sql, minutesAgo(60 - index), email))
       return householdCsvOf(sql, NOW)
     })
-    expect(csv.split("\r\n").map((line) => line.split(",yes,yes,,,,")[1])).toEqual([
+    expect(csv.split("\r\n").map((line) => line.split(",yes,yes,,,,,,")[1])).toEqual([
       undefined,
       `"'=HYPERLINK(""x"")"`,
       '"Smith, Em"',
@@ -156,6 +193,6 @@ describe("householdCsvOf", () => {
       diapered(sql, NOW - 5 * MINUTE_MS)
       return householdCsvOf(sql, NOW)
     })
-    expect(linesOf(csv)[1]).toBe("Diaper,2026-10-08 19:55,,,,,,yes,yes,,,,Andrew")
+    expect(linesOf(csv)[1]).toBe("Diaper,2026-10-08 19:55,,,,,,yes,yes,,,,,,Andrew")
   })
 })

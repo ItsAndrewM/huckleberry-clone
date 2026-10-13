@@ -37,6 +37,7 @@ describe("GET /api/days/:date", () => {
       totals: NO_TOTALS,
       feeds: [],
       diapers: [],
+      sleeps: [],
       measurements: [],
     })
   })

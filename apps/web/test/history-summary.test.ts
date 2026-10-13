@@ -5,6 +5,7 @@ import { LOCALE, local, WEIGHED } from "./history-fixtures.ts"
 import { NO_TOTALS, ZONE } from "./today-fixtures.ts"
 
 const DAY_TOTALS = {
+  ...NO_TOTALS,
   feedsStarted: 7,
   leftSeconds: 3600,
   rightSeconds: 3120,

@@ -1,4 +1,4 @@
-import type { NewMeasurement, PortionEntry, SegmentEntry } from "@bt/contracts"
+import type { NewMeasurement, PortionEntry, SegmentEntry, SleepKind } from "@bt/contracts"
 import { describe, expect, it } from "vitest"
 import { deleteDiaper, logDiaper } from "../src/core/diapers.ts"
 import { deletePortion, deleteSegment } from "../src/core/feeds/components.ts"
@@ -7,6 +7,9 @@ import { pauseFeed, startFeed, switchSide } from "../src/core/feeds/lifecycle.ts
 import { logFeed } from "../src/core/feeds/log.ts"
 import { deleteMeasurement, logMeasurement } from "../src/core/growth.ts"
 import { dayOf, monthOf, weekOf } from "../src/core/periods.ts"
+import { deleteSleep } from "../src/core/sleeps/edits.ts"
+import { startSleep } from "../src/core/sleeps/lifecycle.ts"
+import { logSleep } from "../src/core/sleeps/log.ts"
 import { bottle, newFeed, segment } from "./feed-fixtures.ts"
 import {
   ACTION_ID,
@@ -33,6 +36,7 @@ const WEDNESDAY_OCT_14_NOON = Date.UTC(2026, 9, 14, 19)
 const SUNDAY_OCT_11_AT_23_50 = Date.UTC(2026, 9, 12, 6, 50)
 const sundayNight = (minutes: number) => SUNDAY_OCT_11_AT_23_50 + minutes * MINUTE_MS
 
+const OCT_7_AT_20_00 = Date.UTC(2026, 9, 8, 3)
 const OCT_7_AT_23_30 = Date.UTC(2026, 9, 8, 6, 30)
 const OCT_8_AT_00_15 = Date.UTC(2026, 9, 8, 7, 15)
 const OCT_8_AT_03_00 = Date.UTC(2026, 9, 8, 10)
@@ -56,6 +60,9 @@ const weighed = (measuredAt: number): NewMeasurement => ({
 const measuredAt = (sql: SqlStorage, at: number, now = NOW) =>
   saved(logMeasurement(stampOf(sql, ANDREW.email, now), weighed(at))(sql))
 
+const slept = (sql: SqlStorage, startedAt: number, endedAt: number, kind: SleepKind = "nap") =>
+  saved(logSleep(stampOf(sql), { actionId: crypto.randomUUID(), kind, startedAt, endedAt })(sql))
+
 const idAt = (parts: ReadonlyArray<{ readonly id: string }>, index: number) => parts[index]?.id ?? "missing"
 
 const inLondon = async <R>(read: (sql: SqlStorage) => R) =>
@@ -70,6 +77,7 @@ describe("dayOf", () => {
       totals: NO_TOTALS,
       feeds: [],
       diapers: [],
+      sleeps: [],
       measurements: [],
     })
   })
@@ -208,6 +216,64 @@ describe("dayOf", () => {
   })
 })
 
+describe("dayOf, for sleep", () => {
+  it("holds a sleep across midnight whole in both days, each counting its own part, and the longest where it started (AC 12)", async () => {
+    const { sleep, before, after } = await inHousehold((sql) => {
+      const sleep = slept(sql, ac4(-20), ac4(70), "night")
+      return { sleep, before: dayOf(sql, "2026-10-07", NOW), after: dayOf(sql, "2026-10-08", NOW) }
+    })
+    expect(before.sleeps).toEqual([sleep])
+    expect(after.sleeps).toEqual([sleep])
+    expect(before.totals).toEqual({
+      ...NO_TOTALS,
+      sleepsStarted: 1,
+      sleepSeconds: 1800,
+      nightSeconds: 1800,
+      longestSleepSeconds: 5400,
+    })
+    expect(after.totals).toEqual({ ...NO_TOTALS, sleepSeconds: 3600, nightSeconds: 3600 })
+  })
+
+  it("holds the running sleep whole, counted up to when it answered, and leaves it out of tomorrow", async () => {
+    const { sleep, today, tomorrow } = await inHousehold((sql) => {
+      const start = { actionId: ACTION_ID, kind: "nap" as const, startedAt: minutesAgo(45) }
+      const sleep = saved(startSleep(stampOf(sql), start)(sql))
+      return { sleep, today: dayOf(sql, "2026-10-08", NOW), tomorrow: dayOf(sql, "2026-10-09", NOW) }
+    })
+    expect(today.sleeps).toEqual([sleep])
+    expect(today.totals).toMatchObject({ sleepsStarted: 1, sleepSeconds: 2700, napSeconds: 2700 })
+    expect(tomorrow.sleeps).toEqual([])
+  })
+
+  it("leaves a sleep that ended as the day began to the day before, and a deleted one out of both", async () => {
+    const { ended, yesterday, today } = await inHousehold((sql) => {
+      const ended = slept(sql, OCT_8.start - HOUR_MS, OCT_8.start, "night")
+      const deleted = slept(sql, OCT_8.start + HOUR_MS, OCT_8.start + 2 * HOUR_MS, "night")
+      saved(deleteSleep(stampOf(sql), deleted.id, { actionId: crypto.randomUUID(), version: deleted.version })(sql))
+      return { ended, yesterday: dayOf(sql, "2026-10-07", NOW), today: dayOf(sql, "2026-10-08", NOW) }
+    })
+    expect(yesterday.sleeps).toEqual([ended])
+    expect(yesterday.totals).toEqual({
+      ...NO_TOTALS,
+      sleepsStarted: 1,
+      sleepSeconds: 3600,
+      nightSeconds: 3600,
+      longestSleepSeconds: 3600,
+    })
+    expect(today.sleeps).toEqual([])
+    expect(today.totals).toEqual(NO_TOTALS)
+  })
+
+  it("lists sleeps in time order, not in the order they were logged", async () => {
+    const { first, second, day } = await inHousehold((sql) => {
+      const second = slept(sql, minutesAgo(120), minutesAgo(90))
+      const first = slept(sql, minutesAgo(300), minutesAgo(240), "night")
+      return { first, second, day: dayOf(sql, "2026-10-08", NOW) }
+    })
+    expect(day.sleeps).toEqual([first, second])
+  })
+})
+
 describe("at 3 AM, with a feed from before midnight still running", () => {
   it("holds it whole in yesterday and today with its right side open, each day counting its own minutes, and the week adding them up", async () => {
     const { feed, yesterday, today, tomorrow, week } = await inHousehold((sql) => {
@@ -236,6 +302,30 @@ describe("at 3 AM, with a feed from before midnight still running", () => {
       rightSeconds: 9900,
       nursingSeconds: 12600,
     })
+  })
+})
+
+describe("at 3 AM, with a sleep from the evening before still running", () => {
+  it("holds it whole in yesterday and today, each day counting its own part, and the longest where it started, up to now", async () => {
+    const { sleep, yesterday, today } = await inHousehold((sql) => {
+      const start = { actionId: ACTION_ID, kind: "night" as const, startedAt: OCT_7_AT_20_00 }
+      const sleep = saved(startSleep(stampOf(sql, ANDREW.email, OCT_7_AT_20_00), start)(sql))
+      return {
+        sleep,
+        yesterday: dayOf(sql, "2026-10-07", OCT_8_AT_03_00),
+        today: dayOf(sql, "2026-10-08", OCT_8_AT_03_00),
+      }
+    })
+    expect(yesterday.sleeps).toEqual([sleep])
+    expect(yesterday.totals).toEqual({
+      ...NO_TOTALS,
+      sleepsStarted: 1,
+      sleepSeconds: 14400,
+      nightSeconds: 14400,
+      longestSleepSeconds: 25200,
+    })
+    expect(today.sleeps).toEqual([sleep])
+    expect(today.totals).toEqual({ ...NO_TOTALS, sleepSeconds: 10800, nightSeconds: 10800 })
   })
 })
 
@@ -286,6 +376,24 @@ describe("weekOf", () => {
     expect(week.diapers).toEqual([diaper])
     expect(before.feeds).toEqual([feed])
     expect(before.totals).toEqual({ ...NO_TOTALS, feedsStarted: 1, leftSeconds: 600, nursingSeconds: 600 })
+  })
+})
+
+describe("a week's sleep", () => {
+  it("adds up its days' sleep and keeps the longest of their longest sleeps", async () => {
+    const week = await inHousehold((sql) => {
+      slept(sql, ac4(-20), ac4(70), "night")
+      slept(sql, minutesAgo(240), minutesAgo(180))
+      return weekOf(sql, "2026-W41", NOW)
+    })
+    expect(week.totals).toMatchObject({
+      sleepsStarted: 2,
+      sleepSeconds: 9000,
+      napSeconds: 3600,
+      nightSeconds: 5400,
+      longestSleepSeconds: 5400,
+    })
+    expect(week.sleeps).toHaveLength(2)
   })
 })
 

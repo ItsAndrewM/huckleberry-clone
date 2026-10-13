@@ -13,8 +13,14 @@ export interface DayAverage {
   readonly days: number
 }
 
-export const hasEntries = ({ feedsStarted, nursingSeconds, bottleMl, diapers }: Totals): boolean =>
-  feedsStarted + nursingSeconds + bottleMl + diapers > 0
+export const hasEntries = ({
+  feedsStarted,
+  nursingSeconds,
+  bottleMl,
+  diapers,
+  sleepsStarted,
+  sleepSeconds,
+}: Totals): boolean => feedsStarted + nursingSeconds + bottleMl + diapers + sleepsStarted + sleepSeconds > 0
 
 export const dayStatus = ({ date, totals }: DatedTotals, today: LocalDate, birthDate: LocalDate): DayStatus => {
   if (date > today) return "after-today"
@@ -36,6 +42,11 @@ const meanOf = (all: ReadonlyArray<Totals>): Totals => {
     diapers: mean((totals) => totals.diapers),
     wetDiapers: mean((totals) => totals.wetDiapers),
     dirtyDiapers: mean((totals) => totals.dirtyDiapers),
+    sleepsStarted: mean((totals) => totals.sleepsStarted),
+    sleepSeconds: mean((totals) => totals.sleepSeconds),
+    napSeconds: mean((totals) => totals.napSeconds),
+    nightSeconds: mean((totals) => totals.nightSeconds),
+    longestSleepSeconds: mean((totals) => totals.longestSleepSeconds),
   }
 }
 

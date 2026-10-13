@@ -13,7 +13,7 @@ import type { DeletedRecord } from "../src/features/deleted/deleted-rows.ts"
 import { restoreFailure, restoreOf, restoreWaitReason, withoutEntry } from "../src/features/deleted/restore.ts"
 import type { Household } from "../src/sheets/failure.ts"
 import { measurement } from "./growth-fixtures.ts"
-import { ANDREW, diaperAt, EMILY, feedAt, MINUTE, NOW, nursedFor, ZONE } from "./today-fixtures.ts"
+import { ANDREW, diaperAt, EMILY, feedAt, MINUTE, NOW, nursedFor, sleptAt, ZONE } from "./today-fixtures.ts"
 
 const HOUSEHOLD = {
   caregivers: [
@@ -68,10 +68,12 @@ describe("withoutEntry", () => {
     const kept = diaperAt(NOW - MINUTE, { id: "diaper-2", deletedAt: NOW })
     const feed = feedAt(NOW, { id: "feed-1", deletedAt: NOW })
     const measured = { ...measurement("m1", NOW, { weightG: 4300 }), deletedAt: NOW }
-    const deleted = { feeds: [feed], diapers: [diaper, kept], measurements: [measured] }
+    const nap = sleptAt(NOW - 120 * MINUTE, { id: "sleep-1", deletedAt: NOW })
+    const deleted = { feeds: [feed], diapers: [diaper, kept], sleeps: [nap], measurements: [measured] }
     expect(withoutEntry(deleted, "diaper-1")).toEqual({ ...deleted, diapers: [kept] })
     expect(withoutEntry(deleted, "feed-1")).toEqual({ ...deleted, feeds: [] })
     expect(withoutEntry(deleted, "m1")).toEqual({ ...deleted, measurements: [] })
+    expect(withoutEntry(deleted, "sleep-1")).toEqual({ ...deleted, sleeps: [] })
   })
 })
 

@@ -31,6 +31,7 @@ export const restoreOf = (record: DeletedRecord, actionId: string): Action => {
 export const withoutEntry = (deleted: Deleted, id: string): Deleted => ({
   feeds: deleted.feeds.filter((feed) => feed.id !== id),
   diapers: deleted.diapers.filter((diaper) => diaper.id !== id),
+  sleeps: deleted.sleeps.filter((sleep) => sleep.id !== id),
   measurements: deleted.measurements.filter((measurement) => measurement.id !== id),
 })
 

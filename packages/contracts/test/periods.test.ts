@@ -9,6 +9,7 @@ import {
   MonthPeriod,
   PeriodBounds,
   PeriodsGroup,
+  type Sleep,
   type Totals,
   WeekPeriod,
 } from "../src/index.ts"
@@ -28,6 +29,11 @@ const TOTALS: Totals = {
   diapers: 1,
   wetDiapers: 1,
   dirtyDiapers: 0,
+  sleepsStarted: 0,
+  sleepSeconds: 0,
+  napSeconds: 0,
+  nightSeconds: 0,
+  longestSleepSeconds: 0,
 }
 
 const FEED: Feed = {
@@ -72,12 +78,26 @@ const MEASUREMENT: Measurement = {
   deletedAt: null,
 }
 
+const SLEEP: Sleep = {
+  id: "sleep-1",
+  kind: "nap",
+  startedAt: AT - 90 * MINUTE_MS,
+  endedAt: AT - 30 * MINUTE_MS,
+  version: 2,
+  createdBy: "caregiver-1",
+  createdAt: AT - 90 * MINUTE_MS,
+  updatedBy: "caregiver-1",
+  updatedAt: AT - 30 * MINUTE_MS,
+  deletedAt: null,
+}
+
 const PERIOD = {
   bounds: OCT_12,
   asOf: AT + 15 * MINUTE_MS,
   totals: TOTALS,
   feeds: [FEED],
   diapers: [DIAPER],
+  sleeps: [SLEEP],
   measurements: [MEASUREMENT],
 }
 
@@ -112,8 +132,8 @@ describe("a day", () => {
     expect(decodes(DayPeriod, DAY)).toBe(true)
   })
 
-  it("still reads when a later version adds a field, as M3.1's sleeps will be", () => {
-    expect(decodes(DayPeriod, { ...DAY, sleeps: [] })).toBe(true)
+  it("still reads when a later version adds a field, as M3.3's doses will be", () => {
+    expect(decodes(DayPeriod, { ...DAY, doses: [] })).toBe(true)
   })
 
   it.each([
@@ -121,6 +141,7 @@ describe("a day", () => {
     ["an answer from before 2000", { asOf: Date.UTC(1999, 11, 31) }],
     ["an answer whose feeds are null", { feeds: null }],
     ["an answer whose diapers are null", { diapers: null }],
+    ["an answer whose sleeps are null", { sleeps: null }],
     ["an answer whose measurements are null", { measurements: null }],
   ])("refuses %s", (_label, change) => {
     expect(decodes(DayPeriod, { ...DAY, ...change })).toBe(false)

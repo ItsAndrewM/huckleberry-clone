@@ -41,10 +41,11 @@ export const later = (current: Feed | null, feed: Feed) =>
   current === null || current.id === feed.id || feed.startedAt >= current.startedAt ? feed : current
 
 const shiftedTotals = (totals: Totals, period: Interval, now: Instant, before: Change, after: Change): Totals => {
-  const added = totalsIn(period, after.feeds, after.diapers, now)
-  const removed = totalsIn(period, before.feeds, before.diapers, now)
+  const added = totalsIn(period, { ...after, sleeps: [] }, now)
+  const removed = totalsIn(period, { ...before, sleeps: [] }, now)
   const sum = (key: keyof Totals) => Math.max(0, roundTo(totals[key] + added[key] - removed[key], 1))
   return {
+    ...totals,
     feedsStarted: sum("feedsStarted"),
     leftSeconds: sum("leftSeconds"),
     rightSeconds: sum("rightSeconds"),

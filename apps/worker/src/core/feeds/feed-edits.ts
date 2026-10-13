@@ -10,15 +10,14 @@ import {
 } from "@bt/contracts"
 import { validateNotInFuture } from "@bt/domain"
 import { calendarOf, timeIssue } from "../calendar.ts"
+import { errorAt, invalidUnless } from "../fields.ts"
 import type { CoreResult, Stamp } from "../receipts.ts"
 import { invalidParts } from "./log.ts"
 import {
   activeFeed,
   deletedAsItStands,
-  errorAt,
   feedChanges,
   feedFor,
-  invalidUnless,
   latestOf,
   NO_EXCLUSION,
   overlapConflict,

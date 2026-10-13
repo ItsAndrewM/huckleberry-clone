@@ -1,4 +1,4 @@
-import { Last24h, SavedDiaper, SavedFeed, Today } from "@bt/contracts"
+import { Last24h, SavedDiaper, SavedFeed, SavedSleep, Today } from "@bt/contracts"
 import { Schema } from "effect"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { ANDREW, HOUR_MS, MINUTE_MS, minutesAgo, NO_TOTALS, NOW, seededHousehold } from "./fixtures.ts"
@@ -8,6 +8,7 @@ const decodeToday = Schema.decodeUnknownSync(Schema.toCodecJson(Today))
 const decodeLast24h = Schema.decodeUnknownSync(Schema.toCodecJson(Last24h))
 const decodeSavedDiaper = Schema.decodeUnknownSync(Schema.toCodecJson(SavedDiaper))
 const decodeSavedFeed = Schema.decodeUnknownSync(Schema.toCodecJson(SavedFeed))
+const decodeSavedSleep = Schema.decodeUnknownSync(Schema.toCodecJson(SavedSleep))
 
 const okBody = async (household: Household, path: string) => {
   const response = await get(household, path, ANDREW.email)
@@ -38,6 +39,8 @@ describe("GET /api/today", () => {
       totals: NO_TOTALS,
       activeFeed: null,
       lastFeed: null,
+      activeSleep: null,
+      lastSleep: null,
       prefill: { lastBottle: null, lastSide: null },
       recent: [],
     })
@@ -65,6 +68,19 @@ describe("GET /api/today", () => {
     })
     vi.setSystemTime(NOW + 10 * MINUTE_MS)
     expect((await today(household)).totals.rightSeconds).toBe(1800)
+  })
+
+  it("answers a running sleep as the active and the last sleep, its time growing with the household's clock", async () => {
+    const household = await seededHousehold()
+    const starting = { actionId: crypto.randomUUID(), kind: "nap", startedAt: minutesAgo(30) }
+    const { sleep } = decodeSavedSleep((await sendJson(household, "POST", "/api/sleeps/start", starting)).body)
+    expect(await today(household)).toMatchObject({
+      totals: { sleepsStarted: 1, sleepSeconds: 1800, napSeconds: 1800, longestSleepSeconds: 1800 },
+      activeSleep: sleep,
+      lastSleep: sleep,
+    })
+    vi.setSystemTime(NOW + 10 * MINUTE_MS)
+    expect((await today(household)).totals.sleepSeconds).toBe(2400)
   })
 })
 

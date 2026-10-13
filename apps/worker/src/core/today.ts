@@ -4,6 +4,8 @@ import { calendarOf } from "./calendar.ts"
 import { liveDiapersSince } from "./diapers.ts"
 import { lastFeed, liveFeedsSince, prefillOf } from "./feeds/reads.ts"
 import { activeFeed } from "./feeds/rules.ts"
+import { lastSleep, liveSleepsSince } from "./sleeps/reads.ts"
+import { activeSleep } from "./sleeps/rules.ts"
 
 const timeOf = (entry: RecentEntry): Instant => (entry.kind === "feed" ? entry.feed.startedAt : entry.diaper.occurredAt)
 
@@ -23,11 +25,14 @@ export const todayOf = (sql: SqlStorage, now: Instant): Today => {
   const from = Math.min(day.start, last24h.start)
   const feeds = liveFeedsSince(sql, from)
   const diapers = liveDiapersSince(sql, from)
+  const sleeps = liveSleepsSince(sql, from)
   return {
     date,
-    totals: totalsIn(day, feeds, diapers, now),
+    totals: totalsIn(day, { feeds, diapers, sleeps }, now),
     activeFeed: activeFeed(sql) ?? null,
     lastFeed: lastFeed(sql),
+    activeSleep: activeSleep(sql) ?? null,
+    lastSleep: lastSleep(sql),
     prefill: prefillOf(sql),
     recent: recentIn(last24h, feeds, diapers),
   }
@@ -35,6 +40,11 @@ export const todayOf = (sql: SqlStorage, now: Instant): Today => {
 
 export const last24hOf = (sql: SqlStorage, now: Instant): Last24h => {
   const period = last24hPeriod(now)
-  const totals = totalsIn(period, liveFeedsSince(sql, period.start), liveDiapersSince(sql, period.start), now)
+  const entries = {
+    feeds: liveFeedsSince(sql, period.start),
+    diapers: liveDiapersSince(sql, period.start),
+    sleeps: liveSleepsSince(sql, period.start),
+  }
+  const totals = totalsIn(period, entries, now)
   return { from: period.start, totals }
 }
