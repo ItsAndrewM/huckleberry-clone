@@ -11,7 +11,9 @@ import {
   playHousehold,
   quickAction,
   runningFeed,
+  runningSleep,
   savedDiaper,
+  sleepingToday,
   todayWith,
 } from "./played-household.ts"
 
@@ -197,4 +199,52 @@ test("asks about a measurement kept through a reload, on Growth", async ({ page 
   await page.reload()
   await expect(sheet.getByRole("alert")).toContainText("This wasn't saved")
   await expect(sheet.getByRole("textbox", { name: "Weight" })).toHaveValue("4.5")
+})
+
+test("keeps a sleep started with no connection through a reload, and starts it under its actionId when asked", async ({
+  page,
+}) => {
+  const { andrew } = await caregiversOf(page)
+  const { played } = await playHousehold(page, todayWith())
+  const sent = await loseSaves(page, "**/api/sleeps/start", {
+    lost: 1,
+    until: Promise.resolve(),
+    answer: (body) => {
+      const sleep = runningSleep(andrew.id, body.startedAt ?? NOW, body.kind ?? "nap")
+      played.today = sleepingToday(sleep)
+      return { sleep, changed: [["today"]] }
+    },
+  })
+  await muteLiveUpdates(page)
+  await openToday(page)
+  await quickAction(page, "Sleep").click()
+  const sheet = page.getByRole("dialog", { name: "Sleep" })
+  await sheet.getByRole("button", { name: "Start sleep" }).click()
+  await expect(sheet.getByRole("alert")).toContainText("No connection. This is kept on this phone:")
+  await page.reload()
+  await expect(sheet.getByRole("alert")).toHaveText(/^This wasn't saved, Fri 9:30\sAM\. Save it now\?Save now$/u)
+  await sheet.getByRole("button", { name: "Save now" }).click()
+  await expect(page.getByText("Sleep started")).toBeVisible()
+  expect(sent).toHaveLength(2)
+  expect(sent[1]).toEqual(sent[0])
+})
+
+test("lets a sleep's start go for good once it meets the other phone's running sleep", async ({ page }) => {
+  const { emily } = await caregiversOf(page)
+  const theirs = runningSleep(emily.id, NOW - 5 * MINUTE, "nap")
+  const { played, answer } = await playHousehold(page, todayWith())
+  await answer("**/api/sleeps/start", () => {
+    played.today = sleepingToday(theirs)
+    return { status: 409, json: { _tag: "Conflict", code: "SLEEP_ALREADY_ACTIVE", current: theirs } }
+  })
+  await muteLiveUpdates(page)
+  await openToday(page)
+  await quickAction(page, "Sleep").click()
+  const sheet = page.getByRole("dialog", { name: "Sleep" })
+  await sheet.getByRole("button", { name: "Start sleep" }).click()
+  await expect(sheet.getByRole("alert")).toContainText(`${emily.displayName} started a sleep at`)
+  expect(await page.evaluate(() => localStorage.getItem("bt.kept"))).toBeNull()
+  await page.reload()
+  await page.getByText("Totals").waitFor()
+  await expect(sheet).toBeHidden()
 })
