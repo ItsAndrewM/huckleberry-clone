@@ -37,6 +37,29 @@ describe("pendingToday", () => {
     expect(next.recent).toHaveLength(1)
   })
 
+  it("keeps every sleep number in today's totals as it was when a diaper or a feed being saved shifts them", () => {
+    const asleep = {
+      sleepsStarted: 2,
+      sleepSeconds: 7200,
+      napSeconds: 5400,
+      nightSeconds: 1800,
+      longestSleepSeconds: 5400,
+    }
+    const today = todayWith({ totals: { ...NO_TOTALS, ...asleep } })
+    const diaper = pendingToday(
+      today,
+      { kind: "logDiaper", payload: { actionId: ACTION_ID, occurredAt: NOW, wet: false, dirty: true } },
+      pending,
+    )
+    const feed = pendingToday(
+      today,
+      { kind: "startFeed", payload: { actionId: ACTION_ID, side: "left", startedAt: NOW - 2 * MINUTE } },
+      pending,
+    )
+    expect(diaper.totals).toEqual({ ...NO_TOTALS, ...asleep, diapers: 1, dirtyDiapers: 1 })
+    expect(feed.totals).toEqual({ ...NO_TOTALS, ...asleep, feedsStarted: 1, leftSeconds: 120, nursingSeconds: 120 })
+  })
+
   it("shows a feed being started as the running feed, from its start", () => {
     const next = pendingToday(
       todayWith(),

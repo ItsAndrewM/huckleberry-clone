@@ -71,6 +71,12 @@ describe("a started sleep", () => {
     expect(fieldErrors(SleepStart, { actionId: ACTION_ID, startedAt: AT })).toEqual([
       { path: "kind", issue: "invalid" },
     ])
+    const withAnEnd = { actionId: ACTION_ID, kind: "nap", startedAt: AT, endedAt: AT + HOUR_MS }
+    expect(Schema.decodeUnknownSync(Schema.toCodecJson(SleepStart))(withAnEnd)).toEqual({
+      actionId: ACTION_ID,
+      kind: "nap",
+      startedAt: AT,
+    })
   })
 })
 
@@ -81,6 +87,8 @@ describe("an edit to a sleep", () => {
     expect(fieldErrors(SleepEdit, edit)).toEqual([])
     const unversioned = { actionId: ACTION_ID, kind: "night", startedAt: AT, endedAt: AT + HOUR_MS }
     expect(fieldErrors(SleepEdit, unversioned)).toEqual([{ path: "version", issue: "invalid" }])
+    const unlabelled = { actionId: ACTION_ID, version: 2, startedAt: AT, endedAt: AT + HOUR_MS }
+    expect(fieldErrors(SleepEdit, unlabelled)).toEqual([{ path: "kind", issue: "invalid" }])
   })
 
   it("sends no end for a sleep that's still running", () => {

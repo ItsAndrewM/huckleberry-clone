@@ -205,6 +205,11 @@ describe("dryRun", () => {
     )
   })
 
+  it("accepts rows that lack a column a pending migration adds, since the columns are checked before it runs", () => {
+    const widening = [...BEFORE_SLEEPS, { name: "0007-notes", sql: "ALTER TABLE diapers ADD COLUMN notes TEXT" }]
+    expect(dryRun(exportOf(names(BEFORE_SLEEPS)), widening)).toEqual({ applied: ["0007-notes"], rows: 5, tables: 8 })
+  })
+
   it("refuses a row that lacks a column its siblings have", () => {
     const diapers = [diaper(EMILY), { ...without(diaper(EMILY), "deleted_at"), id: "diaper-2" }]
     expect(() => dryRun(exportOf(names(BEFORE_SLEEPS), tablesWith(diapers)), MIGRATIONS)).toThrow(

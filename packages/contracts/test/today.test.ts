@@ -35,6 +35,17 @@ const DIAPER: Diaper = {
   deletedAt: null,
 }
 
+const TODAY = {
+  date: "2026-10-08",
+  totals: TOTALS,
+  activeFeed: null,
+  lastFeed: null,
+  activeSleep: null,
+  lastSleep: null,
+  prefill: { lastBottle: null, lastSide: null },
+  recent: [],
+}
+
 const decodes = <A, I extends Schema.Json>(schema: Schema.Codec<A, I>, input: Schema.Json) =>
   Exit.isSuccess(Schema.decodeUnknownExit(Schema.toCodecJson(schema))(input))
 
@@ -77,6 +88,21 @@ describe("Last24h", () => {
   })
 })
 
+describe("Today", () => {
+  it("holds its date, totals, active and last feed and sleep, prefill and recent entries", () => {
+    expect(decodes(Today, TODAY)).toBe(true)
+  })
+
+  it("still reads when a later version adds a field, as M3.3's doses will be", () => {
+    expect(decodes(Today, { ...TODAY, doses: [] })).toBe(true)
+  })
+
+  it.each(["activeSleep", "lastSleep"])("refuses an answer without its %s", (field) => {
+    const without = Object.fromEntries(Object.entries(TODAY).filter(([key]) => key !== field))
+    expect(decodes(Today, without)).toBe(false)
+  })
+})
+
 describe("Today's recent entries", () => {
   const decodeRecent = Schema.decodeUnknownSync(Schema.toCodecJson(RecentEntries))
   const SECOND = { kind: "diaper", diaper: { ...DIAPER, id: "diaper-2" } }
@@ -100,16 +126,6 @@ describe("Today's recent entries", () => {
   })
 
   it("lets Today decode while its recent list holds a kind this app doesn't know", () => {
-    const today = {
-      date: "2026-10-08",
-      totals: TOTALS,
-      activeFeed: null,
-      lastFeed: null,
-      activeSleep: null,
-      lastSleep: null,
-      prefill: { lastBottle: null, lastSide: null },
-      recent: [SLEEP, { kind: "diaper", diaper: DIAPER }],
-    }
-    expect(decodes(Today, today)).toBe(true)
+    expect(decodes(Today, { ...TODAY, recent: [SLEEP, { kind: "diaper", diaper: DIAPER }] })).toBe(true)
   })
 })

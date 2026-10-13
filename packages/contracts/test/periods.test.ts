@@ -132,8 +132,8 @@ describe("a day", () => {
     expect(decodes(DayPeriod, DAY)).toBe(true)
   })
 
-  it("still reads when a later version adds a field, as M3.1's sleeps will be", () => {
-    expect(decodes(DayPeriod, { ...DAY, sleeps: [] })).toBe(true)
+  it("still reads when a later version adds a field, as M3.3's doses will be", () => {
+    expect(decodes(DayPeriod, { ...DAY, doses: [] })).toBe(true)
   })
 
   it.each([
@@ -141,6 +141,7 @@ describe("a day", () => {
     ["an answer from before 2000", { asOf: Date.UTC(1999, 11, 31) }],
     ["an answer whose feeds are null", { feeds: null }],
     ["an answer whose diapers are null", { diapers: null }],
+    ["an answer whose sleeps are null", { sleeps: null }],
     ["an answer whose measurements are null", { measurements: null }],
   ])("refuses %s", (_label, change) => {
     expect(decodes(DayPeriod, { ...DAY, ...change })).toBe(false)
