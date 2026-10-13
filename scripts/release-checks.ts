@@ -1,10 +1,13 @@
+import { parseArgs } from "node:util"
+
 export const PRODUCTION_NAME = "baby-tracker"
 export const PRODUCTION_HOSTNAME = "baby.andamonium.dev"
-
-const BOOKMARK_FORMAT = /^[0-9a-f]+(?:-[0-9a-f]+)+$/
+export const PRODUCTION_ACCOUNT_ID = "6624f09210327baade61004af0d9be84"
+export const CI_WORKFLOW = "CI"
 
 export interface DeployConfig {
   readonly name?: string
+  readonly account_id?: string
   readonly routes?: ReadonlyArray<{ readonly pattern?: string; readonly custom_domain?: boolean }>
   readonly workers_dev?: boolean
   readonly preview_urls?: boolean
@@ -17,7 +20,6 @@ export interface DeployConfig {
 }
 
 export interface Checkout {
-  readonly branch: string
   readonly clean: boolean
   readonly head: string
   readonly originMain: string
@@ -27,6 +29,22 @@ export interface CiRun {
   readonly status: string
   readonly conclusion: string
   readonly createdAt: string
+}
+
+export interface Upload {
+  readonly config: string
+  readonly commit: string
+  readonly runId: string | undefined
+}
+
+export interface Rollout extends Upload {
+  readonly versionId: string
+  readonly restorePoint: string
+}
+
+interface WranglerOutputEntry {
+  readonly type?: string
+  readonly version_id?: string
 }
 
 type Check<A> = readonly [expectation: string, holds: (value: A) => boolean]
@@ -44,6 +62,10 @@ const DEPLOY_CHECKS: ReadonlyArray<Check<DeployConfig>> = [
     `the Worker is ${PRODUCTION_NAME}, not a local build (rebuild without CLOUDFLARE_ENV)`,
     (config) => config.name === PRODUCTION_NAME,
   ],
+  [
+    `account_id is ${PRODUCTION_ACCOUNT_ID}, the production account`,
+    (config) => config.account_id === PRODUCTION_ACCOUNT_ID,
+  ],
   [`its only route is the Custom Domain ${PRODUCTION_HOSTNAME}`, onlyRouteIsTheHostname],
   ["workers.dev is off", (config) => config.workers_dev === false],
   ["preview URLs are off", (config) => config.preview_urls === false],
@@ -54,10 +76,13 @@ const DEPLOY_CHECKS: ReadonlyArray<Check<DeployConfig>> = [
 ]
 
 const CHECKOUT_CHECKS: ReadonlyArray<Check<Checkout>> = [
-  ["the checkout is on main", (checkout) => checkout.branch === "main"],
   ["the checkout has no uncommitted changes", (checkout) => checkout.clean],
-  ["main is the same commit as origin/main", (checkout) => checkout.head === checkout.originMain],
+  ["HEAD is the same commit as origin/main", (checkout) => checkout.head === checkout.originMain],
 ]
+
+export const refuseUnknownFlags = (args: ReadonlyArray<string>): void => {
+  parseArgs({ args: [...args], strict: true })
+}
 
 export const deployProblems = (config: DeployConfig): string[] => problemsOf(DEPLOY_CHECKS, config)
 
@@ -72,29 +97,61 @@ export const ciProblems = (runs: ReadonlyArray<CiRun>): string[] => {
   return latest.conclusion === "success" ? [] : ["CI passed on this commit"]
 }
 
-export const withoutCloudflareEnv = (env: NodeJS.ProcessEnv): NodeJS.ProcessEnv =>
-  Object.fromEntries(Object.entries(env).filter(([name]) => name !== "CLOUDFLARE_ENV"))
+const DROPPED = {
+  git: ["CLOUDFLARE_ENV", "CLOUDFLARE_API_TOKEN", "GH_TOKEN", "GITHUB_TOKEN"],
+  gh: ["CLOUDFLARE_ENV", "CLOUDFLARE_API_TOKEN"],
+  build: ["CLOUDFLARE_ENV", "CLOUDFLARE_API_TOKEN", "GH_TOKEN", "GITHUB_TOKEN"],
+  wrangler: ["CLOUDFLARE_ENV", "GH_TOKEN", "GITHUB_TOKEN"],
+} as const
 
-const bookmarkIn = (body: string): string | undefined => {
-  try {
-    const parsed: { readonly bookmark?: string } = JSON.parse(body)
-    return parsed.bookmark
-  } catch {
-    return undefined
-  }
+export type Tool = keyof typeof DROPPED
+
+export const envFor = (tool: Tool, env: NodeJS.ProcessEnv): NodeJS.ProcessEnv => {
+  const dropped = new Set<string>(DROPPED[tool])
+  return Object.fromEntries(Object.entries(env).filter(([name]) => !dropped.has(name)))
 }
 
-export const bookmarkFrom = (status: number, body: string): string => {
-  const bookmark = status === 200 ? bookmarkIn(body) : undefined
-  if (bookmark === undefined || !BOOKMARK_FORMAT.test(bookmark)) {
-    throw new Error(`Couldn't take a bookmark before deploying: ${status} ${body}`)
-  }
-  return bookmark
+export const restorePointOf = (at: Date): string => `${at.toISOString().slice(0, 19)}Z`
+
+const sourceOf = (runId: string | undefined): string => (runId === undefined ? "local" : `ci:${runId}`)
+
+export const versionUploadArgs = ({ config, commit, runId }: Upload): string[] => [
+  "versions",
+  "upload",
+  "--config",
+  config,
+  "--tag",
+  commit,
+  "--message",
+  `${commit.slice(0, 7)} ${sourceOf(runId)}`,
+]
+
+export const uploadedVersionId = (output: string): string => {
+  const entries: ReadonlyArray<WranglerOutputEntry> = output
+    .split("\n")
+    .filter((line) => line !== "")
+    .map((line) => JSON.parse(line))
+  const versionId = entries.find((entry) => entry.type === "version-upload")?.version_id ?? ""
+  if (versionId === "") throw new Error("Wrangler reported no uploaded version in its output file")
+  return versionId
 }
 
-export const exportProblem = (failure: Error): string =>
-  `the household can be exported first (${failure.message}). ` +
-  "If the live Worker predates exports, as before the first release with M3.11, release once with --skip-export"
+export const versionDeployArgs = ({ config, versionId, commit, restorePoint, runId }: Rollout): string[] => [
+  "versions",
+  "deploy",
+  `${versionId}@100%`,
+  "--config",
+  config,
+  "--message",
+  `${commit.slice(0, 7)} restore point ${restorePoint} ${sourceOf(runId)}`,
+  "--yes",
+]
 
-export const deployLogLine = (at: Date, commit: string, bookmark: string | null): string =>
-  `${at.toISOString()} ${commit} ${bookmark ?? "first-deploy-no-bookmark"}\n`
+export const restorePointReport = (restorePoint: string): string =>
+  `Restore point: ${restorePoint}. To rewind the household to just before this deploy, run \`pnpm admin pitr:restore --at ${restorePoint}\`.`
+
+export const releasedReport = (commit: string): string =>
+  [
+    `Released ${commit.slice(0, 7)} to https://${PRODUCTION_HOSTNAME}.`,
+    "Open the app online on each phone, so its offline copy updates to this build.",
+  ].join("\n\n")
