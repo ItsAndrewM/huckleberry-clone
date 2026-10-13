@@ -5,6 +5,7 @@ import {
   MeasurementConflict,
   NotFound,
   ServiceUnavailable,
+  SleepConflict,
   Unauthorized,
 } from "@bt/contracts"
 import { describe, expect, it } from "vitest"
@@ -137,5 +138,39 @@ describe("restoreFailure", () => {
     expect(failure(new ServiceUnavailable())).toBe("Not restored. Try again.")
     expect(failure(new NotFound())).toBe("Not restored. Try again.")
     expect(failure(new Error("defect"))).toBe("Not restored. Try again.")
+  })
+})
+
+describe("a deleted sleep's restore", () => {
+  const NAP = sleptAt(NOW - 90 * MINUTE, { id: "sleep-1", endedAt: NOW - 30 * MINUTE, version: 2, deletedAt: NOW })
+  const RUNNING = sleptAt(NOW - 40 * MINUTE, { id: "sleep-2", endedAt: null, version: 2, deletedAt: NOW })
+  const THEIRS = sleptAt(NOW - 20 * MINUTE, { id: "sleep-3", kind: "night", endedAt: null, createdBy: EMILY })
+  const plain = (text: string) => text.replace(/\s/gu, " ")
+
+  it("restores at the sleep's endpoint, from the version its delete answered", () => {
+    expect(restoreOf({ kind: "sleep", sleep: NAP }, ACTION_ID)).toEqual({
+      kind: "restoreSleep",
+      id: "sleep-1",
+      payload: { actionId: ACTION_ID, version: 2 },
+    })
+  })
+
+  it("names the nap or night a finished sleep would overlap", () => {
+    const error = new SleepConflict({ code: "SLEEP_OVERLAP", current: THEIRS })
+    expect(plain(restoreFailure(error, HOUSEHOLD, { kind: "sleep", sleep: NAP }))).toBe(
+      "This overlaps the night at 9:10 AM–now.",
+    )
+  })
+
+  it("says a sleep still running when it was deleted can't come back over the sleep started since", () => {
+    const error = new SleepConflict({ code: "SLEEP_ALREADY_ACTIVE", current: THEIRS })
+    expect(plain(restoreFailure(error, HOUSEHOLD, { kind: "sleep", sleep: RUNNING }))).toBe(
+      "It was still running when it was deleted, so it would run on over the sleep Emily started at 9:10 AM. It can't come back.",
+    )
+  })
+
+  it("says the other parent restored it already", () => {
+    const error = new SleepConflict({ code: "STALE_VERSION", current: { ...NAP, deletedAt: null, updatedBy: EMILY } })
+    expect(restoreFailure(error, HOUSEHOLD, { kind: "sleep", sleep: NAP })).toBe("Emily restored this a moment ago.")
   })
 })

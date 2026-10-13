@@ -4,6 +4,7 @@ import {
   FeedConflict,
   InvalidInput,
   MeasurementConflict,
+  SleepConflict,
   Unauthorized,
 } from "@bt/contracts"
 import type { Action } from "../../api/actions.ts"
@@ -25,6 +26,8 @@ export const restoreOf = (record: DeletedRecord, actionId: string): Action => {
       const { id, version } = record.measurement
       return { kind: "restoreMeasurement", id, payload: { actionId, version } }
     }
+    case "sleep":
+      return { kind: "restoreSleep", id: record.sleep.id, payload: { actionId, version: record.sleep.version } }
   }
 }
 
@@ -48,7 +51,9 @@ interface Current {
 const staleSentence = (household: Household, { updatedBy, deletedAt }: Current) =>
   `${nameOf(household, updatedBy)} ${deletedAt === null ? "restored" : "changed"} this a moment ago.`
 
-const stillRunning = (record: DeletedRecord) => record.kind === "feed" && runningSide(record.feed) !== undefined
+const stillRunning = (record: DeletedRecord) =>
+  (record.kind === "feed" && runningSide(record.feed) !== undefined) ||
+  (record.kind === "sleep" && record.sleep.endedAt === null)
 
 const runningOver = (other: string) =>
   `It was still running when it was deleted, so it would run on over ${other}. It can't come back.`
@@ -73,7 +78,25 @@ const feedSentence = ({ code, current }: FeedConflict, household: Household, run
   }
 }
 
+const sleepSentence = ({ code, current }: SleepConflict, household: Household, running: boolean): string => {
+  switch (code) {
+    case "SLEEP_ALREADY_ACTIVE":
+      return runningOver(
+        `the sleep ${nameOf(household, current.createdBy)} started at ${timeOf(household, current.startedAt)}`,
+      )
+    case "SLEEP_OVERLAP": {
+      const other = `the ${current.kind} at ${spanOf(household, current)}`
+      return running ? runningOver(other) : `This overlaps ${other}.`
+    }
+    case "STALE_VERSION":
+      return staleSentence(household, current)
+    case "ACTION_REPLAY_MISMATCH":
+      return NOT_RESTORED
+  }
+}
+
 const conflictSentence = (error: Error, household: Household, record: DeletedRecord): string | null => {
+  if (error instanceof SleepConflict) return sleepSentence(error, household, stillRunning(record))
   if (error instanceof FeedConflict) return feedSentence(error, household, stillRunning(record))
   if (!(error instanceof DiaperConflict) && !(error instanceof MeasurementConflict)) return null
   return error.code === "STALE_VERSION" ? staleSentence(household, error.current) : NOT_RESTORED
