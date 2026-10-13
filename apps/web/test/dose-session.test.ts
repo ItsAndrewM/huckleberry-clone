@@ -5,6 +5,7 @@ import {
   doseSessionOf,
   duplicateMessage,
   duplicateOf,
+  formKeyOf,
   supplementIdOf,
 } from "../src/features/supplement/dose-session.ts"
 import type { Household } from "../src/sheets/failure.ts"
@@ -59,6 +60,27 @@ describe("doseSessionOf", () => {
       when: whenAt(NOW - 5 * MINUTE, ZONE),
       confirmedDuplicate: true,
     })
+  })
+})
+
+describe("formKeyOf", () => {
+  it("is the held dose's own action, so the form starts again on each dose it shows", () => {
+    const resent: Failed = {
+      sending: {
+        sheet: "dose",
+        action: {
+          kind: "logDose",
+          payload: { actionId: "action-2", supplementId: VITAMIN_D, occurredAt: NOW, confirmedDuplicate: true },
+        },
+      },
+      error: new Offline(),
+    }
+    expect(formKeyOf(failedWith(new Offline()))).toBe(ACTION_ID)
+    expect(formKeyOf(resent)).toBe("action-2")
+  })
+
+  it("is the same for every new dose, which has no held dose to belong to", () => {
+    expect(formKeyOf(null)).toBe("new")
   })
 })
 

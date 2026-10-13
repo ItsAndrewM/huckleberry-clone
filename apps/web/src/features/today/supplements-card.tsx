@@ -20,10 +20,10 @@ const SupplementItem = ({ row }: { readonly row: SupplementRow }) => {
           <Icon aria-hidden="true" className="size-4" />
         </span>
         <span className="flex min-w-0 flex-1 flex-col">
-          <span className="font-medium">{row.title}</span>
+          <span className="font-medium break-words">{row.title}</span>
           {row.detail.length === 0 ? null : (
             <span className="text-sm text-muted-foreground">
-              <Parts parts={row.detail} />
+              <Parts parts={row.detail} freeText />
             </span>
           )}
         </span>

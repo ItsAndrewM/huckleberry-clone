@@ -1,10 +1,12 @@
-import { FeedConflict } from "@bt/contracts"
+import { DoseConflict, FeedConflict } from "@bt/contracts"
 import { describe, expect, it } from "vitest"
 import type { Action } from "../src/api/actions.ts"
 import { Offline } from "../src/api/errors.ts"
+import { heldFor } from "../src/sheets/held.ts"
 import { closesOnSend, type Sending } from "../src/sheets/sending.ts"
 import {
   CLOSED,
+  dismissedState,
   expiredState,
   failedState,
   isEntry,
@@ -16,7 +18,7 @@ import {
 } from "../src/sheets/sheets-state.ts"
 import { TOAST_MS } from "../src/sheets/undo.ts"
 import { measurement } from "./growth-fixtures.ts"
-import { diaperAt, feedAt, NOW } from "./today-fixtures.ts"
+import { diaperAt, dosedAt, feedAt, NOW } from "./today-fixtures.ts"
 
 const ACTION_ID = "4b1c2a5e-8f3d-4c6b-9a7e-2d1f0e3c5b6a"
 const RENEWED = "9d2e1f3c-5b4a-4e6d-8c7b-1a0f2e3d4c5b"
@@ -484,5 +486,59 @@ describe("a failed Undo", () => {
       ...CLOSED,
       toast: { message: "That wasn't undone.", undo: null, until: NOW + TOAST_MS },
     })
+  })
+})
+
+describe("a dose that fails while another supplement's sheet is open", () => {
+  const OTHER_DOSE: Sending = {
+    sheet: "dose",
+    action: {
+      kind: "logDose",
+      payload: { actionId: RENEWED, supplementId: "supplement-2", occurredAt: NOW, confirmedDuplicate: false },
+    },
+  }
+  const failed = { sending: DOSE, error: new Offline() }
+  const waiting = failedState(shownState(CLOSED, "dose", "supplement-2"), failed, NOW)
+
+  it("reopens its own supplement's sheet, with the tap held, when no sheet is open", () => {
+    expect(failedState(CLOSED, failed, NOW)).toMatchObject({
+      open: "dose",
+      editing: "supplement-1",
+      queued: true,
+      held: [failed],
+    })
+  })
+
+  it("leaves the open sheet on its own supplement, and holds the failure for its own sheet", () => {
+    expect(waiting).toMatchObject({ open: "dose", editing: "supplement-2", queued: false, held: [failed] })
+    expect(heldFor(waiting.held, "dose", "supplement-2")).toBeNull()
+    expect(heldFor(waiting.held, "dose", "supplement-1")).toBe(failed)
+  })
+
+  it("opens its own supplement's sheet, with the tap held, once the open sheet's dose is sent", () => {
+    expect(sendingState(waiting, OTHER_DOSE, true)).toMatchObject({
+      open: "dose",
+      editing: "supplement-1",
+      queued: true,
+      held: [failed],
+    })
+  })
+
+  it("opens its own supplement's sheet without asking when the open sheet is closed unsent", () => {
+    expect(dismissedState(waiting)).toMatchObject({
+      open: "dose",
+      editing: "supplement-1",
+      asking: false,
+      queued: true,
+    })
+  })
+
+  it("isn't let go with the open sheet, though the household says it was already saved", () => {
+    const replayed = {
+      sending: DOSE,
+      error: new DoseConflict({ code: "ACTION_REPLAY_MISMATCH", current: dosedAt(NOW) }),
+    }
+    const sheetOpen = failedState(shownState(CLOSED, "dose", "supplement-2"), replayed, NOW)
+    expect(sendingState(sheetOpen, OTHER_DOSE, true).held).toEqual([replayed])
   })
 })

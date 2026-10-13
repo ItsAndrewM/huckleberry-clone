@@ -56,6 +56,8 @@ const EDIT_SHEETS = new Set<SheetKind>(["editDiaper", "editFeed", "editDose"])
 
 export const editsARecord = (sheet: SheetKind) => EDIT_SHEETS.has(sheet)
 
+export const opensOnOne = (sheet: SheetKind) => editsARecord(sheet) || sheet === "dose"
+
 export const isUndo = ({ sheet }: Sending) => sheet === "undo"
 
 export const closesOnSend = (sending: Sending) =>

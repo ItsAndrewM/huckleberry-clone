@@ -1,5 +1,6 @@
 import { type Dose, DoseConflict } from "@bt/contracts"
 import { type Household, nameOf, timeOf } from "../../sheets/failure.ts"
+import { actionIdOf } from "../../sheets/held.ts"
 import type { Failed, Sending } from "../../sheets/sending.ts"
 import { NOW, type When, whenAt } from "../../sheets/when.ts"
 
@@ -17,6 +18,8 @@ const loggedIn = (failed: Failed | null) => {
 
 export const supplementIdOf = (failed: Failed | null, editing: string | null) =>
   loggedIn(failed)?.payload.supplementId ?? editing
+
+export const formKeyOf = (failed: Failed | null) => (failed === null ? "new" : actionIdOf(failed.sending))
 
 export const doseSessionOf = (
   failed: Failed | null,
