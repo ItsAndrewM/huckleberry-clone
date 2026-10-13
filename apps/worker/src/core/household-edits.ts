@@ -29,6 +29,7 @@ import {
   type HouseholdRow,
 } from "./household.ts"
 import type { CoreResult, Stamp } from "./receipts.ts"
+import { refileDoses } from "./supplements/dose-writes.ts"
 
 const PROFILE_CHANGED: Changed = [queryKeys.me, queryKeys.today, queryKeys.last24h]
 
@@ -54,6 +55,7 @@ export const editHousehold =
         stamp.now,
       )
       .one()
+    if (timeZone !== current.timeZone) refileDoses(sql, timeZone)
     return { ok: true, response: householdFrom(row), changed: PROFILE_CHANGED }
   }
 
@@ -65,6 +67,7 @@ const earliestRecordAt = (sql: SqlStorage): Instant | null =>
          UNION ALL SELECT min(started_at) FROM feeds WHERE deleted_at IS NULL
          UNION ALL SELECT min(measured_at) FROM growth_measurements WHERE deleted_at IS NULL
          UNION ALL SELECT min(started_at) FROM sleeps WHERE deleted_at IS NULL
+         UNION ALL SELECT min(occurred_at) FROM supplement_logs WHERE deleted_at IS NULL
        )`,
     )
     .one().at
