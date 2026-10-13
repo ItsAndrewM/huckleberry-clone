@@ -162,7 +162,15 @@ describe("the caches an edit or delete changes at once", () => {
       id: old.id,
       payload: { actionId: ACTION_ID, version: 1, occurredAt: old.occurredAt, wet: true, dirty: true },
     }
-    settle(queryClient, { diaper: { ...old, wet: true, version: 2 }, changed: [] }, action)
+    settle(queryClient, { diaper: { ...old, wet: true, version: 2 }, changed: [] }, action, NOW_ON_DAY)
+    expect(queryClient.getQueryData<Today>(queryKeys.today)?.recent).toEqual([diaper(PEE), feed(NURSED)])
+  })
+
+  it("leaves Today's list alone when the household answers the Undo of a delete to an entry older than 24 hours", () => {
+    const queryClient = householdCache()
+    const old = { ...POO, id: "old-diaper", occurredAt: NOW_ON_DAY - 30 * 60 * MINUTE, version: 3 }
+    const undo: Action = { kind: "restoreDiaper", id: old.id, payload: { actionId: ACTION_ID, version: 2 } }
+    settle(queryClient, { diaper: old, changed: [] }, undo, NOW_ON_DAY)
     expect(queryClient.getQueryData<Today>(queryKeys.today)?.recent).toEqual([diaper(PEE), feed(NURSED)])
   })
 

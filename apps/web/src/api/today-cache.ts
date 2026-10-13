@@ -1,9 +1,10 @@
 import type { Feed, RecentEntry, Today } from "@bt/contracts"
+import { contains, type Instant, last24hPeriod } from "@bt/domain"
 import type { Action } from "./actions.ts"
 import { isPending, pendingDiaper, pendingFeed, pendingId, startedFeed, withBottle } from "./pending.ts"
 import type { Saved } from "./send.ts"
 import { isSwapping } from "./swap.ts"
-import { idOf, later, NOTHING, type Pending, shifted, without, withEntry, withFeed } from "./today-change.ts"
+import { idOf, later, NOTHING, type Pending, shifted, timeOf, without, withEntry, withFeed } from "./today-change.ts"
 
 export const pendingToday = (today: Today, action: Action, pending: Pending): Today => {
   switch (action.kind) {
@@ -89,14 +90,18 @@ const savedFeed = (today: Today, feed: Feed, recent: ReadonlyArray<RecentEntry>,
   }
 }
 
-const isShown = (today: Today, action: Action, id: string) =>
-  !isSwapping(action) || today.recent.some((entry) => idOf(entry) === id)
+const isShown = (today: Today, action: Action, entry: RecentEntry, now: Instant) =>
+  today.recent.some((listed) => idOf(listed) === idOf(entry)) ||
+  (!isSwapping(action) && contains(last24hPeriod(now), timeOf(entry)))
 
-export const savedToday = (today: Today, saved: Saved, action: Action): Today => {
+export const savedToday = (today: Today, saved: Saved, action: Action, now: Instant): Today => {
   if ("measurement" in saved) return today
   const recent = without(today.recent, pendingId(action.payload.actionId))
-  if ("feed" in saved) return savedFeed(today, saved.feed, recent, isShown(today, action, saved.feed.id))
+  if ("feed" in saved) {
+    const { feed } = saved
+    return savedFeed(today, feed, recent, isShown(today, action, { kind: "feed", feed }, now))
+  }
   const { diaper } = saved
-  const live = diaper.deletedAt === null && isShown(today, action, diaper.id)
+  const live = diaper.deletedAt === null && isShown(today, action, { kind: "diaper", diaper }, now)
   return { ...today, recent: live ? withEntry(recent, { kind: "diaper", diaper }) : without(recent, diaper.id) }
 }

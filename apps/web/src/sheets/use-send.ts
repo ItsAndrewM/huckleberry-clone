@@ -21,7 +21,7 @@ export const useSend = ({ onFailed, onSaved }: SendHandlers) => {
       onFailed({ sending, error })
     },
     onSuccess: (saved, sending) => {
-      settle(queryClient, saved, sending.action)
+      settle(queryClient, saved, sending.action, Date.now())
       onSaved(sending, saved)
     },
   })

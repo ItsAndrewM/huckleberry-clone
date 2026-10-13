@@ -82,14 +82,14 @@ const refetchAfterSave = async (queryClient: QueryClient, queryKey: QueryKey) =>
   await queryClient.invalidateQueries({ queryKey })
 }
 
-export const settle = (queryClient: QueryClient, saved: Saved, action: Action) => {
+export const settle = (queryClient: QueryClient, saved: Saved, action: Action, now: number) => {
   if (isMeasurementAction(action) && "measurement" in saved) {
     queryClient.setQueryData<Growth>(queryKeys.growth, (growth) =>
       growth === undefined ? growth : savedGrowth(growth, saved, action),
     )
   } else {
     queryClient.setQueryData<Today>(queryKeys.today, (today) =>
-      today === undefined ? today : savedToday(today, saved, action),
+      today === undefined ? today : savedToday(today, saved, action, now),
     )
   }
   for (const queryKey of saved.changed) void refetchAfterSave(queryClient, queryKey)
