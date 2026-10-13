@@ -90,6 +90,7 @@ describe("weekModel", () => {
     expect(grid.blocks.map(({ id }) => id)).toEqual([ACROSS_MIDNIGHT.id, NURSED.id, PAUSED.id, RUNNING.id])
     expect(grid.blocks[1]).toMatchObject({ top: 7, height: 2, lane: 0, lanes: 1 })
     expect(grid.blocks[2]?.bands.map(({ kind }) => kind)).toEqual(["left", "right"])
+    expect(grid.blocks[3]).toMatchObject({ id: RUNNING.id, top: 52, height: 5, running: true })
   })
 
   it("puts bottles and diapers in their own dots, gathering only those of a kind", () => {

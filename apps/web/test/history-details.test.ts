@@ -75,8 +75,8 @@ describe("entryDetails", () => {
 
   it("says a feed is still going, up to now", () => {
     expect(feed(RUNNING)).toMatchObject({
-      when: expect.stringMatching(/^Fri, Oct 9, 9:10\s–\s9:30\sAM$/u),
-      lines: ["In progress", "Left 20 min"],
+      when: expect.stringMatching(/^Fri, Oct 9, 8:40\s–\s9:30\sAM$/u),
+      lines: ["In progress", "Left 50 min"],
     })
   })
 
@@ -85,7 +85,7 @@ describe("entryDetails", () => {
       ...RUNNING,
       segments: [{ id: "p", side: "left" as const, startedAt: RUNNING.startedAt, endedAt: local("09:20") }],
     }
-    expect(feed(paused).lines).toEqual(["Paused", "Left 10 min"])
+    expect(feed(paused).lines).toEqual(["Paused", "Left 40 min"])
   })
 
   it("gives a diaper its time and kind", () => {

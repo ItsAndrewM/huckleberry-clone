@@ -77,7 +77,7 @@ test("steps back a week and comes back to this week", async ({ page }) => {
   await page.getByRole("link", { name: "Previous week" }).click()
   await expect(page).toHaveURL(/\/history\?view=week&date=2026-09-28$/u)
   await expect(weekHeading(page)).toHaveText(/^Sep 28\s–\sOct 4$/u)
-  expect(asked).toContain(LAST_WEEK)
+  await expect.poll(() => asked).toContain(LAST_WEEK)
   await page.getByRole("link", { name: "Back to this week" }).click()
   await expect(page).toHaveURL(/\/history\?view=week$/u)
   await expect(weekHeading(page)).toHaveText(/^Oct 5\s–\s11$/u)
