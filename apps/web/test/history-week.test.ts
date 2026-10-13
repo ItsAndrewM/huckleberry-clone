@@ -31,6 +31,16 @@ const ACROSS_MIDNIGHT: Feed = {
 
 const FRIDAY_TOTALS = { ...NO_TOTALS, feedsStarted: 4, nursingSeconds: 3480, bottleMl: 150, diapers: 3, wetDiapers: 2 }
 
+const BACK = "2026-W44"
+const LOS_ANGELES = "America/Los_Angeles"
+
+const nursedAt = (id: string, at: number): Feed => ({
+  ...feedAt(at),
+  id,
+  endedAt: at + 15 * 60_000,
+  segments: [{ id: `${id}-0`, side: "left", startedAt: at, endedAt: at + 15 * 60_000 }],
+})
+
 const weekWith = (change: Partial<WeekPeriod> = {}): WeekPeriod => {
   const days = isoWeekDates(WEEK).map((date) => ({
     date,
@@ -96,6 +106,31 @@ describe("weekModel", () => {
     expect(columnOn(DATE).grid.blocks[0]).toMatchObject({ top: 0, startsBefore: true })
     expect(columnOn(DATE).grid.now).toBe(57)
     expect(columnOn(THURSDAY).grid.now).toBeNull()
+  })
+
+  it("lays the night the clocks go back on the household's clock, both 1:30 feeds on one row", () => {
+    const days = isoWeekDates(BACK).map((date) => ({
+      date,
+      bounds: zonedDayBounds(date, LOS_ANGELES),
+      totals: NO_TOTALS,
+    }))
+    const week: WeekPeriod = {
+      week: BACK,
+      bounds: { start: days[0]?.bounds.start ?? 0, end: days.at(-1)?.bounds.end ?? 0 },
+      asOf: Date.UTC(2026, 10, 2, 12),
+      totals: NO_TOTALS,
+      days,
+      feeds: [nursedAt("first", Date.UTC(2026, 10, 1, 8, 30)), nursedAt("second", Date.UTC(2026, 10, 1, 9, 30))],
+      diapers: [],
+      measurements: [],
+    }
+    const context = { ...CONTEXT, zone: LOS_ANGELES, now: Date.UTC(2026, 10, 2, 12), today: "2026-11-02" }
+    const sunday = weekModel(week, context).find(({ date }) => date === "2026-11-01")
+    expect(sunday?.grid.steps).toBe(144)
+    expect(sunday?.grid.blocks.map(({ top, lane, lanes }) => [top, lane, lanes])).toEqual([
+      [9, 0, 2],
+      [9, 1, 2],
+    ])
   })
 
   it("marks a day with a measurement", () => {
