@@ -58,7 +58,7 @@ test("says there's no usual day yet when nothing was logged in the seven days be
   await expect(chart(page, "Diapers")).toContainText("No entries")
   await expect(chart(page, "Diapers")).toContainText("No usual day yet")
   await expect(chart(page, "Diapers").locator('[data-ts-key^="usual:"]')).toHaveCount(0)
-  await expect(page.getByRole("main").locator('text[data-ts-key^="x-tick-label"]')).toHaveCount(20)
+  await expect(page.getByRole("main").locator('text[data-ts-key^="x-tick-label"]')).toHaveCount(25)
   await expect(page.getByRole("main").locator('[data-ts-key^="so-far:"]')).toHaveCount(0)
 })
 

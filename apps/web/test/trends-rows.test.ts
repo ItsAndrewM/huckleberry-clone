@@ -68,15 +68,15 @@ describe("tableRows", () => {
     const rows = tableRows(trendDays([dated("2026-10-11"), ...WEEK], TODAY, BIRTH), "ml", LOCALE)
     expect(rows).toEqual([
       { date: "2026-10-11", name: "Sun, Oct 11", cells: ["No entries"] },
-      { date: "2026-10-12", name: "Mon, Oct 12", cells: ["8", "1 h 40 min", "610 mL", "8"] },
-      { date: "2026-10-13", name: "Tue, Oct 13", cells: ["7", "1 h 20 min", "520 mL", "7"] },
-      { date: TODAY, name: "Wed, Oct 14, so far", cells: ["2", "15 min", "0 mL", "1"] },
+      { date: "2026-10-12", name: "Mon, Oct 12", cells: ["8", "1 h 40 min", "610 mL", "8", "0 min"] },
+      { date: "2026-10-13", name: "Tue, Oct 13", cells: ["7", "1 h 20 min", "520 mL", "7", "0 min"] },
+      { date: TODAY, name: "Wed, Oct 14, so far", cells: ["2", "15 min", "0 mL", "1", "0 min"] },
     ])
   })
 
   it("leaves out the days before her birth date", () => {
     expect(tableRows(trendDays([dated("2026-08-31"), dated(BIRTH, MONDAY)], TODAY, BIRTH), "ml", LOCALE)).toEqual([
-      { date: BIRTH, name: "Tue, Sep 1", cells: ["8", "1 h 40 min", "610 mL", "8"] },
+      { date: BIRTH, name: "Tue, Sep 1", cells: ["8", "1 h 40 min", "610 mL", "8", "0 min"] },
     ])
   })
 })
