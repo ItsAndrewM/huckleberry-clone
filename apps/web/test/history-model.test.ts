@@ -3,6 +3,7 @@ import { zonedDayBounds } from "@bt/domain"
 import { describe, expect, it } from "vitest"
 import { anchorOf, dayModel, entriesIn, isLiveFeed } from "../src/features/history/day-model.ts"
 import { markersOf } from "../src/features/history/grid-markers.ts"
+import { hiddenIn } from "../src/features/history/history-kinds.ts"
 import {
   BOTH,
   BOTTLE,
@@ -87,6 +88,16 @@ describe("dayModel", () => {
       { kind: "diaper", diaper: PEE },
       { kind: "feed", feed: NURSED },
     ])
+  })
+
+  it("leaves out the kinds a filter hides, and still finds every entry", () => {
+    const noDiapers = dayModel(dayWith(), ZONE, NOW_ON_DAY, hiddenIn("diapers"))
+    expect(noDiapers.grid.blocks.map(({ id }) => id)).toEqual([NURSED.id, PAUSED.id, RUNNING.id])
+    expect(noDiapers.grid.clusters).toEqual([{ top: 48, ids: [BOTTLE.id] }])
+    const noFeeds = dayModel(dayWith(), ZONE, NOW_ON_DAY, hiddenIn("feeds"))
+    expect(noFeeds.grid.blocks).toEqual([])
+    expect(noFeeds.grid.clusters.flatMap(({ ids }) => ids)).toEqual([PEE.id, POO.id, BOTH.id])
+    expect(entriesIn(noFeeds, [NURSED.id, PEE.id])).toHaveLength(2)
   })
 })
 

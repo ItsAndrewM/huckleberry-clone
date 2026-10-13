@@ -1,4 +1,4 @@
-import type { DayPeriod, Diaper, Feed } from "@bt/contracts"
+import type { DayPeriod, Diaper, Feed, LocalDate } from "@bt/contracts"
 import {
   type CalendarBlock,
   type CalendarPoint,
@@ -9,8 +9,22 @@ import {
   sessionBounds,
   type Side,
 } from "@bt/domain"
+import type { Hidden } from "./history-kinds.ts"
 
 export const SCALE: GridScale = { stepMs: 5 * 60_000, minBlockSteps: 4, pointSteps: 5 }
+
+export interface DaySlice {
+  readonly date: LocalDate
+  readonly bounds: Interval
+  readonly feeds: ReadonlyArray<Feed>
+  readonly diapers: ReadonlyArray<Diaper>
+}
+
+export interface DayPieces {
+  readonly blocks: ReadonlyArray<CalendarBlock<Side>>
+  readonly bottles: ReadonlyArray<CalendarPoint>
+  readonly diapers: ReadonlyArray<CalendarPoint>
+}
 
 export type Entry =
   | { readonly kind: "feed"; readonly feed: Feed }
@@ -36,10 +50,17 @@ const blockOf = (feed: Feed): ReadonlyArray<CalendarBlock<Side>> => {
 
 const pointAt = (feed: Feed, bounds: Interval) => (isNursing(feed) ? bounds.start : feed.startedAt)
 
-const pointsOf = ({ feeds, diapers, bounds }: DayPeriod): ReadonlyArray<CalendarPoint> => [
-  ...feeds.filter((feed) => !isBlock(feed, bounds)).map((feed) => ({ id: feed.id, at: pointAt(feed, bounds) })),
-  ...diapers.map(({ id, occurredAt }) => ({ id, at: occurredAt })),
-]
+export const shownSlice = <Slice extends DaySlice>(slice: Slice, hidden: Hidden): Slice => ({
+  ...slice,
+  feeds: hidden.has("feeds") ? [] : slice.feeds,
+  diapers: hidden.has("diapers") ? [] : slice.diapers,
+})
+
+export const piecesOf = ({ feeds, diapers, bounds }: DaySlice): DayPieces => ({
+  blocks: feeds.filter((feed) => isBlock(feed, bounds)).flatMap(blockOf),
+  bottles: feeds.filter((feed) => !isBlock(feed, bounds)).map((feed) => ({ id: feed.id, at: pointAt(feed, bounds) })),
+  diapers: diapers.map(({ id, occurredAt }) => ({ id, at: occurredAt })),
+})
 
 const entriesOf = (day: DayPeriod): ReadonlyMap<string, Entry> =>
   new Map<string, Entry>([
@@ -47,20 +68,13 @@ const entriesOf = (day: DayPeriod): ReadonlyMap<string, Entry> =>
     ...day.diapers.map((diaper) => [diaper.id, { kind: "diaper", diaper }] as const),
   ])
 
-export const dayModel = (day: DayPeriod, zone: string, now: number): DayModel => ({
-  grid: layoutDay(
-    {
-      date: day.date,
-      zone,
-      bounds: day.bounds,
-      now,
-      blocks: day.feeds.filter((feed) => isBlock(feed, day.bounds)).flatMap(blockOf),
-      points: pointsOf(day),
-    },
-    SCALE,
-  ),
-  entries: entriesOf(day),
-})
+export const dayModel = (day: DayPeriod, zone: string, now: number, hidden: Hidden = new Set()): DayModel => {
+  const { blocks, bottles, diapers } = piecesOf(shownSlice(day, hidden))
+  return {
+    grid: layoutDay({ date: day.date, zone, bounds: day.bounds, now, blocks, points: [...bottles, ...diapers] }, SCALE),
+    entries: entriesOf(day),
+  }
+}
 
 export const entriesIn = (model: DayModel, ids: ReadonlyArray<string>): ReadonlyArray<Entry> =>
   ids.flatMap((id) => {
