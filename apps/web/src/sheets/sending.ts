@@ -46,7 +46,7 @@ const CLOSES_ON_SEND = new Set<Action["kind"]>([
   "deleteFeed",
 ])
 
-const CLOSES_ON_SAVE = new Set<Action["kind"]>(["editDiaper", "editPortion"])
+const CLOSES_ON_SAVE = new Set<Action["kind"]>(["editDiaper", "editPortion", "editFeed"])
 
 const EDIT_SHEETS = new Set<SheetKind>(["editDiaper", "editFeed"])
 

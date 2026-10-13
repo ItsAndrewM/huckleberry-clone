@@ -1,9 +1,10 @@
-import { DiaperConflict, type Feed, FeedConflict, InvalidInput } from "@bt/contracts"
+import { DiaperConflict, type Feed, FeedConflict, InvalidInput, MeasurementConflict } from "@bt/contracts"
 import { describe, expect, it } from "vitest"
 import { Offline } from "../src/api/errors.ts"
 import { settlesWithoutAsking } from "../src/sheets/held.ts"
 import { offersOk, recoveryOf } from "../src/sheets/recovery.ts"
 import type { Failed, Sending } from "../src/sheets/sending.ts"
+import { measurement } from "./growth-fixtures.ts"
 import { diaperAt, feedAt, MINUTE, NOW } from "./today-fixtures.ts"
 
 const ACTION_ID = "4b1c2a5e-8f3d-4c6b-9a7e-2d1f0e3c5b6a"
@@ -265,35 +266,31 @@ describe("an entry that was saved before, as first entered", () => {
     })
   })
 
-  it("saves a bottle's changes as an edit of the saved feed's only portion", () => {
-    const recovery = recoveryOf(feedConflict(BOTTLE_FEED, "ACTION_REPLAY_MISMATCH", SAVED_BOTTLE))
+  it.each([
+    { case: "a bottle", sending: BOTTLE_FEED },
+    { case: "a past feed with sides", sending: PAST_FEED },
+  ])("saves $case's changes over the saved feed in one PUT, under a fresh actionId", ({ sending }) => {
+    const recovery = recoveryOf(feedConflict(sending, "ACTION_REPLAY_MISMATCH", SAVED_BOTTLE))
     expect(recovery?.label).toBe("Save my changes")
+    const { action } = sending
+    if (action.kind !== "logFeed") throw new Error("a logged feed")
     expect(recovery?.sendingAt(TAP)).toEqual({
-      sheet: "bottle",
+      sheet: sending.sheet,
       action: {
-        kind: "editPortion",
-        id: "portion-1",
-        payload: { actionId: FRESH, version: 1, occurredAt: NOW, breastMilkMl: 90, formulaMl: 0 },
+        kind: "editFeed",
+        id: "feed-2",
+        payload: { actionId: FRESH, version: 1, segments: action.payload.segments, portions: action.payload.portions },
       },
     })
   })
 
   it.each([
-    { case: "a past feed with sides", sending: PAST_FEED, current: SAVED_BOTTLE },
     { case: "a start", sending: start("left"), current: theirs() },
     { case: "a bottle added to a running feed", sending: addBottle(NOW), current: theirs() },
     {
-      case: "a bottle whose saved feed has more than one portion",
+      case: "a feed the other phone has changed since",
       sending: BOTTLE_FEED,
-      current: {
-        ...SAVED_BOTTLE,
-        portions: [...SAVED_BOTTLE.portions, { id: "portion-2", occurredAt: NOW, breastMilkMl: 30, formulaMl: 0 }],
-      },
-    },
-    {
-      case: "a bottle whose saved feed has sides",
-      sending: BOTTLE_FEED,
-      current: { ...SAVED_BOTTLE, segments: PAUSED.segments },
+      current: { ...SAVED_BOTTLE, version: 2 },
     },
   ])("offers nothing to save for $case", ({ sending, current }) => {
     expect(recoveryOf(feedConflict(sending, "ACTION_REPLAY_MISMATCH", current))).toBeNull()
@@ -364,5 +361,54 @@ describe("an entry that can't be saved as it is", () => {
     { case: "a field error", error: new InvalidInput({ fieldErrors: [{ path: "occurredAt", issue: "in_future" }] }) },
   ])("asks first after $case", ({ error }) => {
     expect(settlesWithoutAsking(error)).toBe(false)
+  })
+})
+
+describe("a measurement the other phone got to first", () => {
+  const saved = measurement("m1", NOW, { weightG: 4300 })
+  const logged: Sending = {
+    sheet: "measurement",
+    action: {
+      kind: "logMeasurement",
+      payload: { actionId: ACTION_ID, measuredAt: NOW, weightG: 4350, lengthCm: 55, headCm: null },
+    },
+  }
+  const edited: Sending = {
+    sheet: "measurement",
+    action: {
+      kind: "editMeasurement",
+      id: "m1",
+      payload: { actionId: ACTION_ID, version: 1, measuredAt: NOW, weightG: 4350, lengthCm: null, headCm: null },
+    },
+  }
+
+  it("saves a replayed measurement's changes as an edit of the saved one", () => {
+    const failed = {
+      sending: logged,
+      error: new MeasurementConflict({ code: "ACTION_REPLAY_MISMATCH", current: saved }),
+    }
+    expect(recoveryOf(failed)?.sendingAt(TAP)).toEqual({
+      sheet: "measurement",
+      action: {
+        kind: "editMeasurement",
+        id: "m1",
+        payload: { actionId: FRESH, version: 1, measuredAt: NOW, weightG: 4350, lengthCm: 55, headCm: null },
+      },
+    })
+    expect(offersOk(failed)).toBe(true)
+  })
+
+  it("saves an edit on top of theirs, unless they deleted it", () => {
+    const theirsNow = { ...saved, version: 2 }
+    const stale = { sending: edited, error: new MeasurementConflict({ code: "STALE_VERSION", current: theirsNow }) }
+    const recovery = recoveryOf(stale)
+    expect(recovery?.label).toBe("Save mine anyway")
+    expect(recovery?.sendingAt(TAP)).toEqual({
+      ...edited,
+      action: { ...edited.action, payload: { ...edited.action.payload, version: 2 } },
+    })
+    expect(offersOk(stale)).toBe(true)
+    const gone = new MeasurementConflict({ code: "STALE_VERSION", current: { ...theirsNow, deletedAt: NOW } })
+    expect(recoveryOf({ sending: edited, error: gone })).toBeNull()
   })
 })

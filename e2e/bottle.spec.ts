@@ -123,7 +123,7 @@ test("adds the bottle to the feed that's running, with that feed's version", asy
     ])
 })
 
-test("saves the changes to a bottle whose first save had landed, as an edit of its portion", async ({ page }) => {
+test("saves the changes to a bottle whose first save had landed, as an edit of the whole feed", async ({ page }) => {
   const { andrew } = await caregiversOf(page)
   const household = await playHousehold(page, todayWith(null, LAST_BOTTLE))
   const first = bottleFeed(andrew.id)
@@ -136,14 +136,9 @@ test("saves the changes to a bottle whose first save had landed, as an edit of i
     household.played.today = { ...todayWith(null, LAST_BOTTLE), recent: [{ kind: "feed", feed: first }] }
     return route.abort("internetdisconnected")
   })
-  await household.answer("**/api/portions/portion-1", ({ body }) => {
-    const portion = {
-      id: "portion-1",
-      occurredAt: NOW,
-      breastMilkMl: body.breastMilkMl ?? 0,
-      formulaMl: body.formulaMl ?? 0,
-    }
-    const feed = { ...first, version: 2, portions: [portion] }
+  await household.answer("**/api/feeds/feed-2", ({ body }) => {
+    const portions = (body.portions ?? []).map((portion, index) => ({ id: `portion-${index + 2}`, ...portion }))
+    const feed = { ...first, version: 2, portions }
     household.played.today = { ...todayWith(null, LAST_BOTTLE), recent: [{ kind: "feed", feed }] }
     return { status: 200, json: { feed, changed: [["today"]] } }
   })
@@ -160,9 +155,14 @@ test("saves the changes to a bottle whose first save had landed, as an edit of i
   expect(posted).toEqual([ACTION_ID, posted[0]])
   expect(household.played.sent).toEqual([
     {
-      method: "PATCH",
-      path: "/api/portions/portion-1",
-      body: { actionId: ACTION_ID, version: 1, occurredAt: NOW, breastMilkMl: 50, formulaMl: 20 },
+      method: "PUT",
+      path: "/api/feeds/feed-2",
+      body: {
+        actionId: ACTION_ID,
+        version: 1,
+        segments: [],
+        portions: [{ occurredAt: NOW, breastMilkMl: 50, formulaMl: 20 }],
+      },
     },
   ])
   expect(household.played.sent[0]?.body.actionId).not.toBe(posted[0])

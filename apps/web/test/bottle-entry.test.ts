@@ -1,6 +1,14 @@
 import { describe, expect, it } from "vitest"
 import { pendingId } from "../src/api/pending.ts"
-import { bottleAction, bottleSession, canSaveBottle, hasMilk, toppedUpFeed } from "../src/features/feed/bottle-entry.ts"
+import {
+  bottleAction,
+  bottleSession,
+  canSaveBottle,
+  hasMilk,
+  toppedUpFeed,
+  toppedUpFor,
+} from "../src/features/feed/bottle-entry.ts"
+import { StaleDraft } from "../src/sheets/drafts.ts"
 import { feedAt, MINUTE, NOW, ZONE } from "./today-fixtures.ts"
 
 const ACTION_ID = "4b1c2a5e-8f3d-4c6b-9a7e-2d1f0e3c5b6a"
@@ -41,6 +49,7 @@ describe("bottleSession", () => {
       actionId: ACTION_ID,
       ...AMOUNTS,
       when: { kind: "at", local: "2026-10-09T09:00", pick: null },
+      held: { kind: "addBottle", id: "feed-1", version: 2 },
     })
   })
 
@@ -137,5 +146,39 @@ describe("canSaveBottle", () => {
 
   it("waits while the feed itself hasn't been answered", () => {
     expect(canSaveBottle(AMOUNTS, { ...running, id: pendingId("action-1") })).toBe(false)
+  })
+})
+
+describe("a held bottle", () => {
+  const running = feedAt(NOW - 20 * MINUTE, { id: "feed-9", status: "active", endedAt: null, version: 4 })
+  const loggedAlone = { kind: "logFeed" } as const
+  const toppedUp = { kind: "addBottle", id: "feed-1", version: 2 } as const
+
+  it("stays a bottle on its own when a feed has started since it failed", () => {
+    expect(bottleAction(ACTION_ID, AMOUNTS, NOW, running, loggedAlone)).toMatchObject({ kind: "logFeed" })
+    expect(toppedUpFor(running, NOW, loggedAlone)).toBeNull()
+  })
+
+  it("stays a top-up of its own feed, at that feed's version, even once another feed runs", () => {
+    expect(bottleAction(ACTION_ID, AMOUNTS, NOW, running, toppedUp)).toMatchObject({
+      kind: "addBottle",
+      id: "feed-1",
+      payload: { actionId: ACTION_ID, version: 2 },
+    })
+    expect(toppedUpFor(running, NOW, toppedUp)).toBeNull()
+    const same = { ...running, id: "feed-1", version: 5 }
+    expect(bottleAction(ACTION_ID, AMOUNTS, NOW, same, toppedUp)).toMatchObject({ payload: { version: 5 } })
+  })
+})
+
+describe("a bottle's held route", () => {
+  it("keeps the route of a failure whose actionId may hold a receipt, and lets a renewed draft's go", () => {
+    expect(bottleSession(UNSAVED_BOTTLE, undefined, ZONE, null).held).toEqual({
+      kind: "addBottle",
+      id: "feed-1",
+      version: 2,
+    })
+    const stale = { ...UNSAVED_BOTTLE, error: new StaleDraft({ createdAt: NOW - 13 * 60 * MINUTE }) }
+    expect(bottleSession(stale, undefined, ZONE, null).held).toBeNull()
   })
 })

@@ -1,4 +1,4 @@
-import type { Feed, Side } from "@bt/contracts"
+import type { Feed, Measurement, Side } from "@bt/contracts"
 import type { Action } from "../api/actions.ts"
 import { SIDE_NAMES } from "../sides.ts"
 import type { Recovery, Sending } from "./sending.ts"
@@ -95,4 +95,9 @@ export const joined = ({ action }: Sending, feed: Feed): Recovery | null => {
       action: { kind: "switchSide", id, to: side, payload: { actionId, version, occurredAt: at } },
     }),
   }
+}
+
+export const mineAnyway = ({ sheet, action }: Sending, current: Measurement): Recovery | null => {
+  if (action.kind !== "editMeasurement" || current.deletedAt !== null) return null
+  return { label: "Save mine anyway", sendingAt: () => ({ sheet, action: withVersion(action, current.version) }) }
 }

@@ -280,7 +280,7 @@ test("keeps the focus in the field being typed in, though the delete was asked a
   await expect(weight).toBeFocused()
 })
 
-test("says who changed the measurement when the other phone saved first, and reopens the sheet with what the parent typed", async ({
+test("says who changed the measurement when the other phone saved first, keeps what the parent typed, and saves it on top when asked", async ({
   page,
 }) => {
   const { played, answer } = await playGrowth(page, STORED, { weight: "kg", length: "cm" })
@@ -292,8 +292,13 @@ test("says who changed the measurement when the other phone saved first, and reo
   const sheet = page.getByRole("dialog", { name: "Edit measurement" })
   await sheet.getByRole("textbox", { name: "Weight" }).fill("4.4")
   await sheet.getByRole("button", { name: "Save" }).click()
-  await expect(sheet.getByRole("alert")).toHaveText(`${emily.displayName} changed this measurement a moment ago.`)
+  const alert = sheet.getByRole("alert")
+  await expect(alert).toContainText(`${emily.displayName} changed this measurement a moment ago.`)
   await expect(sheet.getByRole("textbox", { name: "Weight" })).toHaveValue("4.4")
+  await answer(200, saved({ ...NEWEST, version: 3, weightG: 4400 }))
+  await alert.getByRole("button", { name: "Save mine anyway" }).click()
+  await expect(sheet).toBeHidden()
+  await expect.poll(() => played.sent.map(({ body }) => ("version" in body ? body.version : undefined))).toEqual([1, 2])
 })
 
 test("lets go of a held edit when the parent deletes the measurement instead, and deletes the newer copy on the second try", async ({
@@ -309,12 +314,12 @@ test("lets go of a held edit when the parent deletes the measurement instead, an
   const weight = sheet.getByRole("textbox", { name: "Weight" })
   await weight.fill("4.4")
   await sheet.getByRole("button", { name: "Save" }).click()
-  await expect(sheet.getByRole("alert")).toHaveText(`${emily.displayName} changed this measurement a moment ago.`)
+  await expect(sheet.getByRole("alert")).toContainText(`${emily.displayName} changed this measurement a moment ago.`)
   await expect(weight).toHaveValue("4.4")
   await sheet.getByRole("button", { name: "Delete measurement" }).click()
   await sheet.getByRole("button", { name: "Delete", exact: true }).click()
   await expect(weight).toHaveValue("4.3")
-  await expect(sheet.getByRole("alert")).toHaveText(`${emily.displayName} changed this measurement a moment ago.`)
+  await expect(sheet.getByRole("alert")).toContainText(`${emily.displayName} changed this measurement a moment ago.`)
   await answer(200, saved({ ...NEWEST, version: 3, deletedAt: NOW }), [EARLIER])
   await sheet.getByRole("button", { name: "Delete measurement" }).click()
   await sheet.getByRole("button", { name: "Delete", exact: true }).click()
@@ -365,7 +370,8 @@ test("keeps Add, with its typed weight, when the edit sent just before it finds 
   await typeAddBehindHeldEdit(page, held)
   answered.open()
   const sheet = page.getByRole("dialog")
-  await expect(sheet.getByRole("alert")).toHaveText(`${emily.displayName} deleted this measurement a moment ago.`)
+  await expect(sheet.getByRole("alert")).toContainText(`${emily.displayName} deleted this measurement a moment ago.`)
+  await expect(sheet.getByRole("alert").getByRole("button", { name: "Save mine anyway" })).toHaveCount(0)
   const card = page.getByRole("listitem", { includeHidden: true }).filter({ hasText: "Oct 6, 2026" })
   await expect(card).toHaveCount(0)
   await expect(sheet).toHaveAccessibleName("Add measurement")
