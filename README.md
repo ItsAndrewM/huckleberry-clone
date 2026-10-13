@@ -19,7 +19,7 @@ Locally, `pnpm dev` and `pnpm e2e` run the `local` environment in `apps/worker/w
 | `pnpm test` | Vitest: domain tests under two host time zones (east and west of UTC), contract tests, Workers tests in workerd, web client tests, and script tests |
 | `pnpm coverage` | Domain tests with the 100 % coverage gate on statements, branches, functions and lines |
 | `pnpm build` | Client and Worker build into `apps/web/dist` |
-| `pnpm bundle:check` | Fails if the Worker is over 400 KiB gzip (run `pnpm build` first) |
+| `pnpm bundle:check` | Fails if the Worker is over 400 KiB gzip, or the app's main script over 350 kB gzip or its CSS over 15 kB (run `pnpm build` first). It gzips the app's files with `node:zlib`, which reads about 1 % under Vite's build report |
 | `pnpm bench` | Times each read and a feed write over two years of heavy logging (12 feeds a day, each with two sides and a bottle, and 10 diapers a day) in a test household in workerd, and prints a table. CI never runs it: run it when a period read or a migration changes |
 | `pnpm e2e` | Playwright, WebKit and Chromium at iPhone size (`pnpm exec playwright install chromium webkit` once) |
 | `pnpm api:docs` | Rewrites `docs/api.json` from the API in `packages/contracts`. A test fails while it's stale |
