@@ -1,4 +1,4 @@
-import type { Diaper, Feed, Last24h, RecentEntry, Today } from "@bt/contracts"
+import type { Diaper, Feed, Last24h, RecentEntry, Sleep, Today } from "@bt/contracts"
 import { contains, type Instant, type Interval, last24hPeriod, localDateOf, totalsIn, zonedDayBounds } from "@bt/domain"
 import { calendarOf } from "./calendar.ts"
 import { liveDiapersSince } from "./diapers.ts"
@@ -7,12 +7,28 @@ import { activeFeed } from "./feeds/rules.ts"
 import { lastSleep, liveSleepsSince } from "./sleeps/reads.ts"
 import { activeSleep } from "./sleeps/rules.ts"
 
-const timeOf = (entry: RecentEntry): Instant => (entry.kind === "feed" ? entry.feed.startedAt : entry.diaper.occurredAt)
+interface Logged {
+  readonly feeds: ReadonlyArray<Feed>
+  readonly diapers: ReadonlyArray<Diaper>
+  readonly sleeps: ReadonlyArray<Sleep>
+}
 
-const recentIn = (period: Interval, feeds: ReadonlyArray<Feed>, diapers: ReadonlyArray<Diaper>): RecentEntry[] =>
+const timeOf = (entry: RecentEntry): Instant => {
+  switch (entry.kind) {
+    case "feed":
+      return entry.feed.startedAt
+    case "diaper":
+      return entry.diaper.occurredAt
+    case "sleep":
+      return entry.sleep.startedAt
+  }
+}
+
+const recentIn = (period: Interval, { feeds, diapers, sleeps }: Logged): RecentEntry[] =>
   [
     ...feeds.map((feed) => ({ kind: "feed" as const, feed })),
     ...diapers.map((diaper) => ({ kind: "diaper" as const, diaper })),
+    ...sleeps.map((sleep) => ({ kind: "sleep" as const, sleep })),
   ]
     .filter((entry) => contains(period, timeOf(entry)))
     .toSorted((a, b) => timeOf(b) - timeOf(a))
@@ -23,18 +39,20 @@ export const todayOf = (sql: SqlStorage, now: Instant): Today => {
   const day = zonedDayBounds(date, zone)
   const last24h = last24hPeriod(now)
   const from = Math.min(day.start, last24h.start)
-  const feeds = liveFeedsSince(sql, from)
-  const diapers = liveDiapersSince(sql, from)
-  const sleeps = liveSleepsSince(sql, from)
+  const logged = {
+    feeds: liveFeedsSince(sql, from),
+    diapers: liveDiapersSince(sql, from),
+    sleeps: liveSleepsSince(sql, from),
+  }
   return {
     date,
-    totals: totalsIn(day, { feeds, diapers, sleeps }, now),
+    totals: totalsIn(day, logged, now),
     activeFeed: activeFeed(sql) ?? null,
     lastFeed: lastFeed(sql),
     activeSleep: activeSleep(sql) ?? null,
     lastSleep: lastSleep(sql),
     prefill: prefillOf(sql),
-    recent: recentIn(last24h, feeds, diapers),
+    recent: recentIn(last24h, logged),
   }
 }
 

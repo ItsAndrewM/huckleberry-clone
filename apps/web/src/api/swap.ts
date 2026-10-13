@@ -1,5 +1,14 @@
 import type { DayPeriod, Diaper, Feed, FeedEdit, RecentEntry, Today } from "@bt/contracts"
-import { contains, feedTouches, type Instant, type Interval, last24hPeriod, sessionBounds, totalsIn } from "@bt/domain"
+import {
+  contains,
+  feedTouches,
+  type Instant,
+  type Interval,
+  last24hPeriod,
+  sessionBounds,
+  sleepTouches,
+  totalsIn,
+} from "@bt/domain"
 import type { Action } from "./actions.ts"
 import { type Author, pendingId } from "./pending.ts"
 import { changeOf, idOf, later, type Pending, shifted, timeOf, without, withEntry } from "./today-change.ts"
@@ -74,8 +83,16 @@ export const swappedToday = (today: Today, pending: Pending, swap: Swap, asOf: I
   }
 }
 
-const touches = (period: Interval, entry: RecentEntry, now: Instant) =>
-  entry.kind === "feed" ? feedTouches(period, entry.feed, now) : contains(period, entry.diaper.occurredAt)
+const touches = (period: Interval, entry: RecentEntry, now: Instant) => {
+  switch (entry.kind) {
+    case "feed":
+      return feedTouches(period, entry.feed, now)
+    case "diaper":
+      return contains(period, entry.diaper.occurredAt)
+    case "sleep":
+      return sleepTouches(period, entry.sleep, now)
+  }
+}
 
 const inPeriod = <R extends { readonly id: string }>(
   records: ReadonlyArray<R>,
@@ -94,16 +111,23 @@ export const swappedDay = (day: DayPeriod, now: Instant, swap: Swap): DayPeriod 
     after?.kind === "diaper" ? after.diaper : null,
     (diaper) => diaper.occurredAt,
   )
-  return { ...day, totals: totalsIn(day.bounds, { feeds, diapers, sleeps: day.sleeps }, now), feeds, diapers }
+  const sleeps = inPeriod(day.sleeps, id, after?.kind === "sleep" ? after.sleep : null, (sleep) => sleep.startedAt)
+  return { ...day, totals: totalsIn(day.bounds, { feeds, diapers, sleeps }, now), feeds, diapers, sleeps }
+}
+
+const activeCopy = (today: Today, id: string): RecentEntry | null => {
+  if (today.activeFeed?.id === id) return { kind: "feed", feed: today.activeFeed }
+  return today.activeSleep?.id === id ? { kind: "sleep", sleep: today.activeSleep } : null
 }
 
 export const todayCopy = (today: Today, id: string): RecentEntry | null =>
-  today.recent.find((entry) => idOf(entry) === id) ??
-  (today.activeFeed?.id === id ? { kind: "feed", feed: today.activeFeed } : null)
+  today.recent.find((entry) => idOf(entry) === id) ?? activeCopy(today, id)
 
 export const dayCopy = (day: DayPeriod, id: string): RecentEntry | null => {
   const feed = day.feeds.find((one) => one.id === id)
   if (feed !== undefined) return { kind: "feed", feed }
   const diaper = day.diapers.find((one) => one.id === id)
-  return diaper === undefined ? null : { kind: "diaper", diaper }
+  if (diaper !== undefined) return { kind: "diaper", diaper }
+  const sleep = day.sleeps.find((one) => one.id === id)
+  return sleep === undefined ? null : { kind: "sleep", sleep }
 }

@@ -1,9 +1,10 @@
-import type { Diaper, Feed, VolumeUnit } from "@bt/contracts"
+import type { Diaper, Feed, RecentEntry, Sleep, VolumeUnit } from "@bt/contracts"
 import { feedSummary } from "@bt/domain"
 import { clockTime } from "../../clock-time.ts"
 import type { Display } from "../today/display.ts"
 import { feedParts, feedTitle } from "../today/feed-parts.ts"
 import { formatVolume, presentParts } from "../today/format.ts"
+import { sleepParts, sleepTitle } from "../today/sleep-parts.ts"
 import type { Entry } from "./day-model.ts"
 
 const MINUTE_S = 60
@@ -47,9 +48,13 @@ const diaperChip = ({ wet, dirty }: Diaper) => {
 export const markerText = (entry: Entry, volume: VolumeUnit, now: number) =>
   entry.kind === "diaper" ? diaperChip(entry.diaper) : formatVolume(feedSummary(entry.feed, now).bottleMl, volume)
 
-export const entryName = (entry: Entry, display: Display, now: number) => {
+const sleepName = (sleep: Sleep, display: Display, now: number) =>
+  `${sleepTitle(sleep)} at ${clockTime(sleep.startedAt, display.timeZone, display.locale)}: ${sleepParts(sleep, display.timeZone, now, display.locale).join(", ")}`
+
+export const entryName = (entry: RecentEntry, display: Display, now: number) => {
   const time = (at: number) => clockTime(at, display.timeZone, display.locale)
   if (entry.kind === "diaper") return `Diaper at ${time(entry.diaper.occurredAt)}: ${diaperText(entry.diaper)}`
+  if (entry.kind === "sleep") return sleepName(entry.sleep, display, now)
   const { feed } = entry
   const details = [...progressOf(feed, "in progress"), ...feedParts(feed, display.volume, now)]
   const name = `${feedTitle(feed)} at ${time(feed.startedAt)}`

@@ -7,9 +7,10 @@ import { cachedEntry } from "../src/api/entry-cache.ts"
 import { pendIn, rollBack, settle } from "../src/api/optimistic.ts"
 import { pendingId } from "../src/api/pending.ts"
 import { type Swap, swappedDay, swappedEntry, swappedToday } from "../src/api/swap.ts"
+import { timeOf } from "../src/api/today-change.ts"
 import { meWith } from "./growth-fixtures.ts"
 import { BOTTLE, BOUNDS, dayWith, local, NOW_ON_DAY, NURSED, PEE, POO, RUNNING } from "./history-fixtures.ts"
-import { ANDREW, MINUTE, todayWith, ZONE } from "./today-fixtures.ts"
+import { ANDREW, MINUTE, sleptAt, todayWith, ZONE } from "./today-fixtures.ts"
 
 const ACTION_ID = "4b1c2a5e-8f3d-4c6b-9a7e-2d1f0e3c5b6a"
 const PENDING = { by: ANDREW, now: NOW_ON_DAY, zone: ZONE }
@@ -45,8 +46,6 @@ const countedDay = (records: Pick<DayPeriod, "feeds" | "diapers">) =>
   dayWith({ ...records, measurements: [], totals: totalsIn(BOUNDS, { ...records, sleeps: [] }, NOW_ON_DAY) })
 
 const recentOf = (entries: ReadonlyArray<RecentEntry>) => entries.toSorted((a, b) => timeOf(b) - timeOf(a))
-
-const timeOf = (entry: RecentEntry) => (entry.kind === "feed" ? entry.feed.startedAt : entry.diaper.occurredAt)
 
 const countedToday = (entries: ReadonlyArray<RecentEntry>) => {
   const feeds = entries.flatMap((entry) => (entry.kind === "feed" ? [entry.feed] : []))
@@ -281,6 +280,17 @@ describe("the copy of an entry an edit sheet opens on", () => {
     const queryClient = cachedWith([], { feeds: [], diapers: [POO] })
     expect(cachedEntry(queryClient, POO.id)).toEqual(diaper(POO))
     expect(cachedEntry(queryClient, PEE.id)).toBeNull()
+  })
+
+  it("finds a sleep: the one running on Today, or the newest copy a cached day holds", () => {
+    const running = sleptAt(local("08:48"), { endedAt: null })
+    const nap = sleptAt(local("01:10"), { endedAt: local("02:30") })
+    const queryClient = new QueryClient()
+    queryClient.setQueryData(queryKeys.me, meWith())
+    queryClient.setQueryData(queryKeys.today, todayWith({ activeSleep: running, lastSleep: running }))
+    queryClient.setQueryData(queryKeys.day("2026-10-09"), dayWith({ sleeps: [{ ...nap, version: 2 }] }))
+    expect(cachedEntry(queryClient, running.id)).toEqual({ kind: "sleep", sleep: running })
+    expect(cachedEntry(queryClient, nap.id)).toEqual({ kind: "sleep", sleep: { ...nap, version: 2 } })
   })
 
   it("puts the newest copy back in the fresh day when an edit made over a stale Today fails", async () => {

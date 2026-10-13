@@ -15,7 +15,7 @@ import {
   POO,
   RUNNING,
 } from "./history-fixtures.ts"
-import { ZONE } from "./today-fixtures.ts"
+import { sleptAt, ZONE } from "./today-fixtures.ts"
 
 describe("shortMinutes", () => {
   it("keeps a block's label short", () => {
@@ -80,6 +80,18 @@ describe("what a screen reader hears for an entry", () => {
       segments: [{ id: "zero-0", side: "left" as const, startedAt: local("01:05"), endedAt: local("01:05") }],
     }
     expect(entryName({ kind: "feed", feed: instant }, DISPLAY, NOW_ON_DAY)).toBe("Nursing at 1:05 AM")
+  })
+
+  it("names a sleep as a nap or a night, with how long she slept and when she woke, or that she's asleep now", () => {
+    const plain = (text: string) => text.replace(/\s/gu, " ")
+    const nap = sleptAt(local("01:10"), { endedAt: local("02:30") })
+    const asleep = sleptAt(local("08:48"), { kind: "night", endedAt: null })
+    expect(plain(entryName({ kind: "sleep", sleep: nap }, DISPLAY, NOW_ON_DAY))).toBe(
+      "Nap at 1:10 AM: 1 h 20 min, Woke 2:30 AM",
+    )
+    expect(plain(entryName({ kind: "sleep", sleep: asleep }, DISPLAY, NOW_ON_DAY))).toBe(
+      "Night at 8:48 AM: Asleep now, 42 min",
+    )
   })
 
   it("counts the entries gathered in one marker, from the first one's time", () => {

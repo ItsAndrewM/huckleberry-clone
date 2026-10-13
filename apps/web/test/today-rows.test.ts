@@ -4,7 +4,7 @@ import type { Display } from "../src/features/today/display.ts"
 import { feedParts, feedTitle } from "../src/features/today/feed-parts.ts"
 import { recentRows } from "../src/features/today/recent-rows.ts"
 import { totalsRows } from "../src/features/today/totals-rows.ts"
-import { ANDREW, diaperAt, EMILY, feedAt, MINUTE, NO_TOTALS, NOW, nursedFor, ZONE } from "./today-fixtures.ts"
+import { ANDREW, diaperAt, EMILY, feedAt, MINUTE, NO_TOTALS, NOW, nursedFor, sleptAt, ZONE } from "./today-fixtures.ts"
 
 const TWO_TEN = Date.UTC(2026, 9, 9, 9, 10)
 const BOTTLE = { id: "bottle", occurredAt: TWO_TEN, breastMilkMl: 40, formulaMl: 20 }
@@ -184,16 +184,43 @@ describe("recentRows", () => {
     ])
   })
 
+  it("shows a sleep at its start as a nap or a night, with how long she slept, when she woke and who logged it", () => {
+    const nap = sleptAt(TWO_TEN, { endedAt: TWO_TEN + 80 * MINUTE })
+    const rows = recentRows([{ kind: "sleep", sleep: nap }], DISPLAY, NOW)
+    const plain = (text: string) => text.replace(/\s/gu, " ")
+    expect(rows.map((row) => ({ ...row, time: plain(row.time), detail: row.detail.map(plain) }))).toEqual([
+      {
+        id: nap.id,
+        kind: "sleep",
+        at: TWO_TEN,
+        time: "2:10 AM",
+        title: "Nap",
+        detail: ["1 h 20 min", "Woke 3:30 AM"],
+        by: "Andrew",
+        saving: false,
+        opens: null,
+      },
+    ])
+  })
+
+  it("says she's asleep now while a sleep runs, counting up to now", () => {
+    const night = sleptAt(NOW - 42 * MINUTE, { kind: "night", endedAt: null })
+    const [row] = recentRows([{ kind: "sleep", sleep: night }], DISPLAY, NOW)
+    expect([row?.title, row?.detail]).toEqual(["Night", ["Asleep now", "42 min"]])
+  })
+
   it("says a feed or a diaper is saving until the household gives it an id of its own", () => {
     const rows = recentRows(
       [
         { kind: "feed", feed: feedAt(TWO_TEN, { id: pendingId("action-2") }) },
         { kind: "diaper", diaper: diaperAt(TWO_TEN, { id: pendingId("action-3") }) },
+        { kind: "sleep", sleep: sleptAt(TWO_TEN, { id: pendingId("action-4") }) },
         { kind: "diaper", diaper: diaperAt(TWO_TEN) },
+        { kind: "sleep", sleep: sleptAt(TWO_TEN) },
       ],
       DISPLAY,
       NOW,
     )
-    expect(rows.map((row) => row.saving)).toEqual([true, true, false])
+    expect(rows.map((row) => row.saving)).toEqual([true, true, true, false, false])
   })
 })
