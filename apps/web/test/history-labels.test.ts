@@ -30,7 +30,7 @@ describe("a block's label", () => {
   })
 
   it("ends with now while a side is running", () => {
-    expect(blockText(RUNNING, "ml", NOW_ON_DAY)).toBe("Nursing 20m L · now")
+    expect(blockText(RUNNING, "ml", NOW_ON_DAY)).toBe("Nursing 50m L · now")
   })
 
   it("says just Nursing · now for a side that started this moment", () => {
@@ -59,7 +59,7 @@ describe("what a screen reader hears for an entry", () => {
       "Nursing and bottle at 3:00 AM: Left 10 min, Right 10 min, 60 mL",
     )
     expect(entryName({ kind: "feed", feed: RUNNING }, DISPLAY, NOW_ON_DAY)).toBe(
-      "Nursing at 9:10 AM: in progress, Left 20 min",
+      "Nursing at 8:40 AM: in progress, Left 50 min",
     )
   })
 
@@ -69,7 +69,7 @@ describe("what a screen reader hears for an entry", () => {
       segments: [{ id: "p", side: "left" as const, startedAt: RUNNING.startedAt, endedAt: local("09:20") }],
     }
     expect(entryName({ kind: "feed", feed: paused }, DISPLAY, NOW_ON_DAY)).toBe(
-      "Nursing at 9:10 AM: paused, Left 10 min",
+      "Nursing at 8:40 AM: paused, Left 40 min",
     )
   })
 

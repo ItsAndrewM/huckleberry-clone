@@ -50,10 +50,10 @@ export const PAUSED: Feed = {
 export const BOTTLE: Feed = { ...feedAt(local("04:00")), portions: [portion("bottle-p0", "04:00", 0, 90)] }
 
 export const RUNNING: Feed = {
-  ...feedAt(local("09:10"), { createdBy: EMILY }),
+  ...feedAt(local("08:40"), { createdBy: EMILY }),
   status: "active",
   endedAt: null,
-  segments: [side("running-0", "left", "09:10", null)],
+  segments: [side("running-0", "left", "08:40", null)],
 }
 
 export const PEE = diaperAt(local("02:10"))
