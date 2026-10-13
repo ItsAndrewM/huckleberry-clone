@@ -21,6 +21,8 @@ import {
 import { diaperAt, feedAt, NO_TOTALS, ZONE } from "./today-fixtures.ts"
 
 const WEEK = "2026-W41"
+const MONDAY = "2026-10-05"
+const TUESDAY = "2026-10-06"
 const THURSDAY = "2026-10-08"
 
 const ACROSS_MIDNIGHT: Feed = {
@@ -68,8 +70,8 @@ const CONTEXT: WeekContext = {
   hidden: hiddenIn(undefined),
 }
 
-const columnOn = (date: string, context: WeekContext = CONTEXT) => {
-  const column = weekModel(weekWith(), context).find((each) => each.date === date)
+const columnOn = (date: string, context: WeekContext = CONTEXT, week: WeekPeriod = weekWith()) => {
+  const column = weekModel(week, context).find((each) => each.date === date)
   if (column === undefined) throw new Error(`No column for ${date}`)
   return column
 }
@@ -106,6 +108,23 @@ describe("weekModel", () => {
     expect(columnOn(DATE).grid.blocks[0]).toMatchObject({ top: 0, startsBefore: true })
     expect(columnOn(DATE).grid.now).toBe(57)
     expect(columnOn(THURSDAY).grid.now).toBeNull()
+  })
+
+  it("draws a nursing feed that ends as the next day begins on its own day alone", () => {
+    const week = weekWith({ feeds: [nursedAt("ends-at-midnight", local("23:45", MONDAY))] })
+    expect(columnOn(MONDAY, CONTEXT, week).grid.blocks.map(({ id }) => id)).toEqual(["ends-at-midnight"])
+    expect(columnOn(TUESDAY, CONTEXT, week).grid.blocks).toEqual([])
+    expect(columnOn(TUESDAY, CONTEXT, week).grid.clusters).toEqual([])
+  })
+
+  it("keeps a feed whose bottle lands as the next day begins as a dot at that day's top", () => {
+    const bottled: Feed = {
+      ...nursedAt("bottle-at-midnight", local("23:45", MONDAY)),
+      portions: [{ id: "bottle-at-midnight-p0", occurredAt: local("00:00", TUESDAY), breastMilkMl: 60, formulaMl: 0 }],
+    }
+    const week = weekWith({ feeds: [bottled] })
+    expect(columnOn(MONDAY, CONTEXT, week).grid.blocks.map(({ id }) => id)).toEqual([bottled.id])
+    expect(columnOn(TUESDAY, CONTEXT, week).grid.clusters).toEqual([{ top: 0, ids: [bottled.id] }])
   })
 
   it("lays the night the clocks go back on the household's clock, both 1:30 feeds on one row", () => {

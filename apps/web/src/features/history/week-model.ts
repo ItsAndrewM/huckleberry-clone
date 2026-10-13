@@ -1,6 +1,7 @@
 import type { LocalDate, Measurement, Totals, WeekPeriod } from "@bt/contracts"
 import {
   type DayGrid,
+  feedTouches,
   type GridScale,
   type Interval,
   layoutDay,
@@ -36,7 +37,8 @@ const measuredIn = (measurements: ReadonlyArray<Measurement>, { start, end }: In
 
 export const weekModel = (week: WeekPeriod, context: WeekContext): ReadonlyArray<WeekColumn> =>
   week.days.map(({ date, bounds, totals }) => {
-    const slice = shownSlice({ date, bounds, feeds: week.feeds, diapers: week.diapers }, context.hidden)
+    const feeds = week.feeds.filter((feed) => feedTouches(bounds, feed, context.now))
+    const slice = shownSlice({ date, bounds, feeds, diapers: week.diapers }, context.hidden)
     const { blocks, bottles, diapers } = piecesOf(slice)
     const day = { date, zone: context.zone, bounds, now: context.now, blocks, points: bottles }
     return {
