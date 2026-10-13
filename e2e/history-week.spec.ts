@@ -1,4 +1,4 @@
-import { expect, type Page, test } from "@playwright/test"
+import { expect, type Locator, type Page, test } from "@playwright/test"
 import { busyDay, dayHeading, emptyDay, NO_TOTALS, openHistory, playHistory } from "./played-day.ts"
 import { LAST_WEEK, playWeeks, THIS_WEEK, weekGrid, weekHeading, weekOf } from "./played-week.ts"
 
@@ -16,6 +16,12 @@ const playBusyWeek = async (page: Page) => {
     "2026-W38": weekOf("2026-W38", []),
   })
   return { played, asked, andrew }
+}
+
+const boxOf = async (locator: Locator) => {
+  const box = await locator.boundingBox()
+  if (box === null) throw new Error(`${locator} isn't on screen to measure`)
+  return box
 }
 
 test("shows the week as seven days, each one up to today opening its Day view", async ({ page }) => {
@@ -41,6 +47,12 @@ test("fits all 24 hours of the week on the screen, above the tab bar", async ({ 
   expect(await page.evaluate<number>("document.documentElement.scrollHeight - window.innerHeight")).toBeLessThanOrEqual(
     1,
   )
+  const column = await boxOf(weekGrid(page).getByRole("link").first())
+  const sixPm = await boxOf(page.getByText("6 PM", { exact: true }))
+  expect(sixPm.y + sixPm.height / 2 - column.y).toBeCloseTo(0.75 * column.height, 0)
+  const friday = await boxOf(weekGrid(page).getByRole("link", { name: /^Fri, Oct 9/u }))
+  const now = await boxOf(weekGrid(page).locator(".border-t-2"))
+  expect(now.y - friday.y).toBeCloseTo((57 / 144) * friday.height, 0)
 })
 
 test("steps back a week and comes back to this week", async ({ page }) => {
@@ -91,6 +103,21 @@ test.describe("on a narrow screen", () => {
     await scroller.evaluate((node) => node.scrollBy({ left: 200 }))
     await expect.poll(async () => (await hours.boundingBox())?.x).toBe(before?.x)
     await expect(weekGrid(page).getByRole("link", { name: /^Fri, Oct 9/u })).toBeInViewport()
+  })
+})
+
+test.describe("on a short screen", () => {
+  test.use({ viewport: { width: 393, height: 300 } })
+
+  test("keeps the hours under the switcher and the tab bar while the page scrolls", async ({ page }) => {
+    await playBusyWeek(page)
+    await openHistory(page, "?view=week")
+    await expect(weekGrid(page).getByRole("link")).toHaveCount(5)
+    await page.evaluate("window.scrollTo(0, 120)")
+    const tabs = page.getByRole("navigation", { name: "Main" })
+    await tabs.getByRole("link", { name: "Today" }).click({ trial: true, timeout: 2000 })
+    await page.evaluate("window.scrollTo(0, document.documentElement.scrollHeight)")
+    await page.getByRole("link", { name: "Previous week" }).click({ trial: true, timeout: 2000 })
   })
 })
 

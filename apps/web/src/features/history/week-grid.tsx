@@ -17,7 +17,7 @@ interface WeekGridProps {
 
 export const WeekGrid = ({ columns, display, today, hidden }: WeekGridProps) => (
   <section aria-label="The week by hour" className="flex min-h-72 flex-1 flex-col gap-2">
-    <div className="flex flex-1 overflow-x-auto overscroll-x-contain">
+    <div className="isolate flex flex-1 overflow-x-auto overscroll-x-contain">
       <WeekHours locale={display.locale} />
       <ol className="flex flex-1 gap-0.5">
         {columns.map((column) => (
