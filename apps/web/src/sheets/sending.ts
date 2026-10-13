@@ -55,6 +55,8 @@ const CLOSES_ON_SEND = new Set<Action["kind"]>([
 
 const CLOSES_ON_SAVE = new Set<Action["kind"]>(["editDiaper", "editPortion", "editFeed"])
 
+const savesAPastSleep = ({ sheet, action }: Sending) => sheet === "pastSleep" && action.kind === "editSleep"
+
 const EDIT_SHEETS = new Set<SheetKind>(["editDiaper", "editFeed", "editSleep"])
 
 export const editsARecord = (sheet: SheetKind) => EDIT_SHEETS.has(sheet)
@@ -65,4 +67,4 @@ export const closesOnSend = (sending: Sending) =>
   !isUndo(sending) && (editsARecord(sending.sheet) || CLOSES_ON_SEND.has(sending.action.kind))
 
 export const closesOnSave = (sending: Sending) =>
-  !editsARecord(sending.sheet) && CLOSES_ON_SAVE.has(sending.action.kind)
+  (!editsARecord(sending.sheet) && CLOSES_ON_SAVE.has(sending.action.kind)) || savesAPastSleep(sending)
