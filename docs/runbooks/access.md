@@ -155,7 +155,7 @@ Roll back the code before you restore the data. The order matters: a restore res
 - **Nothing to apply:** "The export already has every migration, so there was nothing to apply." exits 1. The export already lists every migration on disk, so something deployed the migration already, or you gave it the wrong file.
 - **Where it may go:** outside the checkout, like `~/baby-tracker.json` (a leading `~` is your home folder, quoted or not), or under the checkout's `exports/`. It refuses anywhere else in the checkout, where git would see the file, even by way of a symlink.
 - **From a phone:** Settings › Export shares the CSV or the JSON through the share sheet. A browser that can't share files downloads them instead.
-- **What's in them:** the JSON keeps every table as stored: every row and column, deleted rows and audit columns included, with the migrations applied. It leaves out the receipts, which expire after a day. The CSV has a row per live feed, diaper and measurement, at the household's local time.
+- **What's in them:** the JSON keeps every table as stored: every row and column, deleted rows and audit columns included, with the migrations applied. It leaves out the receipts, which expire after a day. The CSV has a row per live feed, diaper, sleep and measurement, at the household's local time.
 
 ## Caregivers
 
