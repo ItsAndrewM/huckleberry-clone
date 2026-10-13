@@ -8,7 +8,12 @@ const ORIGIN = "https://bt.example.test"
 
 describe("deletedQuery", () => {
   it("asks the household for its recently deleted entries, under the key every delete and restore names", async () => {
-    const deleted = { feeds: [], diapers: [diaperAt(NOW, { version: 2, deletedAt: NOW })], measurements: [] }
+    const deleted = {
+      feeds: [],
+      diapers: [diaperAt(NOW, { version: 2, deletedAt: NOW })],
+      sleeps: [],
+      measurements: [],
+    }
     const asked: string[] = []
     const api = connectApi({
       baseUrl: ORIGIN,

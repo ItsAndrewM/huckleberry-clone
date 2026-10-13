@@ -1,6 +1,14 @@
 import { Exit, Schema } from "effect"
 import { describe, expect, it } from "vitest"
-import { Deleted, DeletedGroup, type Diaper, type Feed, type Measurement, RECENTLY_DELETED_DAYS } from "../src/index.ts"
+import {
+  Deleted,
+  DeletedGroup,
+  type Diaper,
+  type Feed,
+  type Measurement,
+  RECENTLY_DELETED_DAYS,
+  type Sleep,
+} from "../src/index.ts"
 
 const MINUTE_MS = 60_000
 const AT = Date.UTC(2026, 9, 12, 14, 30)
@@ -48,22 +56,36 @@ const MEASUREMENT: Measurement = {
   deletedAt: DELETED_AT,
 }
 
-const DELETED = { feeds: [FEED], diapers: [DIAPER], measurements: [MEASUREMENT] }
+const SLEEP: Sleep = {
+  id: "sleep-1",
+  kind: "night",
+  startedAt: AT - 300 * MINUTE_MS,
+  endedAt: AT - 180 * MINUTE_MS,
+  version: 2,
+  createdBy: "caregiver-2",
+  createdAt: AT,
+  updatedBy: "caregiver-1",
+  updatedAt: DELETED_AT,
+  deletedAt: DELETED_AT,
+}
+
+const DELETED = { feeds: [FEED], diapers: [DIAPER], sleeps: [SLEEP], measurements: [MEASUREMENT] }
 
 const decodes = (input: Schema.Json) => Exit.isSuccess(Schema.decodeUnknownExit(Schema.toCodecJson(Deleted))(input))
 
 describe("the household's recently deleted entries", () => {
-  it("hold every deleted feed, diaper and measurement, each as it was when deleted", () => {
+  it("hold every deleted feed, diaper, sleep and measurement, each as it was when deleted", () => {
     expect(decodes(DELETED)).toBe(true)
   })
 
-  it("still read when a later version adds a kind, as M3.1's sleeps will", () => {
-    expect(decodes({ ...DELETED, sleeps: [] })).toBe(true)
+  it("still read when a later version adds a kind, as M3.3's doses will", () => {
+    expect(decodes({ ...DELETED, doses: [] })).toBe(true)
   })
 
   it.each([
     ["feeds that are null", { feeds: null }],
     ["diapers that are null", { diapers: null }],
+    ["sleeps that are null", { sleeps: null }],
     ["measurements that are null", { measurements: null }],
   ])("refuse %s", (_label, change) => {
     expect(decodes({ ...DELETED, ...change })).toBe(false)

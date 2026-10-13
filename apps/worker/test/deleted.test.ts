@@ -30,7 +30,7 @@ afterEach(() => {
 
 describe("GET /api/deleted", () => {
   it("answers 200, no-store, with nothing deleted yet", async () => {
-    expect(await okDeleted(await seededHousehold())).toEqual({ feeds: [], diapers: [], measurements: [] })
+    expect(await okDeleted(await seededHousehold())).toEqual({ feeds: [], diapers: [], sleeps: [], measurements: [] })
   })
 
   it("lists a diaper the other parent deleted, as the delete answered it", async () => {

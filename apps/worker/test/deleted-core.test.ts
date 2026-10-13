@@ -5,6 +5,8 @@ import { deletePortion } from "../src/core/feeds/components.ts"
 import { deleteFeed } from "../src/core/feeds/feed-edits.ts"
 import { logFeed } from "../src/core/feeds/log.ts"
 import { deleteMeasurement, logMeasurement } from "../src/core/growth.ts"
+import { deleteSleep } from "../src/core/sleeps/edits.ts"
+import { logSleep } from "../src/core/sleeps/log.ts"
 import { bottle, newFeed, segment } from "./feed-fixtures.ts"
 import {
   ACTION_ID,
@@ -47,7 +49,22 @@ describe("the household's recently deleted entries", () => {
         deleted: deletedOf(sql, NOW + 5),
       }
     })
-    expect(deleted).toEqual({ feeds: [feed], diapers: [second, first], measurements: [measurement] })
+    expect(deleted).toEqual({ feeds: [feed], diapers: [second, first], sleeps: [], measurements: [measurement] })
+  })
+
+  it("list each deleted sleep as it was deleted, the newest deletion first, a running one with no end", async () => {
+    const { nap, night, deleted } = await inHousehold((sql) => {
+      const logged = (startedAt: number, endedAt: number) =>
+        saved(logSleep(stampOf(sql), { actionId: crypto.randomUUID(), kind: "nap", startedAt, endedAt })(sql))
+      const first = logged(minutesAgo(300), minutesAgo(240))
+      const second = logged(minutesAgo(200), minutesAgo(150))
+      return {
+        night: saved(deleteSleep(stampOf(sql, ANDREW.email, NOW + 1), first.id, VERSION_1)(sql)),
+        nap: saved(deleteSleep(stampOf(sql, ANDREW.email, NOW + 2), second.id, VERSION_1)(sql)),
+        deleted: deletedOf(sql, NOW + 3),
+      }
+    })
+    expect(deleted.sleeps).toEqual([nap, night])
   })
 
   it("name who deleted each entry in its updatedBy, beside who logged it", async () => {
@@ -71,7 +88,7 @@ describe("the household's recently deleted entries", () => {
       saved(restoreDiaper(stampOf(sql), restored.id, { actionId: ACTION_ID, version: 2 })(sql))
       return deletedOf(sql, NOW)
     })
-    expect(deleted).toEqual({ feeds: [], diapers: [], measurements: [] })
+    expect(deleted).toEqual({ feeds: [], diapers: [], sleeps: [], measurements: [] })
   })
 
   it("reach back exactly 30 days from the household's clock", async () => {

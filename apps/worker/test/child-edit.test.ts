@@ -1,4 +1,4 @@
-import { SavedChild, SavedDiaper } from "@bt/contracts"
+import { SavedChild, SavedDiaper, SavedSleep } from "@bt/contracts"
 import { Schema } from "effect"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { bottle, newFeed } from "./feed-fixtures.ts"
@@ -7,6 +7,7 @@ import { get, type Household, inStorage, send, sendJson, sha256 } from "./reques
 
 const decodeSaved = Schema.decodeUnknownSync(Schema.toCodecJson(SavedChild))
 const decodeSavedDiaper = Schema.decodeUnknownSync(Schema.toCodecJson(SavedDiaper))
+const decodeSavedSleep = Schema.decodeUnknownSync(Schema.toCodecJson(SavedSleep))
 
 const PROFILE_CHANGED = [["me"], ["today"], ["last24h"]]
 const SEP_1_AT_02_30 = Date.UTC(2026, 8, 1, 9, 30)
@@ -110,6 +111,23 @@ describe("PATCH /api/child", () => {
     expect(await sendJson(household, "PATCH", "/api/child", editOf(1, "2026-09-04"))).toEqual(
       refusedBirthDate("before_birth"),
     )
+  })
+
+  it("refuses a birth date after the day of a sleep's start, but not after a deleted sleep's", async () => {
+    const household = await seededHousehold()
+    const nap = {
+      actionId: crypto.randomUUID(),
+      kind: "nap",
+      startedAt: SEP_3_BEGINS,
+      endedAt: SEP_3_BEGINS + 3_600_000,
+    }
+    const { body } = await sendJson(household, "POST", "/api/sleeps", nap)
+    expect(await sendJson(household, "PATCH", "/api/child", editOf(1, "2026-09-04"))).toEqual(
+      refusedBirthDate("before_birth"),
+    )
+    const sleep = decodeSavedSleep(body).sleep
+    await sendJson(household, "DELETE", `/api/sleeps/${sleep.id}`, { actionId: crypto.randomUUID(), version: 1 })
+    expect(await sendJson(household, "PATCH", "/api/child", editOf(1, "2026-09-04"))).toMatchObject({ status: 200 })
   })
 
   it("takes a name-only edit when a move west has put an early entry before the unchanged birth date", async () => {
