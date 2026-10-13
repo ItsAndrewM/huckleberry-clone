@@ -1,5 +1,5 @@
 import type { VolumeUnit } from "@bt/contracts"
-import type { DayAverage, Interval, RunningPoint, RunningTotals } from "@bt/domain"
+import type { DayAverage, DayStatus, Interval, RunningPoint, RunningTotals } from "@bt/domain"
 import { defineChart, lineY, ruleY } from "@tanstack/charts"
 import { decorative } from "@tanstack/charts/mark/decorative"
 import { scaleLinear } from "@tanstack/charts/scales/linear"
@@ -22,6 +22,7 @@ const axisNumber = new Intl.NumberFormat(undefined, { maximumFractionDigits: 1 }
 
 export interface RunningInput {
   readonly running: RunningTotals
+  readonly status: DayStatus
   readonly usual: DayAverage | null | undefined
   readonly bounds: Interval
   readonly ticks: ReadonlyArray<number>
@@ -29,7 +30,8 @@ export interface RunningInput {
 }
 
 export const runningChartModel = (metric: TrendsMetric, volume: VolumeUnit, input: RunningInput): RunningChartModel => {
-  const points = metric.running(input.running).map(({ at, value }) => ({ at, value: metric.plotted(value, volume) }))
+  const climbed = input.status === "no-entries" ? [] : metric.running(input.running)
+  const points = climbed.map(({ at, value }) => ({ at, value: metric.plotted(value, volume) }))
   const average = input.usual ?? null
   const usual = average === null ? null : metric.plotted(metric.total(average.totals), volume)
   return {
@@ -40,6 +42,17 @@ export const runningChartModel = (metric: TrendsMetric, volume: VolumeUnit, inpu
     tickLabel: input.tickLabel,
     top: Math.max(points.at(-1)?.value ?? 0, usual ?? 0, metric.axisFloor(volume)),
   }
+}
+
+export const runningChartDescription = ({ points, usual }: RunningChartModel) => {
+  if (points.length === 0) {
+    return usual === null
+      ? "No line, as nothing was logged."
+      : "Only a dashed line at her usual day, as nothing was logged."
+  }
+  return usual === null
+    ? "A line that climbs through the day."
+    : "A line that climbs through the day, and a dashed line at her usual day."
 }
 
 export const runningChartDefinition = ({ bounds, points, usual, ticks, tickLabel, top }: RunningChartModel) =>

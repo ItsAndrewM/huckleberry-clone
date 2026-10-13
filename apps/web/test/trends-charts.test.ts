@@ -1,11 +1,15 @@
-import { datesBetween, runningTotals, zonedDayBounds } from "@bt/domain"
+import { datesBetween, type DayStatus, runningTotals, zonedDayBounds } from "@bt/domain"
 import { type ChartScene, createChartScene, renderChartSvg } from "@tanstack/charts"
 import { describe, expect, it, vi } from "vitest"
 import { barChartDefinition, barChartModel } from "../src/features/trends/bar-chart-definition.ts"
 import { dayTicks, hourLabel } from "../src/features/trends/day-ticks.ts"
 import { TRENDS_METRICS } from "../src/features/trends/metrics.ts"
 import { PLOT_LEFT_MARGIN } from "../src/features/trends/plot-margin.ts"
-import { runningChartDefinition, runningChartModel } from "../src/features/trends/running-chart-definition.ts"
+import {
+  runningChartDefinition,
+  runningChartDescription,
+  runningChartModel,
+} from "../src/features/trends/running-chart-definition.ts"
 import { trendDays } from "../src/features/trends/trends-numbers.ts"
 import { diaperAt, feedAt, nursedFor, ZONE } from "./today-fixtures.ts"
 import { BIRTH, dated, LOCALE, MONDAY, TODAY, WEEK } from "./trends-fixtures.ts"
@@ -93,8 +97,13 @@ const at = (time: string) => Date.parse(`2026-10-09T${time}:00-07:00`)
 const FED = [nursedFor(feedAt(at("01:05")), "left", 14), nursedFor(feedAt(at("05:00")), "right", 20)]
 const RUNNING = runningTotals(DAY, FED, [diaperAt(at("02:10"))], at("09:30"))
 
-const runningInput = (usual: Parameters<typeof runningChartModel>[2]["usual"]) => ({
-  running: RUNNING,
+const runningInput = (
+  usual: Parameters<typeof runningChartModel>[2]["usual"],
+  status: DayStatus = "today",
+  running = RUNNING,
+) => ({
+  running,
+  status,
   usual,
   bounds: DAY,
   ticks: dayTicks("2026-10-09", DAY, ZONE),
@@ -102,6 +111,7 @@ const runningInput = (usual: Parameters<typeof runningChartModel>[2]["usual"]) =
 })
 
 const USUAL = { days: 6, totals: { ...MONDAY, nursingSeconds: 5940 } }
+const NOTHING_LOGGED = runningTotals(DAY, [], [], DAY.end)
 
 describe("runningChartDefinition", () => {
   it("climbs in minutes for nursing, up to now", () => {
@@ -117,6 +127,40 @@ describe("runningChartDefinition", () => {
     expect(model.usual).toBe(99)
     expect(scene.points).toEqual([])
     expect(captured(svg, /data-ts-key="(usual)[^"]*"[^>]*stroke-dasharray="([^"]+)"/gu)).toEqual(["usual:4 4"])
+  })
+
+  it("draws no line through a finished day with nothing logged, but keeps her usual day", () => {
+    const model = runningChartModel(BOTTLES, "ml", runningInput(USUAL, "no-entries", NOTHING_LOGGED))
+    const svg = renderChartSvg(createChartScene(runningChartDefinition(model), SIZE), { ariaLabel: "Bottles" })
+    expect(model.points).toEqual([])
+    expect(svg).not.toContain('data-ts-key="so-far')
+    expect(captured(svg, /data-ts-key="(usual)[^"]*"[^>]*stroke-dasharray="([^"]+)"/gu)).toEqual(["usual:4 4"])
+  })
+
+  it("still draws today's line along zero up to now before anything is logged", () => {
+    const sinceMidnight = runningTotals(DAY, [], [], at("09:30"))
+    const model = runningChartModel(BOTTLES, "ml", runningInput(null, "today", sinceMidnight))
+    expect(model.points).toEqual([
+      { at: DAY.start, value: 0 },
+      { at: at("09:30"), value: 0 },
+    ])
+    const svg = renderChartSvg(createChartScene(runningChartDefinition(model), SIZE), { ariaLabel: "Bottles" })
+    expect(svg).toContain('data-ts-key="so-far')
+  })
+
+  it("describes only the lines it draws", () => {
+    const described = [
+      runningInput(USUAL),
+      runningInput(null),
+      runningInput(USUAL, "no-entries", NOTHING_LOGGED),
+      runningInput(null, "no-entries", NOTHING_LOGGED),
+    ].map((input) => runningChartDescription(runningChartModel(BOTTLES, "ml", input)))
+    expect(described).toEqual([
+      "A line that climbs through the day, and a dashed line at her usual day.",
+      "A line that climbs through the day.",
+      "Only a dashed line at her usual day, as nothing was logged.",
+      "No line, as nothing was logged.",
+    ])
   })
 
   it("leaves the dashed line out while she has no usual day", () => {

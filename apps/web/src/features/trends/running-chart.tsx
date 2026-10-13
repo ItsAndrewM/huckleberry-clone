@@ -1,6 +1,6 @@
 import { Chart } from "@tanstack/charts/react"
 import { useMemo } from "react"
-import { type RunningChartModel, runningChartDefinition } from "./running-chart-definition.ts"
+import { type RunningChartModel, runningChartDefinition, runningChartDescription } from "./running-chart-definition.ts"
 
 const CHART_HEIGHT = 150
 
@@ -16,11 +16,7 @@ export const RunningChart = ({ model, label }: RunningChartProps) => {
       definition={definition}
       height={CHART_HEIGHT}
       ariaLabel={label}
-      ariaDescription={
-        model.usual === null
-          ? "A line that climbs through the day."
-          : "A line that climbs through the day, and a dashed line at her usual day."
-      }
+      ariaDescription={runningChartDescription(model)}
     />
   )
 }
