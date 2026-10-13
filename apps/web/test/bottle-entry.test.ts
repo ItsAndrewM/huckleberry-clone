@@ -154,6 +154,7 @@ describe("canSaveBottle", () => {
 
 describe("a held bottle", () => {
   const running = feedAt(NOW - 20 * MINUTE, { id: "feed-9", status: "active", endedAt: null, version: 4 })
+  const newer = { ...running, id: "feed-1", version: 5 }
   const loggedAlone = { kind: "logFeed" } as const
   const toppedUp = { kind: "addBottle", id: "feed-1", version: 2 } as const
 
@@ -162,15 +163,31 @@ describe("a held bottle", () => {
     expect(toppedUpFor(running, NOW, loggedAlone)).toBeNull()
   })
 
-  it("stays a top-up of its own feed, at that feed's version, even once another feed runs", () => {
+  it("stays a top-up of its own feed, at the version it first went at, even once another feed runs", () => {
     expect(bottleAction(ACTION_ID, AMOUNTS, NOW, running, toppedUp)).toMatchObject({
       kind: "addBottle",
       id: "feed-1",
       payload: { actionId: ACTION_ID, version: 2 },
     })
     expect(toppedUpFor(running, NOW, toppedUp)).toBeNull()
-    const same = { ...running, id: "feed-1", version: 5 }
-    expect(bottleAction(ACTION_ID, AMOUNTS, NOW, same, toppedUp)).toMatchObject({ payload: { version: 5 } })
+  })
+
+  it("resends a top-up at the version it first went at while its feed is active at a newer one, so a send that landed replays", () => {
+    expect(toppedUpFor(newer, NOW, toppedUp)).toBe(newer)
+    expect(bottleAction(ACTION_ID, AMOUNTS, NOW, newer, toppedUp)).toEqual({
+      kind: "addBottle",
+      id: "feed-1",
+      payload: { actionId: ACTION_ID, version: 2, occurredAt: NOW, ...AMOUNTS },
+    })
+  })
+
+  it("keeps a still-active feed's start for the start-minute clamp, at the version it first went at", () => {
+    const startedAt = newer.startedAt + 27_000
+    expect(bottleAction(ACTION_ID, AMOUNTS, newer.startedAt, { ...newer, startedAt }, toppedUp)).toEqual({
+      kind: "addBottle",
+      id: "feed-1",
+      payload: { actionId: ACTION_ID, version: 2, occurredAt: startedAt, ...AMOUNTS },
+    })
   })
 })
 
@@ -202,6 +219,17 @@ describe("a bottle's held route after the household answers", () => {
       kind: "addBottle",
       id: "feed-9",
       payload: { actionId: ACTION_ID, version: 4 },
+    })
+  })
+
+  it("sends a top-up at its feed's live version once the household refuses the first, since nothing was saved", () => {
+    const live = feedAt(NOW - 40 * MINUTE, { id: "feed-1", status: "active", endedAt: null, version: 5 })
+    const { actionId, held } = reopenedAfter(new FeedConflict({ code: "STALE_VERSION", current: live }))
+    expect(held).toBeNull()
+    expect(bottleAction(actionId, AMOUNTS, NOW, live, held)).toEqual({
+      kind: "addBottle",
+      id: "feed-1",
+      payload: { actionId: ACTION_ID, version: 5, occurredAt: NOW, ...AMOUNTS },
     })
   })
 

@@ -72,8 +72,9 @@ export const canSaveBottle = (amounts: Amounts, toppedUp: Feed | null) =>
   hasMilk(amounts) && (toppedUp === null || !isSaving(toppedUp))
 
 const targetOf = (toppedUp: Feed | null, held: HeldRoute) => {
-  if (toppedUp !== null) return { id: toppedUp.id, version: toppedUp.version, startedAt: toppedUp.startedAt }
-  return held?.kind === "addBottle" ? { id: held.id, version: held.version, startedAt: null } : null
+  if (held?.kind === "addBottle") return { id: held.id, version: held.version, startedAt: toppedUp?.startedAt ?? null }
+  if (toppedUp === null) return null
+  return { id: toppedUp.id, version: toppedUp.version, startedAt: toppedUp.startedAt }
 }
 
 export const bottleAction = (
