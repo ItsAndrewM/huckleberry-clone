@@ -17,9 +17,9 @@ const ACTION_ID = expect.stringMatching(/^[0-9a-f-]{36}$/u)
 const recent = (page: Page) => page.getByRole("list", { name: "Last 24 hours" })
 const editSheet = (page: Page) => page.getByRole("dialog", { name: "Edit diaper" })
 
-const playDiaper = async (page: Page) => {
+const playDiaper = async (page: Page, occurredAt = NOW - 30 * MINUTE) => {
   const { andrew, emily } = await caregiversOf(page)
-  const diaper = { id: "diaper-1", occurredAt: NOW - 30 * MINUTE, wet: true, dirty: false, ...savedBy(andrew.id) }
+  const diaper = { id: "diaper-1", occurredAt, wet: true, dirty: false, ...savedBy(andrew.id) }
   const household = await playHousehold(page, { ...todayWith(), recent: [{ kind: "diaper", diaper }] })
   const showing = (shown: typeof diaper | null) => {
     household.played.today = { ...todayWith(), recent: shown === null ? [] : [{ kind: "diaper", diaper: shown }] }
@@ -72,6 +72,30 @@ test("edits a diaper from Today, showing the change before the household answers
       },
     ])
   await expect(recent(page)).toContainText("Pee and poo")
+})
+
+test("keeps a diaper's time to the second when only its kind changes", async ({ page }) => {
+  const occurredAt = NOW - 30 * MINUTE + 37_412
+  const { answer, played, diaper, showing } = await playDiaper(page, occurredAt)
+  await answer("**/api/diapers/diaper-1", ({ body }) => {
+    const edited = { ...diaper, wet: body.wet ?? true, dirty: body.dirty ?? false, version: 2 }
+    showing(edited)
+    return { status: 200, json: { diaper: edited, changed: [["today"]] } }
+  })
+  const sheet = await openTheDiaper(page)
+  await expect(sheet.getByLabel("When")).toHaveValue("2026-10-09T09:00")
+  await sheet.getByRole("button", { name: "Poo" }).click()
+  await sheet.getByRole("button", { name: "Save" }).click()
+  await expect(sheet).toBeHidden()
+  await expect
+    .poll(() => played.sent)
+    .toEqual([
+      {
+        method: "PATCH",
+        path: "/api/diapers/diaper-1",
+        body: { actionId: ACTION_ID, version: 1, occurredAt, wet: false, dirty: true },
+      },
+    ])
 })
 
 test("deletes a diaper after asking, takes it off Today at once, and Undo restores it", async ({ page }) => {

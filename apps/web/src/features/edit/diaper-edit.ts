@@ -1,7 +1,7 @@
 import type { Diaper } from "@bt/contracts"
 import type { DiaperAction } from "../../api/actions.ts"
 import type { Failed } from "../../sheets/sending.ts"
-import { type When, whenAt } from "../../sheets/when.ts"
+import { type Resolved, resolveWhen, sameWhen, type When, whenAt } from "../../sheets/when.ts"
 
 export interface DiaperKind {
   readonly wet: boolean
@@ -16,6 +16,7 @@ export interface Target {
 export interface DiaperEditSession {
   readonly actionId: string
   readonly target: Target
+  readonly occurredAt: number
   readonly when: When
   readonly kind: DiaperKind
 }
@@ -24,16 +25,26 @@ export const diaperEditSession = (failed: Failed | null, diaper: Diaper, zone: s
   const action = failed?.sending.action
   if (action?.kind === "editDiaper") {
     const { actionId, version, occurredAt, wet, dirty } = action.payload
-    return { actionId, target: { id: action.id, version }, when: whenAt(occurredAt, zone), kind: { wet, dirty } }
+    return {
+      actionId,
+      target: { id: action.id, version },
+      occurredAt,
+      when: whenAt(occurredAt, zone),
+      kind: { wet, dirty },
+    }
   }
   const { id, version, occurredAt, wet, dirty } = diaper
   return {
     actionId: crypto.randomUUID(),
     target: { id, version },
+    occurredAt,
     when: whenAt(occurredAt, zone),
     kind: { wet, dirty },
   }
 }
+
+export const occurredAtOf = (session: DiaperEditSession, when: When, zone: string, now: number): Resolved =>
+  sameWhen(when, session.when) ? { ok: true, instant: session.occurredAt } : resolveWhen(when, zone, now)
 
 export const diaperEdit = (session: DiaperEditSession, kind: DiaperKind, occurredAt: number): DiaperAction => ({
   kind: "editDiaper",

@@ -1,17 +1,20 @@
 import { DiaperConflict, FeedConflict, NotFound } from "@bt/contracts"
 import { describe, expect, it } from "vitest"
 import { Offline } from "../src/api/errors.ts"
-import { diaperDelete, diaperEdit, diaperEditSession } from "../src/features/edit/diaper-edit.ts"
+import { diaperDelete, diaperEdit, diaperEditSession, occurredAtOf } from "../src/features/edit/diaper-edit.ts"
 import { sentAnyway, staleMessage, staleOf } from "../src/features/edit/stale.ts"
 import type { Display } from "../src/features/today/display.ts"
 import { failureNote, type Household } from "../src/sheets/failure.ts"
 import type { Failed, Sending } from "../src/sheets/sending.ts"
-import { whenAt } from "../src/sheets/when.ts"
+import { NOW as NOW_WHEN, whenAt } from "../src/sheets/when.ts"
 import { ANDREW, diaperAt, EMILY, feedAt, NOW, ZONE } from "./today-fixtures.ts"
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
 const TWO_TEN = Date.UTC(2026, 9, 9, 9, 10)
+const TWO_ELEVEN = Date.UTC(2026, 9, 9, 9, 11)
+const TWO_TEN_AND_A_BIT = TWO_TEN + 37_412
 const PEE = diaperAt(TWO_TEN, { id: "diaper-1", version: 2 })
+const PEE_TO_THE_SECOND = diaperAt(TWO_TEN_AND_A_BIT, { id: "diaper-1", version: 2 })
 const CAREGIVERS = [
   { id: ANDREW, displayName: "Andrew" },
   { id: EMILY, displayName: "Emily" },
@@ -28,6 +31,15 @@ const EDITED: Sending = {
   },
 }
 
+const EDITED_TO_THE_SECOND: Sending = {
+  sheet: "editDiaper",
+  action: {
+    kind: "editDiaper",
+    id: "diaper-1",
+    payload: { actionId: "action-edit", version: 2, occurredAt: TWO_TEN_AND_A_BIT, wet: true, dirty: true },
+  },
+}
+
 const spaced = (text: string) => text.replace(/\s/gu, " ")
 
 describe("editing a diaper", () => {
@@ -36,6 +48,7 @@ describe("editing a diaper", () => {
     expect(session).toEqual({
       actionId: expect.stringMatching(UUID),
       target: { id: "diaper-1", version: 2 },
+      occurredAt: TWO_TEN,
       when: whenAt(TWO_TEN, ZONE),
       kind: { wet: true, dirty: false },
     })
@@ -51,6 +64,7 @@ describe("editing a diaper", () => {
     expect(diaperEditSession(failed, PEE, ZONE)).toEqual({
       actionId: "action-edit",
       target: { id: "diaper-1", version: 2 },
+      occurredAt: TWO_TEN - 60_000,
       when: whenAt(TWO_TEN - 60_000, ZONE),
       kind: { wet: true, dirty: true },
     })
@@ -68,6 +82,29 @@ describe("editing a diaper", () => {
     expect(failureNote(new NotFound(), HOUSEHOLD, { keptOn: null, sheet: "editDiaper" }).message).toBe(
       "This was deleted since it opened.",
     )
+  })
+})
+
+describe("a diaper's time", () => {
+  const session = diaperEditSession(null, PEE_TO_THE_SECOND, ZONE)
+
+  it("keeps the exact time, seconds included, while its When is left alone", () => {
+    expect(occurredAtOf(session, session.when, ZONE, NOW)).toEqual({ ok: true, instant: TWO_TEN_AND_A_BIT })
+  })
+
+  it("reads a changed When as the minute picked, on the household's clock", () => {
+    const picked = { kind: "at", local: "2026-10-09T02:11", pick: null } as const
+    expect(occurredAtOf(session, picked, ZONE, NOW)).toEqual({ ok: true, instant: TWO_ELEVEN })
+  })
+
+  it("takes the moment tapped once the When is set back to Now", () => {
+    expect(occurredAtOf(session, NOW_WHEN, ZONE, NOW)).toEqual({ ok: true, instant: NOW })
+  })
+
+  it("keeps the exact time a failed edit sent, so its retry sends the same time again", () => {
+    const failed: Failed = { sending: EDITED_TO_THE_SECOND, error: new Offline() }
+    const resumed = diaperEditSession(failed, PEE, ZONE)
+    expect(occurredAtOf(resumed, resumed.when, ZONE, NOW)).toEqual({ ok: true, instant: TWO_TEN_AND_A_BIT })
   })
 })
 
