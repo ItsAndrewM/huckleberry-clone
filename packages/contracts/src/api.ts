@@ -10,7 +10,7 @@ import { ChildGroup, HouseholdGroup } from "./household.ts"
 import { type Caregiver, MeGroup } from "./me.ts"
 import { PeriodsGroup } from "./periods.ts"
 import { SleepsGroup } from "./sleeps.ts"
-import { SupplementsGroup } from "./supplements.ts"
+import { DosesGroup, SupplementsGroup } from "./supplements.ts"
 import { TodayGroup } from "./today.ts"
 
 export class CurrentCaregiver extends Context.Service<CurrentCaregiver, Caregiver>()("bt/CurrentCaregiver") {}
@@ -35,6 +35,7 @@ export class Api extends HttpApi.make("baby-tracker")
   .add(PortionsGroup)
   .add(SleepsGroup)
   .add(SupplementsGroup)
+  .add(DosesGroup)
   .add(GrowthGroup)
   .add(ExportGroup)
   .add(PeriodsGroup)
