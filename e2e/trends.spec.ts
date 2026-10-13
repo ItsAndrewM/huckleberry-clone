@@ -140,6 +140,17 @@ test("picks today, and a finished day with nothing logged, each with its own num
   await expect(chart(page, "Feeds started")).toContainText("3 so far")
 })
 
+test("does nothing when a day still to come is tapped", async ({ page }) => {
+  await playWeeks(page)
+  await openTrends(page)
+  await tapColumn(page, "Bottles", "Sat")
+  await expect(pickedDay(page)).toHaveText(HINT)
+  await expect(clearPick(page)).toHaveCount(0)
+  await expect(chart(page, "Bottles")).toContainText("543 mL a day, over 4 days")
+  await tapColumn(page, "Bottles", "Fri")
+  await expect(pickedDay(page)).toHaveText("Fri, Oct 9")
+})
+
 test("picks a day from the keyboard, and keeps focus on the picked line when × lets it go", async ({ page }) => {
   await playWeeks(page)
   await openTrends(page)
