@@ -25,7 +25,7 @@ export const PeriodView = ({ days, me, today, picked, onPick }: PeriodViewProps)
   const pickedDay = trend.find(({ date }) => date === picked)
   return (
     <>
-      <PickedDay date={pickedDay?.date ?? null} onClear={() => onPick(null)} />
+      <PickedDay date={pickedDay?.date ?? null} today={today} onClear={() => onPick(null)} />
       {TRENDS_METRICS.map((metric) => (
         <MetricSection
           key={metric.id}
@@ -45,7 +45,7 @@ export const PeriodView = ({ days, me, today, picked, onPick }: PeriodViewProps)
           />
         </MetricSection>
       ))}
-      <TrendsTable days={trend} volume={volume} />
+      <TrendsTable days={trend} volume={volume} today={today} />
     </>
   )
 }

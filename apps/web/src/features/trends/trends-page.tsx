@@ -7,6 +7,7 @@ import { retryOf } from "../../api/retry.ts"
 import { NotLoaded } from "../../shell/not-loaded.tsx"
 import { Page } from "../../shell/page.tsx"
 import { useMinute } from "../../timer/use-now.ts"
+import { DayTrends } from "./day-trends.tsx"
 import { PeriodSwitcher } from "./period-switcher.tsx"
 import { PeriodTrends } from "./period-trends.tsx"
 import { periodId } from "./trends-period.ts"
@@ -32,14 +33,18 @@ const TrendsBody = ({ me, now }: { readonly me: Me; readonly now: number }) => {
     <>
       <ViewSwitch period={period} today={today} birthDate={me.child.birthDate} picked={picked} />
       <PeriodSwitcher navigation={navigationOf(period, today, me.child.birthDate)} />
-      <PeriodTrends
-        key={id}
-        period={period}
-        me={me}
-        today={today}
-        picked={picked}
-        onPick={(date) => setPick(date === null ? null : { period: id, date })}
-      />
+      {period.view === "day" ? (
+        <DayTrends key={id} date={period.date} me={me} now={now} today={today} />
+      ) : (
+        <PeriodTrends
+          key={id}
+          period={period}
+          me={me}
+          today={today}
+          picked={picked}
+          onPick={(date) => setPick(date === null ? null : { period: id, date })}
+        />
+      )}
     </>
   )
 }

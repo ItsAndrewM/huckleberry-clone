@@ -5,6 +5,7 @@ import type { TrendsPeriod, TrendsView } from "./trends-period.ts"
 import { viewSearch } from "./trends-search.ts"
 
 const VIEWS = [
+  { value: "day", label: "Day" },
   { value: "week", label: "Week" },
   { value: "month", label: "Month" },
 ] as const satisfies ReadonlyArray<{ value: TrendsView; label: string }>

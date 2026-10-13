@@ -1,4 +1,6 @@
-import type { VolumeUnit } from "@bt/contracts"
+import type { LocalDate, VolumeUnit } from "@bt/contracts"
+import { Link } from "@tanstack/react-router"
+import { historySearchOf } from "./history-link.ts"
 import { TRENDS_METRICS } from "./metrics.ts"
 import { tableRows } from "./table-rows.ts"
 import type { TrendDay } from "./trends-numbers.ts"
@@ -6,9 +8,10 @@ import type { TrendDay } from "./trends-numbers.ts"
 interface TrendsTableProps {
   readonly days: ReadonlyArray<TrendDay>
   readonly volume: VolumeUnit
+  readonly today: LocalDate
 }
 
-export const TrendsTable = ({ days, volume }: TrendsTableProps) => (
+export const TrendsTable = ({ days, volume, today }: TrendsTableProps) => (
   <details>
     <summary className="flex min-h-11 cursor-pointer items-center text-sm font-medium text-primary">
       Show as a table
@@ -31,7 +34,9 @@ export const TrendsTable = ({ days, volume }: TrendsTableProps) => (
         {tableRows(days, volume).map(({ date, name, cells }) => (
           <tr key={date} className="border-t">
             <th scope="row" className="py-2 pr-2 font-normal">
-              {name}
+              <Link to="/history" search={historySearchOf(date, today)} className="text-primary underline-offset-4">
+                {name}
+              </Link>
             </th>
             {cells.length === 1 ? (
               <td colSpan={TRENDS_METRICS.length} className="py-2 whitespace-nowrap text-muted-foreground">
