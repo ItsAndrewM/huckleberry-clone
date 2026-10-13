@@ -1,18 +1,8 @@
 import type { DayPeriod, Diaper, Feed, FeedEdit, RecentEntry, Today } from "@bt/contracts"
-import { contains, feedTouches, type Instant, type Interval, last24hPeriod, sessionBounds } from "@bt/domain"
+import { contains, feedTouches, type Instant, type Interval, last24hPeriod, sessionBounds, totalsIn } from "@bt/domain"
 import type { Action } from "./actions.ts"
 import { type Author, pendingId } from "./pending.ts"
-import {
-  changeOf,
-  idOf,
-  later,
-  type Pending,
-  shifted,
-  shiftedTotals,
-  timeOf,
-  without,
-  withEntry,
-} from "./today-change.ts"
+import { changeOf, idOf, later, type Pending, shifted, timeOf, without, withEntry } from "./today-change.ts"
 
 export interface Swap {
   readonly before: RecentEntry | null
@@ -69,7 +59,7 @@ const swapId = ({ before, after }: Swap) => {
   return idOf(entry)
 }
 
-export const swappedToday = (today: Today, pending: Pending, swap: Swap): Today => {
+export const swappedToday = (today: Today, pending: Pending, swap: Swap, asOf: Instant): Today => {
   const id = swapId(swap)
   const { after } = swap
   const kept = without(today.recent, id)
@@ -77,7 +67,7 @@ export const swappedToday = (today: Today, pending: Pending, swap: Swap): Today 
   const feed = after?.kind === "feed" ? after.feed : null
   return {
     ...today,
-    totals: shifted(today, pending, changeOf(swap.before), changeOf(after)),
+    totals: shifted(today, { ...pending, now: asOf }, changeOf(swap.before), changeOf(after)),
     activeFeed: activeAfter(today, id, feed),
     lastFeed: lastFeedAfter(today, id, recent, feed),
     recent,
@@ -97,12 +87,14 @@ const inPeriod = <R extends { readonly id: string }>(
 export const swappedDay = (day: DayPeriod, now: Instant, swap: Swap): DayPeriod => {
   const id = swapId(swap)
   const after = swap.after !== null && touches(day.bounds, swap.after, now) ? swap.after : null
-  return {
-    ...day,
-    totals: shiftedTotals(day.totals, day.bounds, now, changeOf(swap.before), changeOf(after)),
-    feeds: inPeriod(day.feeds, id, after?.kind === "feed" ? after.feed : null, (feed) => feed.startedAt),
-    diapers: inPeriod(day.diapers, id, after?.kind === "diaper" ? after.diaper : null, (diaper) => diaper.occurredAt),
-  }
+  const feeds = inPeriod(day.feeds, id, after?.kind === "feed" ? after.feed : null, (feed) => feed.startedAt)
+  const diapers = inPeriod(
+    day.diapers,
+    id,
+    after?.kind === "diaper" ? after.diaper : null,
+    (diaper) => diaper.occurredAt,
+  )
+  return { ...day, totals: totalsIn(day.bounds, feeds, diapers, now), feeds, diapers }
 }
 
 export const todayCopy = (today: Today, id: string): RecentEntry | null =>

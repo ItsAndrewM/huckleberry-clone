@@ -38,16 +38,10 @@ export const withEntry = (recent: ReadonlyArray<RecentEntry>, entry: RecentEntry
 export const later = (current: Feed | null, feed: Feed) =>
   current === null || current.id === feed.id || feed.startedAt >= current.startedAt ? feed : current
 
-export const shiftedTotals = (
-  totals: Totals,
-  period: Interval,
-  now: Instant,
-  before: Change,
-  after: Change,
-): Totals => {
+const shiftedTotals = (totals: Totals, period: Interval, now: Instant, before: Change, after: Change): Totals => {
   const added = totalsIn(period, after.feeds, after.diapers, now)
   const removed = totalsIn(period, before.feeds, before.diapers, now)
-  const sum = (key: keyof Totals) => roundTo(totals[key] + added[key] - removed[key], 1)
+  const sum = (key: keyof Totals) => Math.max(0, roundTo(totals[key] + added[key] - removed[key], 1))
   return {
     feedsStarted: sum("feedsStarted"),
     leftSeconds: sum("leftSeconds"),

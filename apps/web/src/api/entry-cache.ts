@@ -10,6 +10,7 @@ export interface EntriesPended {
   readonly id: string
   readonly original: RecentEntry
   readonly pending: Pending
+  readonly asOf: number
 }
 
 const todayOf = (queryClient: QueryClient) => queryClient.getQueryData<Today>(queryKeys.today)
@@ -24,11 +25,17 @@ export const cachedEntry = (queryClient: QueryClient, id: string): RecentEntry |
   return cachedDays(queryClient).reduce<RecentEntry | null>((found, { day }) => found ?? dayCopy(day, id), null)
 }
 
-const swapEverywhere = (queryClient: QueryClient, pending: Pending, id: string, after: RecentEntry | null) => {
+const swapEverywhere = (
+  queryClient: QueryClient,
+  pending: Pending,
+  id: string,
+  after: RecentEntry | null,
+  asOf: number,
+) => {
   const today = todayOf(queryClient)
   const inToday = today === undefined ? null : todayCopy(today, id)
   if (today !== undefined && (inToday !== null || after !== null)) {
-    queryClient.setQueryData(queryKeys.today, swappedToday(today, pending, { before: inToday, after }))
+    queryClient.setQueryData(queryKeys.today, swappedToday(today, pending, { before: inToday, after }, asOf))
   }
   for (const { key, day } of cachedDays(queryClient)) {
     const before = dayCopy(day, id)
@@ -47,9 +54,10 @@ export const pendEntries = async (
   if (me === undefined || original === null) return null
   await Promise.all([queryClient.cancelQueries({ queryKey: queryKeys.today }), queryClient.cancelQueries(DAYS)])
   const pending = { by: me.caregiver.id, now, zone: me.household.timeZone }
-  swapEverywhere(queryClient, pending, action.id, swappedEntry(original, action, pending))
-  return { cache: "entries", id: action.id, original, pending }
+  const asOf = queryClient.getQueryState(queryKeys.today)?.dataUpdatedAt ?? now
+  swapEverywhere(queryClient, pending, action.id, swappedEntry(original, action, pending), asOf)
+  return { cache: "entries", id: action.id, original, pending, asOf }
 }
 
-export const unswapped = (queryClient: QueryClient, { id, original, pending }: EntriesPended) =>
-  swapEverywhere(queryClient, pending, id, original)
+export const unswapped = (queryClient: QueryClient, { id, original, pending, asOf }: EntriesPended) =>
+  swapEverywhere(queryClient, pending, id, original, asOf)

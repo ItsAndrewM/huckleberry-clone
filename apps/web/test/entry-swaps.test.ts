@@ -7,12 +7,19 @@ import { pendIn, rollBack, settle } from "../src/api/optimistic.ts"
 import { pendingId } from "../src/api/pending.ts"
 import { type Swap, swappedDay, swappedEntry, swappedToday } from "../src/api/swap.ts"
 import { meWith } from "./growth-fixtures.ts"
-import { BOTTLE, BOUNDS, dayWith, local, NOW_ON_DAY, NURSED, PEE, POO } from "./history-fixtures.ts"
+import { BOTTLE, BOUNDS, dayWith, local, NOW_ON_DAY, NURSED, PEE, POO, RUNNING } from "./history-fixtures.ts"
 import { ANDREW, MINUTE, todayWith, ZONE } from "./today-fixtures.ts"
 
 const ACTION_ID = "4b1c2a5e-8f3d-4c6b-9a7e-2d1f0e3c5b6a"
 const PENDING = { by: ANDREW, now: NOW_ON_DAY, zone: ZONE }
 const YESTERDAY = "2026-10-08"
+const COUNTED_AT = RUNNING.startedAt + 5_000
+const DELETED_AT = COUNTED_AT + 20 * MINUTE
+const DELETE_RUNNING = {
+  kind: "deleteFeed",
+  id: RUNNING.id,
+  payload: { actionId: ACTION_ID, version: 1 },
+} satisfies Action
 
 const diaper = (entry: typeof PEE): RecentEntry => ({ kind: "diaper", diaper: entry })
 const feed = (entry: typeof NURSED): RecentEntry => ({ kind: "feed", feed: entry })
@@ -101,13 +108,13 @@ describe("an edit or delete swapped in before the household answers", () => {
       endedAt: at,
       portions: BOTTLE.portions.map((portion) => ({ ...portion, occurredAt: at })),
     }
-    const edited = swappedToday(today, PENDING, { before: feed(BOTTLE), after: feed(yesterday) })
+    const edited = swappedToday(today, PENDING, { before: feed(BOTTLE), after: feed(yesterday) }, NOW_ON_DAY)
     expect(edited).toEqual({ ...countedToday([feed(NURSED), diaper(PEE)]), lastFeed: NURSED })
   })
 
   it("lets the last feed fall back to the latest one left when it's deleted", () => {
     const today = countedToday([feed(NURSED), feed(BOTTLE)])
-    expect(swappedToday(today, PENDING, { before: feed(BOTTLE), after: null }).lastFeed).toEqual(NURSED)
+    expect(swappedToday(today, PENDING, { before: feed(BOTTLE), after: null }, NOW_ON_DAY).lastFeed).toEqual(NURSED)
   })
 })
 
@@ -156,5 +163,40 @@ describe("the caches an edit or delete changes at once", () => {
     }
     settle(queryClient, { diaper: { ...old, wet: true, version: 2 }, changed: [] }, action)
     expect(queryClient.getQueryData<Today>(queryKeys.today)?.recent).toEqual([diaper(PEE), feed(NURSED)])
+  })
+
+  it("takes a running feed off Today as Today counted it, never below zero, and puts Today back exactly when the delete fails", async () => {
+    const queryClient = new QueryClient()
+    queryClient.setQueryData(queryKeys.me, meWith())
+    const counted = todayWith({
+      totals: totalsIn(BOUNDS, [NURSED, RUNNING], [], COUNTED_AT),
+      activeFeed: RUNNING,
+      lastFeed: RUNNING,
+      recent: [feed(RUNNING), feed(NURSED)],
+    })
+    queryClient.setQueryData(queryKeys.today, counted, { updatedAt: COUNTED_AT })
+    const pended = await pendIn(queryClient, DELETE_RUNNING, DELETED_AT)
+    expect(queryClient.getQueryData(queryKeys.today)).toEqual(
+      todayWith({ totals: totalsIn(BOUNDS, [NURSED], [], COUNTED_AT), lastFeed: NURSED, recent: [feed(NURSED)] }),
+    )
+    rollBack(queryClient, DELETE_RUNNING, pended)
+    expect(queryClient.getQueryData(queryKeys.today)).toEqual(counted)
+  })
+
+  it("works a cached day's totals out from its records when a running feed is deleted, never below zero, and puts its feeds back when the delete fails", async () => {
+    const queryClient = new QueryClient()
+    queryClient.setQueryData(queryKeys.me, meWith())
+    const counted = dayWith({
+      feeds: [NURSED, RUNNING],
+      diapers: [],
+      totals: totalsIn(BOUNDS, [NURSED, RUNNING], [], COUNTED_AT),
+    })
+    queryClient.setQueryData(queryKeys.day("2026-10-09"), counted)
+    const pended = await pendIn(queryClient, DELETE_RUNNING, DELETED_AT)
+    expect(queryClient.getQueryData<DayPeriod>(queryKeys.day("2026-10-09"))?.totals).toEqual(
+      totalsIn(BOUNDS, [NURSED], [], DELETED_AT),
+    )
+    rollBack(queryClient, DELETE_RUNNING, pended)
+    expect(queryClient.getQueryData<DayPeriod>(queryKeys.day("2026-10-09"))?.feeds).toEqual([NURSED, RUNNING])
   })
 })
