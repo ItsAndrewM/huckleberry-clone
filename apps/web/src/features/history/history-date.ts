@@ -3,7 +3,9 @@ import { addDaysToDate } from "@bt/domain"
 import { flow, Option, Schema } from "effect"
 
 export interface HistorySearch {
+  readonly view?: "week" | undefined
   readonly date?: LocalDate | undefined
+  readonly hide?: string | undefined
 }
 
 export interface DayNavigation {
@@ -17,6 +19,8 @@ const decodeDate = Schema.decodeUnknownOption(LocalDate)
 
 export const dateInSearch = flow(decodeDate, Option.getOrUndefined)
 
+export const viewInSearch = flow(Schema.decodeUnknownOption(Schema.Literals(["week"])), Option.getOrUndefined)
+
 export const shownDate = (asked: LocalDate | undefined, today: LocalDate): LocalDate =>
   asked !== undefined && asked < today ? asked : today
 
@@ -29,7 +33,18 @@ export const navigationOf = (date: LocalDate, today: LocalDate, birthDate: Local
   next: date < today ? searchFor(addDaysToDate(date, 1), today) : null,
 })
 
+const noonOf = (date: LocalDate) => Date.parse(`${date}T12:00:00Z`)
+
+const formatIn = (locale: string | undefined, options: Intl.DateTimeFormatOptions) =>
+  new Intl.DateTimeFormat(locale, { ...options, timeZone: "UTC" })
+
 export const dayTitle = (date: LocalDate, locale?: string) =>
-  new Intl.DateTimeFormat(locale, { weekday: "short", month: "short", day: "numeric", timeZone: "UTC" }).format(
-    Date.parse(`${date}T12:00:00Z`),
-  )
+  formatIn(locale, { weekday: "short", month: "short", day: "numeric" }).format(noonOf(date))
+
+export const weekTitle = (monday: LocalDate, sunday: LocalDate, locale?: string) =>
+  formatIn(locale, { month: "short", day: "numeric" }).formatRange(noonOf(monday), noonOf(sunday))
+
+export const weekdayOf = (date: LocalDate, locale?: string) =>
+  formatIn(locale, { weekday: "short" }).format(noonOf(date))
+
+export const dayOfMonth = (date: LocalDate) => Number(date.slice(8, 10))
