@@ -22,7 +22,12 @@ const sentBottle = (failed: Failed | null) => {
   return portion === undefined ? undefined : { ...portion, actionId: action.payload.actionId }
 }
 
-export const bottleSession = (failed: Failed | null, prefill: Prefill | undefined, zone: string): BottleSession => {
+export const bottleSession = (
+  failed: Failed | null,
+  prefill: Prefill | undefined,
+  zone: string,
+  at: number | null,
+): BottleSession => {
   const sent = sentBottle(failed)
   if (sent !== undefined) {
     const { actionId, breastMilkMl, formulaMl, occurredAt } = sent
@@ -33,7 +38,7 @@ export const bottleSession = (failed: Failed | null, prefill: Prefill | undefine
     actionId: crypto.randomUUID(),
     breastMilkMl: last?.breastMilkMl ?? 0,
     formulaMl: last?.formulaMl ?? 0,
-    when: NOW,
+    when: at === null ? NOW : whenAt(at, zone),
   }
 }
 

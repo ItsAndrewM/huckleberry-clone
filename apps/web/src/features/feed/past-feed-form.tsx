@@ -21,7 +21,7 @@ interface PastFeedFormProps {
 export const PastFeedForm = ({ unit, zone }: PastFeedFormProps) => {
   const sheets = useSheets()
   const now = useNow()
-  const [session] = useState(() => pastFeedSession(failedFor(sheets, "pastFeed"), now, zone))
+  const [session] = useState(() => pastFeedSession(failedFor(sheets, "pastFeed"), now, zone, sheets.at))
   const [when, setWhen] = useState(session.when)
   const [feed, setFeed] = useState(() => ({
     first: session.first,

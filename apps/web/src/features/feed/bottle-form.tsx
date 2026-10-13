@@ -21,7 +21,7 @@ interface BottleFormProps {
 
 export const BottleForm = ({ prefill, active, unit, zone }: BottleFormProps) => {
   const sheets = useSheets()
-  const [session] = useState(() => bottleSession(failedFor(sheets, "bottle"), prefill, zone))
+  const [session] = useState(() => bottleSession(failedFor(sheets, "bottle"), prefill, zone, sheets.at))
   const [amounts, setAmounts] = useState({ breastMilkMl: session.breastMilkMl, formulaMl: session.formulaMl })
   const [when, setWhen] = useState(session.when)
   const now = useNow()

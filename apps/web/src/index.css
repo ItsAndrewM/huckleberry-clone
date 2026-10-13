@@ -68,6 +68,42 @@
   --radius-2xl: calc(var(--radius) * 1.8);
 }
 
+@utility cal-at {
+  top: calc(var(--cal-step) * (var(--cal-at-tens) * 10 + var(--cal-at-ones)));
+}
+
+@utility cal-at-tens-* {
+  --cal-at-tens: --value(integer);
+}
+
+@utility cal-at-ones-* {
+  --cal-at-ones: --value(integer);
+}
+
+@utility cal-tall {
+  height: calc(var(--cal-step) * (var(--cal-tall-tens) * 10 + var(--cal-tall-ones)));
+}
+
+@utility cal-tall-tens-* {
+  --cal-tall-tens: --value(integer);
+}
+
+@utility cal-tall-ones-* {
+  --cal-tall-ones: --value(integer);
+}
+
+@utility cal-lanes-* {
+  --cal-lanes: --value(integer);
+  width: calc(100% / --value(integer));
+}
+
+@utility cal-lane-* {
+  left: calc(100% / var(--cal-lanes) * --value(integer));
+}
+
+@source inline("cal-at cal-tall {cal-at,cal-tall}-tens-{0..31} {cal-at,cal-tall}-ones-{0..9}");
+@source inline("cal-lanes-{1..6} cal-lane-{0..5}");
+
 @layer base {
   * {
     @apply border-border outline-ring/50;

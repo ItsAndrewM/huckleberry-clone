@@ -1,5 +1,11 @@
 export { type DayTotals, feedTouches, sumTotals, totalsByDay } from "./aggregate/periods.ts"
 export { type DiaperChange, last24hPeriod, type StartedFeed, type Totals, totalsIn } from "./aggregate/totals.ts"
+export type { CalendarBand, CalendarBlock, PlacedBand, PlacedBlock } from "./calendar/blocks.ts"
+export type { CalendarPoint, PlacedCluster } from "./calendar/clusters.ts"
+export type { HourRow } from "./calendar/hours.ts"
+export { type DayGrid, type DayInput, layoutDay } from "./calendar/layout.ts"
+export { QUARTER_HOUR_MS, slotIn } from "./calendar/slot.ts"
+export type { GridScale } from "./calendar/steps.ts"
 export {
   type BottlePortion,
   type FeedComponents,

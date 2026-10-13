@@ -1,7 +1,7 @@
 import { Schema } from "effect"
 import { Action } from "../api/actions.ts"
 
-export const SheetKind = Schema.Literals(["diaper", "bottle", "nursing", "pastFeed", "measurement"])
+export const SheetKind = Schema.Literals(["diaper", "bottle", "nursing", "pastFeed", "measurement", "details", "logAt"])
 export type SheetKind = typeof SheetKind.Type
 
 export const Sending = Schema.Struct({ sheet: SheetKind, action: Action })
