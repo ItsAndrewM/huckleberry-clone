@@ -3,6 +3,7 @@ import {
   ComponentDelete,
   Feed,
   FeedConflict,
+  FeedEdit,
   FeedFinish,
   FeedMove,
   FeedResume,
@@ -16,7 +17,7 @@ import {
 import { Effect, Layer } from "effect"
 import { HttpApiBuilder } from "effect/http-api"
 import { deletePortion, deleteSegment, editPortion, editSegment } from "./core/feeds/components.ts"
-import { deleteFeed, moveFeed, restoreFeed } from "./core/feeds/feed-edits.ts"
+import { deleteFeed, editFeed, moveFeed, restoreFeed } from "./core/feeds/feed-edits.ts"
 import { addBottle, finishFeed, pauseFeed, resumeFeed, startFeed, switchSide } from "./core/feeds/lifecycle.ts"
 import { logFeed } from "./core/feeds/log.ts"
 import { mutations, type Saved } from "./mutations.ts"
@@ -56,6 +57,9 @@ export const feedHandlers = (storage: DurableObjectStorage, broadcast: Broadcast
       )
       .handle("moveFeed", ({ params, payload, request }) =>
         mutate(request, FeedMove, payload, (stamp) => moveFeed(stamp, params.id, payload)).pipe(asSavedFeed),
+      )
+      .handle("editFeed", ({ params, payload, request }) =>
+        mutate(request, FeedEdit, payload, (stamp) => editFeed(stamp, params.id, payload)).pipe(asSavedFeed),
       )
       .handle("deleteFeed", ({ params, payload, request }) =>
         mutate(request, VersionedAction, payload, (stamp) => deleteFeed(stamp, params.id, payload)).pipe(asSavedFeed),

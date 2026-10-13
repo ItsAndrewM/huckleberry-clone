@@ -23,7 +23,7 @@ import { type Calendar, changedKeys, timeIssue } from "../calendar.ts"
 import type { CoreResult, Stamp } from "../receipts.ts"
 import { loadFeed, saveFeed } from "./store.ts"
 
-type FeedState = "live" | "active" | "paused" | "deleted"
+type FeedState = "live" | "active" | "paused" | "completed" | "deleted"
 
 type Found =
   | { readonly ok: true; readonly feed: Feed }
@@ -65,6 +65,7 @@ const isIn = (feed: Feed, wanted: FeedState): boolean => {
   if (wanted === "deleted") return feed.deletedAt !== null
   if (feed.deletedAt !== null) return false
   if (wanted === "live") return true
+  if (wanted === "completed") return feed.status === "completed"
   if (feed.status !== "active") return false
   return wanted === "active" || runningSegment(feed) === undefined
 }

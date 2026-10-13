@@ -1,7 +1,7 @@
 import type { Feed } from "@bt/contracts"
 import { describe, expect, it } from "vitest"
 import { deletedOf } from "../src/core/deleted.ts"
-import { deleteFeed, moveFeed, restoreFeed } from "../src/core/feeds/feed-edits.ts"
+import { deleteFeed, editFeed, moveFeed, restoreFeed } from "../src/core/feeds/feed-edits.ts"
 import { finishFeed, startFeed } from "../src/core/feeds/lifecycle.ts"
 import { logFeed } from "../src/core/feeds/log.ts"
 import { loadFeed } from "../src/core/feeds/store.ts"
@@ -11,6 +11,7 @@ import {
   CHANGED_SUNDAY_AND_MONDAY,
   newFeed,
   PAST_FEED_WITH_ITS_BOTTLE_AT_MIDNIGHT,
+  rowCount,
   segment,
   WEDNESDAY_OCT_14_NOON,
 } from "./feed-fixtures.ts"
@@ -54,6 +55,13 @@ const running = (sql: SqlStorage, startedAt = minutesAgo(20)) =>
 const move = (feed: Feed, startedAt: number) => ({ actionId: ACTION_ID, version: feed.version, startedAt })
 
 const versioned = (feed: Feed) => ({ actionId: ACTION_ID, version: feed.version })
+
+const edit = (feed: Feed, parts: ReturnType<typeof newFeed>) => ({ ...parts, version: feed.version })
+
+const timesOf = (feed: Feed) => ({
+  segments: feed.segments.map(({ side, startedAt, endedAt }) => ({ side, startedAt, endedAt })),
+  portions: feed.portions.map(({ occurredAt, breastMilkMl, formulaMl }) => ({ occurredAt, breastMilkMl, formulaMl })),
+})
 
 describe("moving a feed", () => {
   it("moves the whole feed to start at the new time, shifting every segment and bottle by as much", async () => {
@@ -165,6 +173,161 @@ describe("moving a feed", () => {
     expect(result).toMatchObject({
       ok: false,
       error: { _tag: "Conflict", code: "STALE_VERSION", current: { version: 2, deletedAt: NOW } },
+    })
+  })
+})
+
+describe("editing a whole feed", () => {
+  const SWITCHED_EARLIER = newFeed(
+    [segment("left", minutesAgo(60), minutesAgo(50)), segment("right", minutesAgo(50), minutesAgo(30))],
+    [bottle(minutesAgo(25), 50, 20)],
+  )
+
+  it("replaces its sides and bottles in one save, keeping its id and who logged it, so a switch can move earlier (D9)", async () => {
+    const { before, after, emily } = await inHousehold((sql) => {
+      const before = logged(sql, 60)
+      const after = saved(editFeed(stampOf(sql, EMILY.email), before.id, edit(before, SWITCHED_EARLIER))(sql))
+      return { before, after, emily: caregiverId(sql, EMILY.email) }
+    })
+    expect(timesOf(after)).toEqual({ segments: SWITCHED_EARLIER.segments, portions: SWITCHED_EARLIER.portions })
+    expect(after).toMatchObject({
+      id: before.id,
+      status: "completed",
+      startedAt: minutesAgo(60),
+      endedAt: minutesAgo(25),
+      version: 2,
+      createdBy: before.createdBy,
+      updatedBy: emily,
+      deletedAt: null,
+    })
+  })
+
+  it("keeps the sides and bottles it replaced as deleted rows, so the export still shows what the feed held", async () => {
+    const counts = await inHousehold((sql) => {
+      const before = logged(sql, 60)
+      saved(editFeed(stampOf(sql), before.id, edit(before, SWITCHED_EARLIER))(sql))
+      const deleted = (table: string) =>
+        sql.exec<{ n: number }>(`SELECT count(*) AS n FROM ${table} WHERE deleted_at = ?`, NOW).one().n
+      return {
+        segments: [rowCount(sql, "nursing_segments"), deleted("nursing_segments")],
+        portions: [rowCount(sql, "bottle_portions"), deleted("bottle_portions")],
+      }
+    })
+    expect(counts).toEqual({ segments: [4, 2], portions: [2, 1] })
+  })
+
+  it("adds a side or a bottle the parent forgot, and drops one they remove", async () => {
+    const after = await inHousehold((sql) => {
+      const before = logged(sql, 60)
+      const parts = newFeed(
+        [segment("left", minutesAgo(60), minutesAgo(45))],
+        [bottle(minutesAgo(40)), bottle(minutesAgo(30))],
+      )
+      return saved(editFeed(stampOf(sql), before.id, edit(before, parts))(sql))
+    })
+    expect(timesOf(after)).toEqual({
+      segments: [{ side: "left", startedAt: minutesAgo(60), endedAt: minutesAgo(45) }],
+      portions: [
+        { occurredAt: minutesAgo(40), breastMilkMl: 60, formulaMl: 0 },
+        { occurredAt: minutesAgo(30), breastMilkMl: 60, formulaMl: 0 },
+      ],
+    })
+  })
+
+  it("names both days and both months when the edit moves the feed from the last of a month to the first (AC 17)", async () => {
+    const result = await inHousehold((sql) => {
+      const lastOfSeptember = segment("left", SEP_30_AT_23_00, SEP_30_AT_23_00 + 15 * MINUTE_MS)
+      const feed = saved(logFeed(stampOf(sql), newFeed([lastOfSeptember]))(sql))
+      const firstOfOctober = segment("left", OCT_1_AT_01_00, OCT_1_AT_01_00 + 15 * MINUTE_MS)
+      return editFeed(stampOf(sql), feed.id, edit(feed, newFeed([firstOfOctober])))(sql)
+    })
+    expect(result.ok && result.changed).toEqual([
+      ["today"],
+      ["last24h"],
+      ["day", "2026-09-30"],
+      ["day", "2026-10-01"],
+      ["week", "2026-W40"],
+      ["month", "2026-09"],
+      ["month", "2026-10"],
+    ])
+  })
+
+  it.each([
+    [
+      "a side ending more than 5 minutes ahead of the server's clock",
+      newFeed([segment("left", minutesAgo(10), NOW + 6 * MINUTE_MS)]),
+      [{ path: "segments.0.endedAt", issue: "in_future" }],
+    ],
+    [
+      "a bottle before the birth date began",
+      newFeed([], [bottle(BIRTH_DATE_BEGINS - MINUTE_MS)]),
+      [{ path: "portions.0.occurredAt", issue: "before_birth" }],
+    ],
+    [
+      "two of its own sides at once",
+      newFeed([segment("left", minutesAgo(60), minutesAgo(40)), segment("right", minutesAgo(50), minutesAgo(30))]),
+      [{ path: "segments", issue: "invalid" }],
+    ],
+  ])("refuses %s, changing nothing", async (_label, parts, fieldErrors) => {
+    const { before, result, after } = await inHousehold((sql) => {
+      const before = logged(sql, 60)
+      const result = editFeed(stampOf(sql), before.id, edit(before, parts))(sql)
+      return { before, result, after: loadFeed(sql, before.id) }
+    })
+    expect(result).toMatchObject({ ok: false, error: { fieldErrors } })
+    expect(after).toEqual(before)
+  })
+
+  it("refuses sides over another feed's, with SEGMENT_OVERLAP and that feed, changing nothing (D9)", async () => {
+    const { before, other, result, after } = await inHousehold((sql) => {
+      const other = saved(logFeed(stampOf(sql), newFeed([segment("left", minutesAgo(90), minutesAgo(70))]))(sql))
+      const before = logged(sql, 60)
+      const parts = newFeed([segment("left", minutesAgo(75), minutesAgo(45))])
+      const result = editFeed(stampOf(sql), before.id, edit(before, parts))(sql)
+      return { before, other, result, after: loadFeed(sql, before.id) }
+    })
+    expect(result).toEqual({ ok: false, error: expect.objectContaining({ code: "SEGMENT_OVERLAP", current: other }) })
+    expect(after).toEqual(before)
+  })
+
+  it("refuses a side over the feed running now, with SEGMENT_OVERLAP and that feed (D9)", async () => {
+    const { active, result } = await inHousehold((sql) => {
+      const before = logged(sql, 60)
+      const active = running(sql, minutesAgo(20))
+      const parts = newFeed([segment("left", minutesAgo(60), minutesAgo(10))])
+      return { active, result: editFeed(stampOf(sql), before.id, edit(before, parts))(sql) }
+    })
+    expect(result).toEqual({ ok: false, error: expect.objectContaining({ code: "SEGMENT_OVERLAP", current: active }) })
+  })
+
+  it("answers 404 for a running feed, which the Nursing sheet changes instead, and for a deleted one", async () => {
+    const results = await inHousehold((sql) => {
+      const active = running(sql, minutesAgo(20))
+      const parts = newFeed([segment("left", minutesAgo(25), minutesAgo(5))])
+      const runningEdit = editFeed(stampOf(sql), active.id, edit(active, parts))(sql)
+      const before = logged(sql, 60)
+      const deleted = saved(deleteFeed(stampOf(sql), before.id, versioned(before))(sql))
+      return [runningEdit, editFeed(stampOf(sql), before.id, edit(deleted, SWITCHED_EARLIER))(sql)]
+    })
+    expect(results).toMatchObject([
+      { ok: false, error: { _tag: "NotFound" } },
+      { ok: false, error: { _tag: "NotFound" } },
+    ])
+  })
+
+  it("refuses an edit the other parent got in first with STALE_VERSION, showing the feed as it is now", async () => {
+    const result = await inHousehold((sql) => {
+      const before = logged(sql, 60)
+      saved(editFeed(stampOf(sql, EMILY.email), before.id, edit(before, SWITCHED_EARLIER))(sql))
+      return editFeed(
+        stampOf(sql),
+        before.id,
+        edit(before, newFeed([segment("left", minutesAgo(60), minutesAgo(30))])),
+      )(sql)
+    })
+    expect(result).toMatchObject({
+      ok: false,
+      error: { _tag: "Conflict", code: "STALE_VERSION", current: { version: 2 } },
     })
   })
 })

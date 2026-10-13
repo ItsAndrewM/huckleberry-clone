@@ -1,6 +1,7 @@
 import {
   type Feed,
   FeedConflict,
+  type FeedEdit,
   type FeedMove,
   type InvalidInput,
   type NotFound,
@@ -10,6 +11,7 @@ import {
 import { validateNotInFuture } from "@bt/domain"
 import { calendarOf, timeIssue } from "../calendar.ts"
 import type { CoreResult, Stamp } from "../receipts.ts"
+import { invalidParts } from "./log.ts"
 import {
   activeFeed,
   deletedAsItStands,
@@ -23,7 +25,7 @@ import {
   overlappedFeed,
   savedFeed,
 } from "./rules.ts"
-import { saveFeed, shiftFeed } from "./store.ts"
+import { replaceParts, saveFeed, shiftFeed } from "./store.ts"
 
 const shiftedSegments = (feed: Feed, offset: number) =>
   feed.segments.map((segment) => ({
@@ -47,6 +49,21 @@ export const moveFeed =
     const overlapped = overlappedFeed(sql, moved, stamp.now, { feedId: feed.id, segmentId: null })
     if (overlapped !== undefined) return { ok: false, error: overlapConflict(overlapped) }
     shiftFeed(sql, stamp, feed.id, offset)
+    return savedFeed(calendar, feed, saveFeed(sql, stamp, feed), stamp.now)
+  }
+
+export const editFeed =
+  (stamp: Stamp, id: string, edit: FeedEdit) =>
+  (sql: SqlStorage): CoreResult<Feed, InvalidInput | NotFound | FeedConflict> => {
+    const found = feedFor(sql, id, edit.version, "completed")
+    if (!found.ok) return found
+    const { feed } = found
+    const calendar = calendarOf(sql)
+    const invalid = invalidParts(calendar, edit, stamp.now)
+    if (invalid !== null) return { ok: false, error: invalid }
+    const overlapped = overlappedFeed(sql, edit.segments, stamp.now, { feedId: feed.id, segmentId: null })
+    if (overlapped !== undefined) return { ok: false, error: overlapConflict(overlapped) }
+    replaceParts(sql, stamp, feed, edit)
     return savedFeed(calendar, feed, saveFeed(sql, stamp, feed), stamp.now)
   }
 

@@ -274,6 +274,18 @@ describe("the receipts the feed endpoints keep", () => {
       (actionId) => ({ version: 6, actionId }),
       (actionId) => `{"actionId":"${actionId}","version":6}`,
     )
+    await run(
+      `PUT ${loggedPath}`,
+      (actionId) => ({
+        portions: [{ formulaMl: 0, breastMilkMl: 30, occurredAt: minutesAgo(92) }],
+        segments: [{ endedAt: minutesAgo(97), startedAt: minutesAgo(111), side: "left" }],
+        version: 7,
+        actionId,
+      }),
+      (actionId) =>
+        `{"actionId":"${actionId}","version":7,"segments":[{"side":"left","startedAt":${minutesAgo(111)},"endedAt":${minutesAgo(97)}}],` +
+        `"portions":[{"occurredAt":${minutesAgo(92)},"breastMilkMl":30,"formulaMl":0}]}`,
+    )
     const receipts = await inStorage(household, (sql) =>
       sql.exec("SELECT route, request_hash FROM receipts ORDER BY rowid").toArray(),
     )
@@ -294,6 +306,7 @@ describe("the receipts the feed endpoints keep", () => {
         "DELETE /api/segments/:id",
         "DELETE /api/feeds/:id",
         "POST /api/feeds/:id/restore",
+        "PUT /api/feeds/:id",
       ]),
     )
   })

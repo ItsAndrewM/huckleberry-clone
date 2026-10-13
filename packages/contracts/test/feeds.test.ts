@@ -4,6 +4,7 @@ import {
   ComponentDelete,
   Feed,
   FeedConflict,
+  FeedEdit,
   FeedFinish,
   invalidInputFrom,
   MAX_FEED_COMPONENTS,
@@ -100,6 +101,32 @@ describe("a new feed", () => {
       { path: "portions.0.occurredAt", issue: "invalid" },
       { path: "portions.0.breastMilkMl", issue: "invalid" },
       { path: "portions.0.formulaMl", issue: "invalid" },
+    ])
+  })
+})
+
+describe("an edit to a whole feed", () => {
+  const edit = { actionId: ACTION_ID, version: 3, segments: [LEFT], portions: [BOTTLE] }
+
+  it("carries the feed's version and every side and bottle it should hold", () => {
+    expect(fieldErrors(FeedEdit, edit)).toEqual([])
+    expect(fieldErrors(FeedEdit, { ...edit, version: 0 })).toEqual([{ path: "version", issue: "invalid" }])
+  })
+
+  it("needs a segment or a bottle, as a new feed does", () => {
+    expect(fieldErrors(FeedEdit, { ...edit, segments: [], portions: [] })).toEqual([
+      { path: "segments", issue: "invalid" },
+      { path: "portions", issue: "invalid" },
+    ])
+  })
+
+  it(`refuses a running side, and more than ${MAX_FEED_COMPONENTS} segments or bottles`, () => {
+    const running = { ...edit, segments: [{ ...LEFT, endedAt: null }] }
+    expect(fieldErrors(FeedEdit, running)).toEqual([{ path: "segments.0.endedAt", issue: "invalid" }])
+    const tooMany = { ...edit, segments: Array(21).fill(LEFT), portions: Array(21).fill(BOTTLE) }
+    expect(fieldErrors(FeedEdit, tooMany)).toEqual([
+      { path: "segments", issue: "invalid" },
+      { path: "portions", issue: "invalid" },
     ])
   })
 })
