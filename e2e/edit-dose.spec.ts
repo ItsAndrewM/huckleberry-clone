@@ -1,4 +1,4 @@
-import { expect, type Page, test } from "@playwright/test"
+import { expect, type Locator, type Page, test } from "@playwright/test"
 import {
   caregiversOf,
   type DoseAnswer,
@@ -36,7 +36,7 @@ const playDose = async (page: Page, occurredAt = NOW - 30 * MINUTE) => {
   }
   const household = await playHousehold(page, todayWith())
   showing(dose)
-  return { ...household, dose, emily, showing }
+  return { ...household, dose, emily, me, showing }
 }
 
 const openTheDose = async (page: Page) => {
@@ -45,6 +45,28 @@ const openTheDose = async (page: Page) => {
     .getByRole("button", { name: /Vitamin D/u })
     .click()
   return editSheet(page)
+}
+
+const scrollsSideways = (sheet: Locator) =>
+  sheet.evaluate((dialog) => {
+    const view = dialog.ownerDocument.defaultView
+    return [dialog, ...dialog.querySelectorAll("*")].some((element) => {
+      const overflowX = view?.getComputedStyle(element).overflowX
+      return (overflowX === "auto" || overflowX === "scroll") && element.scrollWidth > element.clientWidth
+    })
+  })
+
+const textEndOf = (target: Locator) =>
+  target.evaluate((element) => {
+    const range = element.ownerDocument.createRange()
+    range.selectNodeContents(element)
+    return range.getBoundingClientRect().right
+  })
+
+const rightEdgeOf = async (target: Locator) => {
+  const box = await target.boundingBox()
+  if (box === null) throw new Error(`${target} isn't on screen to measure`)
+  return box.x + box.width
 }
 
 test("moves a dose from Today, keeping its supplement and dose, and the card follows it", async ({ page }) => {
@@ -131,3 +153,34 @@ test("says who changed the dose first, and saves mine on top of theirs when aske
       [2, NOW - 75 * MINUTE],
     ])
 })
+
+const LONGEST = [
+  {
+    written: "with spaces",
+    name: "Cholecalciferol (vitamin D3) liquid drops for infants, 400IU",
+    given: "1 dropperful each morning with breakfast",
+  },
+  { written: "with no spaces", name: "Multivitamin".repeat(5), given: "W".repeat(40) },
+]
+
+for (const { written, name, given } of LONGEST) {
+  test(`wraps the longest name and dose ${written} above the form, inside a 360-pixel-wide sheet`, async ({ page }) => {
+    expect([name.length, given.length]).toEqual([60, 40])
+    await page.setViewportSize({ width: 360, height: 900 })
+    const { dose, me, showing } = await playDose(page)
+    const supplements = me.household.supplements.map((supplement: { id: string }) =>
+      supplement.id === dose.supplementId ? { ...supplement, name } : supplement,
+    )
+    await page.route("**/api/me", (route) =>
+      route.fulfill({ json: { ...me, household: { ...me.household, supplements } } }),
+    )
+    showing({ ...dose, dose: given })
+    await openToday(page)
+    await recent(page).getByRole("button", { name }).click()
+    const sheet = editSheet(page)
+    const heading = sheet.getByText(name)
+    await expect(heading).toBeVisible()
+    expect(await scrollsSideways(sheet)).toBe(false)
+    expect(await textEndOf(heading)).toBeLessThanOrEqual(await rightEdgeOf(sheet))
+  })
+}

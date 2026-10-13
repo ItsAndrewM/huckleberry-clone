@@ -35,7 +35,7 @@ export const EditDoseForm = ({ dose, display, onUseTheirs }: EditDoseFormProps) 
     <>
       <EditFailure sheet="editDose" display={display} onUseTheirs={onUseTheirs} />
       <p className="text-base font-medium">
-        <Parts parts={givenParts(display, dose)} />
+        <Parts parts={givenParts(display, dose)} freeText />
       </p>
       <WhenField label="When" when={when} onChange={setWhen} zone={zone} now={now} />
       <Button size="lg" className="h-14 text-lg" disabled={!movedTo(session, when, zone, now).ok} onClick={save}>
