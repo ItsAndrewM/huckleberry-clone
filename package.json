@@ -11,6 +11,7 @@
     "test": "vitest run",
     "coverage": "vitest run --project domain --coverage",
     "bundle:check": "node scripts/check-bundle-size.ts",
+    "bench": "pnpm --filter @bt/worker bench",
     "e2e": "playwright test",
     "pins:check": "node scripts/check-pins.ts",
     "api:docs": "node scripts/api-docs.ts",
