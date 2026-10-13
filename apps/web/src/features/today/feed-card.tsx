@@ -6,6 +6,7 @@ import type { Display } from "./display.ts"
 import { feedParts } from "./feed-parts.ts"
 import { feedStatus } from "./feed-status.ts"
 import { formatSince } from "./format.ts"
+import { LiveDot } from "./live-dot.tsx"
 import { StatusCard } from "./status-card.tsx"
 
 interface FeedCardProps {
@@ -13,8 +14,6 @@ interface FeedCardProps {
   readonly display: Display
   readonly now: number
 }
-
-const LiveDot = () => <span aria-hidden="true" className="size-2 rounded-full bg-primary motion-safe:animate-pulse" />
 
 export const FeedCard = ({ today, display, now }: FeedCardProps) => {
   const status = feedStatus(today, now)

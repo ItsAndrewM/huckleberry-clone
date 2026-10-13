@@ -51,14 +51,26 @@ describe("totalsRows", () => {
     diapers: 5,
     wetDiapers: 4,
     dirtyDiapers: 2,
+    sleepsStarted: 3,
+    sleepSeconds: 680 * 60,
+    napSeconds: 170 * 60,
+    nightSeconds: 510 * 60,
+    longestSleepSeconds: 390 * 60,
   }
 
-  it("totals feeds, nursing, bottles and diapers, each with its parts", () => {
+  it("totals feeds, nursing, bottles, diapers and sleep, each with its parts", () => {
     expect(totalsRows(TOTALS, "ml")).toEqual([
       { label: "Feeds started", value: "6", detail: [] },
       { label: "Nursing", value: "1 h 20 min", detail: ["Left 42 min", "Right 38 min"] },
       { label: "Bottles", value: "180 mL", detail: ["Breast milk 120 mL", "Formula 60 mL"] },
       { label: "Diapers", value: "5", detail: ["4 pee", "2 poo"] },
+      { label: "Sleep", value: "11 h 20 min", detail: ["Naps 2 h 50 min", "Night 8 h 30 min"] },
+    ])
+  })
+
+  it("leaves out naps or night when she had none", () => {
+    expect(totalsRows({ ...TOTALS, sleepSeconds: 170 * 60, nightSeconds: 0 }, "ml")[4]?.detail).toEqual([
+      "Naps 2 h 50 min",
     ])
   })
 
@@ -76,6 +88,7 @@ describe("totalsRows", () => {
       ["0 min", []],
       ["0 mL", []],
       ["0", []],
+      ["0 min", []],
     ])
   })
 })
