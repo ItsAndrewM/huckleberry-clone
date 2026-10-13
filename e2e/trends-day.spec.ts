@@ -46,6 +46,8 @@ test("climbs through today so far, against her usual day over the seven days bef
   await expect(chart(page, "Bottles")).toContainText("150 mL so far")
   await expect(chart(page, "Bottles").locator('[data-ts-key^="usual:"]').first()).toBeAttached()
   await expect(chart(page, "Bottles").locator('[data-ts-key^="so-far:"]').first()).toBeAttached()
+  await expect(chart(page, "Bottles").getByRole("img")).toHaveAccessibleName("Bottles through the day, in mL")
+  await expect(chart(page, "Feeds started").getByRole("img")).toHaveAccessibleName("Feeds started through the day")
 })
 
 test("says there's no usual day yet when nothing was logged in the seven days before, and draws no line through a day with nothing logged", async ({

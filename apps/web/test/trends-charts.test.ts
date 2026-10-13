@@ -2,6 +2,7 @@ import { datesBetween, type DayStatus, runningTotals, zonedDayBounds } from "@bt
 import { type ChartScene, createChartScene, renderChartSvg } from "@tanstack/charts"
 import { describe, expect, it, vi } from "vitest"
 import { barChartDefinition, barChartModel } from "../src/features/trends/bar-chart-definition.ts"
+import { chartName } from "../src/features/trends/chart-name.ts"
 import { dayTicks, hourLabel } from "../src/features/trends/day-ticks.ts"
 import { TRENDS_METRICS } from "../src/features/trends/metrics.ts"
 import { PLOT_LEFT_MARGIN } from "../src/features/trends/plot-margin.ts"
@@ -30,6 +31,23 @@ const OCTOBER = trendDays(
   TODAY,
   BIRTH,
 )
+
+describe("chartName", () => {
+  it("names each chart by what it shows, with a unit in lower case only where the values have one", () => {
+    expect(TRENDS_METRICS.map((metric) => chartName(metric, "ml", "each day"))).toEqual([
+      "Feeds started each day",
+      "Nursing each day, in minutes",
+      "Bottles each day, in mL",
+      "Diapers each day",
+    ])
+    expect(TRENDS_METRICS.map((metric) => chartName(metric, "fl_oz", "through the day"))).toEqual([
+      "Feeds started through the day",
+      "Nursing through the day, in minutes",
+      "Bottles through the day, in fl oz",
+      "Diapers through the day",
+    ])
+  })
+})
 
 describe("barChartModel", () => {
   it("lays a week out Monday to Sunday, each day labelled by its weekday", () => {

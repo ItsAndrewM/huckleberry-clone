@@ -1,6 +1,7 @@
 import type { DayPeriod, LocalDate, Me } from "@bt/contracts"
 import { type DayAverage, runningTotals, totalsIn } from "@bt/domain"
 import { useMemo } from "react"
+import { chartName } from "./chart-name.ts"
 import { dayTicks, hourLabel } from "./day-ticks.ts"
 import { HistoryLink } from "./history-link-view.tsx"
 import { MetricSection } from "./metric-section.tsx"
@@ -45,7 +46,7 @@ export const DayView = ({ day, usual, me, now, today }: DayViewProps) => {
           numbers={dayNumbers(metric, shown, volume)}
           note={usualText(metric, usual, volume)}
         >
-          <RunningChart model={model} label={`${metric.title} through the day`} />
+          <RunningChart model={model} label={chartName(metric, volume, "through the day")} />
         </MetricSection>
       ))}
     </>

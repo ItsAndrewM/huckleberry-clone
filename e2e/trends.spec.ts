@@ -65,6 +65,9 @@ test("opens on this week, so far, with each chart's average over the days that h
   await expect(chart(page, "Nursing")).toContainText(/Left 48 min\s·\sRight 49 min/u)
   await expect(chart(page, "Bottles")).toContainText("543 mL a day, over 4 days")
   await expect(chart(page, "Diapers")).toContainText(/8 a day, over 4 days/u)
+  await expect(chart(page, "Diapers").getByRole("img")).toHaveAccessibleName("Diapers each day")
+  await expect(chart(page, "Nursing").getByRole("img")).toHaveAccessibleName("Nursing each day, in minutes")
+  await expect(chart(page, "Bottles").getByRole("img")).toHaveAccessibleName("Bottles each day, in mL")
 })
 
 test("leaves a day with nothing logged out of the averages, and says so in the table", async ({ page }) => {
