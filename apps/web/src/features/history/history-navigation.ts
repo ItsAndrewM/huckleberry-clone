@@ -28,7 +28,7 @@ export const shownPeriod = (search: HistorySearch, today: LocalDate, birthDate: 
   periodOf(search.view ?? "day", clamp(search.date ?? today, birthDate, today))
 
 export const searchFor = (period: HistoryPeriod, today: LocalDate, hidden: Hidden): HistorySearch => ({
-  view: period.view === "week" ? "week" : undefined,
+  view: period.view === "day" ? undefined : period.view,
   date: holds(period, today) ? undefined : firstDateOf(period),
   hide: hideOf(hidden),
 })
