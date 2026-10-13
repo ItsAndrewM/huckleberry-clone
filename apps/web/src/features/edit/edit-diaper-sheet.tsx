@@ -10,15 +10,15 @@ const EditDiaperContent = () => {
   const sheets = useSheets()
   const { data: me } = useMe()
   const cached = useCachedEntry(sheets.editing)
-  const [shown, setShown] = useState(cached)
+  const [shown, setShown] = useState({ entry: cached, taken: 0 })
   if (me === undefined) return null
-  if (shown?.kind !== "diaper") return <p className="text-sm text-muted-foreground">This diaper was deleted.</p>
+  if (shown.entry?.kind !== "diaper") return <p className="text-sm text-muted-foreground">This diaper was deleted.</p>
   return (
     <EditDiaperForm
-      key={shown.diaper.version}
-      diaper={shown.diaper}
+      key={shown.taken}
+      diaper={shown.entry.diaper}
       display={displayOf(me.household)}
-      onUseTheirs={setShown}
+      onUseTheirs={(entry) => setShown(({ taken }) => ({ entry, taken: taken + 1 }))}
     />
   )
 }
