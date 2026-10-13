@@ -1,4 +1,4 @@
-import { expect, type Page, test } from "@playwright/test"
+import { expect, type Page, test, type WebSocketRoute } from "@playwright/test"
 import {
   caregiversOf,
   type FeedAnswer,
@@ -37,9 +37,12 @@ const bottled = (by: string): FeedAnswer => ({
 })
 
 const playFeed = async (page: Page, kind: "nursed" | "bottled") => {
-  const { andrew } = await caregiversOf(page)
+  const { andrew, emily } = await caregiversOf(page)
   const feed = kind === "nursed" ? nursed(andrew.id) : bottled(andrew.id)
   const household = await playHousehold(page, { ...todayWith(), recent: [{ kind: "feed", feed }] })
+  const showing = (shown: FeedAnswer) => {
+    household.played.today = { ...todayWith(), recent: [{ kind: "feed", feed: shown }] }
+  }
   await household.answer(`**/api/feeds/${feed.id}`, ({ method, body }) => {
     if (method === "DELETE")
       return { status: 200, json: { feed: { ...feed, version: 2, deletedAt: NOW }, changed: [] } }
@@ -48,12 +51,23 @@ const playFeed = async (page: Page, kind: "nursed" | "bottled") => {
     return { status: 200, json: { feed: { ...feed, segments, portions, version: 2 }, changed: [] } }
   })
   await openToday(page)
-  return { ...household, feed }
+  return { ...household, feed, emily, showing }
 }
 
 const openFeed = async (page: Page, name: RegExp, title: string) => {
   await recent(page).getByRole("button", { name }).click()
   return page.getByRole("dialog", { name: title })
+}
+
+const playSocket = async (page: Page) => {
+  const sockets: WebSocketRoute[] = []
+  await page.routeWebSocket(/\/api\/ws$/u, (socket) => {
+    sockets.push(socket)
+  })
+  return async () => {
+    await expect.poll(() => sockets.length).toBeGreaterThan(0)
+    sockets.at(-1)?.send(JSON.stringify({ changed: [["today"]] }))
+  }
 }
 
 test("moves the switch earlier in one Save, and Today shows it before the household answers", async ({ page }) => {
@@ -146,4 +160,36 @@ test("offers only to delete the feed once every side is removed", async ({ page 
   await expect(sheet.getByRole("button", { name: "Save" })).toHaveCount(0)
   await sheet.getByRole("alert").getByRole("button", { name: "Delete" }).click()
   await expect.poll(() => played.sent.map(({ method }) => method)).toEqual(["DELETE"])
+})
+
+test("loads Emily's sides and bottles into the form even when they reached this phone before the save", async ({
+  page,
+}) => {
+  const todayChanged = await playSocket(page)
+  const { answer, showing, feed, emily } = await playFeed(page, "nursed")
+  const theirs = {
+    ...feed,
+    version: 2,
+    updatedBy: emily.id,
+    portions: [{ id: "p1", occurredAt: AT_8 + 23 * MINUTE, breastMilkMl: 0, formulaMl: 30 }],
+  }
+  await answer(`**/api/feeds/${feed.id}`, () => ({
+    status: 409,
+    json: { _tag: "Conflict", code: "STALE_VERSION", current: theirs },
+  }))
+  const sheet = await openFeed(page, /Nursing/u, "Edit feed")
+  const left = sheet.getByRole("group", { name: "Side 1" })
+  await expect(left.getByLabel("Minutes")).toHaveValue("14")
+  showing(theirs)
+  await todayChanged()
+  await expect(page.getByRole("list", { name: "Last 24 hours", includeHidden: true })).toContainText(
+    "Nursing and bottle",
+  )
+  await left.getByLabel("Minutes").fill("10")
+  await sheet.getByRole("button", { name: "Save" }).click()
+  await expect(sheet.getByRole("alert")).toContainText(`${emily.displayName} changed this a moment ago.`)
+  await sheet.getByRole("button", { name: `Use ${emily.displayName}'s` }).click()
+  await expect(sheet.getByRole("alert")).toHaveCount(0)
+  await expect(sheet.getByRole("group", { name: "Bottle 1" }).getByLabel("Formula", { exact: true })).toHaveValue("30")
+  await expect(left.getByLabel("Minutes")).toHaveValue("14")
 })

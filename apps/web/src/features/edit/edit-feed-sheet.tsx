@@ -13,11 +13,16 @@ const EditFeedContent = () => {
   const sheets = useSheets()
   const { data: me } = useMe()
   const cached = useCachedEntry(sheets.editing)
-  const [shown, setShown] = useState(cached)
+  const [shown, setShown] = useState({ entry: cached, taken: 0 })
   if (me === undefined) return null
-  if (shown?.kind !== "feed") return <p className="text-sm text-muted-foreground">This feed was deleted.</p>
+  if (shown.entry?.kind !== "feed") return <p className="text-sm text-muted-foreground">This feed was deleted.</p>
   return (
-    <EditFeedForm key={shown.feed.version} feed={shown.feed} display={displayOf(me.household)} onUseTheirs={setShown} />
+    <EditFeedForm
+      key={shown.taken}
+      feed={shown.entry.feed}
+      display={displayOf(me.household)}
+      onUseTheirs={(entry) => setShown(({ taken }) => ({ entry, taken: taken + 1 }))}
+    />
   )
 }
 
