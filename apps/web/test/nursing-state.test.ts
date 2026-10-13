@@ -6,10 +6,13 @@ import {
   nursingState,
   pauseAction,
   resumeAction,
+  startChanged,
+  startedAtOf,
   switchAction,
 } from "../src/features/feed/nursing-state.ts"
 import type { Sending } from "../src/sheets/sending.ts"
-import { feedAt, MINUTE, NOW } from "./today-fixtures.ts"
+import { NOW as NOW_WHEN, whenAt } from "../src/sheets/when.ts"
+import { feedAt, MINUTE, NOW, ZONE } from "./today-fixtures.ts"
 
 const LEFT = { id: "s1", side: "left" as const, startedAt: NOW - 20 * MINUTE, endedAt: NOW - 10 * MINUTE }
 const RIGHT = { id: "s2", side: "right" as const, startedAt: NOW - 10 * MINUTE, endedAt: null }
@@ -51,6 +54,32 @@ describe("the running feed's actions", () => {
       to: "left",
       payload: { actionId: expect.stringMatching(/^[0-9a-f-]{36}$/u), version: 3, occurredAt: NOW },
     })
+  })
+})
+
+describe("the first side's start", () => {
+  const TO_THE_SECOND = { ...LEFT, startedAt: LEFT.startedAt + 37_412 }
+
+  it("keeps the exact start, seconds included, while its When is left alone", () => {
+    const untouched = whenAt(TO_THE_SECOND.startedAt, ZONE)
+    expect(startChanged(TO_THE_SECOND, untouched, ZONE)).toBe(false)
+    expect(startedAtOf(TO_THE_SECOND, untouched, ZONE, NOW)).toEqual({ ok: true, instant: TO_THE_SECOND.startedAt })
+  })
+
+  it("reads a changed When as the minute picked, on the household's clock", () => {
+    const picked = { kind: "at", local: "2026-10-09T09:05", pick: null } as const
+    expect(startChanged(TO_THE_SECOND, picked, ZONE)).toBe(true)
+    expect(startedAtOf(TO_THE_SECOND, picked, ZONE, NOW)).toEqual({ ok: true, instant: Date.UTC(2026, 9, 9, 16, 5) })
+  })
+
+  it("takes the moment tapped once the When is set to Now", () => {
+    expect(startChanged(TO_THE_SECOND, NOW_WHEN, ZONE)).toBe(true)
+    expect(startedAtOf(TO_THE_SECOND, NOW_WHEN, ZONE, NOW)).toEqual({ ok: true, instant: NOW })
+  })
+
+  it("refuses a time the field can't read", () => {
+    const blank = { kind: "at", local: "", pick: null } as const
+    expect(startedAtOf(TO_THE_SECOND, blank, ZONE, NOW)).toEqual({ ok: false, issue: "unreadable" })
   })
 })
 

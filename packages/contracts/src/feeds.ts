@@ -90,12 +90,16 @@ const someComponent = Schema.makeFilter(
   { expected: SOME_COMPONENT },
 )
 
-export const NewFeed = Schema.Struct({
-  actionId: ActionId,
+const components = {
   segments: Schema.Array(SegmentEntry).check(Schema.isMaxLength(MAX_FEED_COMPONENTS)),
   portions: Schema.Array(PortionEntry).check(Schema.isMaxLength(MAX_FEED_COMPONENTS)),
-}).check(someComponent)
+}
+
+export const NewFeed = Schema.Struct({ actionId: ActionId, ...components }).check(someComponent)
 export type NewFeed = typeof NewFeed.Type
+
+export const FeedEdit = Schema.Struct({ actionId: ActionId, version: Version, ...components }).check(someComponent)
+export type FeedEdit = typeof FeedEdit.Type
 
 export const FeedStart = Schema.Struct({ actionId: ActionId, side: Side, startedAt: Instant })
 export type FeedStart = typeof FeedStart.Type
@@ -168,6 +172,7 @@ export class FeedsGroup extends HttpApiGroup.make("feeds")
   .add(HttpApiEndpoint.post("addBottle", "/feeds/:id/bottle", { ...onFeed, payload: VersionedPortion }))
   .add(HttpApiEndpoint.post("finishFeed", "/feeds/:id/finish", { ...onFeed, payload: FeedFinish }))
   .add(HttpApiEndpoint.patch("moveFeed", "/feeds/:id", { ...onFeed, payload: FeedMove }))
+  .add(HttpApiEndpoint.put("editFeed", "/feeds/:id", { ...onFeed, payload: FeedEdit }))
   .add(HttpApiEndpoint.delete("deleteFeed", "/feeds/:id", { ...onFeed, payload: VersionedAction }))
   .add(HttpApiEndpoint.post("restoreFeed", "/feeds/:id/restore", { ...onFeed, payload: VersionedAction })) {}
 

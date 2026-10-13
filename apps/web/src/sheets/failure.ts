@@ -12,7 +12,7 @@ import {
 import { AuthRequired, Offline } from "../api/errors.ts"
 import { clockTime } from "../clock-time.ts"
 import { restoredNote } from "./restored-note.ts"
-import type { SheetKind } from "./sending.ts"
+import { editsARecord, type SheetKind } from "./sending.ts"
 
 export interface Note {
   readonly message: string
@@ -118,7 +118,14 @@ const OFFLINE = {
 const offlineNote = (keptOn: KeptOn): Note =>
   note(keptOn === null ? "No connection. Try again once you're back online." : OFFLINE[keptOn], TRY_AGAIN)
 
-const goneNote = (sheet: SheetKind | undefined): Note => note(sheet === "measurement" ? MEASUREMENT_GONE : GONE)
+const EDITED_GONE = "This was deleted since it opened."
+
+const goneMessage = (sheet: SheetKind | undefined) => {
+  if (sheet === "measurement") return MEASUREMENT_GONE
+  return sheet !== undefined && editsARecord(sheet) ? EDITED_GONE : GONE
+}
+
+const goneNote = (sheet: SheetKind | undefined): Note => note(goneMessage(sheet))
 
 export const failureNote = (error: Error, household: Household, { keptOn, sheet }: NoteOptions): Note => {
   if (error instanceof Offline) return offlineNote(keptOn)

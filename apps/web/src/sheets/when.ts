@@ -34,6 +34,9 @@ export const whenAt = (instant: Instant, zone: string): When => {
   return { kind: "at", local, pick: instant < resolution.later ? "earlier" : "later" }
 }
 
+export const sameWhen = (a: When, b: When) =>
+  a.kind === "now" ? b.kind === "now" : b.kind === "at" && a.local === b.local && a.pick === b.pick
+
 const issue = (found: WhenIssue): Resolved => ({ ok: false, issue: found })
 
 const atInstant = ({ local, pick }: At, zone: string): Resolved => {

@@ -7,6 +7,8 @@ import { runningSide } from "./feed-status.ts"
 
 export type RowKind = "nursing" | "bottle" | "diaper"
 
+export type RowSheet = "editDiaper" | "editFeed" | "nursing"
+
 export interface RecentRow {
   readonly id: string
   readonly kind: RowKind
@@ -16,6 +18,7 @@ export interface RecentRow {
   readonly detail: ReadonlyArray<string>
   readonly by: string
   readonly saving: boolean
+  readonly opens: RowSheet | null
 }
 
 const nameOf = ({ caregivers }: Display, id: string) =>
@@ -31,6 +34,11 @@ const diaperDetail = ({ wet, dirty }: Diaper) => {
   return wet ? "Pee" : "Poo"
 }
 
+const opensFor = (feed: Feed): RowSheet | null => {
+  if (isSaving(feed)) return null
+  return feed.status === "completed" ? "editFeed" : "nursing"
+}
+
 const feedRow = (feed: Feed, display: Display, now: number): RecentRow => ({
   id: feed.id,
   kind: feed.segments.length === 0 ? "bottle" : "nursing",
@@ -40,6 +48,7 @@ const feedRow = (feed: Feed, display: Display, now: number): RecentRow => ({
   detail: [...progressOf(feed), ...feedParts(feed, display.volume, now)],
   by: nameOf(display, feed.createdBy),
   saving: isSaving(feed),
+  opens: opensFor(feed),
 })
 
 const diaperRow = (diaper: Diaper, display: Display): RecentRow => ({
@@ -51,6 +60,7 @@ const diaperRow = (diaper: Diaper, display: Display): RecentRow => ({
   detail: [diaperDetail(diaper)],
   by: nameOf(display, diaper.createdBy),
   saving: isPending(diaper.id),
+  opens: isPending(diaper.id) ? null : "editDiaper",
 })
 
 export const recentRows = (recent: ReadonlyArray<RecentEntry>, display: Display, now: number) =>

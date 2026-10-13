@@ -92,6 +92,7 @@ describe("recentRows", () => {
         detail: ["Left 12 min", "Right 8 min", "60 mL"],
         by: "Andrew",
         saving: false,
+        opens: "editFeed",
       },
     ])
   })
@@ -112,6 +113,23 @@ describe("recentRows", () => {
       ["In progress", "Left 17 min", "Right 8 min"],
       ["Paused", "Left 12 min", "Right 8 min"],
     ])
+  })
+
+  it("opens a diaper or a finished feed in its edit sheet, a feed still going in the Nursing sheet, and a saving one in nothing", () => {
+    const going = { ...NURSED, id: "going", status: "active" as const, endedAt: null }
+    const saving = { ...NURSED, id: pendingId("action-1") }
+    const rows = recentRows(
+      [
+        { kind: "diaper", diaper: diaperAt(TWO_TEN) },
+        { kind: "feed", feed: NURSED },
+        { kind: "feed", feed: going },
+        { kind: "feed", feed: saving },
+        { kind: "diaper", diaper: diaperAt(TWO_TEN, { id: pendingId("action-2") }) },
+      ],
+      DISPLAY,
+      NOW,
+    )
+    expect(rows.map(({ opens }) => opens)).toEqual(["editDiaper", "editFeed", "nursing", null, null])
   })
 
   it("shows a diaper as pee, poo or both, with who changed it", () => {

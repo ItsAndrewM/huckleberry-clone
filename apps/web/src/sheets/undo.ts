@@ -1,8 +1,8 @@
-import type { Feed, VersionedPortion } from "@bt/contracts"
+import type { Diaper, Feed, VersionedPortion } from "@bt/contracts"
 import type { Action } from "../api/actions.ts"
 import { Offline } from "../api/errors.ts"
 import type { Saved } from "../api/send.ts"
-import type { Sending } from "./sending.ts"
+import { isUndo, type Sending } from "./sending.ts"
 
 export interface Toast {
   readonly message: string
@@ -21,22 +21,29 @@ const addedPortion = (feed: Feed, sent: VersionedPortion) =>
   )
 
 const undoFeed = (action: Action, feed: Feed, actionId: string): Action | null => {
-  if (action.kind === "logFeed" || action.kind === "startFeed") {
-    return { kind: "deleteFeed", id: feed.id, payload: { actionId, version: feed.version } }
-  }
+  const versioned = { actionId, version: feed.version }
+  if (action.kind === "logFeed" || action.kind === "startFeed")
+    return { kind: "deleteFeed", id: feed.id, payload: versioned }
+  if (action.kind === "deleteFeed") return { kind: "restoreFeed", id: feed.id, payload: versioned }
   if (action.kind !== "addBottle") return null
   const portion = addedPortion(feed, action.payload)
   if (portion === undefined) return null
-  return { kind: "deletePortion", id: portion.id, payload: { actionId, version: feed.version, deleteIfEmpty: false } }
+  return { kind: "deletePortion", id: portion.id, payload: { ...versioned, deleteIfEmpty: false } }
+}
+
+const undoDiaper = (action: Action, { id, version }: Diaper, actionId: string): Action | null => {
+  if (action.kind === "logDiaper") return { kind: "deleteDiaper", id, payload: { actionId, version } }
+  return action.kind === "deleteDiaper" ? { kind: "restoreDiaper", id, payload: { actionId, version } } : null
 }
 
 export const undoOf = ({ action }: Sending, saved: Saved, actionId: string): Action | null => {
   if ("feed" in saved) return undoFeed(action, saved.feed, actionId)
-  if (action.kind !== "logDiaper" || !("diaper" in saved)) return null
-  return { kind: "deleteDiaper", id: saved.diaper.id, payload: { actionId, version: saved.diaper.version } }
+  return "diaper" in saved ? undoDiaper(action, saved.diaper, actionId) : null
 }
 
-const messageOf = ({ sheet, action }: Sending): string | null => {
+const feedNoun = (saved: Saved) => ("feed" in saved && saved.feed.segments.length === 0 ? "Bottle" : "Feed")
+
+const messageOf = ({ sheet, action }: Sending, saved: Saved): string | null => {
   switch (action.kind) {
     case "logDiaper":
       return "Diaper saved"
@@ -46,16 +53,20 @@ const messageOf = ({ sheet, action }: Sending): string | null => {
       return "Feed started"
     case "addBottle":
       return "Bottle added to the feed"
+    case "deleteDiaper":
+      return "Diaper deleted"
+    case "deleteFeed":
+      return `${feedNoun(saved)} deleted`
     default:
       return null
   }
 }
 
 export const toastFor = (sending: Sending, saved: Saved, now: number): Toast | null => {
-  const message = messageOf(sending)
+  const message = isUndo(sending) ? null : messageOf(sending, saved)
   if (message === null) return null
   const undo = undoOf(sending, saved, crypto.randomUUID())
-  return { message, undo: undo === null ? null : { sheet: sending.sheet, action: undo }, until: now + TOAST_MS }
+  return { message, undo: undo === null ? null : { sheet: "undo", action: undo }, until: now + TOAST_MS }
 }
 
 export const restoredToast = (saved: Saved, now: number, actionId: string): Toast => {
@@ -63,13 +74,12 @@ export const restoredToast = (saved: Saved, now: number, actionId: string): Toas
   if ("diaper" in saved) {
     const { id, version } = saved.diaper
     const action = { kind: "deleteDiaper", id, payload: { actionId, version } } as const
-    return { message: "Diaper restored", undo: { sheet: "diaper", action }, until }
+    return { message: "Diaper restored", undo: { sheet: "undo", action }, until }
   }
   if (!("feed" in saved)) return { message: "Measurement restored", undo: null, until }
-  const { id, version, segments } = saved.feed
+  const { id, version } = saved.feed
   const action = { kind: "deleteFeed", id, payload: { actionId, version } } as const
-  const message = segments.length === 0 ? "Bottle restored" : "Feed restored"
-  return { message, undo: { sheet: "pastFeed", action }, until }
+  return { message: `${feedNoun(saved)} restored`, undo: { sheet: "undo", action }, until }
 }
 
 interface LostMessages {

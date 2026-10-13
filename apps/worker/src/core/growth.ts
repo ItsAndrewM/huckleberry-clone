@@ -131,7 +131,8 @@ export const editMeasurement =
     const found = measurementFor(sql, id, edit.version, "live")
     if (!found.ok) return found
     const calendar = calendarOf(sql)
-    const invalid = invalidTime(calendar, edit.measuredAt, stamp.now)
+    const kept = edit.measuredAt === found.row.measured_at
+    const invalid = kept ? null : invalidTime(calendar, edit.measuredAt, stamp.now)
     if (invalid !== null) return { ok: false, error: invalid }
     const row = sql
       .exec<MeasurementRow>(

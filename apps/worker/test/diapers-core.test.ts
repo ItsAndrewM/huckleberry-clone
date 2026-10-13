@@ -13,6 +13,7 @@ import {
   inHousehold,
   MINUTE_MS,
   movedBirthDate,
+  movedZone,
   NOW,
   OCT_1_AT_00_30,
   SEP_3_BEGINS,
@@ -96,6 +97,21 @@ describe("editing a diaper", () => {
       updatedBy: emily,
       updatedAt: NOW + 1,
     })
+  })
+
+  it("edits a diaper a zone change left before the birth date while its time stays, but won't move it to another time there", async () => {
+    const results = await inHousehold((sql) => {
+      const logged = saved(logDiaper(stampOf(sql), wet(BIRTH_DATE_BEGINS))(sql))
+      movedZone(sql, "Pacific/Honolulu")
+      const both = { actionId: ACTION_ID, occurredAt: BIRTH_DATE_BEGINS, wet: true, dirty: true }
+      const kept = editDiaper(stampOf(sql), logged.id, { ...both, version: 1 })(sql)
+      const moved = { ...both, version: 2, occurredAt: BIRTH_DATE_BEGINS + MINUTE_MS }
+      return [kept, editDiaper(stampOf(sql), logged.id, moved)(sql)]
+    })
+    expect(results).toMatchObject([
+      { ok: true, response: { occurredAt: BIRTH_DATE_BEGINS, dirty: true, version: 2 } },
+      { ok: false, error: { _tag: "InvalidInput", fieldErrors: [{ path: "occurredAt", issue: "before_birth" }] } },
+    ])
   })
 
   it("invalidates both days and both months when it moves across midnight at the end of a month", async () => {

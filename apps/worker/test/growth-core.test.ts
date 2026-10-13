@@ -15,6 +15,7 @@ import {
   HOUR_MS,
   inHousehold,
   MINUTE_MS,
+  movedZone,
   NOW,
   OCT_1_AT_00_30,
   SEP_30_AT_23_30,
@@ -136,6 +137,24 @@ describe("editing a measurement", () => {
       return saved(editMeasurement(stampOf(sql), logged.id, editFrom(1, { lengthCm: 54.2, headCm: null }))(sql))
     })
     expect(edited).toMatchObject({ weightG: 4210.5, lengthCm: 54.2, headCm: null, version: 2 })
+  })
+
+  it("edits a measurement a zone change left before the birth date while its time stays, but won't move it to another time there", async () => {
+    const results = await inHousehold((sql) => {
+      const logged = saved(logMeasurement(stampOf(sql), weighed(BIRTH_DATE_BEGINS))(sql))
+      movedZone(sql, "Pacific/Honolulu")
+      const kept = editMeasurement(
+        stampOf(sql),
+        logged.id,
+        editFrom(1, { measuredAt: BIRTH_DATE_BEGINS, weightG: 3400 }),
+      )(sql)
+      const moved = editFrom(2, { measuredAt: BIRTH_DATE_BEGINS + MINUTE_MS })
+      return [kept, editMeasurement(stampOf(sql), logged.id, moved)(sql)]
+    })
+    expect(results).toMatchObject([
+      { ok: true, response: { measuredAt: BIRTH_DATE_BEGINS, weightG: 3400, version: 2 } },
+      { ok: false, error: { _tag: "InvalidInput", fieldErrors: [{ path: "measuredAt", issue: "before_birth" }] } },
+    ])
   })
 
   it("invalidates both days, both months and growth when it moves across midnight at the end of a month", async () => {

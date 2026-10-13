@@ -116,7 +116,8 @@ export const editDiaper =
     const found = diaperFor(sql, id, edit.version, "live")
     if (!found.ok) return found
     const calendar = calendarOf(sql)
-    const invalid = invalidTime(calendar, edit.occurredAt, stamp.now)
+    const kept = edit.occurredAt === found.row.occurred_at
+    const invalid = kept ? null : invalidTime(calendar, edit.occurredAt, stamp.now)
     if (invalid !== null) return { ok: false, error: invalid }
     const row = sql
       .exec<DiaperRow>(

@@ -1,7 +1,7 @@
 import type { Feed } from "@bt/contracts"
 import { zonedDayBounds } from "@bt/domain"
 import { describe, expect, it } from "vitest"
-import { anchorOf, dayModel, entriesIn, isLiveFeed } from "../src/features/history/day-model.ts"
+import { anchorOf, dayModel, editSheetOf, entriesIn, isLiveFeed } from "../src/features/history/day-model.ts"
 import { markersOf } from "../src/features/history/grid-markers.ts"
 import {
   BOTH,
@@ -17,7 +17,7 @@ import {
   POO,
   RUNNING,
 } from "./history-fixtures.ts"
-import { feedAt, ZONE } from "./today-fixtures.ts"
+import { diaperAt, feedAt, ZONE } from "./today-fixtures.ts"
 
 const LATER_DAY = BOUNDS.end + 3_600_000
 const DAY_BEFORE = "2026-10-08"
@@ -31,6 +31,9 @@ const BOTTLE_AT_MIDNIGHT: Feed = {
   ],
   portions: [{ id: "late-p0", occurredAt: BOUNDS.start, breastMilkMl: 60, formulaMl: 0 }],
 }
+
+const PAUSED_AT_MIDNIGHT: Feed = { ...BOTTLE_AT_MIDNIGHT, status: "active", endedAt: null }
+const DIAPER_AFTER_MIDNIGHT = diaperAt(local("00:10"))
 
 describe("dayModel", () => {
   const model = dayModel(dayWith(), ZONE, NOW_ON_DAY)
@@ -104,6 +107,24 @@ describe("isLiveFeed", () => {
     expect(isLiveFeed(entriesIn(model, [PEE.id]))).toBe(false)
     expect(isLiveFeed(entriesIn(model, [RUNNING.id, PEE.id]))).toBe(false)
     expect(isLiveFeed([])).toBe(false)
+  })
+})
+
+describe("editSheetOf", () => {
+  it("opens a diaper's own sheet, a finished feed's, and Nursing for a feed that's running or paused", () => {
+    expect(editSheetOf({ kind: "diaper", diaper: PEE })).toBe("editDiaper")
+    expect(editSheetOf({ kind: "feed", feed: NURSED })).toBe("editFeed")
+    expect(editSheetOf({ kind: "feed", feed: RUNNING })).toBe("nursing")
+    expect(editSheetOf({ kind: "feed", feed: PAUSED_AT_MIDNIGHT })).toBe("nursing")
+  })
+
+  it("opens Nursing for a paused feed pinned to the top of the day and gathered with a diaper, where isLiveFeed no longer sees it", () => {
+    const model = dayModel(dayWith({ feeds: [PAUSED_AT_MIDNIGHT], diapers: [DIAPER_AFTER_MIDNIGHT] }), ZONE, NOW_ON_DAY)
+    const ids = [PAUSED_AT_MIDNIGHT.id, DIAPER_AFTER_MIDNIGHT.id]
+    expect(markersOf(model, DISPLAY, NOW_ON_DAY)).toEqual([expect.objectContaining({ kind: "several", ids })])
+    const entries = entriesIn(model, ids)
+    expect(isLiveFeed(entries)).toBe(false)
+    expect(entries.map((entry) => editSheetOf(entry))).toEqual(["nursing", "editDiaper"])
   })
 })
 

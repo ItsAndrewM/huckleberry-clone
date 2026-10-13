@@ -1,4 +1,4 @@
-import type { Feed, Side } from "@bt/contracts"
+import type { Feed, Measurement, Side } from "@bt/contracts"
 import type { Action } from "../api/actions.ts"
 import { SIDE_NAMES } from "../sides.ts"
 import type { Recovery, Sending } from "./sending.ts"
@@ -9,6 +9,8 @@ const REDO_LABELS = new Map<Action["kind"], string>([
   ["resumeFeed", "Resume anyway"],
   ["finishFeed", "Finish anyway"],
   ["addBottle", "Add it anyway"],
+  ["editSegment", "Change it anyway"],
+  ["deleteFeed", "Delete anyway"],
 ])
 
 const openSideOf = (feed: Feed) => feed.segments.find(({ endedAt }) => endedAt === null) ?? null
@@ -20,6 +22,13 @@ const runningSince = (feed: Feed, at: number) => {
 
 const switchFits = (feed: Feed, to: Side | undefined, at: number) =>
   to !== undefined && runningSince(feed, at) && openSideOf(feed)?.side !== to
+
+const segmentOf = (feed: Feed, segmentId: string) => feed.segments.find(({ id }) => id === segmentId)
+
+const startStillFits = (feed: Feed, segmentId: string, startedAt: number) => {
+  const segment = segmentOf(feed, segmentId)
+  return segment !== undefined && (segment.endedAt === null || startedAt < segment.endedAt)
+}
 
 const fits = (action: Action, feed: Feed) => {
   switch (action.kind) {
@@ -35,6 +44,10 @@ const fits = (action: Action, feed: Feed) => {
       )
     case "addBottle":
       return action.payload.occurredAt >= feed.startedAt
+    case "editSegment":
+      return startStillFits(feed, action.id, action.payload.startedAt)
+    case "deleteFeed":
+      return true
     default:
       return false
   }
@@ -45,11 +58,18 @@ const withVersion = <Sent extends Action>(action: Sent, version: number): Sent =
   payload: { ...action.payload, version },
 })
 
+const resent = (action: Action, feed: Feed): Action => {
+  const versioned = withVersion(action, feed.version)
+  if (versioned.kind !== "editSegment") return versioned
+  const { side, endedAt } = segmentOf(feed, versioned.id) ?? versioned.payload
+  return { ...versioned, payload: { ...versioned.payload, side, endedAt } }
+}
+
 export const redone = ({ sheet, action }: Sending, feed: Feed): Recovery | null => {
   const label = REDO_LABELS.get(action.kind)
   const live = feed.status === "active" && feed.deletedAt === null
   if (label === undefined || !live || !fits(action, feed)) return null
-  return { label, sendingAt: () => ({ sheet, action: withVersion(action, feed.version) }) }
+  return { label, sendingAt: () => ({ sheet, action: resent(action, feed) }) }
 }
 
 export const joined = ({ action }: Sending, feed: Feed): Recovery | null => {
@@ -75,4 +95,9 @@ export const joined = ({ action }: Sending, feed: Feed): Recovery | null => {
       action: { kind: "switchSide", id, to: side, payload: { actionId, version, occurredAt: at } },
     }),
   }
+}
+
+export const mineAnyway = ({ sheet, action }: Sending, current: Measurement): Recovery | null => {
+  if (action.kind !== "editMeasurement" || current.deletedAt !== null) return null
+  return { label: "Save mine anyway", sendingAt: () => ({ sheet, action: withVersion(action, current.version) }) }
 }
