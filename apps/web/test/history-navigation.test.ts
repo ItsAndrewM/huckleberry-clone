@@ -16,17 +16,22 @@ const NO_DIAPERS = hiddenIn("diapers")
 
 describe("shownPeriod", () => {
   it("shows the household's today when the address names no day, or one after today", () => {
-    expect(shownPeriod({}, TODAY)).toEqual({ view: "day", date: TODAY })
-    expect(shownPeriod({ date: "2026-10-12" }, TODAY)).toEqual({ view: "day", date: TODAY })
+    expect(shownPeriod({}, TODAY, BIRTH)).toEqual({ view: "day", date: TODAY })
+    expect(shownPeriod({ date: "2026-10-12" }, TODAY, BIRTH)).toEqual({ view: "day", date: TODAY })
   })
 
   it("shows an earlier day the address names", () => {
-    expect(shownPeriod({ date: "2026-10-09" }, TODAY)).toEqual({ view: "day", date: "2026-10-09" })
+    expect(shownPeriod({ date: "2026-10-09" }, TODAY, BIRTH)).toEqual({ view: "day", date: "2026-10-09" })
   })
 
   it("shows the week that holds the address's date, or this week", () => {
-    expect(shownPeriod({ view: "week" }, TODAY)).toEqual({ view: "week", week: "2026-W41" })
-    expect(shownPeriod({ view: "week", date: "2026-09-30" }, TODAY)).toEqual({ view: "week", week: "2026-W40" })
+    expect(shownPeriod({ view: "week" }, TODAY, BIRTH)).toEqual({ view: "week", week: "2026-W41" })
+    expect(shownPeriod({ view: "week", date: "2026-09-30" }, TODAY, BIRTH)).toEqual({ view: "week", week: "2026-W40" })
+  })
+
+  it("shows her birth date, or the week that holds it, for an address naming an earlier day", () => {
+    expect(shownPeriod({ date: "2026-08-10" }, TODAY, BIRTH)).toEqual({ view: "day", date: BIRTH })
+    expect(shownPeriod({ view: "week", date: "2026-08-10" }, TODAY, BIRTH)).toEqual({ view: "week", week: "2026-W36" })
   })
 })
 
@@ -95,18 +100,29 @@ describe("navigationOf", () => {
 
 describe("viewSearch", () => {
   it("opens the week that holds the day shown", () => {
-    expect(viewSearch("week", periodOf("day", "2026-09-30"), TODAY, NONE)).toMatchObject({
+    expect(viewSearch("week", periodOf("day", "2026-09-30"), TODAY, BIRTH, NONE)).toMatchObject({
       view: "week",
       date: "2026-09-28",
     })
   })
 
   it("opens today from this week, and Monday from an earlier week", () => {
-    expect(viewSearch("day", periodOf("week", TODAY), TODAY, NONE)).toMatchObject({ view: undefined, date: undefined })
-    expect(viewSearch("day", periodOf("week", "2026-09-30"), TODAY, NO_DIAPERS)).toEqual({
+    expect(viewSearch("day", periodOf("week", TODAY), TODAY, BIRTH, NONE)).toMatchObject({
+      view: undefined,
+      date: undefined,
+    })
+    expect(viewSearch("day", periodOf("week", "2026-09-30"), TODAY, BIRTH, NO_DIAPERS)).toEqual({
       view: undefined,
       date: "2026-09-28",
       hide: "diapers",
+    })
+  })
+
+  it("keeps a switch from her birth week inside her days", () => {
+    expect(viewSearch("day", periodOf("week", BIRTH), TODAY, BIRTH, NONE)).toEqual({
+      view: undefined,
+      date: BIRTH,
+      hide: undefined,
     })
   })
 })

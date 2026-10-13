@@ -19,10 +19,13 @@ export interface HistoryNavigation {
   readonly current: HistorySearch
 }
 
-export const shownPeriod = (search: HistorySearch, today: LocalDate): HistoryPeriod => {
-  const asked = search.date ?? today
-  return periodOf(search.view ?? "day", asked < today ? asked : today)
+const clamp = (date: LocalDate, earliest: LocalDate, latest: LocalDate) => {
+  if (date > latest) return latest
+  return date < earliest ? earliest : date
 }
+
+export const shownPeriod = (search: HistorySearch, today: LocalDate, birthDate: LocalDate): HistoryPeriod =>
+  periodOf(search.view ?? "day", clamp(search.date ?? today, birthDate, today))
 
 export const searchFor = (period: HistoryPeriod, today: LocalDate, hidden: Hidden): HistorySearch => ({
   view: period.view === "week" ? "week" : undefined,
@@ -43,8 +46,13 @@ export const navigationOf = (
   current: searchFor(periodOf(period.view, today), today, hidden),
 })
 
-export const viewSearch = (view: HistoryView, from: HistoryPeriod, today: LocalDate, hidden: Hidden) =>
-  searchFor(periodOf(view, holds(from, today) ? today : firstDateOf(from)), today, hidden)
+export const viewSearch = (
+  view: HistoryView,
+  from: HistoryPeriod,
+  today: LocalDate,
+  birthDate: LocalDate,
+  hidden: Hidden,
+) => searchFor(periodOf(view, clamp(holds(from, today) ? today : firstDateOf(from), birthDate, today)), today, hidden)
 
 export const daySearch = (date: LocalDate, today: LocalDate, hidden: Hidden) =>
   searchFor(periodOf("day", date), today, hidden)
