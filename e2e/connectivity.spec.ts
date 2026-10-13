@@ -2,6 +2,7 @@ import { expect, test } from "@playwright/test"
 
 const SIGNED_OUT_COOKIE = "bt-preview-signed-out"
 const HALF_PAST_NINE_IN_VANCOUVER = Date.UTC(2026, 9, 9, 16, 30)
+const TWO_MINUTES_TO_MIDNIGHT_IN_VANCOUVER = Date.UTC(2026, 9, 10, 6, 58)
 
 test("shows No connection while the phone is offline, with when the app last heard from the household, and clears it once back online", async ({
   page,
@@ -20,6 +21,29 @@ test("shows No connection while the phone is offline, with when the app last hea
   await expect(noConnection).toContainText(/Updated 9:30\sAM\./)
   await context.setOffline(false)
   await expect(page.getByText("No connection")).toBeHidden()
+})
+
+test("gives No connection's last-updated time its date once the household's midnight passes", async ({
+  page,
+  context,
+  browserName,
+}) => {
+  test.skip(
+    browserName !== "chromium",
+    "WebKit's setOffline lets the socket's next try open, which reads as back online",
+  )
+  await page.clock.install({ time: TWO_MINUTES_TO_MIDNIGHT_IN_VANCOUVER })
+  const todayAnswered = Promise.all(["**/api/today", "**/api/last24h"].map((url) => page.waitForResponse(url)))
+  await page.goto("/")
+  await expect(page.getByText("Robin")).toBeVisible()
+  await Promise.all((await todayAnswered).map((response) => response.finished()))
+  await expect(page.getByText("Loading…")).toBeHidden()
+  await page.routeWebSocket(/\/api\/ws$/, (socket) => socket.close({ code: 1011, reason: "offline" }))
+  await context.setOffline(true)
+  const noConnection = page.getByRole("alert").filter({ hasText: "No connection" })
+  await expect(noConnection).toContainText(/Updated 11:5\d\sPM\./)
+  await page.clock.fastForward("03:00")
+  await expect(noConnection).toContainText(/Updated Oct 9, 11:5\d\sPM\./)
 })
 
 test("asks to sign in once Access has signed the parent out, and signs in back to the same page", async ({

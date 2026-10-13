@@ -41,7 +41,9 @@ export const deletedFeedsSince = (sql: SqlStorage, since: Instant): Feed[] =>
 
 export const lastFeed = (sql: SqlStorage): Feed | null => {
   const rows = sql
-    .exec<{ id: string }>("SELECT id FROM feeds WHERE deleted_at IS NULL ORDER BY started_at DESC, rowid DESC LIMIT 1")
+    .exec<{ id: string }>(
+      "SELECT id FROM feeds INDEXED BY feeds_by_time WHERE deleted_at IS NULL ORDER BY started_at DESC, rowid DESC LIMIT 1",
+    )
     .toArray()
   return loaded(sql, rows)[0] ?? null
 }
@@ -55,7 +57,7 @@ export const prefillOf = (sql: SqlStorage): Prefill => {
     .toArray()
   const [segment] = sql
     .exec<{ side: Side }>(
-      `SELECT s.side FROM nursing_segments s JOIN feeds f ON f.id = s.feed_id
+      `SELECT s.side FROM nursing_segments s INDEXED BY nursing_segments_by_time JOIN feeds f ON f.id = s.feed_id
        WHERE s.deleted_at IS NULL AND f.deleted_at IS NULL ORDER BY s.started_at DESC, s.rowid DESC LIMIT 1`,
     )
     .toArray()
