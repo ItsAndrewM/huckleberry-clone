@@ -1,5 +1,5 @@
 import { expect, type Locator, type Page, test } from "@playwright/test"
-import { busyDay, dayHeading, emptyDay, NO_TOTALS, openHistory, playHistory } from "./played-day.ts"
+import { busyDay, DAY, dayHeading, emptyDay, measurement, NO_TOTALS, openHistory, playHistory } from "./played-day.ts"
 import { LAST_WEEK, playWeeks, THIS_WEEK, weekGrid, weekHeading, weekOf } from "./played-week.ts"
 
 test.use({ timezoneId: "Europe/London" })
@@ -87,6 +87,39 @@ test("switches from a day to the week that holds it, and back to today", async (
   await page.getByRole("group", { name: "History by" }).getByRole("button", { name: "Day" }).click()
   await expect(page).toHaveURL(/\/history$/u)
   await expect(dayHeading(page)).toHaveText("Fri, Oct 9")
+})
+
+test("hides a kind on both views, and keeps it while stepping and switching", async ({ page }) => {
+  await playBusyWeek(page)
+  await openHistory(page, "?view=week")
+  const chips = page.getByRole("group", { name: "Show" })
+  await chips.getByRole("button", { name: "Diapers" }).click()
+  await expect(chips.getByRole("button", { name: "Diapers" })).toHaveAttribute("aria-pressed", "false")
+  await expect(page).toHaveURL(/\/history\?view=week&hide=diapers$/u)
+  await expect(weekGrid(page).getByRole("link", { name: "Fri, Oct 9: 5 feeds started" })).toBeVisible()
+  await weekGrid(page)
+    .getByRole("link", { name: /^Fri, Oct 9/u })
+    .click()
+  await expect(page).toHaveURL(/\/history\?hide=diapers$/u)
+  const day = page.getByRole("region", { name: "The day by hour" })
+  await expect(day.getByRole("button", { name: "Bottle at 4:00 AM: 90 mL" })).toBeVisible()
+  await expect(day.getByRole("button", { name: /^Diaper at/u })).toHaveCount(0)
+  await page.getByRole("link", { name: "Previous day" }).click()
+  await expect(page).toHaveURL(/\/history\?date=2026-10-08&hide=diapers$/u)
+})
+
+test("hides Growth's strip on the Day view, and says nothing was logged only when nothing was", async ({ page }) => {
+  const { played, andrew } = await playHistory(page, [])
+  const weighed = {
+    ...emptyDay(DAY),
+    measurements: [measurement("m", Date.parse(`${DAY}T08:00:00-07:00`), 4210, 55, 37.5, andrew)],
+  }
+  played.days.push(weighed)
+  await openHistory(page, "?hide=growth")
+  await expect(page.getByRole("button", { name: /^Edit the measurement/u })).toHaveCount(0)
+  await expect(page.getByText("Nothing logged.")).toHaveCount(0)
+  await page.getByRole("group", { name: "Show" }).getByRole("button", { name: "Growth" }).click()
+  await expect(page.getByRole("button", { name: "Edit the measurement from 8:00 AM" })).toBeVisible()
 })
 
 test.describe("on a narrow screen", () => {

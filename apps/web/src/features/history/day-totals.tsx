@@ -3,17 +3,20 @@ import { RulerIcon } from "lucide-react"
 import { useSheets } from "../../sheets/sheets-context.ts"
 import { Parts } from "../today/parts.tsx"
 import { growthItems, totalsLines } from "./day-summary.ts"
+import type { Hidden } from "./history-kinds.ts"
 
 interface DayTotalsProps {
   readonly day: DayPeriod
   readonly me: Me
+  readonly hidden: Hidden
 }
 
-export const DayTotals = ({ day, me }: DayTotalsProps) => {
+export const DayTotals = ({ day, me, hidden }: DayTotalsProps) => {
   const sheets = useSheets()
   const lines = totalsLines(day.totals, me.household.units.volume)
-  const growth = growthItems(day.measurements, me.household.units, me.household.timeZone)
-  const nothingLogged = lines.length === 0 && growth.length === 0
+  const measured = growthItems(day.measurements, me.household.units, me.household.timeZone)
+  const growth = hidden.has("growth") ? [] : measured
+  const nothingLogged = lines.length === 0 && measured.length === 0
   return (
     <section aria-label="This day" className="flex flex-col gap-2">
       {nothingLogged ? <p className="text-sm text-muted-foreground">Nothing logged.</p> : null}
