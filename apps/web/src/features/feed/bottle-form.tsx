@@ -6,10 +6,9 @@ import { FailureNote } from "../../sheets/failure-note.tsx"
 import { failedFor, useSheets } from "../../sheets/sheets-context.ts"
 import { tapTime } from "../../sheets/tap-time.ts"
 import { WhenField } from "../../sheets/when-field.tsx"
-import { resolveWhen } from "../../sheets/when.ts"
 import { useNow } from "../../timer/use-now.ts"
 import { AmountField } from "./amount-field.tsx"
-import { bottleAction, bottleSession, canSaveBottle, toppedUpFor, topUpNote } from "./bottle-entry.ts"
+import { bottleAction, bottleSession, canSaveBottle, occurredAtOf, toppedUpFor, topUpNote } from "./bottle-entry.ts"
 
 interface BottleFormProps {
   readonly prefill: Prefill | undefined
@@ -24,13 +23,13 @@ export const BottleForm = ({ prefill, active, unit, zone }: BottleFormProps) => 
   const [amounts, setAmounts] = useState({ breastMilkMl: session.breastMilkMl, formulaMl: session.formulaMl })
   const [when, setWhen] = useState(session.when)
   const now = useNow()
-  const picked = resolveWhen(when, zone, now)
+  const picked = occurredAtOf(session, when, zone, now)
   const toppedUp = picked.ok ? toppedUpFor(active, picked.instant, session.held) : null
   const note = topUpNote(toppedUp, session.held, zone)
   const ready = picked.ok && canSaveBottle(amounts, toppedUp)
   const save = () => {
     if (sheets.open !== "bottle") return
-    const resolved = resolveWhen(when, zone, tapTime())
+    const resolved = occurredAtOf(session, when, zone, tapTime())
     if (!resolved.ok || !canSaveBottle(amounts, toppedUpFor(active, resolved.instant, session.held))) return
     const action = bottleAction(session.actionId, amounts, resolved.instant, active, session.held)
     sheets.send({ sheet: "bottle", action })

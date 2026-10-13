@@ -4,7 +4,7 @@ import { isSaving } from "../../api/pending.ts"
 import { clockOf } from "../../sheets/clock.ts"
 import { mayHoldReceipt } from "../../sheets/held.ts"
 import type { Failed } from "../../sheets/sending.ts"
-import { inStartMinute, NOW, type When, whenAt } from "../../sheets/when.ts"
+import { inStartMinute, NOW, type Resolved, resolveWhen, sameWhen, type When, whenAt } from "../../sheets/when.ts"
 
 export interface Amounts {
   readonly breastMilkMl: number | null
@@ -18,6 +18,7 @@ export type HeldRoute =
 
 export interface BottleSession extends Amounts {
   readonly actionId: string
+  readonly occurredAt: number | null
   readonly when: When
   readonly held: HeldRoute
 }
@@ -45,17 +46,23 @@ export const bottleSession = (
   const sent = sentBottle(failed)
   if (sent !== undefined) {
     const { actionId, breastMilkMl, formulaMl, occurredAt, held } = sent
-    return { actionId, breastMilkMl, formulaMl, when: whenAt(occurredAt, zone), held }
+    return { actionId, breastMilkMl, formulaMl, occurredAt, when: whenAt(occurredAt, zone), held }
   }
   const last = prefill?.lastBottle
   return {
     actionId: crypto.randomUUID(),
     breastMilkMl: last?.breastMilkMl ?? 0,
     formulaMl: last?.formulaMl ?? 0,
+    occurredAt: null,
     when: at === null ? NOW : whenAt(at, zone),
     held: null,
   }
 }
+
+export const occurredAtOf = (session: BottleSession, when: When, zone: string, now: number): Resolved =>
+  session.occurredAt !== null && sameWhen(when, session.when)
+    ? { ok: true, instant: session.occurredAt }
+    : resolveWhen(when, zone, now)
 
 export const hasMilk = ({ breastMilkMl, formulaMl }: Amounts) =>
   breastMilkMl !== null && formulaMl !== null && breastMilkMl + formulaMl > 0

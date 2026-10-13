@@ -3,11 +3,13 @@ import { describe, expect, it } from "vitest"
 import { AuthRequired, Offline, Unexpected } from "../src/api/errors.ts"
 import { pendingId } from "../src/api/pending.ts"
 import {
+  type BottleSession,
   bottleAction,
   bottleSession,
   canSaveBottle,
   type HeldRoute,
   hasMilk,
+  occurredAtOf,
   toppedUpFeed,
   toppedUpFor,
   topUpNote,
@@ -15,6 +17,8 @@ import {
 import { clockOf } from "../src/sheets/clock.ts"
 import { StaleDraft } from "../src/sheets/drafts.ts"
 import { Unsaved } from "../src/sheets/kept.ts"
+import type { Failed, Sending } from "../src/sheets/sending.ts"
+import { NOW as NOW_WHEN, type When } from "../src/sheets/when.ts"
 import { feedAt, MINUTE, NOW, ZONE } from "./today-fixtures.ts"
 
 const ACTION_ID = "4b1c2a5e-8f3d-4c6b-9a7e-2d1f0e3c5b6a"
@@ -54,6 +58,7 @@ describe("bottleSession", () => {
     expect(bottleSession(UNSAVED_BOTTLE, undefined, ZONE, null)).toEqual({
       actionId: ACTION_ID,
       ...AMOUNTS,
+      occurredAt: Date.UTC(2026, 9, 9, 16, 0),
       when: { kind: "at", local: "2026-10-09T09:00", pick: null },
       held: { kind: "addBottle", id: "feed-1", version: 2 },
     })
@@ -251,6 +256,75 @@ describe("a bottle's held route after the household answers", () => {
     },
   ])("keeps a top-up on its own feed after $case, since the household may hold a receipt", ({ error }) => {
     expect(reopenedAfter(error).held).toEqual({ kind: "addBottle", id: "feed-1", version: 2 })
+  })
+})
+
+describe("a held bottle's time", () => {
+  const sentAt = Date.UTC(2026, 9, 9, 16, 0) + 37_412
+  const pickedMinute = Date.UTC(2026, 9, 9, 16, 5)
+  const picked = { kind: "at", local: "2026-10-09T09:05", pick: null } as const
+  const running = feedAt(NOW - 40 * MINUTE, { id: "feed-1", status: "active", endedAt: null, version: 5 })
+  const failedWith = (action: Sending["action"]): Failed => ({
+    sending: { sheet: "bottle", action },
+    error: new Offline(),
+  })
+  const routes = [
+    {
+      route: "addBottle",
+      failed: failedWith({
+        kind: "addBottle",
+        id: "feed-1",
+        payload: { actionId: ACTION_ID, version: 2, occurredAt: sentAt, ...AMOUNTS },
+      }),
+    },
+    {
+      route: "logFeed",
+      failed: failedWith({
+        kind: "logFeed",
+        payload: { actionId: ACTION_ID, segments: [], portions: [{ occurredAt: sentAt, ...AMOUNTS }] },
+      }),
+    },
+  ]
+  const savedAs = (session: BottleSession, when: When) => {
+    const resolved = occurredAtOf(session, when, ZONE, NOW)
+    return resolved.ok ? bottleAction(session.actionId, AMOUNTS, resolved.instant, running, session.held) : null
+  }
+
+  it.each(routes)("keeps the exact time a failed $route send went at while its When is left alone", ({ failed }) => {
+    const session = bottleSession(failed, undefined, ZONE, null)
+    expect(session.occurredAt).toBe(sentAt)
+    expect(occurredAtOf(session, session.when, ZONE, NOW)).toEqual({ ok: true, instant: sentAt })
+  })
+
+  it.each(routes)("saves the very action a failed $route send held, so a plain Save replays it", ({ failed }) => {
+    const session = bottleSession(failed, undefined, ZONE, null)
+    expect(savedAs(session, session.when)).toEqual(failed.sending.action)
+  })
+
+  it.each(routes)(
+    "reads a changed When as the minute picked, on the household's clock, after a failed $route send",
+    ({ failed }) => {
+      const session = bottleSession(failed, undefined, ZONE, null)
+      expect(occurredAtOf(session, picked, ZONE, NOW)).toEqual({ ok: true, instant: pickedMinute })
+    },
+  )
+
+  it.each(routes)("takes the moment tapped once the When of a failed $route send is set back to Now", ({ failed }) => {
+    const session = bottleSession(failed, undefined, ZONE, null)
+    expect(occurredAtOf(session, NOW_WHEN, ZONE, NOW)).toEqual({ ok: true, instant: NOW })
+  })
+
+  it("leaves a fresh session to its When, as before", () => {
+    const fresh = bottleSession(null, undefined, ZONE, null)
+    expect(fresh.occurredAt).toBeNull()
+    expect(occurredAtOf(fresh, NOW_WHEN, ZONE, NOW)).toEqual({ ok: true, instant: NOW })
+    expect(occurredAtOf(fresh, picked, ZONE, NOW)).toEqual({ ok: true, instant: pickedMinute })
+  })
+
+  it("reads the When of a fresh session opened at a time of day as that minute", () => {
+    const fresh = bottleSession(null, undefined, ZONE, pickedMinute + 41_000)
+    expect(fresh.occurredAt).toBeNull()
+    expect(occurredAtOf(fresh, fresh.when, ZONE, NOW)).toEqual({ ok: true, instant: pickedMinute })
   })
 })
 
