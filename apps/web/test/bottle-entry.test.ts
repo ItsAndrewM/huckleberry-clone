@@ -1,17 +1,24 @@
-import { FeedConflict, InvalidInput, NotFound } from "@bt/contracts"
+import { type Feed, FeedConflict, InvalidInput, NotFound } from "@bt/contracts"
 import { describe, expect, it } from "vitest"
 import { AuthRequired, Offline, Unexpected } from "../src/api/errors.ts"
 import { pendingId } from "../src/api/pending.ts"
 import {
+  type BottleSession,
   bottleAction,
   bottleSession,
   canSaveBottle,
+  type HeldRoute,
   hasMilk,
+  occurredAtOf,
   toppedUpFeed,
   toppedUpFor,
+  topUpNote,
 } from "../src/features/feed/bottle-entry.ts"
+import { clockOf } from "../src/sheets/clock.ts"
 import { StaleDraft } from "../src/sheets/drafts.ts"
 import { Unsaved } from "../src/sheets/kept.ts"
+import type { Failed, Sending } from "../src/sheets/sending.ts"
+import { NOW as NOW_WHEN, type When } from "../src/sheets/when.ts"
 import { feedAt, MINUTE, NOW, ZONE } from "./today-fixtures.ts"
 
 const ACTION_ID = "4b1c2a5e-8f3d-4c6b-9a7e-2d1f0e3c5b6a"
@@ -51,6 +58,7 @@ describe("bottleSession", () => {
     expect(bottleSession(UNSAVED_BOTTLE, undefined, ZONE, null)).toEqual({
       actionId: ACTION_ID,
       ...AMOUNTS,
+      occurredAt: Date.UTC(2026, 9, 9, 16, 0),
       when: { kind: "at", local: "2026-10-09T09:00", pick: null },
       held: { kind: "addBottle", id: "feed-1", version: 2 },
     })
@@ -154,6 +162,7 @@ describe("canSaveBottle", () => {
 
 describe("a held bottle", () => {
   const running = feedAt(NOW - 20 * MINUTE, { id: "feed-9", status: "active", endedAt: null, version: 4 })
+  const newer = { ...running, id: "feed-1", version: 5 }
   const loggedAlone = { kind: "logFeed" } as const
   const toppedUp = { kind: "addBottle", id: "feed-1", version: 2 } as const
 
@@ -162,15 +171,31 @@ describe("a held bottle", () => {
     expect(toppedUpFor(running, NOW, loggedAlone)).toBeNull()
   })
 
-  it("stays a top-up of its own feed, at that feed's version, even once another feed runs", () => {
+  it("stays a top-up of its own feed, at the version it first went at, even once another feed runs", () => {
     expect(bottleAction(ACTION_ID, AMOUNTS, NOW, running, toppedUp)).toMatchObject({
       kind: "addBottle",
       id: "feed-1",
       payload: { actionId: ACTION_ID, version: 2 },
     })
     expect(toppedUpFor(running, NOW, toppedUp)).toBeNull()
-    const same = { ...running, id: "feed-1", version: 5 }
-    expect(bottleAction(ACTION_ID, AMOUNTS, NOW, same, toppedUp)).toMatchObject({ payload: { version: 5 } })
+  })
+
+  it("resends a top-up at the version it first went at while its feed is active at a newer one, so a send that landed replays", () => {
+    expect(toppedUpFor(newer, NOW, toppedUp)).toBe(newer)
+    expect(bottleAction(ACTION_ID, AMOUNTS, NOW, newer, toppedUp)).toEqual({
+      kind: "addBottle",
+      id: "feed-1",
+      payload: { actionId: ACTION_ID, version: 2, occurredAt: NOW, ...AMOUNTS },
+    })
+  })
+
+  it("keeps a still-active feed's start for the start-minute clamp, at the version it first went at", () => {
+    const startedAt = newer.startedAt + 27_000
+    expect(bottleAction(ACTION_ID, AMOUNTS, newer.startedAt, { ...newer, startedAt }, toppedUp)).toEqual({
+      kind: "addBottle",
+      id: "feed-1",
+      payload: { actionId: ACTION_ID, version: 2, occurredAt: startedAt, ...AMOUNTS },
+    })
   })
 })
 
@@ -205,6 +230,17 @@ describe("a bottle's held route after the household answers", () => {
     })
   })
 
+  it("sends a top-up at its feed's live version once the household refuses the first, since nothing was saved", () => {
+    const live = feedAt(NOW - 40 * MINUTE, { id: "feed-1", status: "active", endedAt: null, version: 5 })
+    const { actionId, held } = reopenedAfter(new FeedConflict({ code: "STALE_VERSION", current: live }))
+    expect(held).toBeNull()
+    expect(bottleAction(actionId, AMOUNTS, NOW, live, held)).toEqual({
+      kind: "addBottle",
+      id: "feed-1",
+      payload: { actionId: ACTION_ID, version: 5, occurredAt: NOW, ...AMOUNTS },
+    })
+  })
+
   it.each([
     { case: "no connection", error: new Offline() },
     { case: "an unexpected answer", error: new Unexpected({ status: 500 }) },
@@ -220,5 +256,102 @@ describe("a bottle's held route after the household answers", () => {
     },
   ])("keeps a top-up on its own feed after $case, since the household may hold a receipt", ({ error }) => {
     expect(reopenedAfter(error).held).toEqual({ kind: "addBottle", id: "feed-1", version: 2 })
+  })
+})
+
+describe("a held bottle's time", () => {
+  const sentAt = Date.UTC(2026, 9, 9, 16, 0) + 37_412
+  const pickedMinute = Date.UTC(2026, 9, 9, 16, 5)
+  const picked = { kind: "at", local: "2026-10-09T09:05", pick: null } as const
+  const running = feedAt(NOW - 40 * MINUTE, { id: "feed-1", status: "active", endedAt: null, version: 5 })
+  const failedWith = (action: Sending["action"]): Failed => ({
+    sending: { sheet: "bottle", action },
+    error: new Offline(),
+  })
+  const routes = [
+    {
+      route: "addBottle",
+      failed: failedWith({
+        kind: "addBottle",
+        id: "feed-1",
+        payload: { actionId: ACTION_ID, version: 2, occurredAt: sentAt, ...AMOUNTS },
+      }),
+    },
+    {
+      route: "logFeed",
+      failed: failedWith({
+        kind: "logFeed",
+        payload: { actionId: ACTION_ID, segments: [], portions: [{ occurredAt: sentAt, ...AMOUNTS }] },
+      }),
+    },
+  ]
+  const savedAs = (session: BottleSession, when: When) => {
+    const resolved = occurredAtOf(session, when, ZONE, NOW)
+    return resolved.ok ? bottleAction(session.actionId, AMOUNTS, resolved.instant, running, session.held) : null
+  }
+
+  it.each(routes)("keeps the exact time a failed $route send went at while its When is left alone", ({ failed }) => {
+    const session = bottleSession(failed, undefined, ZONE, null)
+    expect(session.occurredAt).toBe(sentAt)
+    expect(occurredAtOf(session, session.when, ZONE, NOW)).toEqual({ ok: true, instant: sentAt })
+  })
+
+  it.each(routes)("saves the very action a failed $route send held, so a plain Save replays it", ({ failed }) => {
+    const session = bottleSession(failed, undefined, ZONE, null)
+    expect(savedAs(session, session.when)).toEqual(failed.sending.action)
+  })
+
+  it.each(routes)(
+    "reads a changed When as the minute picked, on the household's clock, after a failed $route send",
+    ({ failed }) => {
+      const session = bottleSession(failed, undefined, ZONE, null)
+      expect(occurredAtOf(session, picked, ZONE, NOW)).toEqual({ ok: true, instant: pickedMinute })
+    },
+  )
+
+  it.each(routes)("takes the moment tapped once the When of a failed $route send is set back to Now", ({ failed }) => {
+    const session = bottleSession(failed, undefined, ZONE, null)
+    expect(occurredAtOf(session, NOW_WHEN, ZONE, NOW)).toEqual({ ok: true, instant: NOW })
+  })
+
+  it("leaves a fresh session to its When, as before", () => {
+    const fresh = bottleSession(null, undefined, ZONE, null)
+    expect(fresh.occurredAt).toBeNull()
+    expect(occurredAtOf(fresh, NOW_WHEN, ZONE, NOW)).toEqual({ ok: true, instant: NOW })
+    expect(occurredAtOf(fresh, picked, ZONE, NOW)).toEqual({ ok: true, instant: pickedMinute })
+  })
+
+  it("reads the When of a fresh session opened at a time of day as that minute", () => {
+    const fresh = bottleSession(null, undefined, ZONE, pickedMinute + 41_000)
+    expect(fresh.occurredAt).toBeNull()
+    expect(occurredAtOf(fresh, fresh.when, ZONE, NOW)).toEqual({ ok: true, instant: pickedMinute })
+  })
+})
+
+describe("the note on where a bottle is saved", () => {
+  const running = feedAt(NOW - 10 * MINUTE, { id: "feed-1", status: "active", endedAt: null, version: 3 })
+  const another = feedAt(NOW - 20 * MINUTE, { id: "feed-9", status: "active", endedAt: null, version: 4 })
+  const heldTopUp = { kind: "addBottle", id: "feed-1", version: 2 } as const
+  const startNote = `Adds to the feed that started at ${clockOf(running.startedAt, ZONE)}.`
+  const noteFor = (active: Feed | null, held: HeldRoute) => topUpNote(toppedUpFor(active, NOW, held), held, ZONE)
+
+  it("names when the feed being topped up started", () => {
+    expect(noteFor(running, null)).toBe(startNote)
+  })
+
+  it("names it for a held top-up too, while its feed is still active", () => {
+    expect(noteFor(running, heldTopUp)).toBe(startNote)
+  })
+
+  it.each([
+    { case: "no feed is active", active: null },
+    { case: "another feed is the active one", active: another },
+  ])("says a held top-up still goes to the feed it was first added to when $case", ({ active }) => {
+    expect(noteFor(active, heldTopUp)).toBe("Adds to the feed it was first added to.")
+  })
+
+  it("says nothing of a bottle that's its own feed", () => {
+    expect(noteFor(null, null)).toBeNull()
+    expect(noteFor(running, { kind: "logFeed" })).toBeNull()
   })
 })
