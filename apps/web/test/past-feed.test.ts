@@ -59,7 +59,7 @@ describe("isComplete", () => {
 
 describe("pastFeedSession", () => {
   it("starts half an hour back, on the left, with nothing filled in", () => {
-    const session = pastFeedSession(null, START + 30 * MINUTE, ZONE)
+    const session = pastFeedSession(null, START + 30 * MINUTE, ZONE, null)
     expect(session).toMatchObject({
       when: { kind: "at", local: "2026-10-09T02:10", pick: null },
       first: "left",
@@ -69,13 +69,26 @@ describe("pastFeedSession", () => {
     })
   })
 
+  it("starts at the time it was opened at, from History's empty slot, rather than half an hour back", () => {
+    const session = pastFeedSession(null, START + 300 * MINUTE, ZONE, START + 5 * MINUTE)
+    expect(session.when).toEqual({ kind: "at", local: "2026-10-09T02:15", pick: null })
+  })
+
+  const unsaved = {
+    sending: {
+      sheet: "pastFeed" as const,
+      action: { kind: "logFeed" as const, payload: pastFeedEntry(ACTION_ID, START, feed(12, 8, 40, 10)) },
+    },
+    error: new Error("offline"),
+  }
+
+  it("keeps a failed save's own start over the time the sheet was opened at", () => {
+    const session = pastFeedSession(unsaved, START + 60 * MINUTE, ZONE, START + 45 * MINUTE)
+    expect(session.when).toEqual({ kind: "at", local: "2026-10-09T02:10", pick: null })
+  })
+
   it("reopens a feed that wasn't saved with what it held and the same actionId", () => {
-    const payload = pastFeedEntry(ACTION_ID, START, feed(12, 8, 40, 10))
-    const failed = {
-      sending: { sheet: "pastFeed" as const, action: { kind: "logFeed" as const, payload } },
-      error: new Error("offline"),
-    }
-    expect(pastFeedSession(failed, START + 60 * MINUTE, ZONE)).toEqual({
+    expect(pastFeedSession(unsaved, START + 60 * MINUTE, ZONE, null)).toEqual({
       actionId: ACTION_ID,
       when: { kind: "at", local: "2026-10-09T02:10", pick: null },
       first: "right",
@@ -139,7 +152,7 @@ describe("endsInFuture", () => {
 })
 
 describe("futureEnd", () => {
-  const { when } = pastFeedSession(null, NOW, ZONE)
+  const { when } = pastFeedSession(null, NOW, ZONE, null)
 
   it("is where a feed from the default start would end, when that is ahead of the household's clock", () => {
     expect(futureEnd(feed(20, 20), when, ZONE, NOW)).toBe(START + 40 * MINUTE)
@@ -158,7 +171,7 @@ describe("futureEnd", () => {
 })
 
 describe("canSavePastFeed", () => {
-  const { when } = pastFeedSession(null, NOW, ZONE)
+  const { when } = pastFeedSession(null, NOW, ZONE, null)
 
   it("is ready with something to log, a start that resolves and an end that isn't ahead", () => {
     expect(canSavePastFeed(feed(10, 10), when, ZONE, NOW)).toBe(true)

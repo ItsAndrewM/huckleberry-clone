@@ -23,17 +23,27 @@ const UNDONE: Sending = {
 
 describe("a Diaper sheet's session", () => {
   it("starts at Now under a new actionId when nothing failed", () => {
-    const session = sessionOf(null, ZONE)
+    const session = sessionOf(null, ZONE, null)
     expect(session.actionId).toMatch(UUID)
     expect(session.when).toEqual(WHEN_NOW)
   })
 
+  it("starts at the time it was opened at, from History's empty slot, under a new actionId", () => {
+    const session = sessionOf(null, ZONE, SENT_AT)
+    expect(session.actionId).toMatch(UUID)
+    expect(session.when).toEqual(whenAt(SENT_AT, ZONE))
+  })
+
+  it("keeps a failed save's own time over the time the sheet was opened at", () => {
+    expect(sessionOf(failedWith(LOGGED), ZONE, NOW).when).toEqual(whenAt(SENT_AT, ZONE))
+  })
+
   it("picks a failed save up where it left off: the same actionId, and the time sent on the household's clock", () => {
-    expect(sessionOf(failedWith(LOGGED), ZONE)).toEqual({ actionId: ACTION_ID, when: whenAt(SENT_AT, ZONE) })
+    expect(sessionOf(failedWith(LOGGED), ZONE, null)).toEqual({ actionId: ACTION_ID, when: whenAt(SENT_AT, ZONE) })
   })
 
   it("starts over when the failure wasn't a logged diaper", () => {
-    const session = sessionOf(failedWith(UNDONE), ZONE)
+    const session = sessionOf(failedWith(UNDONE), ZONE, null)
     expect(session.actionId).toMatch(UUID)
     expect(session.actionId).not.toBe(ACTION_ID)
     expect(session.when).toEqual(WHEN_NOW)
