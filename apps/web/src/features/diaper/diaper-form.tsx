@@ -20,7 +20,7 @@ type Choice = (typeof CHOICES)[number]
 export const DiaperForm = ({ household }: { readonly household: Household }) => {
   const sheets = useSheets()
   const zone = household.timeZone
-  const [session] = useState(() => sessionOf(failedFor(sheets, "diaper"), zone))
+  const [session] = useState(() => sessionOf(failedFor(sheets, "diaper"), zone, sheets.at))
   const [when, setWhen] = useState(session.when)
   const now = useNow()
   const ready = resolveWhen(when, zone, now).ok
