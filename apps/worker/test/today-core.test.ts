@@ -5,6 +5,7 @@ import { deletePortion, deleteSegment } from "../src/core/feeds/components.ts"
 import { deleteFeed } from "../src/core/feeds/feed-edits.ts"
 import { pauseFeed, startFeed } from "../src/core/feeds/lifecycle.ts"
 import { logFeed } from "../src/core/feeds/log.ts"
+import { lastFeed, prefillOf } from "../src/core/feeds/reads.ts"
 import { last24hOf, todayOf } from "../src/core/today.ts"
 import { bottle, newFeed, segment } from "./feed-fixtures.ts"
 import {
@@ -22,6 +23,7 @@ import {
   stampOf,
 } from "./fixtures.ts"
 import { inStorage } from "./requests.ts"
+import { countingRowsRead } from "./rows-read.ts"
 
 const OCT_7_AT_23_50 = Date.UTC(2026, 9, 8, 6, 50)
 const ac4 = (minutes: number) => OCT_7_AT_23_50 + minutes * MINUTE_MS
@@ -110,6 +112,38 @@ describe("todayOf", () => {
       return { newest, today: todayOf(sql, NOW) }
     })
     expect(today.lastFeed).toEqual(newest)
+  })
+
+  it("takes the later-logged of two feeds that start at the same minute as the last feed", async () => {
+    const { second, today } = await inHousehold((sql) => {
+      fed(sql, [], [bottle(minutesAgo(30), 60, 0)])
+      const second = fed(sql, [], [bottle(minutesAgo(30), 0, 90)])
+      return { second, today: todayOf(sql, NOW) }
+    })
+    expect(today.lastFeed).toEqual(second)
+  })
+
+  it("reads a handful of rows for the last feed and the prefill, however long the history", async () => {
+    const reads = await inHousehold((sql) => {
+      for (let feed = 0; feed < 150; feed++) {
+        const endsAt = minutesAgo(10 + feed * 30)
+        fed(
+          sql,
+          [
+            segment("left", endsAt - 20 * MINUTE_MS, endsAt - 10 * MINUTE_MS),
+            segment("right", endsAt - 10 * MINUTE_MS, endsAt),
+          ],
+          [bottle(endsAt)],
+        )
+      }
+      const forLastFeed = countingRowsRead(sql)
+      lastFeed(forLastFeed.sql)
+      const forPrefill = countingRowsRead(sql)
+      prefillOf(forPrefill.sql)
+      return { lastFeed: forLastFeed.rowsRead(), prefill: forPrefill.rowsRead() }
+    })
+    expect(reads.lastFeed).toBeLessThan(20)
+    expect(reads.prefill).toBeLessThan(20)
   })
 
   it("lists every feed and diaper from the last 24 hours, newest first, though yesterday's aren't in today's totals", async () => {
