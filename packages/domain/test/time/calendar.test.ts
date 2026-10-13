@@ -20,6 +20,11 @@ const dates = fc
   .integer({ min: Date.UTC(2020, 0, 1), max: Date.UTC(2035, 0, 1) })
   .map((ms) => new Date(ms).toISOString().slice(0, 10))
 
+const dateFnsWeekOf = (date: string) => {
+  const day = tz("UTC")(Date.parse(`${date}T00:00:00Z`))
+  return `${getISOWeekYear(day)}-W${String(getISOWeek(day)).padStart(2, "0")}`
+}
+
 describe("addDaysToDate", () => {
   it.each([
     ["2026-10-06", 1, "2026-10-07"],
@@ -134,29 +139,25 @@ describe("ISO weeks", () => {
     expect(isoWeekDates(week)).toHaveLength(7)
   })
 
-  it("numbers every week as date-fns does in UTC, from 1999 to 2100, without reading the device's zone", () => {
-    const utc = tz("UTC")
+  it("numbers sampled dates from 1999 to 2100 as date-fns does in UTC, under host zones either side of UTC", () => {
     const centuryDates = fc
       .integer({ min: Date.UTC(1999, 0, 1), max: Date.UTC(2100, 11, 31) })
       .map((ms) => new Date(ms).toISOString().slice(0, 10))
     fc.assert(
       fc.property(centuryDates, (date) => {
-        const day = utc(Date.parse(`${date}T00:00:00Z`))
-        const week = `${getISOWeekYear(day)}-W${String(getISOWeek(day)).padStart(2, "0")}`
+        const week = dateFnsWeekOf(date)
         expect([isoWeekOfDate(date), isIsoWeek(week), isoWeekMonday(week) <= date]).toEqual([week, true, true])
       }),
     )
   })
 
   it("numbers weeks in years 0 to 199 as date-fns does, where Date.UTC reads years below 100 as the 1900s", () => {
-    const utc = tz("UTC")
     const earlyDates = fc
       .integer({ min: new Date(0).setUTCFullYear(0, 0, 1), max: new Date(0).setUTCFullYear(199, 11, 31) })
       .map((ms) => new Date(ms).toISOString().slice(0, 10))
     fc.assert(
       fc.property(earlyDates, (date) => {
-        const day = utc(Date.parse(`${date}T00:00:00Z`))
-        expect(isoWeekOfDate(date)).toBe(`${getISOWeekYear(day)}-W${String(getISOWeek(day)).padStart(2, "0")}`)
+        expect(isoWeekOfDate(date)).toBe(dateFnsWeekOf(date))
       }),
     )
   })

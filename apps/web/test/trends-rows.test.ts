@@ -14,8 +14,8 @@ const DAYS = trendDays(WEEK, TODAY, BIRTH)
 
 describe("barRows", () => {
   it("draws finished days and today, and nothing for days still to come, logged or not", () => {
-    const logged = trendDays([...WEEK.slice(0, 3), dated("2026-10-15", MONDAY)], TODAY, BIRTH)
-    expect(barRows(FEEDS, logged, "ml", null).map(({ date, value }) => [date, value])).toEqual([
+    const days = trendDays([...WEEK.slice(0, 3), dated("2026-10-15", MONDAY), dated("2026-10-16")], TODAY, BIRTH)
+    expect(barRows(FEEDS, days, "ml", null).map(({ date, value }) => [date, value])).toEqual([
       ["2026-10-12", 8],
       ["2026-10-13", 7],
       [TODAY, 2],

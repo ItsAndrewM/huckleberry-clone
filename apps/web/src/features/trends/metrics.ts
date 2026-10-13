@@ -16,7 +16,7 @@ export interface TrendsMetric {
   readonly parts: ReadonlyArray<MetricPart>
   readonly total: (totals: Totals) => number
   readonly running: (running: RunningTotals) => ReadonlyArray<RunningPoint>
-  readonly axis: (volume: VolumeUnit) => string
+  readonly unit: (volume: VolumeUnit) => string | null
   readonly axisFloor: (volume: VolumeUnit) => number
   readonly plotted: (amount: number, volume: VolumeUnit) => number
   readonly format: (amount: number, volume: VolumeUnit) => string
@@ -35,7 +35,7 @@ const FEEDS: TrendsMetric = {
   parts: [{ key: "feeds", label: "Feeds started", amount: (totals) => totals.feedsStarted }],
   total: (totals) => totals.feedsStarted,
   running: (running) => running.feedsStarted,
-  axis: () => "Feeds",
+  unit: () => null,
   axisFloor: () => 4,
   plotted: asIs,
   format: counted,
@@ -51,7 +51,7 @@ const NURSING: TrendsMetric = {
   ],
   total: (totals) => totals.nursingSeconds,
   running: (running) => running.nursingSeconds,
-  axis: () => "Minutes",
+  unit: () => "minutes",
   axisFloor: () => 60,
   plotted: (seconds) => seconds / 60,
   format: formatMinutes,
@@ -71,7 +71,7 @@ const BOTTLES: TrendsMetric = {
   ],
   total: (totals) => totals.bottleMl,
   running: (running) => running.bottleMl,
-  axis: (volume) => (volume === "ml" ? "mL" : "fl oz"),
+  unit: (volume) => (volume === "ml" ? "mL" : "fl oz"),
   axisFloor: (volume) => (volume === "ml" ? 100 : 4),
   plotted: (ml, volume) => (volume === "ml" ? ml : flOzFromMl(ml)),
   format: formatVolume,
@@ -88,7 +88,7 @@ const DIAPERS: TrendsMetric = {
   parts: [{ key: "diapers", label: "Diapers", amount: (totals) => totals.diapers }],
   total: (totals) => totals.diapers,
   running: (running) => running.diapers,
-  axis: () => "Diapers",
+  unit: () => null,
   axisFloor: () => 4,
   plotted: asIs,
   format: counted,

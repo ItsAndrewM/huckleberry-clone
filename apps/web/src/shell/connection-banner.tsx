@@ -5,14 +5,14 @@ import { useConnectivity, useMe } from "../api/hooks.ts"
 import { useApp } from "../app-context.ts"
 import { Alert, AlertAction, AlertDescription, AlertTitle } from "../components/ui/alert.tsx"
 import { buttonVariants } from "../components/ui/button.tsx"
-import { useNow } from "../timer/use-now.ts"
+import { useMinute } from "../timer/use-now.ts"
 import { signInUrl } from "./sign-in.ts"
 import { phoneZone, updatedLine } from "./updated.ts"
 
 const CANT_SAVE = "Entries can't be saved or refreshed until you're back online."
 
 const OfflineBanner = ({ updatedAt, zone }: { readonly updatedAt: number | null; readonly zone: string }) => {
-  const now = useNow()
+  const now = useMinute()
   return (
     <Alert className="rounded-none border-x-0 border-t-0 bg-muted px-4 text-muted-foreground">
       <WifiOffIcon aria-hidden="true" />

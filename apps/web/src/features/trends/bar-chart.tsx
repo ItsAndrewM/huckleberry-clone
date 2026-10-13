@@ -2,6 +2,7 @@ import type { LocalDate, VolumeUnit } from "@bt/contracts"
 import { Chart } from "@tanstack/charts/react"
 import { useMemo } from "react"
 import { barChartDefinition, barChartModel } from "./bar-chart-definition.ts"
+import { chartName } from "./chart-name.ts"
 import type { TrendsMetric } from "./metrics.ts"
 import type { TrendDay } from "./trends-numbers.ts"
 
@@ -24,7 +25,7 @@ export const BarChart = ({ metric, days, volume, picked, onPick }: BarChartProps
     <Chart
       definition={definition}
       height={CHART_HEIGHT}
-      ariaLabel={`${metric.title} each day, in ${metric.axis(volume)}`}
+      ariaLabel={chartName(metric, volume, "each day")}
       ariaDescription="Pick a day to see its numbers. Show as a table lists every day."
       className="[&_svg:focus:not(:focus-visible)]:outline-none"
       onSelect={(point) => {

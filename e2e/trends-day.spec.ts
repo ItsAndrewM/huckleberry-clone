@@ -46,14 +46,20 @@ test("climbs through today so far, against her usual day over the seven days bef
   await expect(chart(page, "Bottles")).toContainText("150 mL so far")
   await expect(chart(page, "Bottles").locator('[data-ts-key^="usual:"]').first()).toBeAttached()
   await expect(chart(page, "Bottles").locator('[data-ts-key^="so-far:"]').first()).toBeAttached()
+  await expect(chart(page, "Bottles").getByRole("img")).toHaveAccessibleName("Bottles through the day, in mL")
+  await expect(chart(page, "Feeds started").getByRole("img")).toHaveAccessibleName("Feeds started through the day")
 })
 
-test("says there's no usual day yet when nothing was logged in the seven days before", async ({ page }) => {
+test("says there's no usual day yet when nothing was logged in the seven days before, and draws no line through a day with nothing logged", async ({
+  page,
+}) => {
   await playDays(page)
   await openTrends(page, "?view=day&date=2026-10-01")
   await expect(chart(page, "Diapers")).toContainText("No entries")
   await expect(chart(page, "Diapers")).toContainText("No usual day yet")
   await expect(chart(page, "Diapers").locator('[data-ts-key^="usual:"]')).toHaveCount(0)
+  await expect(page.getByRole("main").locator('text[data-ts-key^="x-tick-label"]')).toHaveCount(20)
+  await expect(page.getByRole("main").locator('[data-ts-key^="so-far:"]')).toHaveCount(0)
 })
 
 test("lengthens today's line as the minutes pass", async ({ page }) => {

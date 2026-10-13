@@ -13,12 +13,17 @@ export interface Numbers {
   readonly detail: ReadonlyArray<string>
 }
 
+export const trendDay = (day: DatedTotals, today: LocalDate, birthDate: LocalDate): TrendDay => ({
+  date: day.date,
+  totals: day.totals,
+  status: dayStatus(day, today, birthDate),
+})
+
 export const trendDays = (
   days: ReadonlyArray<DatedTotals>,
   today: LocalDate,
   birthDate: LocalDate,
-): ReadonlyArray<TrendDay> =>
-  days.map((day) => ({ date: day.date, totals: day.totals, status: dayStatus(day, today, birthDate) }))
+): ReadonlyArray<TrendDay> => days.map((day) => trendDay(day, today, birthDate))
 
 const overDays = (days: number) => `over ${days} ${days === 1 ? "day" : "days"}`
 
