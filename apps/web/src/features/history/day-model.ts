@@ -1,4 +1,4 @@
-import type { DayPeriod, Diaper, Feed, LocalDate } from "@bt/contracts"
+import type { DayPeriod, Diaper, Dose, Feed, LocalDate } from "@bt/contracts"
 import {
   type CalendarBlock,
   type CalendarPoint,
@@ -29,6 +29,7 @@ export interface DayPieces {
 export type Entry =
   | { readonly kind: "feed"; readonly feed: Feed }
   | { readonly kind: "diaper"; readonly diaper: Diaper }
+  | { readonly kind: "dose"; readonly dose: Dose }
 
 export interface DayModel {
   readonly grid: DayGrid<Side>
@@ -87,8 +88,9 @@ export const isLiveFeed = (entries: ReadonlyArray<Entry>) => {
   return entries.length === 1 && only?.kind === "feed" && only.feed.status === "active"
 }
 
-export const editSheetOf = (entry: Entry): "editDiaper" | "editFeed" | "nursing" => {
+export const editSheetOf = (entry: Entry): "editDiaper" | "editFeed" | "nursing" | "editDose" => {
   if (entry.kind === "diaper") return "editDiaper"
+  if (entry.kind === "dose") return "editDose"
   return entry.feed.status === "active" ? "nursing" : "editFeed"
 }
 

@@ -37,6 +37,7 @@ export type Prefill = typeof Prefill.Type
 export const RecentEntry = Schema.Union([
   Schema.Struct({ kind: Schema.Literal("feed"), feed: Feed }),
   Schema.Struct({ kind: Schema.Literal("diaper"), diaper: Diaper }),
+  Schema.Struct({ kind: Schema.Literal("dose"), dose: Dose }),
 ])
 export type RecentEntry = typeof RecentEntry.Type
 

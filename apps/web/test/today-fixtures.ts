@@ -1,4 +1,4 @@
-import type { Diaper, Dose, Feed, Sleep, Today, Totals } from "@bt/contracts"
+import type { Diaper, Dose, Feed, Sleep, Supplement, Today, Totals } from "@bt/contracts"
 import { localDateOf } from "@bt/domain"
 
 export const ZONE = "America/Vancouver"
@@ -50,6 +50,19 @@ export const sleptAt = (startedAt: number, change: Partial<Sleep> = {}): Sleep =
   startedAt,
   endedAt: startedAt + 60 * MINUTE,
   ...audit(startedAt, ANDREW),
+  ...change,
+})
+
+export const supplementOf = (change: Partial<Supplement> = {}): Supplement => ({
+  id: VITAMIN_D,
+  name: "Vitamin D",
+  dose: "400 IU",
+  stoppedAt: null,
+  version: 1,
+  createdBy: null,
+  createdAt: Date.UTC(2026, 9, 1),
+  updatedBy: null,
+  updatedAt: Date.UTC(2026, 9, 1),
   ...change,
 })
 

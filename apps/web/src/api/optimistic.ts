@@ -6,7 +6,7 @@ import { pendingGrowth, savedGrowth, withdrawnGrowth } from "./growth-cache.ts"
 import type { Saved } from "./send.ts"
 import { isSwapping } from "./swap.ts"
 import { pendingToday, savedToday, withdrawnToday } from "./today-cache.ts"
-import type { Pending } from "./today-change.ts"
+import { type Pending, pendingOf } from "./today-change.ts"
 
 interface TodayPended {
   readonly cache: "today"
@@ -27,7 +27,7 @@ const pendToday = async (queryClient: QueryClient, action: Action, now: number):
   const before = queryClient.getQueryData<Today>(queryKeys.today)
   const me = queryClient.getQueryData<Me>(queryKeys.me)
   if (before === undefined || me === undefined) return null
-  const pending = { by: me.caregiver.id, now, zone: me.household.timeZone }
+  const pending = pendingOf(me, now)
   const shown = pendingToday(before, action, pending)
   if (shown === before) return null
   queryClient.setQueryData(queryKeys.today, shown)

@@ -1,7 +1,7 @@
-import type { Diaper, Feed, VolumeUnit } from "@bt/contracts"
+import type { Diaper, Dose, Feed, VolumeUnit } from "@bt/contracts"
 import { feedSummary } from "@bt/domain"
 import { clockTime } from "../../clock-time.ts"
-import type { Display } from "../today/display.ts"
+import { type Display, supplementName } from "../today/display.ts"
 import { feedParts, feedTitle } from "../today/feed-parts.ts"
 import { formatVolume, presentParts } from "../today/format.ts"
 import type { Entry } from "./day-model.ts"
@@ -44,12 +44,26 @@ const diaperChip = ({ wet, dirty }: Diaper) => {
   return wet ? "Pee" : "Poo"
 }
 
-export const markerText = (entry: Entry, volume: VolumeUnit, now: number) =>
-  entry.kind === "diaper" ? diaperChip(entry.diaper) : formatVolume(feedSummary(entry.feed, now).bottleMl, volume)
+export const markerText = (entry: Entry, display: Display, now: number) => {
+  switch (entry.kind) {
+    case "diaper":
+      return diaperChip(entry.diaper)
+    case "dose":
+      return supplementName(display, entry.dose.supplementId)
+    case "feed":
+      return formatVolume(feedSummary(entry.feed, now).bottleMl, display.volume)
+  }
+}
+
+const doseName = (dose: Dose, display: Display, time: string) => {
+  const name = `${supplementName(display, dose.supplementId)} at ${time}`
+  return dose.dose === "" ? name : `${name}: ${dose.dose}`
+}
 
 export const entryName = (entry: Entry, display: Display, now: number) => {
   const time = (at: number) => clockTime(at, display.timeZone, display.locale)
   if (entry.kind === "diaper") return `Diaper at ${time(entry.diaper.occurredAt)}: ${diaperText(entry.diaper)}`
+  if (entry.kind === "dose") return doseName(entry.dose, display, time(entry.dose.occurredAt))
   const { feed } = entry
   const details = [...progressOf(feed, "in progress"), ...feedParts(feed, display.volume, now)]
   const name = `${feedTitle(feed)} at ${time(feed.startedAt)}`

@@ -15,7 +15,7 @@ import {
   POO,
   RUNNING,
 } from "./history-fixtures.ts"
-import { ZONE } from "./today-fixtures.ts"
+import { dosedAt, supplementOf, ZONE } from "./today-fixtures.ts"
 
 describe("shortMinutes", () => {
   it("keeps a block's label short", () => {
@@ -44,11 +44,13 @@ describe("a block's label", () => {
 })
 
 describe("a marker's label", () => {
-  it("uses the Diaper sheet's own words, and a bottle's amount in the household's unit", () => {
-    expect(markerText({ kind: "diaper", diaper: PEE }, "ml", NOW_ON_DAY)).toBe("Pee")
-    expect(markerText({ kind: "diaper", diaper: POO }, "ml", NOW_ON_DAY)).toBe("Poo")
-    expect(markerText({ kind: "diaper", diaper: BOTH }, "ml", NOW_ON_DAY)).toBe("Both")
-    expect(markerText({ kind: "feed", feed: BOTTLE }, "fl_oz", NOW_ON_DAY)).toBe("3.0 fl oz")
+  it("uses the Diaper sheet's own words, a bottle's amount in the household's unit, and a dose's supplement", () => {
+    expect(markerText({ kind: "diaper", diaper: PEE }, DISPLAY, NOW_ON_DAY)).toBe("Pee")
+    expect(markerText({ kind: "diaper", diaper: POO }, DISPLAY, NOW_ON_DAY)).toBe("Poo")
+    expect(markerText({ kind: "diaper", diaper: BOTH }, DISPLAY, NOW_ON_DAY)).toBe("Both")
+    expect(markerText({ kind: "feed", feed: BOTTLE }, { ...DISPLAY, volume: "fl_oz" }, NOW_ON_DAY)).toBe("3.0 fl oz")
+    const display = { ...DISPLAY, supplements: [supplementOf()] }
+    expect(markerText({ kind: "dose", dose: dosedAt(local("09:00")) }, display, NOW_ON_DAY)).toBe("Vitamin D")
   })
 })
 
@@ -61,6 +63,13 @@ describe("what a screen reader hears for an entry", () => {
     expect(entryName({ kind: "feed", feed: RUNNING }, DISPLAY, NOW_ON_DAY)).toBe(
       "Nursing at 8:40 AM: in progress, Left 50 min",
     )
+  })
+
+  it("names a dose by its supplement, time and dose, and leaves off a dose that wasn't written down", () => {
+    const display = { ...DISPLAY, supplements: [supplementOf()] }
+    const dose = dosedAt(local("09:00"))
+    expect(entryName({ kind: "dose", dose }, display, NOW_ON_DAY)).toBe("Vitamin D at 9:00 AM: 400 IU")
+    expect(entryName({ kind: "dose", dose: { ...dose, dose: "" } }, display, NOW_ON_DAY)).toBe("Vitamin D at 9:00 AM")
   })
 
   it("says when a feed is paused", () => {

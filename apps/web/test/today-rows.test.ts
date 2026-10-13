@@ -4,7 +4,19 @@ import type { Display } from "../src/features/today/display.ts"
 import { feedParts, feedTitle } from "../src/features/today/feed-parts.ts"
 import { recentRows } from "../src/features/today/recent-rows.ts"
 import { totalsRows } from "../src/features/today/totals-rows.ts"
-import { ANDREW, diaperAt, EMILY, feedAt, MINUTE, NO_TOTALS, NOW, nursedFor, ZONE } from "./today-fixtures.ts"
+import {
+  ANDREW,
+  diaperAt,
+  dosedAt,
+  EMILY,
+  feedAt,
+  MINUTE,
+  NO_TOTALS,
+  NOW,
+  nursedFor,
+  supplementOf,
+  ZONE,
+} from "./today-fixtures.ts"
 
 const TWO_TEN = Date.UTC(2026, 9, 9, 9, 10)
 const BOTTLE = { id: "bottle", occurredAt: TWO_TEN, breastMilkMl: 40, formulaMl: 20 }
@@ -18,6 +30,7 @@ const DISPLAY: Display = {
     { id: ANDREW, displayName: "Andrew" },
     { id: EMILY, displayName: "Emily" },
   ],
+  supplements: [],
 }
 
 describe("a feed's title and parts", () => {
@@ -160,6 +173,24 @@ describe("recentRows", () => {
       NOW,
     )
     expect(rows.map((row) => row.kind)).toEqual(["bottle", "diaper"])
+  })
+
+  it("shows a dose by its supplement's name as it is now, with the dose it was given at and who gave it", () => {
+    const display = { ...DISPLAY, supplements: [supplementOf({ name: "Vitamin D3" })] }
+    const rows = recentRows(
+      [
+        { kind: "dose", dose: dosedAt(TWO_TEN) },
+        { kind: "dose", dose: dosedAt(TWO_TEN, { id: pendingId("action-4"), dose: "" }) },
+        { kind: "dose", dose: dosedAt(TWO_TEN, { supplementId: "gone" }) },
+      ],
+      display,
+      NOW,
+    )
+    expect(rows.map(({ kind, title, detail, by, saving }) => [kind, title, detail, by, saving])).toEqual([
+      ["dose", "Vitamin D3", ["400 IU"], "Emily", false],
+      ["dose", "Vitamin D3", [], "Emily", true],
+      ["dose", "Supplement", ["400 IU"], "Emily", false],
+    ])
   })
 
   it("names no one for a caregiver the household doesn't list", () => {

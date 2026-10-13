@@ -386,6 +386,23 @@ describe("todayOf, for doses", () => {
     })
     expect(today).toMatchObject({ totals: NO_TOTALS, doses: [early, late] })
   })
+
+  it("lists every dose from the last 24 hours among the feeds and diapers, newest first, last night's included", async () => {
+    const { lastNight, diaper, morning, today } = await inHousehold((sql) => {
+      dosedAt(sql, minutesAgo(25 * 60))
+      return {
+        lastNight: dosedAt(sql, ac4(-5)),
+        diaper: diaperAt(sql, minutesAgo(120)),
+        morning: dosedAt(sql, minutesAgo(30)),
+        today: todayOf(sql, NOW),
+      }
+    })
+    expect(today.recent).toEqual([
+      { kind: "dose", dose: morning },
+      { kind: "diaper", diaper },
+      { kind: "dose", dose: lastNight },
+    ])
+  })
 })
 
 describe("last24hOf", () => {

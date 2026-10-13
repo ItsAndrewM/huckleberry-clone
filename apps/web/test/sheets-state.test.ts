@@ -180,7 +180,27 @@ const MEASUREMENT_DELETED: Sending = {
   action: { kind: "deleteMeasurement", id: "measurement-1", payload: { actionId: ACTION_ID, version: 2 } },
 }
 
-const restoring = (sheet: Sending["sheet"], kind: "restoreDiaper" | "restoreFeed" | "restoreMeasurement"): Sending => ({
+const DOSE: Sending = {
+  sheet: "dose",
+  action: {
+    kind: "logDose",
+    payload: { actionId: ACTION_ID, supplementId: "supplement-1", occurredAt: NOW, confirmedDuplicate: false },
+  },
+}
+
+const DOSE_MOVED: Sending = {
+  sheet: "editDose",
+  action: { kind: "editDose", id: "dose-1", payload: { actionId: ACTION_ID, version: 1, occurredAt: NOW - 60_000 } },
+}
+
+const DOSE_DELETED: Sending = {
+  sheet: "editDose",
+  action: { kind: "deleteDose", id: "dose-1", payload: { actionId: ACTION_ID, version: 1 } },
+}
+
+type Restore = "restoreDiaper" | "restoreFeed" | "restoreMeasurement" | "restoreDose"
+
+const restoring = (sheet: Sending["sheet"], kind: Restore): Sending => ({
   sheet,
   action: { kind, id: "record-1", payload: { actionId: ACTION_ID, version: 2 } },
 })
@@ -189,6 +209,10 @@ const CLOSING = {
   restoreDiaper: { sending: restoring("diaper", "restoreDiaper"), closes: false, entry: false },
   restoreFeed: { sending: restoring("pastFeed", "restoreFeed"), closes: false, entry: false },
   restoreMeasurement: { sending: restoring("measurement", "restoreMeasurement"), closes: false, entry: false },
+  restoreDose: { sending: restoring("dose", "restoreDose"), closes: false, entry: false },
+  logDose: { sending: DOSE, closes: true, entry: true },
+  editDose: { sending: DOSE_MOVED, closes: true, entry: false },
+  deleteDose: { sending: DOSE_DELETED, closes: true, entry: false },
   logDiaper: { sending: DIAPER, closes: true, entry: true },
   deleteDiaper: { sending: UNDO_DIAPER, closes: false, entry: false },
   logFeed: { sending: BOTTLE_FEED, closes: true, entry: true },

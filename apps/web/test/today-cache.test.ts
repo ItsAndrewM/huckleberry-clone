@@ -7,7 +7,7 @@ import { ANDREW, diaperAt, feedAt, MINUTE, NO_TOTALS, NOW, nursedFor, todayWith,
 
 const ACTION_ID = "4b1c2a5e-8f3d-4c6b-9a7e-2d1f0e3c5b6a"
 const OTHER_ACTION_ID = "9d2e7f40-1a3b-4c5d-8e6f-7a8b9c0d1e2f"
-const pending = { by: ANDREW, now: NOW, zone: ZONE }
+const pending = { by: ANDREW, now: NOW, zone: ZONE, supplements: [] }
 const MIDNIGHT = Date.UTC(2026, 9, 9, 7)
 const HOUR = 60 * MINUTE
 

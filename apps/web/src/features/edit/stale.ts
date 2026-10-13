@@ -1,4 +1,4 @@
-import { DiaperConflict, FeedConflict, type RecentEntry } from "@bt/contracts"
+import { DiaperConflict, DoseConflict, FeedConflict, type RecentEntry } from "@bt/contracts"
 import type { Action } from "../../api/actions.ts"
 import type { Failed, Sending } from "../../sheets/sending.ts"
 import { entryName } from "../history/entry-labels.ts"
@@ -9,20 +9,31 @@ export interface Stale {
   readonly deleting: boolean
 }
 
-const DELETES = new Set<Action["kind"]>(["deleteDiaper", "deleteFeed"])
+const DELETES = new Set<Action["kind"]>(["deleteDiaper", "deleteFeed", "deleteDose"])
 
-export const staleOf = ({ sending, error }: Failed): Stale | null => {
-  const deleting = DELETES.has(sending.action.kind)
-  if (error instanceof DiaperConflict && error.code === "STALE_VERSION") {
-    return { current: { kind: "diaper", diaper: error.current }, deleting }
-  }
-  if (error instanceof FeedConflict && error.code === "STALE_VERSION") {
-    return { current: { kind: "feed", feed: error.current }, deleting }
-  }
+const currentOf = (error: Error): RecentEntry | null => {
+  if (error instanceof DiaperConflict && error.code === "STALE_VERSION")
+    return { kind: "diaper", diaper: error.current }
+  if (error instanceof FeedConflict && error.code === "STALE_VERSION") return { kind: "feed", feed: error.current }
+  if (error instanceof DoseConflict && error.code === "STALE_VERSION") return { kind: "dose", dose: error.current }
   return null
 }
 
-export const recordIn = (entry: RecentEntry) => (entry.kind === "feed" ? entry.feed : entry.diaper)
+export const staleOf = ({ sending, error }: Failed): Stale | null => {
+  const current = currentOf(error)
+  return current === null ? null : { current, deleting: DELETES.has(sending.action.kind) }
+}
+
+export const recordIn = (entry: RecentEntry) => {
+  switch (entry.kind) {
+    case "feed":
+      return entry.feed
+    case "diaper":
+      return entry.diaper
+    case "dose":
+      return entry.dose
+  }
+}
 
 const withVersion = <Sent extends Action>(action: Sent, version: number): Sent => ({
   ...action,

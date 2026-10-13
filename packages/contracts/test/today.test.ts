@@ -1,6 +1,6 @@
 import { Exit, Schema } from "effect"
 import { describe, expect, it } from "vitest"
-import { type Diaper, Last24h, Prefill, RecentEntries, RecentEntry, Today, Totals } from "../src/index.ts"
+import { type Diaper, type Dose, Last24h, Prefill, RecentEntries, RecentEntry, Today, Totals } from "../src/index.ts"
 
 const AT = Date.UTC(2026, 9, 8, 14, 30)
 
@@ -27,6 +27,20 @@ const DIAPER: Diaper = {
   occurredAt: AT,
   wet: true,
   dirty: false,
+  version: 1,
+  createdBy: "caregiver-1",
+  createdAt: AT,
+  updatedBy: "caregiver-1",
+  updatedAt: AT,
+  deletedAt: null,
+}
+
+const DOSE: Dose = {
+  id: "dose-1",
+  supplementId: "supplement-1",
+  occurredAt: AT,
+  localDate: "2026-10-08",
+  dose: "400 IU",
   version: 1,
   createdBy: "caregiver-1",
   createdAt: AT,
@@ -67,6 +81,11 @@ describe("a recent entry", () => {
   it("says which kind of record it carries", () => {
     expect(decodes(RecentEntry, { kind: "diaper", diaper: DIAPER })).toBe(true)
     expect(decodes(RecentEntry, { kind: "feed", diaper: DIAPER })).toBe(false)
+  })
+
+  it("carries a dose of a supplement", () => {
+    expect(decodes(RecentEntry, { kind: "dose", dose: DOSE })).toBe(true)
+    expect(decodes(RecentEntry, { kind: "dose", diaper: DIAPER })).toBe(false)
   })
 })
 

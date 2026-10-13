@@ -17,6 +17,7 @@ export const DISPLAY: Display = {
     { id: ANDREW, displayName: "Andrew" },
     { id: EMILY, displayName: "Emily" },
   ],
+  supplements: [],
   locale: LOCALE,
 }
 

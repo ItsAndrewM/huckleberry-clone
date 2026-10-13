@@ -19,7 +19,7 @@ const CAREGIVERS = [
   { id: ANDREW, displayName: "Andrew" },
   { id: EMILY, displayName: "Emily" },
 ]
-const DISPLAY: Display = { timeZone: ZONE, volume: "ml", locale: "en-US", caregivers: CAREGIVERS }
+const DISPLAY: Display = { timeZone: ZONE, volume: "ml", locale: "en-US", caregivers: CAREGIVERS, supplements: [] }
 const HOUSEHOLD: Household = { caregivers: CAREGIVERS, timeZone: ZONE, childName: "Robin", locale: "en-US" }
 
 const EDITED: Sending = {

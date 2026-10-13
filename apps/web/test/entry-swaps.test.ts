@@ -12,7 +12,7 @@ import { BOTTLE, BOUNDS, dayWith, local, NOW_ON_DAY, NURSED, PEE, POO, RUNNING }
 import { ANDREW, MINUTE, todayWith, ZONE } from "./today-fixtures.ts"
 
 const ACTION_ID = "4b1c2a5e-8f3d-4c6b-9a7e-2d1f0e3c5b6a"
-const PENDING = { by: ANDREW, now: NOW_ON_DAY, zone: ZONE }
+const PENDING = { by: ANDREW, now: NOW_ON_DAY, zone: ZONE, supplements: [] }
 const YESTERDAY = "2026-10-08"
 const COUNTED_AT = RUNNING.startedAt + 5_000
 const DELETED_AT = COUNTED_AT + 20 * MINUTE
@@ -46,7 +46,10 @@ const countedDay = (records: Pick<DayPeriod, "feeds" | "diapers">) =>
 
 const recentOf = (entries: ReadonlyArray<RecentEntry>) => entries.toSorted((a, b) => timeOf(b) - timeOf(a))
 
-const timeOf = (entry: RecentEntry) => (entry.kind === "feed" ? entry.feed.startedAt : entry.diaper.occurredAt)
+const timeOf = (entry: RecentEntry) => {
+  if (entry.kind === "feed") return entry.feed.startedAt
+  return entry.kind === "diaper" ? entry.diaper.occurredAt : entry.dose.occurredAt
+}
 
 const countedToday = (entries: ReadonlyArray<RecentEntry>) => {
   const feeds = entries.flatMap((entry) => (entry.kind === "feed" ? [entry.feed] : []))

@@ -1,4 +1,4 @@
-import type { Feed, RecentEntry, Today, Totals } from "@bt/contracts"
+import type { Feed, Me, RecentEntry, Supplement, Today, Totals } from "@bt/contracts"
 import {
   type DiaperChange,
   type Instant,
@@ -12,7 +12,15 @@ import type { Author } from "./pending.ts"
 
 export interface Pending extends Author {
   readonly zone: string
+  readonly supplements: ReadonlyArray<Supplement>
 }
+
+export const pendingOf = (me: Me, now: Instant): Pending => ({
+  by: me.caregiver.id,
+  now,
+  zone: me.household.timeZone,
+  supplements: me.household.supplements,
+})
 
 export interface Change {
   readonly feeds: ReadonlyArray<StartedFeed>
@@ -21,15 +29,41 @@ export interface Change {
 
 export const NOTHING: Change = { feeds: [], diapers: [] }
 
-export const idOf = (entry: RecentEntry) => (entry.kind === "feed" ? entry.feed.id : entry.diaper.id)
+const recordOf = (entry: RecentEntry) => {
+  switch (entry.kind) {
+    case "feed":
+      return entry.feed
+    case "diaper":
+      return entry.diaper
+    case "dose":
+      return entry.dose
+  }
+}
 
-export const timeOf = (entry: RecentEntry) => (entry.kind === "feed" ? entry.feed.startedAt : entry.diaper.occurredAt)
+export const idOf = (entry: RecentEntry) => recordOf(entry).id
 
-export const versionOf = (entry: RecentEntry) => (entry.kind === "feed" ? entry.feed.version : entry.diaper.version)
+export const timeOf = (entry: RecentEntry) => {
+  switch (entry.kind) {
+    case "feed":
+      return entry.feed.startedAt
+    case "diaper":
+      return entry.diaper.occurredAt
+    case "dose":
+      return entry.dose.occurredAt
+  }
+}
+
+export const versionOf = (entry: RecentEntry) => recordOf(entry).version
 
 export const changeOf = (entry: RecentEntry | null): Change => {
-  if (entry === null) return NOTHING
-  return entry.kind === "feed" ? { feeds: [entry.feed], diapers: [] } : { feeds: [], diapers: [entry.diaper] }
+  switch (entry?.kind) {
+    case "feed":
+      return { feeds: [entry.feed], diapers: [] }
+    case "diaper":
+      return { feeds: [], diapers: [entry.diaper] }
+    default:
+      return NOTHING
+  }
 }
 
 export const without = (recent: ReadonlyArray<RecentEntry>, id: string) => recent.filter((entry) => idOf(entry) !== id)

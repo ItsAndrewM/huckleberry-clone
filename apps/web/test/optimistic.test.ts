@@ -61,7 +61,9 @@ const growthIds = (queryClient: QueryClient) =>
 const recentIds = (queryClient: QueryClient) =>
   queryClient
     .getQueryData<Today>(queryKeys.today)
-    ?.recent.map((entry) => (entry.kind === "diaper" ? entry.diaper.id : entry.feed.id))
+    ?.recent.map((entry) =>
+      entry.kind === "feed" ? entry.feed.id : entry.kind === "diaper" ? entry.diaper.id : entry.dose.id,
+    )
 
 describe("optimistic measurements", () => {
   it("lists a measurement being saved in the growth cache, and leaves Today alone", async () => {

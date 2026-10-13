@@ -1,9 +1,11 @@
 import type {
   Diaper,
+  Dose,
   Feed,
   FeedStart,
   Measurement,
   NewDiaper,
+  NewDose,
   NewFeed,
   NewMeasurement,
   VersionedPortion,
@@ -39,6 +41,12 @@ export const pendingDiaper = ({ actionId, occurredAt, wet, dirty }: NewDiaper, a
   dirty,
   ...audit(author),
 })
+
+export const pendingDose = (
+  { actionId, supplementId, occurredAt }: NewDose,
+  author: Author,
+  { localDate, dose }: Pick<Dose, "localDate" | "dose">,
+): Dose => ({ id: pendingId(actionId), supplementId, occurredAt, localDate, dose, ...audit(author) })
 
 export const pendingMeasurement = (
   { actionId, measuredAt, weightG, lengthCm, headCm }: NewMeasurement,

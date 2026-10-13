@@ -1,7 +1,7 @@
 import { type DayPeriod, type Me, queryKeys, type RecentEntry, type Today } from "@bt/contracts"
 import type { QueryClient } from "@tanstack/react-query"
 import { dayCopy, swappedDay, swappedEntry, swappedToday, type Swapping, todayCopy } from "./swap.ts"
-import { type Pending, versionOf } from "./today-change.ts"
+import { type Pending, pendingOf, versionOf } from "./today-change.ts"
 
 export const DAYS = { queryKey: ["day"] } as const
 
@@ -55,7 +55,7 @@ export const pendEntries = async (
   const original = cachedEntry(queryClient, action.id)
   if (me === undefined || original === null) return null
   await Promise.all([queryClient.cancelQueries({ queryKey: queryKeys.today }), queryClient.cancelQueries(DAYS)])
-  const pending = { by: me.caregiver.id, now, zone: me.household.timeZone }
+  const pending = pendingOf(me, now)
   const asOf = queryClient.getQueryState(queryKeys.today)?.dataUpdatedAt ?? now
   swapEverywhere(queryClient, pending, action.id, swappedEntry(original, action, pending), asOf)
   return { cache: "entries", id: action.id, original, pending, asOf }

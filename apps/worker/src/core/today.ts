@@ -1,4 +1,4 @@
-import type { Diaper, Feed, Last24h, RecentEntry, Today } from "@bt/contracts"
+import type { Diaper, Dose, Feed, Last24h, RecentEntry, Today } from "@bt/contracts"
 import { contains, type Instant, type Interval, last24hPeriod, localDateOf, totalsIn, zonedDayBounds } from "@bt/domain"
 import { calendarOf } from "./calendar.ts"
 import { liveDiapersSince } from "./diapers.ts"
@@ -6,14 +6,30 @@ import { lastFeed, liveFeedsSince, prefillOf } from "./feeds/reads.ts"
 import { activeFeed } from "./feeds/rules.ts"
 import { lastSleep, liveSleepsSince } from "./sleeps/reads.ts"
 import { activeSleep } from "./sleeps/rules.ts"
-import { liveDosesIn } from "./supplements/doses.ts"
+import { liveDosesSince } from "./supplements/doses.ts"
 
-const timeOf = (entry: RecentEntry): Instant => (entry.kind === "feed" ? entry.feed.startedAt : entry.diaper.occurredAt)
+const timeOf = (entry: RecentEntry): Instant => {
+  switch (entry.kind) {
+    case "feed":
+      return entry.feed.startedAt
+    case "diaper":
+      return entry.diaper.occurredAt
+    case "dose":
+      return entry.dose.occurredAt
+  }
+}
 
-const recentIn = (period: Interval, feeds: ReadonlyArray<Feed>, diapers: ReadonlyArray<Diaper>): RecentEntry[] =>
+interface Logged {
+  readonly feeds: ReadonlyArray<Feed>
+  readonly diapers: ReadonlyArray<Diaper>
+  readonly doses: ReadonlyArray<Dose>
+}
+
+const recentIn = (period: Interval, { feeds, diapers, doses }: Logged): RecentEntry[] =>
   [
     ...feeds.map((feed) => ({ kind: "feed" as const, feed })),
     ...diapers.map((diaper) => ({ kind: "diaper" as const, diaper })),
+    ...doses.map((dose) => ({ kind: "dose" as const, dose })),
   ]
     .filter((entry) => contains(period, timeOf(entry)))
     .toSorted((a, b) => timeOf(b) - timeOf(a))
@@ -27,6 +43,7 @@ export const todayOf = (sql: SqlStorage, now: Instant): Today => {
   const feeds = liveFeedsSince(sql, from)
   const diapers = liveDiapersSince(sql, from)
   const sleeps = liveSleepsSince(sql, from)
+  const doses = liveDosesSince(sql, from)
   return {
     date,
     totals: totalsIn(day, { feeds, diapers, sleeps }, now),
@@ -35,8 +52,8 @@ export const todayOf = (sql: SqlStorage, now: Instant): Today => {
     activeSleep: activeSleep(sql) ?? null,
     lastSleep: lastSleep(sql),
     prefill: prefillOf(sql),
-    recent: recentIn(last24h, feeds, diapers),
-    doses: liveDosesIn(sql, day),
+    recent: recentIn(last24h, { feeds, diapers, doses }),
+    doses: doses.filter((dose) => contains(day, dose.occurredAt)),
   }
 }
 

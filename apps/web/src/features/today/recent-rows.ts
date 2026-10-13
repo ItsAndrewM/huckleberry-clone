@@ -1,11 +1,11 @@
-import type { Diaper, Feed, RecentEntry } from "@bt/contracts"
+import type { Diaper, Dose, Feed, RecentEntry } from "@bt/contracts"
 import { isPending, isSaving } from "../../api/pending.ts"
 import { clockTime } from "../../clock-time.ts"
-import type { Display } from "./display.ts"
+import { type Display, supplementName } from "./display.ts"
 import { feedParts, feedTitle } from "./feed-parts.ts"
 import { runningSide } from "./feed-status.ts"
 
-export type RowKind = "nursing" | "bottle" | "diaper"
+export type RowKind = "nursing" | "bottle" | "diaper" | "dose"
 
 export type RowSheet = "editDiaper" | "editFeed" | "nursing"
 
@@ -63,5 +63,28 @@ const diaperRow = (diaper: Diaper, display: Display): RecentRow => ({
   opens: isPending(diaper.id) ? null : "editDiaper",
 })
 
+const doseRow = (dose: Dose, display: Display): RecentRow => ({
+  id: dose.id,
+  kind: "dose",
+  at: dose.occurredAt,
+  time: clockTime(dose.occurredAt, display.timeZone, display.locale),
+  title: supplementName(display, dose.supplementId),
+  detail: dose.dose === "" ? [] : [dose.dose],
+  by: nameOf(display, dose.createdBy),
+  saving: isPending(dose.id),
+  opens: null,
+})
+
+const rowOf = (entry: RecentEntry, display: Display, now: number) => {
+  switch (entry.kind) {
+    case "feed":
+      return feedRow(entry.feed, display, now)
+    case "diaper":
+      return diaperRow(entry.diaper, display)
+    case "dose":
+      return doseRow(entry.dose, display)
+  }
+}
+
 export const recentRows = (recent: ReadonlyArray<RecentEntry>, display: Display, now: number) =>
-  recent.map((entry) => (entry.kind === "feed" ? feedRow(entry.feed, display, now) : diaperRow(entry.diaper, display)))
+  recent.map((entry) => rowOf(entry, display, now))

@@ -1,15 +1,17 @@
-import type { SavedDiaper, SavedFeed, SavedMeasurement } from "@bt/contracts"
+import type { SavedDiaper, SavedDose, SavedFeed, SavedMeasurement } from "@bt/contracts"
 import {
   type Action,
   type DiaperAction,
+  type DoseAction,
   type FeedAction,
   isDiaperAction,
+  isDoseAction,
   isMeasurementAction,
   type MeasurementAction,
 } from "./actions.ts"
 import type { HouseholdApi } from "./client.ts"
 
-export type Saved = SavedDiaper | SavedFeed | SavedMeasurement
+export type Saved = SavedDiaper | SavedFeed | SavedMeasurement | SavedDose
 
 type OnFeed = Extract<FeedAction, { readonly id: string }>
 type NewFeed = Exclude<FeedAction, OnFeed>
@@ -96,7 +98,21 @@ const sendMeasurement = (api: HouseholdApi, action: MeasurementAction): Promise<
   }
 }
 
+const sendDose = (api: HouseholdApi, action: DoseAction): Promise<SavedDose> => {
+  switch (action.kind) {
+    case "logDose":
+      return api.request((client) => client.doses.logDose({ payload: action.payload }))
+    case "editDose":
+      return api.request((client) => client.doses.editDose({ params: { id: action.id }, payload: action.payload }))
+    case "deleteDose":
+      return api.request((client) => client.doses.deleteDose({ params: { id: action.id }, payload: action.payload }))
+    case "restoreDose":
+      return api.request((client) => client.doses.restoreDose({ params: { id: action.id }, payload: action.payload }))
+  }
+}
+
 export const send = (api: HouseholdApi, action: Action): Promise<Saved> => {
+  if (isDoseAction(action)) return sendDose(api, action)
   if (isMeasurementAction(action)) return sendMeasurement(api, action)
   if (isDiaperAction(action)) return sendDiaper(api, action)
   return "id" in action ? sendOnFeed(api, action) : sendNewFeed(api, action)
