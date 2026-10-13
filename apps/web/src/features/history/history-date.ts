@@ -13,6 +13,15 @@ export const dateInSearch = flow(decodeDate, Option.getOrUndefined)
 
 export const viewInSearch = flow(Schema.decodeUnknownOption(Schema.Literals(["week"])), Option.getOrUndefined)
 
+const DATE_EDIT_KEY = /^(\d|ArrowUp|ArrowDown|Backspace|Delete)$/u
+
+export const editsDateText = (key: string) => DATE_EDIT_KEY.test(key)
+
+export const pickedDate = (value: string, earliest: LocalDate, latest: LocalDate): LocalDate | undefined => {
+  const date = dateInSearch(value)
+  return date !== undefined && earliest <= date && date <= latest ? date : undefined
+}
+
 const noonOf = (date: LocalDate) => Date.parse(`${date}T12:00:00Z`)
 
 const formatIn = (locale: string | undefined, options: Intl.DateTimeFormatOptions) =>

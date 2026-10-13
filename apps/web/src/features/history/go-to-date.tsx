@@ -1,7 +1,7 @@
 import type { LocalDate } from "@bt/contracts"
-import { useId } from "react"
+import { useId, useRef } from "react"
 import { Input } from "../../components/ui/input.tsx"
-import { dateInSearch } from "./history-date.ts"
+import { editsDateText, pickedDate } from "./history-date.ts"
 
 interface GoToDateProps {
   readonly shown: LocalDate
@@ -14,6 +14,12 @@ const focusOnOpen = (node: HTMLInputElement | null) => node?.focus()
 
 export const GoToDate = ({ shown, earliest, latest, onPick }: GoToDateProps) => {
   const id = useId()
+  const typing = useRef(false)
+  const pick = (value: string) => {
+    typing.current = false
+    const date = pickedDate(value, earliest, latest)
+    if (date !== undefined) onPick(date)
+  }
   return (
     <div className="flex flex-col gap-2 pt-1">
       <label htmlFor={id} className="text-sm font-medium">
@@ -27,8 +33,17 @@ export const GoToDate = ({ shown, earliest, latest, onPick }: GoToDateProps) => 
         max={latest}
         defaultValue={shown}
         onChange={(event) => {
-          const date = dateInSearch(event.target.value)
-          if (date !== undefined && earliest <= date && date <= latest) onPick(date)
+          if (!typing.current) pick(event.target.value)
+        }}
+        onKeyDown={(event) => {
+          if (event.key === "Enter") pick(event.currentTarget.value)
+          else if (editsDateText(event.key)) typing.current = true
+        }}
+        onBlur={(event) => {
+          if (typing.current) pick(event.currentTarget.value)
+        }}
+        onPointerDown={() => {
+          typing.current = false
         }}
       />
     </div>

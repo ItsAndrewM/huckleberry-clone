@@ -3,6 +3,8 @@ import {
   dateInSearch,
   dayOfMonth,
   dayTitle,
+  editsDateText,
+  pickedDate,
   viewInSearch,
   weekdayOf,
   weekTitle,
@@ -40,5 +42,37 @@ describe("History's titles", () => {
   it("heads a week's column with its weekday and the day of the month", () => {
     expect(weekdayOf("2026-10-05", LOCALE)).toBe("Mon")
     expect(dayOfMonth("2026-10-05")).toBe(5)
+  })
+})
+
+describe("Go to", () => {
+  it("takes a date from her birth date through today, and nothing else", () => {
+    expect(pickedDate("2026-09-15", "2026-09-01", "2026-10-09")).toBe("2026-09-15")
+    expect(pickedDate("2026-09-01", "2026-09-01", "2026-10-09")).toBe("2026-09-01")
+    expect(pickedDate("2026-10-09", "2026-09-01", "2026-10-09")).toBe("2026-10-09")
+    expect(pickedDate("2026-08-31", "2026-09-01", "2026-10-09")).toBeUndefined()
+    expect(pickedDate("2026-10-10", "2026-09-01", "2026-10-09")).toBeUndefined()
+    expect(pickedDate("", "2026-09-01", "2026-10-09")).toBeUndefined()
+    expect(pickedDate("0002-09-15", "2026-09-01", "2026-10-09")).toBeUndefined()
+  })
+
+  it("waits for Enter or leaving the field after a typed digit or an arrow", () => {
+    expect(["1", "9", "ArrowUp", "ArrowDown", "Backspace", "Delete"].map(editsDateText)).toEqual([
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+    ])
+    expect(["Enter", "Tab", "Escape", "a", "F5", "ArrowLeft", "ArrowRight"].map(editsDateText)).toEqual([
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+    ])
   })
 })
