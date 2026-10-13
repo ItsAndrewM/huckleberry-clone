@@ -127,13 +127,20 @@ test("keeps the picked line one row tall, picked or not, from 393 px down to 320
   }
 })
 
-test("picks today, and a finished day with nothing logged, each with its own numbers", async ({ page }) => {
+test("picks today, and a finished day with nothing logged, each with its own numbers, without moving the tapped chart", async ({
+  page,
+}) => {
   await playWeeks(page)
   await openTrends(page, "?date=2026-09-28")
+  await expect(chart(page, "Bottles")).toContainText("425 mL a day, over 2 days")
+  const bottles = chart(page, "Bottles").getByRole("img")
+  await bottles.scrollIntoViewIfNeeded()
+  const before = await rectOf(bottles)
   await tapColumn(page, "Bottles", "Wed")
   await expect(pickedDay(page)).toHaveText("Wed, Sep 30")
   await expect(chart(page, "Bottles")).toContainText("No entries")
   await expect(chart(page, "Feeds started")).toContainText("No entries")
+  expect(Math.abs((await rectOf(bottles)).y - before.y)).toBeLessThanOrEqual(1)
   await tapDay(page, "Bottles", "2026-10-02")
   await expect(pickedDay(page)).toHaveText("Fri, Oct 2")
   await expect(chart(page, "Bottles")).toContainText(/420 mL/u)
