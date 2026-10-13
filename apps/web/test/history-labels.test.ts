@@ -1,6 +1,14 @@
 import { describe, expect, it } from "vitest"
 import { dayModel } from "../src/features/history/day-model.ts"
-import { blockText, clusterName, entryName, markerText, shortMinutes } from "../src/features/history/entry-labels.ts"
+import {
+  blockText,
+  clusterName,
+  compactLength,
+  entryName,
+  markerText,
+  shortMinutes,
+  sleepBlockText,
+} from "../src/features/history/entry-labels.ts"
 import { markersOf } from "../src/features/history/grid-markers.ts"
 import {
   BOTH,
@@ -20,6 +28,23 @@ import { sleptAt, ZONE } from "./today-fixtures.ts"
 describe("shortMinutes", () => {
   it("keeps a block's label short", () => {
     expect([0, 30, 60, 14 * 60, 3600, 3900].map(shortMinutes)).toEqual(["0m", "<1m", "1m", "14m", "1h", "1h 5m"])
+  })
+})
+
+describe("a sleep block's label", () => {
+  it("fits a sleep's length into its narrow column: minutes, whole hours, or hours and two-digit minutes", () => {
+    expect([30, 45 * 60, 2 * 3600, 70 * 60, 630 * 60].map(compactLength)).toEqual(["<1m", "45m", "2h", "1h10", "10h30"])
+  })
+
+  it("names a sleep a nap or a night, and says now while it runs", () => {
+    expect(sleepBlockText(sleptAt(local("01:10"), { endedAt: local("02:20") }), NOW_ON_DAY)).toEqual({
+      title: "Nap",
+      length: "1h10",
+    })
+    expect(sleepBlockText(sleptAt(local("08:48"), { kind: "night", endedAt: null }), NOW_ON_DAY)).toEqual({
+      title: "Night",
+      length: "now",
+    })
   })
 })
 

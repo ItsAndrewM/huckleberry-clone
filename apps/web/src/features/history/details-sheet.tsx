@@ -50,7 +50,7 @@ export const DetailsSheet = ({ entries, display, now }: DetailsSheetProps) => {
   const title = single ? only.details.title : `${details.length} entries`
   const edit = (entry: Entry, id: string) => () => {
     const sheet = editSheetOf(entry)
-    if (sheet === "nursing") {
+    if (sheet === "nursing" || sheet === "sleep") {
       sheets.show(sheet)
       return
     }

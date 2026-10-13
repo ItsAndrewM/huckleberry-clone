@@ -39,6 +39,13 @@ describe("totalsLines", () => {
   })
 })
 
+describe("a day's sleep line", () => {
+  it("says how long she slept, in naps and at night, after the feeds and diapers", () => {
+    const slept = { ...NO_TOTALS, sleepsStarted: 3, sleepSeconds: 40_800, napSeconds: 10_200, nightSeconds: 30_600 }
+    expect(totalsLines(slept, "ml")).toEqual([["11 h 20 min asleep", "2 h 50 min naps", "8 h 30 min night"]])
+  })
+})
+
 describe("growthItems", () => {
   it("lists each measurement's time and values in the household's units, weight first", () => {
     expect(growthItems([WEIGHED], UNITS, ZONE, LOCALE)).toEqual([

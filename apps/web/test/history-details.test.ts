@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest"
 import { entryDetails } from "../src/features/history/entry-details.ts"
 import { BOTH, BOTTLE, DISPLAY, local, NOW_ON_DAY, NURSED, PAUSED, RUNNING } from "./history-fixtures.ts"
-import { ANDREW, feedAt } from "./today-fixtures.ts"
+import { ANDREW, feedAt, sleptAt } from "./today-fixtures.ts"
 
 const feed = (entry: typeof NURSED) => entryDetails({ kind: "feed", feed: entry }, DISPLAY, NOW_ON_DAY)
 
@@ -101,5 +101,32 @@ describe("entryDetails", () => {
   it("names nobody when the caregiver isn't in the household any more", () => {
     expect(entryDetails({ kind: "diaper", diaper: { ...BOTH, createdBy: "gone" } }, DISPLAY, NOW_ON_DAY).by).toBe("")
     expect(feed({ ...NURSED, createdBy: ANDREW }).by).toBe("Logged by Andrew")
+  })
+})
+
+describe("a sleep's details", () => {
+  const plain = (text: string) => text.replace(/\s/gu, " ")
+
+  it("gives a finished sleep's span, how long she slept and who logged it", () => {
+    const nap = entryDetails(
+      { kind: "sleep", sleep: sleptAt(local("01:10"), { endedAt: local("02:30") }) },
+      DISPLAY,
+      NOW_ON_DAY,
+    )
+    expect({ ...nap, when: plain(nap.when) }).toEqual({
+      id: `sleep-${local("01:10")}`,
+      title: "Nap",
+      when: "Fri, Oct 9, 1:10 – 2:30 AM",
+      lines: ["1 h 20 min"],
+      by: `Logged by Andrew`,
+    })
+  })
+
+  it("says a running sleep is asleep now, and how long so far", () => {
+    const night = sleptAt(local("08:48"), { kind: "night", endedAt: null, createdBy: ANDREW })
+    expect(entryDetails({ kind: "sleep", sleep: night }, DISPLAY, NOW_ON_DAY)).toMatchObject({
+      title: "Night",
+      lines: ["Asleep now", "42 min so far"],
+    })
   })
 })

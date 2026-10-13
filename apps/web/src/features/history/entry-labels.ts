@@ -1,5 +1,5 @@
 import type { Diaper, Feed, RecentEntry, Sleep, VolumeUnit } from "@bt/contracts"
-import { feedSummary } from "@bt/domain"
+import { feedSummary, sleepElapsed } from "@bt/domain"
 import { clockTime } from "../../clock-time.ts"
 import type { Display } from "../today/display.ts"
 import { feedParts, feedTitle } from "../today/feed-parts.ts"
@@ -45,8 +45,16 @@ const diaperChip = ({ wet, dirty }: Diaper) => {
   return wet ? "Pee" : "Poo"
 }
 
-export const markerText = (entry: Entry, volume: VolumeUnit, now: number) =>
-  entry.kind === "diaper" ? diaperChip(entry.diaper) : formatVolume(feedSummary(entry.feed, now).bottleMl, volume)
+export const markerText = (entry: Entry, volume: VolumeUnit, now: number) => {
+  switch (entry.kind) {
+    case "diaper":
+      return diaperChip(entry.diaper)
+    case "feed":
+      return formatVolume(feedSummary(entry.feed, now).bottleMl, volume)
+    case "sleep":
+      return sleepTitle(entry.sleep)
+  }
+}
 
 const sleepName = (sleep: Sleep, display: Display, now: number) =>
   `${sleepTitle(sleep)} at ${clockTime(sleep.startedAt, display.timeZone, display.locale)}: ${sleepParts(sleep, display.timeZone, now, display.locale).join(", ")}`
@@ -63,3 +71,17 @@ export const entryName = (entry: RecentEntry, display: Display, now: number) => 
 
 export const clusterName = (count: number, first: number, display: Display) =>
   `${count} entries from ${clockTime(first, display.timeZone, display.locale)}`
+
+export const compactLength = (seconds: number) => {
+  if (seconds < MINUTE_S) return "<1m"
+  const minutes = Math.floor(seconds / MINUTE_S)
+  const hours = Math.floor(minutes / HOUR_MIN)
+  const rest = minutes % HOUR_MIN
+  if (hours === 0) return `${minutes}m`
+  return rest === 0 ? `${hours}h` : `${hours}h${String(rest).padStart(2, "0")}`
+}
+
+export const sleepBlockText = (sleep: Sleep, now: number) => ({
+  title: sleepTitle(sleep),
+  length: sleep.endedAt === null ? "now" : compactLength(sleepElapsed(sleep, now)),
+})

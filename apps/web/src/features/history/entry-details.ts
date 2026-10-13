@@ -1,8 +1,9 @@
-import type { Feed, NursingSegment } from "@bt/contracts"
-import { feedSummary, sessionBounds } from "@bt/domain"
+import type { Feed, NursingSegment, Sleep } from "@bt/contracts"
+import { feedSummary, sessionBounds, sleepElapsed } from "@bt/domain"
 import type { Display } from "../today/display.ts"
 import { feedTitle } from "../today/feed-parts.ts"
 import { formatMinutes, formatVolume, presentParts } from "../today/format.ts"
+import { sleepTitle } from "../today/sleep-parts.ts"
 import type { Entry } from "./day-model.ts"
 import { diaperText } from "./entry-labels.ts"
 
@@ -83,8 +84,22 @@ const feedDetails = (feed: Feed, display: Display, now: number): EntryDetails =>
   }
 }
 
+const sleepLines = (sleep: Sleep, now: number) => {
+  const slept = formatMinutes(sleepElapsed(sleep, now))
+  return sleep.endedAt === null ? ["Asleep now", `${slept} so far`] : [slept]
+}
+
+const sleepDetails = (sleep: Sleep, display: Display, now: number): EntryDetails => ({
+  id: sleep.id,
+  title: sleepTitle(sleep),
+  when: whenOf(sleep.startedAt, sleep.endedAt ?? now, display),
+  lines: sleepLines(sleep, now),
+  by: byOf(display, sleep.createdBy),
+})
+
 export const entryDetails = (entry: Entry, display: Display, now: number): EntryDetails => {
   if (entry.kind === "feed") return feedDetails(entry.feed, display, now)
+  if (entry.kind === "sleep") return sleepDetails(entry.sleep, display, now)
   const { diaper } = entry
   return {
     id: diaper.id,

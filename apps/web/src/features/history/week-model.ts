@@ -9,6 +9,7 @@ import {
   onWallClock,
   type PlacedCluster,
   type Side,
+  sleepTouches,
 } from "@bt/domain"
 import { piecesOf, shownSlice } from "./day-model.ts"
 import type { Hidden } from "./history-kinds.ts"
@@ -40,7 +41,8 @@ const measuredIn = (measurements: ReadonlyArray<Measurement>, { start, end }: In
 export const weekModel = (week: WeekPeriod, context: WeekContext): ReadonlyArray<WeekColumn> =>
   week.days.map(({ date, bounds, totals }) => {
     const feeds = week.feeds.filter((feed) => feedTouches(bounds, feed, context.now))
-    const slice = shownSlice({ date, bounds, feeds, diapers: week.diapers }, context.hidden)
+    const sleeps = week.sleeps.filter((sleep) => sleepTouches(bounds, sleep, context.now))
+    const slice = shownSlice({ date, bounds, feeds, diapers: week.diapers, sleeps }, context.hidden)
     const { blocks, bottles, diapers } = piecesOf(slice)
     const day = { date, zone: context.zone, bounds, now: context.now, blocks, points: bottles }
     const weighed = measuredIn(week.measurements, bounds)

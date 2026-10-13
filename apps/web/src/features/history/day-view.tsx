@@ -3,7 +3,7 @@ import { useState } from "react"
 import { useSheets } from "../../sheets/sheets-context.ts"
 import { displayOf } from "../today/display.ts"
 import { DayGrid } from "./day-grid.tsx"
-import { dayModel, entriesIn, isLiveFeed } from "./day-model.ts"
+import { dayModel, entriesIn, runningSheetOf } from "./day-model.ts"
 import { DayTotals } from "./day-totals.tsx"
 import { DetailsSheet } from "./details-sheet.tsx"
 import type { Hidden } from "./history-kinds.ts"
@@ -32,8 +32,9 @@ export const DayView = ({ day, me, now, hidden }: DayViewProps) => {
   const display = displayOf(me.household)
   const model = dayModel(day, display.timeZone, now, hidden)
   const open = (ids: ReadonlyArray<string>) => {
-    if (isLiveFeed(entriesIn(model, ids))) {
-      sheets.show("nursing")
+    const running = runningSheetOf(entriesIn(model, ids))
+    if (running !== null) {
+      sheets.show(running)
       return
     }
     setShown(ids)

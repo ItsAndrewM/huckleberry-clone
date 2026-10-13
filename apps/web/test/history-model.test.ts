@@ -1,7 +1,7 @@
 import type { Feed } from "@bt/contracts"
 import { zonedDayBounds } from "@bt/domain"
 import { describe, expect, it } from "vitest"
-import { anchorOf, dayModel, editSheetOf, entriesIn, isLiveFeed } from "../src/features/history/day-model.ts"
+import { anchorOf, dayModel, editSheetOf, entriesIn, runningSheetOf } from "../src/features/history/day-model.ts"
 import { markersOf } from "../src/features/history/grid-markers.ts"
 import { hiddenIn } from "../src/features/history/history-kinds.ts"
 import {
@@ -18,7 +18,7 @@ import {
   POO,
   RUNNING,
 } from "./history-fixtures.ts"
-import { diaperAt, feedAt, ZONE } from "./today-fixtures.ts"
+import { diaperAt, feedAt, sleptAt, ZONE } from "./today-fixtures.ts"
 
 const LATER_DAY = BOUNDS.end + 3_600_000
 const DAY_BEFORE = "2026-10-08"
@@ -104,20 +104,22 @@ describe("dayModel", () => {
   })
 })
 
-describe("isLiveFeed", () => {
+describe("runningSheetOf", () => {
   const model = dayModel(dayWith(), ZONE, NOW_ON_DAY)
 
-  it("is a running or paused feed tapped on its own", () => {
+  it("is Nursing for a running or paused feed tapped on its own, and Sleep for a running sleep", () => {
     const paused = { id: "paused-now", side: "left" as const, startedAt: RUNNING.startedAt, endedAt: NOW_ON_DAY }
-    expect(isLiveFeed(entriesIn(model, [RUNNING.id]))).toBe(true)
-    expect(isLiveFeed([{ kind: "feed", feed: { ...RUNNING, segments: [paused] } }])).toBe(true)
+    expect(runningSheetOf(entriesIn(model, [RUNNING.id]))).toBe("nursing")
+    expect(runningSheetOf([{ kind: "feed", feed: { ...RUNNING, segments: [paused] } }])).toBe("nursing")
+    expect(runningSheetOf([{ kind: "sleep", sleep: sleptAt(local("08:48"), { endedAt: null }) }])).toBe("sleep")
   })
 
-  it("isn't a finished feed, a diaper, or several entries", () => {
-    expect(isLiveFeed(entriesIn(model, [NURSED.id]))).toBe(false)
-    expect(isLiveFeed(entriesIn(model, [PEE.id]))).toBe(false)
-    expect(isLiveFeed(entriesIn(model, [RUNNING.id, PEE.id]))).toBe(false)
-    expect(isLiveFeed([])).toBe(false)
+  it("isn't for a finished feed or sleep, a diaper, or several entries", () => {
+    expect(runningSheetOf(entriesIn(model, [NURSED.id]))).toBeNull()
+    expect(runningSheetOf(entriesIn(model, [PEE.id]))).toBeNull()
+    expect(runningSheetOf([{ kind: "sleep", sleep: sleptAt(local("01:10")) }])).toBeNull()
+    expect(runningSheetOf(entriesIn(model, [RUNNING.id, PEE.id]))).toBeNull()
+    expect(runningSheetOf([])).toBeNull()
   })
 })
 
@@ -129,12 +131,17 @@ describe("editSheetOf", () => {
     expect(editSheetOf({ kind: "feed", feed: PAUSED_AT_MIDNIGHT })).toBe("nursing")
   })
 
-  it("opens Nursing for a paused feed pinned to the top of the day and gathered with a diaper, where isLiveFeed no longer sees it", () => {
+  it("opens a finished sleep's edit sheet, and Sleep for one still running", () => {
+    expect(editSheetOf({ kind: "sleep", sleep: sleptAt(local("01:10")) })).toBe("editSleep")
+    expect(editSheetOf({ kind: "sleep", sleep: sleptAt(local("08:48"), { endedAt: null }) })).toBe("sleep")
+  })
+
+  it("opens Nursing for a paused feed pinned to the top of the day and gathered with a diaper, where runningSheetOf no longer sees it", () => {
     const model = dayModel(dayWith({ feeds: [PAUSED_AT_MIDNIGHT], diapers: [DIAPER_AFTER_MIDNIGHT] }), ZONE, NOW_ON_DAY)
     const ids = [PAUSED_AT_MIDNIGHT.id, DIAPER_AFTER_MIDNIGHT.id]
     expect(markersOf(model, DISPLAY, NOW_ON_DAY)).toEqual([expect.objectContaining({ kind: "several", ids })])
     const entries = entriesIn(model, ids)
-    expect(isLiveFeed(entries)).toBe(false)
+    expect(runningSheetOf(entries)).toBeNull()
     expect(entries.map((entry) => editSheetOf(entry))).toEqual(["nursing", "editDiaper"])
   })
 })
@@ -144,5 +151,37 @@ describe("anchorOf", () => {
     expect(anchorOf(dayModel(dayWith(), ZONE, NOW_ON_DAY))).toBe(114)
     expect(anchorOf(dayModel(dayWith(), ZONE, LATER_DAY))).toBe(13)
     expect(anchorOf(dayModel(dayWith({ feeds: [], diapers: [] }), ZONE, LATER_DAY))).toBe(0)
+  })
+})
+
+describe("a day's sleeps", () => {
+  const NIGHT = sleptAt(local("20:30", DAY_BEFORE), { id: "night", kind: "night", endedAt: local("05:00") })
+  const NAP = sleptAt(local("07:10"), { id: "nap", endedAt: local("08:20") })
+  const model = dayModel(dayWith({ sleeps: [NIGHT, NAP] }), ZONE, NOW_ON_DAY)
+
+  it("draws each sleep in a column of its own, cut where the day begins, leaving the feeds' lanes alone", () => {
+    expect(model.sleeps).toEqual([
+      expect.objectContaining({ id: "night", top: 0, height: 60, startsBefore: true, lane: 0, lanes: 1, bands: [] }),
+      expect.objectContaining({ id: "nap", top: 86, height: 14, startsBefore: false, lanes: 1 }),
+    ])
+    expect(model.grid.blocks.map(({ lanes }) => lanes)).toEqual([1, 1, 1])
+    expect(entriesIn(model, ["nap"])).toEqual([{ kind: "sleep", sleep: NAP }])
+  })
+
+  it("draws a running sleep down to now", () => {
+    const running = sleptAt(local("08:50"), { id: "running", endedAt: null })
+    expect(dayModel(dayWith({ sleeps: [running] }), ZONE, NOW_ON_DAY).sleeps).toEqual([
+      expect.objectContaining({ id: "running", top: 106, height: 8, running: true }),
+    ])
+  })
+
+  it("hides sleeps behind the Sleep chip, and still finds them", () => {
+    const hidden = dayModel(dayWith({ sleeps: [NIGHT, NAP] }), ZONE, NOW_ON_DAY, hiddenIn("sleep"))
+    expect(hidden.sleeps).toEqual([])
+    expect(entriesIn(hidden, ["night"])).toHaveLength(1)
+  })
+
+  it("opens a day with only a sleep at that sleep", () => {
+    expect(anchorOf(dayModel(dayWith({ feeds: [], diapers: [], sleeps: [NAP] }), ZONE, LATER_DAY))).toBe(86)
   })
 })
