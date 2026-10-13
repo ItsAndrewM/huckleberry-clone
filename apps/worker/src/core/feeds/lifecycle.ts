@@ -12,12 +12,11 @@ import {
 } from "@bt/contracts"
 import { type Instant, type ValidationIssue, validateEndAfterStart, validateNotInFuture } from "@bt/domain"
 import { type Calendar, calendarOf, timeIssue } from "../calendar.ts"
+import { errorAt, invalidUnless } from "../fields.ts"
 import type { CoreResult, Stamp } from "../receipts.ts"
 import {
   activeFeed,
-  errorAt,
   feedFor,
-  invalidUnless,
   NO_EXCLUSION,
   onlyComponent,
   overlapConflict,
