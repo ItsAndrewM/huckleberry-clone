@@ -53,11 +53,6 @@ export const exportSummary = ({ tables, exportedAt }: HouseholdExport): string =
   return `${Object.keys(tables).length} tables and ${rows} rows, as of ${new Date(exportedAt).toISOString()}`
 }
 
-export const releaseExportPath = (at: Date, commit: string): string => {
-  const iso = at.toISOString()
-  return `exports/${iso.slice(0, 13)}${iso.slice(14, 16)}${iso.slice(17, 19)}Z-${commit.slice(0, 7)}.json`
-}
-
 export const saveExport = async (env: AdminEnv, file: string): Promise<string> => {
   const response = await fetch(adminRequest(env, "/api/admin/export"))
   const body = await response.text()

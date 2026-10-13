@@ -1,37 +1,44 @@
 import { spawnSync } from "node:child_process"
-import { appendFileSync, readFileSync } from "node:fs"
+import { appendFileSync, mkdtempSync, readFileSync, rmSync } from "node:fs"
+import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { fileURLToPath } from "node:url"
-import { parseArgs } from "node:util"
-import { releaseExportPath, saveExport } from "./admin-export.ts"
-import { adminRequest } from "./admin-seed.ts"
 import { builtWorkerConfig } from "./bundle-size.ts"
 import {
-  bookmarkFrom,
+  CI_WORKFLOW,
   checkoutProblems,
   ciProblems,
-  deployLogLine,
   deployProblems,
-  exportProblem,
-  PRODUCTION_HOSTNAME,
-  withoutCloudflareEnv,
+  envFor,
+  refuseUnknownFlags,
+  releasedReport,
+  restorePointOf,
+  restorePointReport,
+  uploadedVersionId,
+  versionDeployArgs,
+  versionUploadArgs,
 } from "./release-checks.ts"
 
 const rootDir = fileURLToPath(new URL("../", import.meta.url))
 const webDir = fileURLToPath(new URL("../apps/web/", import.meta.url))
-const env = withoutCloudflareEnv(process.env)
 
-const output = (command: string, args: string[]): string => {
-  const run = spawnSync(command, args, { cwd: rootDir, env, encoding: "utf8" })
+const output = (tool: "git" | "gh", args: string[]): string => {
+  const run = spawnSync(tool, args, { cwd: rootDir, env: envFor(tool, process.env), encoding: "utf8" })
   if (run.error !== undefined) throw run.error
-  if (run.status !== 0) throw new Error(`${command} ${args.join(" ")} failed:\n${run.stdout}${run.stderr}`)
+  if (run.status !== 0) throw new Error(`${tool} ${args.join(" ")} failed:\n${run.stdout}${run.stderr}`)
   return run.stdout.trim()
 }
 
-const step = (command: string, args: string[], cwd = rootDir): void => {
-  const run = spawnSync(command, args, { cwd, env, stdio: "inherit" })
+const pnpm = (tool: "build" | "wrangler", args: string[], cwd: string, extraEnv: NodeJS.ProcessEnv = {}): void => {
+  const run = spawnSync("pnpm", args, { cwd, env: { ...envFor(tool, process.env), ...extraEnv }, stdio: "inherit" })
   if (run.error !== undefined) throw run.error
   if (run.status !== 0) process.exit(run.status ?? 1)
+}
+
+const report = (paragraphs: string): void => {
+  console.log(paragraphs)
+  const summary = process.env.GITHUB_STEP_SUMMARY
+  if (summary !== undefined) appendFileSync(summary, `${paragraphs}\n\n`)
 }
 
 const stopUnless = (problems: string[]): void => {
@@ -42,49 +49,51 @@ const stopUnless = (problems: string[]): void => {
   process.exit(1)
 }
 
-const { values } = parseArgs({
-  options: { first: { type: "boolean", default: false }, "skip-export": { type: "boolean", default: false } },
-  strict: true,
-})
+refuseUnknownFlags(process.argv.slice(2))
 
-output("git", ["fetch", "--quiet", "origin", "main"])
 const head = output("git", ["rev-parse", "HEAD"])
 stopUnless(
   checkoutProblems({
-    branch: output("git", ["branch", "--show-current"]),
     clean: output("git", ["status", "--porcelain"]) === "",
     head,
-    originMain: output("git", ["rev-parse", "origin/main"]),
+    originMain: output("gh", ["api", "repos/{owner}/{repo}/commits/main", "--jq", ".sha"]),
   }),
 )
 stopUnless(
   ciProblems(
     JSON.parse(
-      output("gh", ["run", "list", "--commit", head, "--workflow", "CI", "--json", "status,conclusion,createdAt"]),
+      output("gh", [
+        "run",
+        "list",
+        "--commit",
+        head,
+        "--workflow",
+        CI_WORKFLOW,
+        "--json",
+        "status,conclusion,createdAt",
+      ]),
     ),
   ),
 )
 
-step("pnpm", ["build"])
+pnpm("build", ["build"], rootDir)
 const config = builtWorkerConfig(webDir)
 stopUnless(deployProblems(JSON.parse(readFileSync(config, "utf8"))))
 
-const exportProblems = async (): Promise<string[]> => {
-  if (values.first || values["skip-export"]) return []
-  try {
-    console.log(await saveExport(process.env, join(rootDir, releaseExportPath(new Date(), head))))
-    return []
-  } catch (error) {
-    return [exportProblem(error instanceof Error ? error : new Error(String(error)))]
-  }
-}
-stopUnless(await exportProblems())
+const runId = process.env.GITHUB_RUN_ID
+const outputDir = mkdtempSync(join(tmpdir(), "bt-release-"))
+const outputFile = join(outputDir, "wrangler-output.ndjson")
+pnpm("wrangler", ["exec", "wrangler", ...versionUploadArgs({ config, commit: head, runId })], webDir, {
+  WRANGLER_OUTPUT_FILE_PATH: outputFile,
+})
+const versionId = uploadedVersionId(readFileSync(outputFile, "utf8"))
+rmSync(outputDir, { recursive: true, force: true })
 
-const bookmarkResponse = values.first ? null : await fetch(adminRequest(process.env, "/api/admin/pitr/bookmark"))
-const bookmark = bookmarkResponse === null ? null : bookmarkFrom(bookmarkResponse.status, await bookmarkResponse.text())
-if (bookmark !== null) console.log(`Bookmark before this deploy: ${bookmark}`)
-
-step("pnpm", ["exec", "wrangler", "deploy", "--config", config], webDir)
-appendFileSync(new URL("../deploys.log", import.meta.url), deployLogLine(new Date(), head, bookmark))
-console.log(`Released ${head.slice(0, 7)} to https://${PRODUCTION_HOSTNAME}. Logged in deploys.log.`)
-console.log("Open the app online on each phone, so its offline copy updates to this build.")
+const restorePoint = restorePointOf(new Date())
+report(restorePointReport(restorePoint))
+pnpm(
+  "wrangler",
+  ["exec", "wrangler", ...versionDeployArgs({ config, versionId, commit: head, restorePoint, runId })],
+  webDir,
+)
+report(releasedReport(head))
