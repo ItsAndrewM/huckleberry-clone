@@ -10,6 +10,8 @@ import { FeedCard } from "./feed-card.tsx"
 import { QuickActions } from "./quick-actions.tsx"
 import { RecentList } from "./recent-list.tsx"
 import { recentRows } from "./recent-rows.ts"
+import { supplementRows } from "./supplement-rows.ts"
+import { SupplementsCard } from "./supplements-card.tsx"
 import { type Last24h, TotalsCard } from "./totals-card.tsx"
 
 interface TodayCardsProps {
@@ -25,6 +27,7 @@ const TodayCards = ({ today, last24h, household }: TodayCardsProps) => {
   return (
     <>
       <FeedCard today={today} display={display} now={now} />
+      <SupplementsCard rows={supplementRows(display, today.doses)} />
       <TotalsCard today={today.totals} last24h={last24h} volume={display.volume} />
       <RecentList
         rows={recentRows(today.recent, display, now)}

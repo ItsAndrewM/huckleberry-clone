@@ -1,5 +1,6 @@
 import {
   DiaperConflict,
+  DoseConflict,
   FeedConflict,
   InvalidInput,
   MeasurementConflict,
@@ -13,7 +14,7 @@ import { StaleDraft } from "../src/sheets/drafts.ts"
 import { failureNote, type Household } from "../src/sheets/failure.ts"
 import { Unsaved } from "../src/sheets/kept.ts"
 import { measurement } from "./growth-fixtures.ts"
-import { ANDREW, diaperAt, EMILY, feedAt, MINUTE, NOW, ZONE } from "./today-fixtures.ts"
+import { ANDREW, diaperAt, dosedAt, EMILY, feedAt, MINUTE, NOW, ZONE } from "./today-fixtures.ts"
 
 const HOUSEHOLD: Household = {
   caregivers: [
@@ -138,6 +139,20 @@ describe("failureNote", () => {
       "Emily deleted this measurement a moment ago.",
     )
     expect(message(new MeasurementConflict({ code: "ACTION_REPLAY_MISMATCH", current }))).toBe(
+      "This was already saved as you first entered it.",
+    )
+  })
+
+  it("says when a dose that day was already logged and by whom, and who changed or deleted a dose a moment ago", () => {
+    const current = { ...dosedAt(NOW - 200 * MINUTE), updatedBy: ANDREW }
+    expect(message(new DoseConflict({ code: "SUPPLEMENT_DUPLICATE_DAY", current }))).toBe(
+      "This was already logged at 6:10 AM by Emily.",
+    )
+    expect(message(new DoseConflict({ code: "STALE_VERSION", current }))).toBe("Andrew changed this dose a moment ago.")
+    expect(message(new DoseConflict({ code: "STALE_VERSION", current: { ...current, deletedAt: NOW } }))).toBe(
+      "Andrew deleted this dose a moment ago.",
+    )
+    expect(message(new DoseConflict({ code: "ACTION_REPLAY_MISMATCH", current }))).toBe(
       "This was already saved as you first entered it.",
     )
   })

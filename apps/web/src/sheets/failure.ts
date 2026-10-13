@@ -1,6 +1,7 @@
 import {
   type CaregiverName,
   DiaperConflict,
+  DoseConflict,
   type Feed,
   FeedConflict,
   type FieldIssue,
@@ -92,10 +93,22 @@ const measurementNote = ({ code, current }: MeasurementConflict, household: Hous
   return note(`${nameOf(household, current.updatedBy)} ${changed} this measurement a moment ago.`)
 }
 
+const doseNote = ({ code, current }: DoseConflict, household: Household): Note => {
+  if (code === "ACTION_REPLAY_MISMATCH") return note("This was already saved as you first entered it.")
+  if (code === "SUPPLEMENT_DUPLICATE_DAY") {
+    return note(
+      `This was already logged at ${timeOf(household, current.occurredAt)} by ${nameOf(household, current.createdBy)}.`,
+    )
+  }
+  const changed = current.deletedAt === null ? "changed" : "deleted"
+  return note(`${nameOf(household, current.updatedBy)} ${changed} this dose a moment ago.`)
+}
+
 const conflictNote = (error: Error, household: Household): Note | null => {
   if (error instanceof FeedConflict) return feedNote(error, household)
   if (error instanceof DiaperConflict) return diaperNote(error, household)
   if (error instanceof MeasurementConflict) return measurementNote(error, household)
+  if (error instanceof DoseConflict) return doseNote(error, household)
   return null
 }
 
