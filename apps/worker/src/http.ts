@@ -30,6 +30,7 @@ import { mutations, type Saved } from "./mutations.ts"
 import { periodHandlers } from "./period-handlers.ts"
 import { sleepHandlers } from "./sleep-handlers.ts"
 import type { Broadcast } from "./sockets.ts"
+import { supplementHandlers } from "./supplement-handlers.ts"
 
 export const invalidInputs = HttpApiMiddleware.layerSchemaErrorTransform(InvalidInputs, (error) =>
   error.kind === "Body" || error.kind === "ResponseHeaders"
@@ -110,6 +111,7 @@ export const householdApi = (storage: DurableObjectStorage, broadcast: Broadcast
     diaperHandlers(storage, broadcast),
     feedHandlers(storage, broadcast),
     sleepHandlers(storage, broadcast),
+    supplementHandlers(storage, broadcast),
     growthHandlers(storage, broadcast),
     exportHandlers(storage.sql),
     periodHandlers(storage.sql),

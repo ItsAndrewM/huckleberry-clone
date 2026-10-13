@@ -46,6 +46,8 @@ describe("migrations", () => {
       "nursing_segments",
       "receipts",
       "sleeps",
+      "supplement_logs",
+      "supplements",
     ])
     expect(applied).toEqual(APPLIED)
   })

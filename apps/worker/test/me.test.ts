@@ -20,6 +20,19 @@ describe("GET /api/me", () => {
           { id: expect.any(String), displayName: "Andrew" },
           { id: expect.any(String), displayName: "Emily" },
         ],
+        supplements: [
+          {
+            id: expect.any(String),
+            name: "Vitamin D",
+            dose: "400 IU",
+            stoppedAt: null,
+            version: 1,
+            createdBy: null,
+            createdAt: expect.any(Number),
+            updatedBy: null,
+            updatedAt: expect.any(Number),
+          },
+        ],
       },
       child: {
         name: "Robin",

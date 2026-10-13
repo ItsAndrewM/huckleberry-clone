@@ -51,6 +51,11 @@ export const rememberSaved = (queryClient: QueryClient, update: (me: Me) => Me, 
   }
 }
 
+export const withSavedHousehold = (me: Me, household: Household): Me => ({
+  ...me,
+  household: { ...household, caregivers: me.household.caregivers, supplements: me.household.supplements },
+})
+
 export type ChildFields = Pick<Child, "name" | "birthDate" | "sex" | "gestationalAgeDays">
 
 export const childEdit = (latest: Child, shown: Child, fields: ChildFields): ChildEdit => ({

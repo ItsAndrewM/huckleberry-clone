@@ -38,6 +38,8 @@ describe("the API the household serves", () => {
       "PATCH /api/sleeps/:id",
       "DELETE /api/sleeps/:id",
       "POST /api/sleeps/:id/restore",
+      "POST /api/supplements",
+      "PATCH /api/supplements/:id",
       "GET /api/growth",
       "POST /api/growth",
       "PATCH /api/growth/:id",
@@ -71,6 +73,7 @@ describe("the API the household serves", () => {
       "MeasurementConflictEncoded",
       "NotFoundEncoded",
       "SleepConflictEncoded",
+      "SupplementConflictEncoded",
       "UnauthorizedEncoded",
     ])
   })

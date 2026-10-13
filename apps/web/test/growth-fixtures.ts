@@ -59,6 +59,7 @@ export const meWith = ({ units = UNITS, child = {} }: MeChange = {}): Me => ({
     updatedBy: null,
     updatedAt: at("2026-09-01", 9),
     caregivers: [{ id: "caregiver-andrew", displayName: "Andrew" }],
+    supplements: [],
   },
   child: { ...CHILD, ...child },
 })

@@ -58,6 +58,7 @@ test("sends signed-in /api/* fetches through to the household, which knows the a
         { id: expect.any(String), displayName: "Andrew (local)" },
         { id: expect.any(String), displayName: "Emily (local)" },
       ],
+      supplements: expect.arrayContaining([expect.objectContaining({ name: "Vitamin D", dose: "400 IU" })]),
     },
     child: {
       name: "Robin",

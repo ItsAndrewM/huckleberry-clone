@@ -3,7 +3,7 @@ import { QueryClient } from "@tanstack/react-query"
 import { Schema } from "effect"
 import { describe, expect, it } from "vitest"
 import { connectApi } from "../src/api/client.ts"
-import { rememberSaved, saveChild, saveHousehold } from "../src/api/settings.ts"
+import { rememberSaved, saveChild, saveHousehold, withSavedHousehold } from "../src/api/settings.ts"
 
 const ORIGIN = "https://bt.example.test"
 const AT = Date.UTC(2026, 9, 8)
@@ -103,16 +103,46 @@ describe("rememberSaved", () => {
     const queryClient = new QueryClient()
     const me: Me = {
       caregiver: { id: "caregiver-1", email: "andrew@example.test", displayName: "Andrew" },
-      household: { ...HOUSEHOLD, caregivers: [] },
+      household: { ...HOUSEHOLD, caregivers: [], supplements: [] },
       child: CHILD,
     }
     queryClient.setQueryData(queryKeys.me, me)
     queryClient.setQueryData(queryKeys.today, "today's answer")
     const saved = { ...HOUSEHOLD, timeZone: "Asia/Tokyo", version: 2 }
-    rememberSaved(queryClient, (cached) => ({ ...cached, household: { ...saved, caregivers: [] } }), CHANGED)
+    rememberSaved(
+      queryClient,
+      (cached) => ({ ...cached, household: { ...saved, caregivers: [], supplements: [] } }),
+      CHANGED,
+    )
     expect(queryClient.getQueryData<Me>(queryKeys.me)?.household.timeZone).toBe("Asia/Tokyo")
     expect(queryClient.getQueryState(queryKeys.me)?.isInvalidated).toBe(false)
     expect(queryClient.getQueryState(queryKeys.today)?.isInvalidated).toBe(true)
+  })
+})
+
+describe("withSavedHousehold", () => {
+  it("shows the saved household's settings and keeps its caregivers and supplements, which the save doesn't carry", () => {
+    const caregivers = [{ id: "caregiver-1", displayName: "Andrew" }]
+    const supplements = [
+      {
+        id: "supplement-1",
+        name: "Vitamin D",
+        dose: "400 IU",
+        stoppedAt: null,
+        version: 1,
+        createdBy: null,
+        createdAt: AT,
+        updatedBy: null,
+        updatedAt: AT,
+      },
+    ]
+    const me = {
+      caregiver: { id: "caregiver-1", email: "andrew@example.test", displayName: "Andrew" },
+      household: { ...HOUSEHOLD, caregivers, supplements },
+      child: CHILD,
+    } satisfies Me
+    const saved = { ...HOUSEHOLD, timeZone: "Asia/Tokyo", version: 2 }
+    expect(withSavedHousehold(me, saved)).toEqual({ ...me, household: { ...saved, caregivers, supplements } })
   })
 })
 
