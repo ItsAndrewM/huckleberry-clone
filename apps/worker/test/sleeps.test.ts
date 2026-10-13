@@ -2,7 +2,7 @@ import { SavedSleep } from "@bt/contracts"
 import { Schema } from "effect"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { ANDREW, CHANGED_TODAY, EMILY, HOUR_MS, MINUTE_MS, NOW, seededHousehold } from "./fixtures.ts"
-import { type Household, inStorage, send, sendJson } from "./requests.ts"
+import { type Household, inStorage, send, sendJson, sha256 } from "./requests.ts"
 
 const decodeSaved = Schema.decodeUnknownSync(Schema.toCodecJson(SavedSleep))
 
@@ -214,5 +214,94 @@ describe("POST …/wake, PATCH, DELETE and POST …/restore", () => {
       version: 1,
     })
     expect(response).toEqual({ status: 404, body: { _tag: "NotFound" } })
+  })
+
+  it("answers 404 for a wake of a sleep that's already woken, though it's sent from the sleep's current version", async () => {
+    const household = await seededHousehold()
+    const sleep = await started(household)
+    const wake = (version: number) => ({ actionId: crypto.randomUUID(), version, occurredAt: NOW })
+    const woken = decodeSaved((await sendJson(household, "POST", `/api/sleeps/${sleep.id}/wake`, wake(1))).body).sleep
+    expect(await sendJson(household, "POST", `/api/sleeps/${sleep.id}/wake`, wake(woken.version))).toEqual({
+      status: 404,
+      body: { _tag: "NotFound" },
+    })
+  })
+})
+
+describe("the receipts the sleep endpoints keep", () => {
+  it("hold each request's route and the hash of its canonical body, which a retry sent before a deploy must still match", async () => {
+    const household = await seededHousehold()
+    const logging = crypto.randomUUID()
+    const starting = crypto.randomUUID()
+    const waking = crypto.randomUUID()
+    const editing = crypto.randomUUID()
+    const deleting = crypto.randomUUID()
+    const restoring = crypto.randomUUID()
+    const loggedStart = NOW - 5 * HOUR_MS
+    const loggedEnd = NOW - 4 * HOUR_MS
+    const startedAt = NOW - 30 * MINUTE_MS
+    const wokenAt = NOW - MINUTE_MS
+    const editedStart = NOW - HOUR_MS
+    await sendJson(household, "POST", "/api/sleeps", {
+      endedAt: loggedEnd,
+      startedAt: loggedStart,
+      kind: "night",
+      actionId: logging,
+    })
+    const { sleep } = decodeSaved(
+      (await sendJson(household, "POST", "/api/sleeps/start", { startedAt, kind: "nap", actionId: starting })).body,
+    )
+    const path = `/api/sleeps/${sleep.id}`
+    await sendJson(household, "POST", `${path}/wake`, { occurredAt: wokenAt, version: 1, actionId: waking })
+    await sendJson(household, "PATCH", path, {
+      endedAt: wokenAt,
+      startedAt: editedStart,
+      kind: "night",
+      version: 2,
+      actionId: editing,
+    })
+    await sendJson(household, "DELETE", path, { version: 3, actionId: deleting })
+    await sendJson(household, "POST", `${path}/restore`, { version: 4, actionId: restoring })
+    const receipts = await inStorage(household, (sql) =>
+      sql.exec("SELECT action_id, route, request_hash FROM receipts ORDER BY rowid").toArray(),
+    )
+    expect(receipts).toEqual([
+      {
+        action_id: logging,
+        route: "POST /api/sleeps",
+        request_hash: await sha256(
+          `POST /api/sleeps\n{"actionId":"${logging}","kind":"night","startedAt":${loggedStart},"endedAt":${loggedEnd}}`,
+        ),
+      },
+      {
+        action_id: starting,
+        route: "POST /api/sleeps/start",
+        request_hash: await sha256(
+          `POST /api/sleeps/start\n{"actionId":"${starting}","kind":"nap","startedAt":${startedAt}}`,
+        ),
+      },
+      {
+        action_id: waking,
+        route: `POST ${path}/wake`,
+        request_hash: await sha256(`POST ${path}/wake\n{"actionId":"${waking}","version":1,"occurredAt":${wokenAt}}`),
+      },
+      {
+        action_id: editing,
+        route: `PATCH ${path}`,
+        request_hash: await sha256(
+          `PATCH ${path}\n{"actionId":"${editing}","version":2,"kind":"night","startedAt":${editedStart},"endedAt":${wokenAt}}`,
+        ),
+      },
+      {
+        action_id: deleting,
+        route: `DELETE ${path}`,
+        request_hash: await sha256(`DELETE ${path}\n{"actionId":"${deleting}","version":3}`),
+      },
+      {
+        action_id: restoring,
+        route: `POST ${path}/restore`,
+        request_hash: await sha256(`POST ${path}/restore\n{"actionId":"${restoring}","version":4}`),
+      },
+    ])
   })
 })

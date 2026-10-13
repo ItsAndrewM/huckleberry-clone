@@ -8,6 +8,7 @@ import type { HistoryPeriod, HistoryView } from "./history-period.ts"
 const VIEWS = [
   { value: "day", label: "Day" },
   { value: "week", label: "Week" },
+  { value: "list", label: "List" },
 ] as const satisfies ReadonlyArray<{ value: HistoryView; label: string }>
 
 interface HistoryViewSwitchProps {

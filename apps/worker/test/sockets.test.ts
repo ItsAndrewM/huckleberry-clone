@@ -1,4 +1,4 @@
-import { CAREGIVER_DISABLED, ChangedMessage, HEARTBEAT, SavedDiaper, SavedFeed } from "@bt/contracts"
+import { CAREGIVER_DISABLED, ChangedMessage, HEARTBEAT, SavedDiaper, SavedFeed, SavedSleep } from "@bt/contracts"
 import { evictDurableObject, runInDurableObject } from "cloudflare:test"
 import { Schema } from "effect"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
@@ -8,6 +8,7 @@ import { get, type Household, inStorage, ORIGIN, sendJson } from "./requests.ts"
 const decodeMessage = Schema.decodeUnknownSync(Schema.fromJsonString(ChangedMessage))
 const decodeSaved = Schema.decodeUnknownSync(Schema.toCodecJson(SavedDiaper))
 const decodeSavedFeed = Schema.decodeUnknownSync(Schema.toCodecJson(SavedFeed))
+const decodeSavedSleep = Schema.decodeUnknownSync(Schema.toCodecJson(SavedSleep))
 
 const upgrade = (household: Household, headers: Record<string, string>) =>
   household.fetch(`${ORIGIN}/api/ws`, { headers })
@@ -152,6 +153,19 @@ describe("broadcasting what a change changed", () => {
     })
     expect(started.status).toBe(201)
     expect(decodeMessage(await message)).toEqual({ changed: decodeSavedFeed(started.body).changed })
+  })
+
+  it("covers the sleep endpoints too, a started sleep sending the keys it changed", async () => {
+    const household = await seededHousehold()
+    const socket = await connect(household, EMILY.email)
+    const message = nextMessage(socket)
+    const started = await sendJson(household, "POST", "/api/sleeps/start", {
+      actionId: crypto.randomUUID(),
+      kind: "nap",
+      startedAt: NOW,
+    })
+    expect(started.status).toBe(201)
+    expect(decodeMessage(await message)).toEqual({ changed: decodeSavedSleep(started.body).changed })
   })
 
   it("says nothing about a change it refused", async () => {

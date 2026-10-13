@@ -21,6 +21,11 @@ const LogAtChoices = ({ at }: { readonly at: number | null }) => {
   const sheets = useSheets()
   const todayLoaded = useTodayLoaded()
   const waitsId = useId()
+  const closing = sheets.open !== "logAt"
+  const choose = (sheet: TimedSheet) => {
+    if (at === null) sheets.show(sheet)
+    else sheets.showAt(sheet, at)
+  }
   return (
     <div className="flex flex-col gap-2">
       {todayLoaded ? null : (
@@ -37,11 +42,9 @@ const LogAtChoices = ({ at }: { readonly at: number | null }) => {
               variant="secondary"
               size="lg"
               className="h-14 gap-2"
-              disabled={at === null || waits}
+              disabled={closing || waits}
               aria-describedby={waits ? waitsId : undefined}
-              onClick={() => {
-                if (at !== null) sheets.showAt(sheet, at)
-              }}
+              onClick={() => choose(sheet)}
             >
               <Icon aria-hidden="true" />
               {label}

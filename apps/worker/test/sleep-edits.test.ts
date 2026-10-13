@@ -23,6 +23,29 @@ import {
 
 const SEP_2_NOON = Date.UTC(2026, 8, 2, 19)
 
+type OtherDay = [label: string, startedAt: number, endedAt: number, days: string[][]]
+
+const ON_SEP_2: OtherDay[] = [
+  ["the day, week and month of a sleep on Sep 2", SEP_2_NOON, SEP_2_NOON + HOUR_MS, [["day", "2026-09-02"]]],
+  [
+    "both days, the week and the month of a sleep from Sep 2 into Sep 3",
+    SEP_3_BEGINS - 30 * MINUTE_MS,
+    SEP_3_BEGINS + 30 * MINUTE_MS,
+    [
+      ["day", "2026-09-02"],
+      ["day", "2026-09-03"],
+    ],
+  ],
+]
+
+const changedOnSep2 = (days: string[][]) => [
+  ["today"],
+  ["last24h"],
+  ...days,
+  ["week", "2026-W36"],
+  ["month", "2026-09"],
+]
+
 const version = (sleep: Sleep) => ({ actionId: ACTION_ID, version: sleep.version })
 
 const editOf = (sleep: Sleep, change: Partial<SleepEdit> = {}): SleepEdit => ({
@@ -196,6 +219,17 @@ describe("deleting a sleep", () => {
     })
   })
 
+  it.each(ON_SEP_2)(
+    "changes %s, not the day it's deleted on, and Recently deleted",
+    async (_label, startedAt, endedAt, days) => {
+      const result = await inHousehold((sql) => {
+        const sleep = logged(sql, startedAt, endedAt)
+        return deleteSleep(stampOf(sql), sleep.id, version(sleep))(sql)
+      })
+      expect(result).toMatchObject({ ok: true, changed: [...changedOnSep2(days), ["deleted"]] })
+    },
+  )
+
   it("deletes a running sleep, so another can start", async () => {
     const result = await inHousehold((sql) => {
       const sleep = running(sql)
@@ -236,6 +270,18 @@ describe("restoring a sleep (D10)", () => {
     })
   })
 
+  it.each(ON_SEP_2)(
+    "changes %s, not the day it's restored on, and Recently deleted",
+    async (_label, startedAt, endedAt, days) => {
+      const result = await inHousehold((sql) => {
+        const sleep = logged(sql, startedAt, endedAt)
+        const deleted = saved(deleteSleep(stampOf(sql), sleep.id, version(sleep))(sql))
+        return restoreSleep(stampOf(sql), deleted.id, version(deleted))(sql)
+      })
+      expect(result).toMatchObject({ ok: true, changed: [...changedOnSep2(days), ["deleted"]] })
+    },
+  )
+
   it("brings a sleep deleted while running back running, from its start", async () => {
     const result = await inHousehold((sql) => {
       const deleted = saved(deleteSleep(stampOf(sql), running(sql).id, { actionId: ACTION_ID, version: 1 })(sql))
@@ -256,6 +302,18 @@ describe("restoring a sleep (D10)", () => {
     })
   })
 
+  it("brings a finished sleep back while another sleep runs, with its times, as the next version", async () => {
+    const result = await inHousehold((sql) => {
+      const deleted = saved(deleteSleep(stampOf(sql), logged(sql).id, { actionId: ACTION_ID, version: 1 })(sql))
+      running(sql, minutesAgo(10))
+      return restoreSleep(stampOf(sql), deleted.id, version(deleted))(sql)
+    })
+    expect(result).toMatchObject({
+      ok: true,
+      response: { startedAt: minutesAgo(90), endedAt: minutesAgo(30), version: 3, deletedAt: null },
+    })
+  })
+
   it("refuses a sleep a live one now overlaps, with SLEEP_OVERLAP and that sleep", async () => {
     const { other, result } = await inHousehold((sql) => {
       const deleted = saved(deleteSleep(stampOf(sql), logged(sql).id, { actionId: ACTION_ID, version: 1 })(sql))
@@ -273,6 +331,28 @@ describe("restoring a sleep (D10)", () => {
       return restoreSleep(stampOf(sql), deleted.id, version(deleted))(sql)
     })
     expect(result).toMatchObject({ ok: false, error: { fieldErrors: [{ path: "startedAt", issue: "before_birth" }] } })
+  })
+
+  it("brings a sleep woken after more than a day back with its times kept, since a restore isn't held to the day's limit", async () => {
+    const result = await inHousehold((sql) => {
+      const sleep = running(sql, NOW - 30 * HOUR_MS)
+      const woken = saved(wakeSleep(stampOf(sql), sleep.id, { ...version(sleep), occurredAt: NOW })(sql))
+      const deleted = saved(deleteSleep(stampOf(sql), woken.id, version(woken))(sql))
+      return restoreSleep(stampOf(sql), deleted.id, version(deleted))(sql)
+    })
+    expect(result).toMatchObject({
+      ok: true,
+      response: { startedAt: NOW - 30 * HOUR_MS, endedAt: NOW, deletedAt: null },
+    })
+  })
+
+  it("answers STALE_VERSION with the sleep as it is now for a restore from an old version", async () => {
+    const { deleted, result } = await inHousehold((sql) => {
+      const sleep = logged(sql)
+      const deleted = saved(deleteSleep(stampOf(sql, EMILY.email), sleep.id, version(sleep))(sql))
+      return { deleted, result: restoreSleep(stampOf(sql), sleep.id, version(sleep))(sql) }
+    })
+    expect(result).toEqual({ ok: false, error: expect.objectContaining({ code: "STALE_VERSION", current: deleted }) })
   })
 
   it("answers NotFound for a sleep that isn't deleted", async () => {

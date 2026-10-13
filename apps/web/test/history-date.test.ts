@@ -9,6 +9,8 @@ import {
   weekdayOf,
   weekTitle,
 } from "../src/features/history/history-date.ts"
+import { periodOf } from "../src/features/history/history-period.ts"
+import { backLabel, currentLabel, periodTitle } from "../src/features/history/history-titles.ts"
 import { LOCALE } from "./history-fixtures.ts"
 
 describe("History's address", () => {
@@ -20,8 +22,9 @@ describe("History's address", () => {
     expect(dateInSearch(undefined)).toBeUndefined()
   })
 
-  it("reads the Week view, and leaves anything else to the Day view", () => {
+  it("reads the Week and List views, and leaves anything else to the Day view", () => {
     expect(viewInSearch("week")).toBe("week")
+    expect(viewInSearch("list")).toBe("list")
     expect(viewInSearch("day")).toBeUndefined()
     expect(viewInSearch("month")).toBeUndefined()
     expect(viewInSearch(undefined)).toBeUndefined()
@@ -42,6 +45,12 @@ describe("History's titles", () => {
   it("heads a week's column with its weekday and the day of the month", () => {
     expect(weekdayOf("2026-10-05", LOCALE)).toBe("Mon")
     expect(dayOfMonth("2026-10-05")).toBe(5)
+  })
+
+  it("names the list's day, its today and the way back to it as the Day view does", () => {
+    expect(periodTitle(periodOf("list", "2026-10-09"), LOCALE)).toBe(periodTitle(periodOf("day", "2026-10-09"), LOCALE))
+    expect([currentLabel("list"), backLabel("list")]).toEqual([currentLabel("day"), backLabel("day")])
+    expect([currentLabel("day"), backLabel("day")]).toEqual(["Today", "Back to today"])
   })
 })
 

@@ -2,7 +2,7 @@ import { LocalDate } from "@bt/contracts"
 import { flow, Option, Schema } from "effect"
 
 export interface HistorySearch {
-  readonly view?: "week" | undefined
+  readonly view?: "week" | "list" | undefined
   readonly date?: LocalDate | undefined
   readonly hide?: string | undefined
 }
@@ -11,7 +11,7 @@ const decodeDate = Schema.decodeUnknownOption(LocalDate)
 
 export const dateInSearch = flow(decodeDate, Option.getOrUndefined)
 
-export const viewInSearch = flow(Schema.decodeUnknownOption(Schema.Literals(["week"])), Option.getOrUndefined)
+export const viewInSearch = flow(Schema.decodeUnknownOption(Schema.Literals(["week", "list"])), Option.getOrUndefined)
 
 const DATE_EDIT_KEY = /^(\d|ArrowUp|ArrowDown|Backspace|Delete)$/u
 
