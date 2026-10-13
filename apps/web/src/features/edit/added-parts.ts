@@ -1,31 +1,23 @@
 import { whenAt } from "../../sheets/when.ts"
 import { OTHER_SIDE } from "../../sides.ts"
 import type { BottleFields, FeedDraft, SideFields } from "./feed-draft.ts"
-import { checkedParts } from "./feed-entry.ts"
+import { lastEnd } from "./feed-entry.ts"
 
 const MINUTE_MS = 60_000
-const NEW_SIDE_MS = 5 * MINUTE_MS
-
-const lastEnd = (draft: FeedDraft, zone: string, now: number) => {
-  const checked = checkedParts(draft, zone, Number.POSITIVE_INFINITY)
-  if (!checked.ok) return now
-  const { segments, portions } = checked.value
-  const ends = [...segments.map(({ endedAt }) => endedAt), ...portions.map(({ occurredAt }) => occurredAt)]
-  return ends.length === 0 ? now : Math.max(...ends)
-}
+const NEW_SIDE_MINUTES = 5
 
 export const newSide = (draft: FeedDraft, zone: string, now: number): SideFields => {
   const previous = draft.sides.at(-1)?.fields.side
-  const start = Math.min(lastEnd(draft, zone, now), now - NEW_SIDE_MS)
+  const start = lastEnd(draft, zone, now) ?? now
   return {
     side: previous === undefined ? "left" : OTHER_SIDE[previous],
     start: whenAt(start, zone),
-    minutes: NEW_SIDE_MS / MINUTE_MS,
+    minutes: Math.max(1, Math.min(NEW_SIDE_MINUTES, Math.floor((now - start) / MINUTE_MS))),
   }
 }
 
 export const newBottle = (draft: FeedDraft, zone: string, now: number): BottleFields => ({
-  at: whenAt(Math.min(lastEnd(draft, zone, now), now), zone),
+  at: whenAt(Math.min(lastEnd(draft, zone, now) ?? now, now), zone),
   breastMilkMl: 0,
   formulaMl: 0,
 })

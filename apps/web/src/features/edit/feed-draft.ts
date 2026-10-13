@@ -37,7 +37,7 @@ export interface Parts {
   readonly portions: ReadonlyArray<PortionEntry>
 }
 
-export const minutesOf = ({ startedAt, endedAt }: SegmentEntry) => Math.round((endedAt - startedAt) / MINUTE_MS)
+export const minutesOf = ({ startedAt, endedAt }: SegmentEntry) => Math.floor((endedAt - startedAt) / MINUTE_MS)
 
 export const sideFieldsOf = (segment: SegmentEntry, zone: string): SideFields => ({
   side: segment.side,

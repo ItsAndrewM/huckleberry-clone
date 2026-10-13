@@ -1,4 +1,4 @@
-import type { Feed } from "@bt/contracts"
+import type { Feed, RecentEntry } from "@bt/contracts"
 import type { FeedAction } from "../../api/actions.ts"
 import type { Failed } from "../../sheets/sending.ts"
 import type { Target } from "./diaper-edit.ts"
@@ -33,3 +33,6 @@ export const feedDelete = ({ id, version }: Target): FeedAction => ({
 })
 
 export const feedNoun = (feed: Feed) => (feed.segments.length === 0 && feed.portions.length === 1 ? "bottle" : "feed")
+
+export const editFeedTitle = (entry: RecentEntry | null) =>
+  entry?.kind === "feed" && feedNoun(entry.feed) === "bottle" ? "Edit bottle" : "Edit feed"

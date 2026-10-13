@@ -6,7 +6,7 @@ import { Sheet } from "../../sheets/sheet.tsx"
 import { useSheets } from "../../sheets/sheets-context.ts"
 import { displayOf } from "../today/display.ts"
 import { EditFeedForm } from "./edit-feed-form.tsx"
-import { feedNoun } from "./feed-edit.ts"
+import { editFeedTitle } from "./feed-edit.ts"
 import { useCachedEntry } from "./use-cached-entry.ts"
 
 const EditFeedContent = () => {
@@ -29,10 +29,12 @@ const EditFeedContent = () => {
 export const EditFeedSheet = () => {
   const sheets = useSheets()
   const queryClient = useQueryClient()
-  const entry = sheets.editing === null ? null : cachedEntry(queryClient, sheets.editing)
-  const bottle = entry?.kind === "feed" && feedNoun(entry.feed) === "bottle"
+  const [title, setTitle] = useState({ opened: -1, text: "Edit feed" })
+  if (sheets.open === "editFeed" && sheets.editing !== null && title.opened !== sheets.opened) {
+    setTitle({ opened: sheets.opened, text: editFeedTitle(cachedEntry(queryClient, sheets.editing)) })
+  }
   return (
-    <Sheet sheet="editFeed" title={bottle ? "Edit bottle" : "Edit feed"}>
+    <Sheet sheet="editFeed" title={title.text}>
       <EditFeedContent />
     </Sheet>
   )
