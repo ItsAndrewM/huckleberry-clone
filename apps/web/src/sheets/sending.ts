@@ -13,6 +13,7 @@ export const SheetKind = Schema.Literals([
   "editFeed",
   "dose",
   "editDose",
+  "supplement",
   "undo",
 ])
 export type SheetKind = typeof SheetKind.Type
