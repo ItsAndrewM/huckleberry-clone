@@ -22,8 +22,8 @@ describe("History's filters", () => {
   })
 
   it("hides every kind a filter's chips leave off", () => {
-    expect([...hiddenExcept(["feeds"])]).toEqual(["diapers", "growth"])
-    expect(hiddenExcept(["feeds", "diapers", "growth"]).size).toBe(0)
+    expect([...hiddenExcept(["feeds"])]).toEqual(["diapers", "growth", "supplements"])
+    expect(hiddenExcept(["feeds", "diapers", "growth", "supplements"]).size).toBe(0)
   })
 })
 

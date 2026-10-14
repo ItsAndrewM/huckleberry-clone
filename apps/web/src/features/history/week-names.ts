@@ -21,9 +21,14 @@ export const shownTotals = (totals: Totals, hidden: Hidden): Totals => {
   return hidden.has("diapers") ? { ...fed, ...NO_DIAPERS } : fed
 }
 
+const dosesSaid = (count: number) => {
+  if (count === 0) return []
+  return [count === 1 ? "a dose" : `${count} doses`]
+}
+
 export const columnName = (column: WeekColumn, volume: VolumeUnit, hidden: Hidden, locale?: string) => {
   const lines = totalsLines(shownTotals(column.totals, hidden), volume).map((parts) => parts.join(", "))
-  const said = column.measured ? [...lines, "a measurement"] : lines
+  const said = [...lines, ...(column.measured ? ["a measurement"] : []), ...dosesSaid(column.dosesShown)]
   const nothing = column.logged ? "nothing shown" : "nothing logged"
   return `${dayTitle(column.date, locale)}: ${said.length === 0 ? nothing : said.join("; ")}`
 }

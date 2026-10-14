@@ -61,6 +61,20 @@ export const measurement = (id: string, at: number, weightG: number, lengthCm: n
   ...audit(at, by),
 })
 
+export const dose = (id: string, supplementId: string, at: number, by: string) => ({
+  id,
+  supplementId,
+  occurredAt: at,
+  localDate: DAY,
+  dose: "400 IU",
+  version: 1,
+  createdBy: by,
+  createdAt: at,
+  updatedBy: by,
+  updatedAt: at,
+  deletedAt: null,
+})
+
 export const NO_TOTALS = {
   feedsStarted: 0,
   leftSeconds: 0,
@@ -88,7 +102,7 @@ export interface DayAnswer {
   readonly diapers: ReadonlyArray<ReturnType<typeof diaper>>
   readonly sleeps: ReadonlyArray<never>
   readonly measurements: ReadonlyArray<ReturnType<typeof measurement>>
-  readonly doses: ReadonlyArray<never>
+  readonly doses: ReadonlyArray<ReturnType<typeof dose>>
 }
 
 export const emptyDay = (date: string, hours = 24, offset = "-07:00"): DayAnswer => {

@@ -34,7 +34,7 @@ export const weekOf = (week: string, days: ReadonlyArray<DayAnswer>) => {
     diapers: byId(answers.flatMap(({ diapers }) => diapers)),
     sleeps: [],
     measurements: byId(answers.flatMap(({ measurements }) => measurements)),
-    doses: [],
+    doses: byId(answers.flatMap(({ doses }) => doses)),
   }
 }
 

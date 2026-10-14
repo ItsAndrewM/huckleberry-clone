@@ -16,6 +16,7 @@ export const KindChips = ({ search }: { readonly search: HistorySearch }) => {
       }}
       variant="outline"
       size="lg"
+      className="flex-wrap"
     >
       {SHOWN_KINDS.map((kind) => (
         <ToggleGroupItem key={kind} value={kind}>

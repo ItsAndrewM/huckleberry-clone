@@ -1,6 +1,6 @@
 import { flow, Option, Schema } from "effect"
 
-export const SHOWN_KINDS = ["feeds", "diapers", "growth"] as const
+export const SHOWN_KINDS = ["feeds", "diapers", "growth", "supplements"] as const
 
 export type ShownKind = (typeof SHOWN_KINDS)[number]
 
@@ -10,6 +10,7 @@ export const KIND_LABELS = {
   feeds: "Feeds",
   diapers: "Diapers",
   growth: "Growth",
+  supplements: "Supplements",
 } as const satisfies Record<ShownKind, string>
 
 const isShownKind = (value: string): value is ShownKind => SHOWN_KINDS.some((kind) => kind === value)

@@ -29,5 +29,11 @@ export const WeekLegend = ({ hidden }: { readonly hidden: Hidden }) => (
         Measured
       </span>
     )}
+    {hidden.has("supplements") ? null : (
+      <span className="inline-flex items-center gap-1">
+        <Swatch className="size-1.5 rounded-full border border-primary bg-card" />
+        Dose
+      </span>
+    )}
   </p>
 )

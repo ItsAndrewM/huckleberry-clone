@@ -1,4 +1,4 @@
-import type { LocalDate, Measurement, Totals, WeekPeriod } from "@bt/contracts"
+import type { Dose, LocalDate, Measurement, Totals, WeekPeriod } from "@bt/contracts"
 import {
   type DayGrid,
   feedTouches,
@@ -21,6 +21,8 @@ export interface WeekColumn {
   readonly isToday: boolean
   readonly grid: DayGrid<Side>
   readonly diapers: ReadonlyArray<PlacedCluster>
+  readonly doses: ReadonlyArray<PlacedCluster>
+  readonly dosesShown: number
   readonly measured: boolean
   readonly logged: boolean
   readonly totals: Totals
@@ -37,21 +39,28 @@ export interface WeekContext {
 const measuredIn = (measurements: ReadonlyArray<Measurement>, { start, end }: Interval) =>
   measurements.some(({ measuredAt }) => start <= measuredAt && measuredAt < end)
 
+const dosesIn = (doses: ReadonlyArray<Dose>, { start, end }: Interval) =>
+  doses.filter(({ occurredAt }) => start <= occurredAt && occurredAt < end).length
+
 export const weekModel = (week: WeekPeriod, context: WeekContext): ReadonlyArray<WeekColumn> =>
   week.days.map(({ date, bounds, totals }) => {
     const feeds = week.feeds.filter((feed) => feedTouches(bounds, feed, context.now))
-    const slice = shownSlice({ date, bounds, feeds, diapers: week.diapers }, context.hidden)
-    const { blocks, bottles, diapers } = piecesOf(slice)
+    const slice = shownSlice({ date, bounds, feeds, diapers: week.diapers, doses: week.doses }, context.hidden)
+    const { blocks, bottles, diapers, doses } = piecesOf(slice)
     const day = { date, zone: context.zone, bounds, now: context.now, blocks, points: bottles }
+    const lane = (points: typeof doses) => layoutDay(onWallClock({ ...day, blocks: [], points }), WEEK_SCALE).clusters
     const weighed = measuredIn(week.measurements, bounds)
+    const dosed = dosesIn(week.doses, bounds)
     return {
       date,
       opens: context.birthDate <= date && date <= context.today,
       isToday: date === context.today,
       grid: layoutDay(onWallClock(day), WEEK_SCALE),
-      diapers: layoutDay(onWallClock({ ...day, blocks: [], points: diapers }), WEEK_SCALE).clusters,
+      diapers: lane(diapers),
+      doses: lane(doses),
+      dosesShown: context.hidden.has("supplements") ? 0 : dosed,
       measured: !context.hidden.has("growth") && weighed,
-      logged: hasEntries(totals) || weighed,
+      logged: hasEntries(totals) || weighed || dosed > 0,
       totals,
     }
   })

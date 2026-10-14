@@ -18,12 +18,14 @@ export interface DaySlice {
   readonly bounds: Interval
   readonly feeds: ReadonlyArray<Feed>
   readonly diapers: ReadonlyArray<Diaper>
+  readonly doses: ReadonlyArray<Dose>
 }
 
 export interface DayPieces {
   readonly blocks: ReadonlyArray<CalendarBlock<Side>>
   readonly bottles: ReadonlyArray<CalendarPoint>
   readonly diapers: ReadonlyArray<CalendarPoint>
+  readonly doses: ReadonlyArray<CalendarPoint>
 }
 
 export type Entry =
@@ -55,24 +57,28 @@ export const shownSlice = <Slice extends DaySlice>(slice: Slice, hidden: Hidden)
   ...slice,
   feeds: hidden.has("feeds") ? [] : slice.feeds,
   diapers: hidden.has("diapers") ? [] : slice.diapers,
+  doses: hidden.has("supplements") ? [] : slice.doses,
 })
 
-export const piecesOf = ({ feeds, diapers, bounds }: DaySlice): DayPieces => ({
+export const piecesOf = ({ feeds, diapers, doses, bounds }: DaySlice): DayPieces => ({
   blocks: feeds.filter((feed) => isBlock(feed, bounds)).flatMap(blockOf),
   bottles: feeds.filter((feed) => !isBlock(feed, bounds)).map((feed) => ({ id: feed.id, at: pointAt(feed, bounds) })),
   diapers: diapers.map(({ id, occurredAt }) => ({ id, at: occurredAt })),
+  doses: doses.map(({ id, occurredAt }) => ({ id, at: occurredAt })),
 })
 
 const entriesOf = (day: DayPeriod): ReadonlyMap<string, Entry> =>
   new Map<string, Entry>([
     ...day.feeds.map((feed) => [feed.id, { kind: "feed", feed }] as const),
     ...day.diapers.map((diaper) => [diaper.id, { kind: "diaper", diaper }] as const),
+    ...day.doses.map((dose) => [dose.id, { kind: "dose", dose }] as const),
   ])
 
 export const dayModel = (day: DayPeriod, zone: string, now: number, hidden: Hidden = new Set()): DayModel => {
-  const { blocks, bottles, diapers } = piecesOf(shownSlice(day, hidden))
+  const { blocks, bottles, diapers, doses } = piecesOf(shownSlice(day, hidden))
+  const points = [...bottles, ...diapers, ...doses]
   return {
-    grid: layoutDay({ date: day.date, zone, bounds: day.bounds, now, blocks, points: [...bottles, ...diapers] }, SCALE),
+    grid: layoutDay({ date: day.date, zone, bounds: day.bounds, now, blocks, points }, SCALE),
     entries: entriesOf(day),
   }
 }
