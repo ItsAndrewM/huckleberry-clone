@@ -4,7 +4,7 @@ import { hiddenExcept, hiddenIn, hiddenNotice, hideInSearch, hideOf } from "../s
 describe("History's filters", () => {
   it("reads the kinds the address hides, and nothing else", () => {
     expect([...hiddenIn("diapers,growth")]).toEqual(["diapers", "growth"])
-    expect([...hiddenIn("growth,doses,,feeds,sleep")]).toEqual(["growth", "feeds", "sleep"])
+    expect([...hiddenIn("growth,unknown,,feeds,sleep")]).toEqual(["growth", "feeds", "sleep"])
     expect(hiddenIn(undefined).size).toBe(0)
   })
 
@@ -15,7 +15,7 @@ describe("History's filters", () => {
 
   it("keeps a tidy address: known kinds in order, or none", () => {
     expect(hideInSearch("growth,sleep,diapers,growth")).toBe("diapers,sleep,growth")
-    expect(hideInSearch("doses")).toBeUndefined()
+    expect(hideInSearch("unknown")).toBeUndefined()
     expect(hideInSearch("")).toBeUndefined()
     expect(hideInSearch(3)).toBeUndefined()
     expect(hideInSearch(undefined)).toBeUndefined()

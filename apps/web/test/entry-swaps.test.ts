@@ -391,4 +391,19 @@ describe("a sleep edited or deleted before the household answers", () => {
     expect([today?.activeSleep, today?.lastSleep]).toEqual([null, NAP])
     expect(queryClient.getQueryData<DayPeriod>(queryKeys.day(DAY))?.sleeps).toEqual([NAP])
   })
+
+  it("puts the running sleep back on Today as the running and the last sleep when its delete is refused", async () => {
+    const queryClient = cached()
+    const before = queryClient.getQueryData<Today>(queryKeys.today)
+    const remove: Action = {
+      kind: "deleteSleep",
+      id: RUNNING_SLEEP.id,
+      payload: { actionId: ACTION_ID, version: 1 },
+    }
+    const pended = await pendIn(queryClient, remove, NOW_ON_DAY)
+    rollBack(queryClient, remove, pended)
+    const today = queryClient.getQueryData<Today>(queryKeys.today)
+    expect([today?.activeSleep, today?.lastSleep]).toEqual([RUNNING_SLEEP, RUNNING_SLEEP])
+    expect(today).toEqual(before)
+  })
 })

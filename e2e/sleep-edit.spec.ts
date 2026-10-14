@@ -54,6 +54,9 @@ test("logs a past sleep from the sleep sheet: the hour before now, a nap by its 
       },
     ])
   await expect(page.getByText("Sleep saved")).toBeVisible()
+  await expect(
+    page.getByRole("status").filter({ hasText: "Sleep saved" }).getByRole("button", { name: "Undo" }),
+  ).toBeVisible()
   await expect(page.getByText("Since she woke")).toBeVisible()
 })
 

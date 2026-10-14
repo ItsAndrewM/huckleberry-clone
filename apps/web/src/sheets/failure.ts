@@ -65,14 +65,16 @@ const fieldMessage = (issue: FieldIssue, household: Household, sleeping: boolean
 
 const METRICS = new Set(["weightG", "lengthCm", "headCm"])
 
+const fieldFallback = (measured: boolean, sleeping: boolean) => {
+  if (measured) return "Check the measurements, then try again."
+  return sleeping ? "Check the times, then try again." : "Check the times and amounts, then try again."
+}
+
 const fieldNote = (error: InvalidInput, household: Household, sheet: SheetKind | undefined): Note => {
   const sleeping = SLEEP_SHEETS.has(sheet)
   const messages = error.fieldErrors.map(({ issue }) => fieldMessage(issue, household, sleeping))
   const measured = error.fieldErrors.some(({ path }) => METRICS.has(path))
-  const otherwise = measured
-    ? "Check the measurements, then try again."
-    : "Check the times and amounts, then try again."
-  return note(messages.find((message) => message !== null) ?? otherwise)
+  return note(messages.find((message) => message !== null) ?? fieldFallback(measured, sleeping))
 }
 
 const feedNote = (error: FeedConflict, household: Household): Note => {

@@ -2,6 +2,8 @@ import { expect, type Page, test } from "@playwright/test"
 import { busyDay, type DayAnswer, local, openHistory, playHistory, sleep } from "./played-day.ts"
 import { muteLiveUpdates } from "./played-household.ts"
 
+test.use({ timezoneId: "Europe/London" })
+
 const grid = (page: Page) => page.getByRole("region", { name: "The day by hour" })
 
 const boxOf = async (page: Page, name: RegExp) => {

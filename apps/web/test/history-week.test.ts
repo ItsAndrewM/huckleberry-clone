@@ -229,12 +229,20 @@ describe("a week's sleeps", () => {
     expect(columnOn(DATE, { ...CONTEXT, hidden: hiddenIn("sleep") }, week).sleeps).toEqual([])
   })
 
-  it("says the day's sleep in a column's name, unless the chip hides it", () => {
-    const totals = { ...NO_TOTALS, sleepsStarted: 1, sleepSeconds: 22_800, nightSeconds: 22_800 }
+  it("says the day's sleep in a column's name, and nothing of it behind the Sleep chip, naps included", () => {
+    const totals = {
+      ...NO_TOTALS,
+      sleepsStarted: 2,
+      sleepSeconds: 25_800,
+      napSeconds: 3_000,
+      nightSeconds: 22_800,
+      longestSleepSeconds: 22_800,
+    }
     expect(shownTotals(totals, hiddenIn("sleep"))).toEqual(NO_TOTALS)
     const column = { ...columnOn(DATE, CONTEXT, week), totals }
     expect(columnName(column, "ml", hiddenIn(undefined), LOCALE)).toBe(
-      "Fri, Oct 9: 6 h 20 min asleep, 6 h 20 min night; a measurement",
+      "Fri, Oct 9: 7 h 10 min asleep, 50 min naps, 6 h 20 min night; a measurement",
     )
+    expect(columnName(column, "ml", hiddenIn("sleep"), LOCALE)).toBe("Fri, Oct 9: a measurement")
   })
 })

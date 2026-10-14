@@ -473,9 +473,21 @@ describe("a sleep the other phone got to first", () => {
     expect(offersOk(sleepConflict(WAKE, "STALE_VERSION", woken))).toBe(true)
   })
 
+  it.each([
+    { case: "to the held wake", startedAt: NOW },
+    { case: "past the held wake", startedAt: NOW + MINUTE },
+  ])("offers no Wake anyway once they've moved her start $case", ({ startedAt }) => {
+    expect(recoveryOf(sleepConflict(WAKE, "STALE_VERSION", { ...RUNNING, startedAt }))).toBeNull()
+  })
+
   it("changes a running sleep's start, or deletes it, anyway on their version", () => {
     expect(recoveryOf(sleepConflict(MOVED_START, "STALE_VERSION"))?.label).toBe("Change it anyway")
     expect(recoveryOf(sleepConflict(REMOVE, "STALE_VERSION"))?.label).toBe("Delete anyway")
+  })
+
+  it("offers no Change it anyway for a running sleep's edit once they've woken her", () => {
+    const woken = { ...RUNNING, endedAt: NOW - MINUTE }
+    expect(recoveryOf(sleepConflict(MOVED_START, "STALE_VERSION", woken))).toBeNull()
   })
 
   it("saves a past sleep's changes as an edit of the saved one, under a fresh actionId", () => {

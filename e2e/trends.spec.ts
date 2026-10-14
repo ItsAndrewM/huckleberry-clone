@@ -87,7 +87,7 @@ test("leaves a day with nothing logged out of the averages, and says so in the t
   ])
 })
 
-test("picks a day on all five charts with one tap, without moving them, and goes back to the averages", async ({
+test("picks a day on the Feeds started, Nursing, Bottles and Diapers charts with one tap, without moving them, and goes back to the averages", async ({
   page,
 }) => {
   await playWeeks(page)

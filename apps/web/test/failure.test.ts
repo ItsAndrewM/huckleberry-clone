@@ -168,6 +168,23 @@ describe("failureNote", () => {
     expect(refused("end_not_after_start", "editSleep")).toBe("Pick a time after she fell asleep.")
   })
 
+  it("asks a sleep sheet to check only the times when the household refuses a field with no message of its own", () => {
+    const refused = (sheet: "sleep" | "pastSleep" | "editSleep" | "pastFeed" | "diaper") =>
+      failureNote(new InvalidInput({ fieldErrors: [{ path: "kind", issue: "invalid" }] }), HOUSEHOLD, {
+        keptOn: null,
+        sheet,
+      }).message
+    expect([refused("sleep"), refused("pastSleep"), refused("editSleep")]).toEqual([
+      "Check the times, then try again.",
+      "Check the times, then try again.",
+      "Check the times, then try again.",
+    ])
+    expect([refused("pastFeed"), refused("diaper")]).toEqual([
+      "Check the times and amounts, then try again.",
+      "Check the times and amounts, then try again.",
+    ])
+  })
+
   it("says the running feed changed when the household no longer has it as it was", () => {
     expect(message(new NotFound())).toBe("This has changed since it opened. Today is up to date now.")
   })

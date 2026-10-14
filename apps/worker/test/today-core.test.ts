@@ -366,7 +366,7 @@ describe("todayOf, for sleep", () => {
     })
   })
 
-  it("lists the last 24 hours' sleeps by their start among the feeds and diapers, newest first, a running one too", async () => {
+  it("lists the last 24 hours' sleeps among the diapers by their start, newest first, a running one too, but not a night begun over 24 hours ago that ended since", async () => {
     const { older, diaper, running, today } = await inHousehold((sql) => {
       slept(sql, minutesAgo(25 * 60), minutesAgo(23 * 60), "night")
       const older = slept(sql, minutesAgo(300), minutesAgo(200))
