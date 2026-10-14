@@ -283,7 +283,7 @@ describe("what a release reports", () => {
     expect(releasedReport(COMMIT)).toBe(
       [
         "Released 20390a3 to https://baby.andamonium.dev.",
-        "Each phone opens this build the next time the app comes back with nothing open. Settings › Offline copy says which build a phone has.",
+        "Each phone saves this build the next time it's online, and opens it the next time the app comes back online with nothing open. Settings › Offline copy says when a newer version is waiting.",
       ].join("\n\n"),
     )
   })
