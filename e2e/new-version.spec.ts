@@ -165,3 +165,24 @@ test("keeps a Settings change that isn't saved when the app comes back, even onc
   await expect(name).toHaveValue("Robin Jay")
   expect(await isSamePage(page)).toBe(true)
 })
+
+test("waits to offer Open it now until the phone is back online", async ({ page, context, baseURL }) => {
+  let offline = false
+  await page.routeWebSocket(/\/api\/ws$/u, (socket) => {
+    if (offline) socket.close({ code: 1011, reason: "offline" })
+    else socket.connectToServer()
+  })
+  await openWithSavedCopy(page)
+  await deploy(context, baseURL)
+  await tab(page, "Settings")
+  await leaveAndComeBack(page)
+  await expect(page.getByText(NEWER)).toBeVisible({ timeout: SAVING_TAKES_MS })
+  const openNow = page.getByRole("button", { name: "Open it now" })
+  offline = true
+  await context.setOffline(true)
+  await expect(page.getByText("Opening it now needs a connection.")).toBeVisible()
+  await expect(openNow).toBeDisabled()
+  offline = false
+  await context.setOffline(false)
+  await expect(openNow).toBeEnabled()
+})

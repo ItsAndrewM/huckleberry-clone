@@ -3,6 +3,7 @@ import {
   BUILD_META_NAME,
   checkOfflineCopy,
   offlineCopyOf,
+  openNowReason,
   pageBuild,
   SHELL_CACHE_PREFIX,
   SHELL_PATH,
@@ -101,5 +102,13 @@ describe("the names the page and the service worker share", () => {
 
   it("looks in that cache for the shell the service worker opens", () => {
     expect(SHELL_PATH).toBe(SHELL_URL)
+  })
+})
+
+describe("openNowReason", () => {
+  it("says Open it now waits while there's no connection, since a reload offline can't load Today", () => {
+    expect(openNowReason("offline")).toBe("Opening it now needs a connection.")
+    expect(openNowReason("online")).toBeNull()
+    expect(openNowReason("auth-required")).toBeNull()
   })
 })

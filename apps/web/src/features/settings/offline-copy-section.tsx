@@ -1,8 +1,9 @@
 import { keepPreviousData, useQuery } from "@tanstack/react-query"
-import { useSyncExternalStore } from "react"
+import { useId, useSyncExternalStore } from "react"
+import { useConnectivity } from "../../api/hooks.ts"
 import { useApp } from "../../app-context.ts"
 import { Button } from "../../components/ui/button.tsx"
-import { checkOfflineCopy, type OfflineCopy, pageBuild } from "./offline-copy.ts"
+import { checkOfflineCopy, type OfflineCopy, openNowReason, pageBuild } from "./offline-copy.ts"
 import { SettingsSection } from "./settings-section.tsx"
 
 const CHECK_AGAIN_MS = 5_000
@@ -22,14 +23,30 @@ const statusOf = (copy: OfflineCopy | undefined, failed: boolean) => {
   return copy === undefined ? "Checking…" : STATUS[copy]
 }
 
-const NewerCopy = () => (
-  <div className="flex items-center justify-between gap-3">
-    <p className="text-base">{STATUS.newer}</p>
-    <Button size="lg" onClick={() => window.location.reload()}>
-      Open it now
-    </Button>
-  </div>
-)
+const NewerCopy = () => {
+  const reasonId = useId()
+  const reason = openNowReason(useConnectivity())
+  return (
+    <div className="flex flex-col gap-2">
+      <div className="flex items-center justify-between gap-3">
+        <p className="text-base">{STATUS.newer}</p>
+        <Button
+          size="lg"
+          disabled={reason !== null}
+          aria-describedby={reason === null ? undefined : reasonId}
+          onClick={() => window.location.reload()}
+        >
+          Open it now
+        </Button>
+      </div>
+      {reason === null ? null : (
+        <p id={reasonId} className="text-sm text-muted-foreground">
+          {reason}
+        </p>
+      )}
+    </div>
+  )
+}
 
 const OfflineCopyStatus = ({ build }: { readonly build: string }) => {
   const { updates } = useApp()

@@ -99,12 +99,12 @@ The five ways this is most likely to fail a parent, each with the test that pins
   - **Found during the fix pass:** importing `NETWORK_GRACE_MS` from `shell-cache.ts` into page code split it into a chunk that `sw.js` then imported. A classic service worker can't load one, so it never installed, and every spec failed. `updates.ts` keeps its own `CHECK_LIMIT_MS`; #80 asks for a build check.
   - **Each offline gate alone:** `navigator.onLine` and an unavailable check each survive alone in E2E, because each engine trips the other one. The spec without either gate failed in both engines, and unit tests pin each gate.
   - **Calls for Andrew, and deferred minors:**
-    - Open it now reloads even offline, into a Today that can't load until the phone is back online (P5's deliberate tap). It could hide while offline.
+    - Open it now reloaded even offline, into a Today that couldn't load until the phone was back online. CodeRabbit's first round on #81 asked for it to wait, so it does: while the app counts itself offline, the button is disabled with "Opening it now needs a connection." (`openNowReason`), as Export's buttons wait. This amends P5.
     - After the switch begins, the old page still takes taps for up to about 3 s on a slow network, until the new page arrives. Setting `document.documentElement.inert` just before the reload would stop them.
     - A phone still on the version before #61 needs a real close from the app switcher and an online reopen. The PR's checklist and #48 say so.
 - **After the fixes:**
-  - `pnpm test`: 3,547 tests in 212 files.
-  - The new spec: 10 tests, 5 in each engine.
+  - `pnpm test`: 3,548 tests in 212 files.
+  - The new spec: 12 tests, 6 in each engine.
   - The whole E2E suite: 587 passed and 3 skipped, in both engines.
   - The app grows by 0.84 kB gzip of JS (326.62 to 327.46 of 350 kB by `bundle:check`), against `main` at `ca755b1`. The CSS and the Worker are unchanged.
 - **The branch is authoritative.** Stale points in this plan's text:

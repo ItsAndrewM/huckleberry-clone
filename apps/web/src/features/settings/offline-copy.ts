@@ -1,3 +1,5 @@
+import type { Connectivity } from "../../api/connectivity.ts"
+
 export type OfflineCopy = "saved" | "older" | "newer" | "none"
 
 export const BUILD_META_NAME = "bt-build"
@@ -20,6 +22,9 @@ export const offlineCopyOf = (cacheNames: readonly string[], build: string, work
   if (workerChanged) return copies.at(-1) === thisBuild ? "saved" : "newer"
   return copies.includes(thisBuild) ? "saved" : "older"
 }
+
+export const openNowReason = (connectivity: Connectivity): string | null =>
+  connectivity === "offline" ? "Opening it now needs a connection." : null
 
 const holdsShell = async (storage: ShellStorage, cacheName: string) =>
   (await storage.match(SHELL_PATH, { cacheName, ignoreVary: true })) !== undefined
