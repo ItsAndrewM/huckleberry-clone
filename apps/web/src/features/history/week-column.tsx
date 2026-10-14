@@ -1,6 +1,7 @@
 import { Link } from "@tanstack/react-router"
 import { cn } from "cn"
 import type { HistorySearch } from "./history-date.ts"
+import { opensAtTop } from "./history-navigation.ts"
 import { WeekDayHeader } from "./week-day-header.tsx"
 import { WeekMarks } from "./week-marks.tsx"
 import type { WeekColumn } from "./week-model.ts"
@@ -28,6 +29,7 @@ export const WeekColumnView = ({ column, name, search, locale }: WeekColumnProps
       <Link
         to="/history"
         search={search}
+        resetScroll={opensAtTop(search)}
         activeOptions={{ exact: true }}
         aria-label={name}
         className="absolute inset-0 rounded-md outline-none focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:ring-inset"

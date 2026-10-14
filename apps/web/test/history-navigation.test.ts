@@ -4,6 +4,7 @@ import {
   daySearch,
   goToOpensOn,
   navigationOf,
+  opensAtTop,
   searchFor,
   shownPeriod,
   viewSearch,
@@ -199,5 +200,18 @@ describe("daySearch", () => {
   it("opens a week's day in the Day view, keeping what's hidden", () => {
     expect(daySearch("2026-10-06", TODAY, NO_DIAPERS)).toEqual({ view: undefined, date: "2026-10-06", hide: "diapers" })
     expect(daySearch(TODAY, TODAY, NONE)).toEqual({ view: undefined, date: undefined, hide: undefined })
+  })
+})
+
+describe("opensAtTop", () => {
+  it("leaves the scroll to a Day view, which opens at now or at its first entry", () => {
+    expect(opensAtTop({})).toBe(false)
+    expect(opensAtTop({ date: "2026-10-06", hide: "diapers" })).toBe(false)
+  })
+
+  it("opens a day's list and a week at the top", () => {
+    expect(opensAtTop({ view: "list" })).toBe(true)
+    expect(opensAtTop({ view: "list", date: "2026-10-06" })).toBe(true)
+    expect(opensAtTop({ view: "week", date: "2026-09-28" })).toBe(true)
   })
 })
