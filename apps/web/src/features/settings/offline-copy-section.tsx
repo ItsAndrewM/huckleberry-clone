@@ -8,6 +8,7 @@ const BUILD = pageBuild(document)
 const STATUS = {
   saved: "Saved for this version.",
   older: "An older version. It updates while the app is open online.",
+  newer: "A newer version is saved. It opens when you next come back to the app.",
   none: "Not saved yet.",
 } satisfies Record<OfflineCopy, string>
 
@@ -19,7 +20,7 @@ const statusOf = (copy: OfflineCopy | undefined, failed: boolean) => {
 const OfflineCopyStatus = ({ build }: { readonly build: string }) => {
   const { data, isError } = useQuery({
     queryKey: ["offline-copy", build],
-    queryFn: () => checkOfflineCopy(caches, build),
+    queryFn: () => checkOfflineCopy(caches, build, false),
     refetchInterval: ({ state }) => (state.data === "saved" ? false : CHECK_AGAIN_MS),
   })
   return (
