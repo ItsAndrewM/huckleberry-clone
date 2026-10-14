@@ -9,6 +9,7 @@ import type { Entry } from "./day-model.ts"
 
 const MINUTE_S = 60
 const HOUR_MIN = 60
+const STEPS_FOR_TWO_LINES = 7
 
 export const shortMinutes = (seconds: number) => {
   if (seconds > 0 && seconds < MINUTE_S) return "<1m"
@@ -85,3 +86,5 @@ export const sleepBlockText = (sleep: Sleep, now: number) => ({
   title: sleepTitle(sleep),
   length: sleep.endedAt === null ? "now" : compactLength(sleepElapsed(sleep, now)),
 })
+
+export const showsLength = (steps: number) => steps >= STEPS_FOR_TWO_LINES

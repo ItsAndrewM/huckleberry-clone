@@ -1,5 +1,6 @@
 import type { PlacedBlock, Side } from "@bt/domain"
 import { cn } from "cn"
+import { showsLength } from "./entry-labels.ts"
 import { atStep, inLane, stepsTall } from "./grid-classes.ts"
 
 interface SleepBlockProps {
@@ -30,10 +31,10 @@ export const SleepBlock = ({ block, title, length, name, onOpen }: SleepBlockPro
         block.endsAfter && "rounded-b-none border-b-0",
       )}
     >
-      <span className="block truncate px-0.5 text-[0.6875rem] leading-4 font-medium">{title}</span>
-      <span className="block truncate px-0.5 text-[0.6875rem] leading-4 text-muted-foreground tabular-nums">
-        {length}
-      </span>
+      <span className="block truncate text-[0.6875rem] leading-4 font-medium">{title}</span>
+      {showsLength(block.height) ? (
+        <span className="block truncate text-[0.6875rem] leading-4 text-muted-foreground tabular-nums">{length}</span>
+      ) : null}
     </span>
   </button>
 )

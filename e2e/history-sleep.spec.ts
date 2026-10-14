@@ -1,5 +1,5 @@
 import { expect, type Page, test } from "@playwright/test"
-import { busyDay, local, openHistory, playHistory, sleep } from "./played-day.ts"
+import { busyDay, type DayAnswer, local, openHistory, playHistory, sleep } from "./played-day.ts"
 import { muteLiveUpdates } from "./played-household.ts"
 
 const grid = (page: Page) => page.getByRole("region", { name: "The day by hour" })
@@ -21,18 +21,18 @@ const chipTops = async (page: Page) => {
   )
 }
 
-const playSleptDay = async (page: Page) => {
+const playSleeps = async (page: Page, sleepsOf: (andrew: string, emily: string) => DayAnswer["sleeps"]) => {
   const { played, andrew, emily } = await playHistory(page, [])
-  played.days.push({
-    ...busyDay(andrew, emily),
-    sleeps: [
-      sleep("night", local("20:30", "2026-10-08"), local("05:00"), "night", emily),
-      sleep("nap", local("07:10"), local("08:20"), "nap", andrew),
-    ],
-  })
+  played.days.push({ ...busyDay(andrew, emily), sleeps: sleepsOf(andrew, emily) })
   await muteLiveUpdates(page)
   return played
 }
+
+const playSleptDay = (page: Page) =>
+  playSleeps(page, (andrew, emily) => [
+    sleep("night", local("20:30", "2026-10-08"), local("05:00"), "night", emily),
+    sleep("nap", local("07:10"), local("08:20"), "nap", andrew),
+  ])
 
 test("draws each sleep in its own column beside the hours, the feeds it overlaps keeping their width", async ({
   page,
@@ -88,4 +88,24 @@ test("fits all four chips on a 360-pixel-wide phone, on one row, without scrolli
   const tops = await chipTops(page)
   expect(new Set(tops).size, `the chips' tops are ${tops.join(", ")}`).toBe(1)
   expect(await page.evaluate("document.documentElement.scrollWidth <= window.innerWidth")).toBe(true)
+})
+
+test("keeps a 10-hour night's length whole, and a 25-minute nap's name clear of a sliced length, on a 360-pixel-wide phone", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 360, height: 640 })
+  await playSleeps(page, (andrew, emily) => [
+    sleep("night", local("19:30", "2026-10-08"), local("06:00"), "night", emily),
+    sleep("catnap", local("07:10"), local("07:35"), "nap", andrew),
+  ])
+  await openHistory(page)
+  const length = grid(page)
+    .getByRole("button", { name: /^Night at 7:30\sPM/u })
+    .getByText("10h30", { exact: true })
+  await expect(length).toBeVisible()
+  const { needs, has } = await length.evaluate((element) => ({ needs: element.scrollWidth, has: element.clientWidth }))
+  expect(needs, `"10h30" needs ${needs} px of its ${has} px line`).toBeLessThanOrEqual(has)
+  const nap = grid(page).getByRole("button", { name: /^Nap at 7:10\sAM/u })
+  await expect(nap).toHaveText("Nap")
+  await expect(nap).toHaveAccessibleName(/^Nap at 7:10\sAM: 25 min, Woke 7:35\sAM$/u)
 })

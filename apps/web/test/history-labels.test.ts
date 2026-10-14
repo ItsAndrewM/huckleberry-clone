@@ -7,6 +7,7 @@ import {
   entryName,
   markerText,
   shortMinutes,
+  showsLength,
   sleepBlockText,
 } from "../src/features/history/entry-labels.ts"
 import { markersOf } from "../src/features/history/grid-markers.ts"
@@ -45,6 +46,10 @@ describe("a sleep block's label", () => {
       title: "Night",
       length: "now",
     })
+  })
+
+  it("shows the length under the name only from 7 steps tall, where two lines fit, so a short nap shows its name alone", () => {
+    expect([4, 6, 7, 72].map(showsLength)).toEqual([false, false, true, true])
   })
 })
 
