@@ -69,6 +69,8 @@ const playDoses = async (page: Page, already: (vitaminD: string, emily: string) 
 }
 
 test.describe("Today's supplements, with the household's answers played by the test", () => {
+  test.use({ timezoneId: "Europe/London" })
+
   test("logs today's Vitamin D in two taps from its row, and says who logged it and when (AC 2)", async ({ page }) => {
     const { played, vitaminD } = await playDoses(page)
     await openToday(page)
