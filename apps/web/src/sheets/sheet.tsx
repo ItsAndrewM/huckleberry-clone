@@ -28,7 +28,7 @@ export const Sheet = ({ sheet, title, description, children }: SheetProps) => {
       <DrawerContent className={cn("pb-[env(safe-area-inset-bottom)]", SIZES_TO_CONTENT_ON_REOPEN)}>
         <div className="mx-auto flex w-full max-w-lg flex-col gap-5 overflow-y-auto p-4 pt-2">
           <DrawerHeader className="p-0 text-left">
-            <DrawerTitle className="text-xl font-semibold tracking-tight">{title}</DrawerTitle>
+            <DrawerTitle className="text-xl font-semibold tracking-tight break-words">{title}</DrawerTitle>
             {description === undefined ? null : <DrawerDescription>{description}</DrawerDescription>}
           </DrawerHeader>
           {asking ? <DiscardPrompt failed={failed} /> : null}

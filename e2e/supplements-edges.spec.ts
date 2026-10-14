@@ -62,6 +62,15 @@ const textEndOf = (target: Locator) =>
     return range.getBoundingClientRect().right
   })
 
+const scrollsSideways = (sheet: Locator) =>
+  sheet.evaluate((dialog) => {
+    const view = dialog.ownerDocument.defaultView
+    return [dialog, ...dialog.querySelectorAll("*")].some((element) => {
+      const overflowX = view?.getComputedStyle(element).overflowX
+      return (overflowX === "auto" || overflowX === "scroll") && element.scrollWidth > element.clientWidth
+    })
+  })
+
 const endsBefore = async (text: Locator, next: Locator) => {
   expect(await textEndOf(text)).toBeLessThanOrEqual((await boxOf(next)).x)
 }
@@ -99,6 +108,27 @@ test.describe("The longest doses and names, on a 360-pixel-wide phone", () => {
       await endsBefore(row.getByText(name), chevron)
       await endsBefore(row.getByText(dose), chevron)
     }
+  })
+
+  test("keep the dose sheet's title and Log button inside the sheet, without scrolling it or the page sideways", async ({
+    page,
+  }) => {
+    await playLongest(page, false)
+    const name = "Multivitamin".repeat(5)
+    expect(name).toHaveLength(60)
+    await rowOf(page, name).click()
+    const sheet = doseSheet(page, name)
+    const title = sheet.getByRole("heading", { name })
+    const log = sheet.getByRole("button", { name: `Log ${name}` })
+    await expect(log).toBeVisible()
+    const edge = await boxOf(sheet)
+    const right = edge.x + edge.width
+    expect(await textEndOf(title)).toBeLessThanOrEqual(right)
+    expect(await textEndOf(log)).toBeLessThanOrEqual((await boxOf(log)).x + (await boxOf(log)).width)
+    expect((await boxOf(log)).x + (await boxOf(log)).width).toBeLessThanOrEqual(right)
+    expect((await boxOf(log)).height).toBeGreaterThanOrEqual(44)
+    expect(await scrollsSideways(sheet)).toBe(false)
+    expect(await page.locator("html").evaluate((root) => root.scrollWidth - root.clientWidth)).toBe(0)
   })
 
   test("wrap inside Today's card and its Last 24 hours rows once they're logged", async ({ page }) => {

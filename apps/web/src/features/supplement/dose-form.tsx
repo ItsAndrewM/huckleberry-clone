@@ -36,7 +36,12 @@ export const DoseForm = ({ household, supplement }: DoseFormProps) => {
   return (
     <>
       <WhenField label="When" when={when} onChange={setWhen} zone={zone} now={now} />
-      <Button size="lg" className="h-16 text-lg" disabled={!resolveWhen(when, zone, now).ok} onClick={log}>
+      <Button
+        size="lg"
+        className="h-auto min-h-16 py-3 text-lg whitespace-normal wrap-anywhere"
+        disabled={!resolveWhen(when, zone, now).ok}
+        onClick={log}
+      >
         Log {supplement.name}
       </Button>
       <FailureNote sheet="dose" />

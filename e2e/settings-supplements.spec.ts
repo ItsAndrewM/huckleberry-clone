@@ -77,6 +77,19 @@ const sheetOf = (page: Page, name: string) => page.getByRole("dialog", { name })
 const spillsOut = (row: Locator) => row.evaluate((button) => button.scrollWidth > button.clientWidth)
 const widthOfPage = (page: Page) => page.locator("html").evaluate((root) => root.scrollWidth)
 
+const textEndOf = (target: Locator) =>
+  target.evaluate((element) => {
+    const range = element.ownerDocument.createRange()
+    range.selectNodeContents(element)
+    return range.getBoundingClientRect().right
+  })
+
+const rightEdgeOf = async (target: Locator) => {
+  const box = await target.boundingBox()
+  if (box === null) throw new Error(`${target} isn't on screen to measure`)
+  return box.x + box.width
+}
+
 test("adds a supplement from Settings with its dose, and Today then lists it", async ({ page }) => {
   const { played } = await playSupplements(page)
   await page.goto("/settings")
@@ -228,6 +241,26 @@ for (const { written, name, given } of LONGEST) {
     await expect(stoppedList(page).getByRole("button")).toHaveCount(1)
     expect(await spillsOut(section(page).getByRole("button"))).toBe(false)
     expect(await spillsOut(stoppedList(page).getByRole("button"))).toBe(false)
+    expect(await widthOfPage(page)).toBeLessThanOrEqual(360)
+  })
+}
+
+for (const { written, name, given } of LONGEST) {
+  test(`keeps the longest name ${written} inside its sheet's title and stop question on a 360-pixel-wide phone`, async ({
+    page,
+  }) => {
+    const { played, vitaminD } = await playSupplements(page)
+    played.supplements = [{ ...vitaminD, id: "supplement-long", name, dose: given }]
+    await page.setViewportSize({ width: 360, height: 900 })
+    await page.goto("/settings")
+    await section(page).getByRole("button").click()
+    const sheet = sheetOf(page, name)
+    await sheet.getByRole("button", { name: "Stop giving it" }).click()
+    const question = sheet.getByRole("alert").getByText(/^Stop giving /u)
+    await expect(question).toBeVisible()
+    const right = await rightEdgeOf(sheet)
+    expect(await textEndOf(sheet.getByRole("heading", { name }))).toBeLessThanOrEqual(right)
+    expect(await textEndOf(question)).toBeLessThanOrEqual(right)
     expect(await widthOfPage(page)).toBeLessThanOrEqual(360)
   })
 }

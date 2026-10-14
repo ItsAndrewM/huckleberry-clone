@@ -183,4 +183,32 @@ for (const { written, name, given } of LONGEST) {
     expect(await scrollsSideways(sheet)).toBe(false)
     expect(await textEndOf(heading)).toBeLessThanOrEqual(await rightEdgeOf(sheet))
   })
+
+  test(`keeps the longest name and dose ${written} inside the note saying the other phone changed the dose first`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 360, height: 900 })
+    const { answer, dose, emily, me, showing } = await playDose(page)
+    const supplements = me.household.supplements.map((supplement: { id: string }) =>
+      supplement.id === dose.supplementId ? { ...supplement, name } : supplement,
+    )
+    await page.route("**/api/me", (route) =>
+      route.fulfill({ json: { ...me, household: { ...me.household, supplements } } }),
+    )
+    const theirs = { ...dose, dose: given, occurredAt: NOW - 45 * MINUTE, version: 2, updatedBy: emily.id }
+    await answer("**/api/doses/dose-1", () => ({
+      status: 409,
+      json: { _tag: "Conflict", code: "STALE_VERSION", current: theirs },
+    }))
+    showing({ ...dose, dose: given })
+    await openToday(page)
+    await recent(page).getByRole("button", { name }).click()
+    const sheet = editSheet(page)
+    await sheet.getByLabel("When").fill("2026-10-09T08:15")
+    await sheet.getByRole("button", { name: "Save" }).click()
+    const alert = sheet.getByRole("alert")
+    const note = alert.getByText(/changed this a moment ago/u)
+    await expect(note).toBeVisible()
+    expect(await textEndOf(note)).toBeLessThanOrEqual(await rightEdgeOf(alert))
+  })
 }

@@ -31,7 +31,7 @@ export const StopSupplement = ({ name, stopped, disabled, onChange }: StopSupple
   }
   return (
     <div role="alert" className="flex flex-col gap-3 rounded-lg border p-3">
-      <p className="text-sm">{stopQuestion(name)}</p>
+      <p className="text-sm break-words">{stopQuestion(name)}</p>
       <div className="flex gap-2">
         <Button type="button" variant="destructive" size="lg" className="flex-1" disabled={disabled} onClick={change}>
           Stop
