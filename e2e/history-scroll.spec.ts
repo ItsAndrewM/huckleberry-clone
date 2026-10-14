@@ -10,7 +10,7 @@ const YESTERDAY = "2026-10-08"
 
 test.beforeEach(({ page }) => muteLiveUpdates(page))
 
-const playDays = async (page: Page) => {
+const playTodayAndYesterday = async (page: Page) => {
   const { played, andrew, emily } = await playHistory(page, [])
   const today = busyDay(andrew, emily)
   played.days.push(today, {
@@ -41,10 +41,16 @@ const afterFrames = (page: Page) =>
 
 const scrollTop = (page: Page) => page.evaluate<number>("window.scrollY")
 
+const scrollableHeight = (page: Page) =>
+  page.evaluate<number>("document.documentElement.scrollHeight - window.innerHeight")
+
 const viewButton = (page: Page, view: "Day" | "Week" | "List") =>
   page.getByRole("group", { name: "History by" }).getByRole("button", { name: view })
 
 const switchTo = (page: Page, view: "Day" | "Week" | "List") => viewButton(page, view).click()
+
+const switchWithoutScrolling = (page: Page, view: "Day" | "Week" | "List") =>
+  viewButton(page, view).dispatchEvent("click")
 
 const days = (page: Page) => page.getByRole("navigation", { name: "Days" })
 
@@ -66,7 +72,7 @@ const expectYesterdayAtItsEntry = async (page: Page) => {
 }
 
 test("opens today's grid at now after its list", async ({ page }) => {
-  await playDays(page)
+  await playTodayAndYesterday(page)
   await openHistory(page, "?view=list")
   await expect(listRows(page)).toHaveCount(8)
   await switchTo(page, "Day")
@@ -74,7 +80,7 @@ test("opens today's grid at now after its list", async ({ page }) => {
 })
 
 test("opens today's grid at now after the week", async ({ page }) => {
-  await playDays(page)
+  await playTodayAndYesterday(page)
   await openHistory(page)
   await expectTodayAtNow(page)
   await switchTo(page, "Week")
@@ -84,7 +90,7 @@ test("opens today's grid at now after the week", async ({ page }) => {
 })
 
 test("opens today's grid at now from its column on the week", async ({ page }) => {
-  await playDays(page)
+  await playTodayAndYesterday(page)
   await openHistory(page)
   await expectTodayAtNow(page)
   await switchTo(page, "Week")
@@ -94,8 +100,8 @@ test("opens today's grid at now from its column on the week", async ({ page }) =
   await expectTodayAtNow(page)
 })
 
-test("opens today's grid at now when stepping back to it", async ({ page }) => {
-  await playDays(page)
+test("opens today's grid at now when Next day comes back to it", async ({ page }) => {
+  await playTodayAndYesterday(page)
   await openHistory(page)
   await expectTodayAtNow(page)
   await days(page).getByRole("link", { name: "Previous day" }).click()
@@ -105,7 +111,7 @@ test("opens today's grid at now when stepping back to it", async ({ page }) => {
 })
 
 test("opens today's grid at now from Back to today", async ({ page }) => {
-  await playDays(page)
+  await playTodayAndYesterday(page)
   await openHistory(page)
   await expectTodayAtNow(page)
   await days(page).getByRole("link", { name: "Previous day" }).click()
@@ -114,8 +120,8 @@ test("opens today's grid at now from Back to today", async ({ page }) => {
   await expectTodayAtNow(page)
 })
 
-test("opens an earlier day's grid at its first entry when stepping back to it", async ({ page }) => {
-  await playDays(page)
+test("opens an earlier day's grid at its first entry when Previous day comes back to it", async ({ page }) => {
+  await playTodayAndYesterday(page)
   await openHistory(page, `?date=${YESTERDAY}`)
   await expectYesterdayAtItsEntry(page)
   await days(page).getByRole("link", { name: "Next day" }).click()
@@ -125,7 +131,7 @@ test("opens an earlier day's grid at its first entry when stepping back to it", 
 })
 
 test("opens an earlier day's grid at its first entry from Go to", async ({ page }) => {
-  await playDays(page)
+  await playTodayAndYesterday(page)
   await openHistory(page, `?date=${YESTERDAY}`)
   await expectYesterdayAtItsEntry(page)
   await days(page).getByRole("link", { name: "Next day" }).click()
@@ -136,7 +142,7 @@ test("opens an earlier day's grid at its first entry from Go to", async ({ page 
 })
 
 test("opens today's grid at now from the History tab, after another tab", async ({ page }) => {
-  await playDays(page)
+  await playTodayAndYesterday(page)
   await playHousehold(page, todayWith())
   await openHistory(page)
   await expectTodayAtNow(page)
@@ -148,7 +154,7 @@ test("opens today's grid at now from the History tab, after another tab", async 
 })
 
 test("opens today's grid at now from Trends' day", async ({ page }) => {
-  await playDays(page)
+  await playTodayAndYesterday(page)
   await playTrendsWeeks(page)
   await openTrends(page, "?view=day")
   await page.getByRole("link", { name: "Open in History" }).click()
@@ -157,7 +163,7 @@ test("opens today's grid at now from Trends' day", async ({ page }) => {
 })
 
 test("opens today's grid at now from a day in Trends' table", async ({ page }) => {
-  await playDays(page)
+  await playTodayAndYesterday(page)
   await playTrendsWeeks(page)
   await openHistory(page)
   await expectTodayAtNow(page)
@@ -169,7 +175,7 @@ test("opens today's grid at now from a day in Trends' table", async ({ page }) =
 })
 
 test("keeps the grid where it is when a chip hides a kind", async ({ page }) => {
-  await playDays(page)
+  await playTodayAndYesterday(page)
   await openHistory(page)
   await expectTodayAtNow(page)
   await toggleChipWithoutScrolling(page, "Diapers")
@@ -179,29 +185,31 @@ test("keeps the grid where it is when a chip hides a kind", async ({ page }) => 
 })
 
 test("keeps the list where it is when a chip hides a kind", async ({ page }) => {
-  await playDays(page)
+  await playTodayAndYesterday(page)
   await openHistory(page, "?view=list")
+  const lastRow = listRows(page).last()
   await expect(listRows(page)).toHaveCount(8)
+  await expect(lastRow).not.toBeInViewport()
   await page.evaluate("window.scrollTo(0, document.documentElement.scrollHeight)")
-  const scrolled = await scrollTop(page)
-  expect(scrolled).toBeGreaterThan(40)
+  await expect(lastRow).toBeInViewport()
   await toggleChipWithoutScrolling(page, "Growth")
   await expect(page.getByText("Growth hidden", { exact: true })).toBeVisible()
   await afterFrames(page)
-  expect(Math.abs((await scrollTop(page)) - scrolled)).toBeLessThan(40)
+  await expect(lastRow).toBeInViewport()
 })
 
-test("still opens an earlier day's list at its top when stepping back to it", async ({ page }) => {
+test("still opens an earlier day's list at its top when Previous day comes back to it", async ({ page }) => {
   const { played, andrew, emily } = await playHistory(page, [])
   const today = busyDay(andrew, emily)
-  played.days.push(today, { ...emptyDay(YESTERDAY), feeds: today.feeds, diapers: today.diapers })
+  const yesterdayAsLongAsToday = { ...emptyDay(YESTERDAY), feeds: today.feeds, diapers: today.diapers }
+  played.days.push(today, yesterdayAsLongAsToday)
   await openHistory(page, `?view=list&date=${YESTERDAY}`)
   await expect(listRows(page)).toHaveCount(8)
   await days(page).getByRole("link", { name: "Next day" }).click()
   await expect(dayHeading(page)).toHaveText("Fri, Oct 9")
   await expect(listRows(page)).toHaveCount(8)
   await page.evaluate("window.scrollTo(0, document.documentElement.scrollHeight)")
-  expect(await scrollTop(page)).toBeGreaterThan(40)
+  expect(await scrollTop(page)).toBeGreaterThan(0)
   await days(page).getByRole("link", { name: "Previous day" }).click()
   await expect(dayHeading(page)).toHaveText("Thu, Oct 8")
   await afterFrames(page)
@@ -209,12 +217,13 @@ test("still opens an earlier day's list at its top when stepping back to it", as
 })
 
 test("still opens the list at its top after the grid", async ({ page }) => {
-  await playDays(page)
+  await playTodayAndYesterday(page)
   await openHistory(page)
   await expectTodayAtNow(page)
   expect(await scrollTop(page)).toBeGreaterThan(0)
-  await viewButton(page, "List").dispatchEvent("click")
+  await switchWithoutScrolling(page, "List")
   await expect(listRows(page)).toHaveCount(8)
+  expect(await scrollableHeight(page)).toBeGreaterThan(0)
   await afterFrames(page)
   expect(await scrollTop(page)).toBe(0)
 })

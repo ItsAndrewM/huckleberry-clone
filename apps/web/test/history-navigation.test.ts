@@ -209,8 +209,9 @@ describe("opensAtTop", () => {
     expect(opensAtTop({ date: "2026-10-06", hide: "diapers" })).toBe(false)
   })
 
-  it("opens a day's list at the top", () => {
+  it("opens a day's list and a week at the top", () => {
     expect(opensAtTop({ view: "list" })).toBe(true)
     expect(opensAtTop({ view: "list", date: "2026-10-06" })).toBe(true)
+    expect(opensAtTop({ view: "week", date: "2026-09-28" })).toBe(true)
   })
 })
