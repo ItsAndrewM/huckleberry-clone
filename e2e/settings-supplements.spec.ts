@@ -1,4 +1,4 @@
-import { expect, type Page, test } from "@playwright/test"
+import { expect, type Locator, type Page, test, type WebSocketRoute } from "@playwright/test"
 
 const ACTION_ID = expect.stringMatching(/^[0-9a-f-]{36}$/u)
 const AT = Date.UTC(2026, 9, 9, 16, 30)
@@ -53,9 +53,28 @@ const playSupplements = async (page: Page) => {
   return { played, vitaminD }
 }
 
+type Played = Awaited<ReturnType<typeof playSupplements>>["played"]
+
+const playSocket = async (page: Page, played: Played) => {
+  const sockets: WebSocketRoute[] = []
+  await page.routeWebSocket(/\/api\/ws$/u, (socket) => {
+    sockets.push(socket)
+  })
+  return async (id: string, change: Partial<Supplement>) => {
+    await expect.poll(() => sockets.length).toBeGreaterThan(0)
+    played.supplements = played.supplements.map((supplement) =>
+      supplement.id === id ? { ...supplement, ...change, version: supplement.version + 1 } : supplement,
+    )
+    sockets.at(-1)?.send(JSON.stringify({ changed: [["me"]] }))
+  }
+}
+
 const section = (page: Page) => page.getByRole("list", { name: "Supplements" })
 const stoppedList = (page: Page) => page.getByRole("list", { name: "Stopped" })
 const sheetOf = (page: Page, name: string) => page.getByRole("dialog", { name })
+
+const spillsOut = (row: Locator) => row.evaluate((button) => button.scrollWidth > button.clientWidth)
+const widthOfPage = (page: Page) => page.locator("html").evaluate((root) => root.scrollWidth)
 
 test("adds a supplement from Settings with its dose, and Today then lists it", async ({ page }) => {
   const { played } = await playSupplements(page)
@@ -139,4 +158,57 @@ test("says what a name needs before sending a supplement with none", async ({ pa
   await sheet.getByRole("button", { name: "Add supplement" }).click()
   await expect(sheet.getByText("Enter a name of up to 60 characters.")).toBeVisible()
   expect(played.sent).toEqual([])
+})
+
+const LONGEST = [
+  {
+    written: "with spaces",
+    name: "Cholecalciferol (vitamin D3) liquid drops for infants, 400IU",
+    given: "1 dropperful each morning with breakfast",
+  },
+  { written: "with no spaces", name: "Multivitamin".repeat(5), given: "W".repeat(40) },
+]
+
+for (const { written, name, given } of LONGEST) {
+  test(`wraps the longest name and dose ${written} in Settings, in use or stopped, instead of widening a 360-pixel-wide page`, async ({
+    page,
+  }) => {
+    expect([name.length, given.length]).toEqual([60, 40])
+    const { played, vitaminD } = await playSupplements(page)
+    played.supplements = [
+      { ...vitaminD, id: "supplement-long", name, dose: given },
+      { ...vitaminD, id: "supplement-long-stopped", name, dose: given, stoppedAt: AT },
+    ]
+    await page.setViewportSize({ width: 360, height: 900 })
+    await page.goto("/settings")
+    await expect(section(page).getByRole("button")).toHaveCount(1)
+    await expect(stoppedList(page).getByRole("button")).toHaveCount(1)
+    expect(await spillsOut(section(page).getByRole("button"))).toBe(false)
+    expect(await spillsOut(stoppedList(page).getByRole("button"))).toBe(false)
+    expect(await widthOfPage(page)).toBeLessThanOrEqual(360)
+  })
+}
+
+test("shows the other phone's rename in the sheet that was open, and saves a dose change on top of it", async ({
+  page,
+}) => {
+  const { played, vitaminD } = await playSupplements(page)
+  const otherPhoneSaves = await playSocket(page, played)
+  await page.goto("/settings")
+  await section(page).getByRole("button", { name: "Vitamin D · 400 IU" }).click()
+  const sheet = sheetOf(page, "Vitamin D")
+  await expect(sheet.getByLabel("Name")).toHaveValue("Vitamin D")
+  await otherPhoneSaves(vitaminD.id, { name: "Vitamin D3" })
+  await expect(sheet.getByRole("heading")).toHaveText("Vitamin D3")
+  await expect(sheet.getByLabel("Name")).toHaveValue("Vitamin D3")
+  await sheet.getByLabel("Dose").fill("800 IU")
+  await sheet.getByRole("button", { name: "Save" }).click()
+  await expect(sheet).toBeHidden()
+  expect(played.sent).toEqual([
+    {
+      method: "PATCH",
+      path: `/api/supplements/${vitaminD.id}`,
+      body: { actionId: ACTION_ID, version: vitaminD.version + 1, name: "Vitamin D3", dose: "800 IU", stopped: false },
+    },
+  ])
 })

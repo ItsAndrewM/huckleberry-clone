@@ -9,7 +9,7 @@ export const SupplementSheet = () => {
   const shown = me?.household.supplements.find(({ id }) => id === sheets.editing) ?? null
   return (
     <Sheet sheet="supplement" title={shown === null ? "Add a supplement" : shown.name}>
-      {me === undefined ? null : <SupplementForm shown={shown} />}
+      {me === undefined ? null : <SupplementForm key={shown?.version} shown={shown} />}
     </Sheet>
   )
 }

@@ -19,10 +19,10 @@ const SupplementItems = ({ labelledBy, items }: SupplementItemsProps) => {
           <Button
             variant="outline"
             size="lg"
-            className="w-full justify-between"
+            className="h-auto min-h-11 w-full justify-between py-2 text-left whitespace-normal"
             onClick={() => sheets.show("supplement", id)}
           >
-            {label}
+            <span className="min-w-0 break-words">{label}</span>
             <ChevronRightIcon aria-hidden="true" />
           </Button>
         </li>
