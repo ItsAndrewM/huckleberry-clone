@@ -36,6 +36,16 @@ test("hides doses with the Supplements chip, and says so", async ({ page }) => {
   await expect(page).toHaveURL(/hide=supplements/u)
 })
 
+test("doesn't say Nothing logged. on a day holding only a dose, with its chip on or off", async ({ page }) => {
+  await playDosedDay(page)
+  await openHistory(page)
+  await expect(doseMarker(page)).toBeVisible()
+  await expect(page.getByText("Nothing logged.")).toHaveCount(0)
+  await page.getByRole("group", { name: "Show" }).getByRole("button", { name: "Supplements" }).click()
+  await expect(doseMarker(page)).toBeHidden()
+  await expect(page.getByText("Nothing logged.")).toHaveCount(0)
+})
+
 test("fits the four chips on a 360-pixel-wide phone, wrapping them rather than scrolling the page", async ({
   page,
 }) => {
