@@ -34,6 +34,9 @@ const listRows = (page: Page) => page.getByRole("region", { name: "The day's ent
 const nowRow = (page: Page) =>
   page.getByRole("region", { name: "The day by hour" }).getByRole("button", { name: "Log at 9 AM", exact: true })
 
+const midnightRow = (page: Page) =>
+  page.getByRole("region", { name: "The day by hour" }).getByRole("button", { name: "Log at 12 AM", exact: true })
+
 const yesterdaysDiaper = (page: Page) => page.getByRole("button", { name: "Diaper at 8:00 PM: Pee" })
 
 const afterFrames = (page: Page) =>
@@ -128,6 +131,20 @@ test("opens an earlier day's grid at its first entry when Previous day comes bac
   await expectTodayAtNow(page)
   await days(page).getByRole("link", { name: "Previous day" }).click()
   await expectYesterdayAtItsEntry(page)
+})
+
+test("opens an empty earlier day's grid at midnight when Previous day comes back to it", async ({ page }) => {
+  const { played, andrew, emily } = await playHistory(page, [])
+  played.days.push(busyDay(andrew, emily), emptyDay(YESTERDAY))
+  await openHistory(page, `?date=${YESTERDAY}`)
+  await expect(midnightRow(page)).toBeInViewport()
+  await days(page).getByRole("link", { name: "Next day" }).click()
+  await expectTodayAtNow(page)
+  await expect(midnightRow(page)).not.toBeInViewport()
+  await days(page).getByRole("link", { name: "Previous day" }).click()
+  await expect(dayHeading(page)).toHaveText("Thu, Oct 8")
+  await afterFrames(page)
+  await expect(midnightRow(page)).toBeInViewport()
 })
 
 test("opens an earlier day's grid at its first entry from Go to", async ({ page }) => {
