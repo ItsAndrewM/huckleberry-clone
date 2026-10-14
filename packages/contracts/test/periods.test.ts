@@ -148,8 +148,8 @@ describe("a day", () => {
     expect(decodes(DayPeriod, DAY)).toBe(true)
   })
 
-  it("still reads when a later version adds a field, as M3.3's doses will be", () => {
-    expect(decodes(DayPeriod, { ...DAY, doses: [] })).toBe(true)
+  it("still reads when a later version adds a field", () => {
+    expect(decodes(DayPeriod, { ...DAY, naps: [] })).toBe(true)
   })
 
   it.each([

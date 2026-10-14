@@ -93,8 +93,8 @@ describe("the household's recently deleted entries", () => {
     expect(decodes(DELETED)).toBe(true)
   })
 
-  it("still read when a later version adds a kind, as M3.3's doses will", () => {
-    expect(decodes({ ...DELETED, doses: [] })).toBe(true)
+  it("still read when a later version adds a kind", () => {
+    expect(decodes({ ...DELETED, naps: [] })).toBe(true)
   })
 
   it.each([

@@ -113,8 +113,8 @@ describe("Today", () => {
     expect(decodes(Today, TODAY)).toBe(true)
   })
 
-  it("still reads when a later version adds a field, as M3.3's doses will be", () => {
-    expect(decodes(Today, { ...TODAY, doses: [] })).toBe(true)
+  it("still reads when a later version adds a field", () => {
+    expect(decodes(Today, { ...TODAY, naps: [] })).toBe(true)
   })
 
   it.each(["activeSleep", "lastSleep"])("refuses an answer without its %s", (field) => {
