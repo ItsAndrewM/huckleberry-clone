@@ -1,4 +1,4 @@
-import { type BrowserContext, expect, type Page, test } from "@playwright/test"
+import { type BrowserContext, expect, type Locator, type Page, test } from "@playwright/test"
 
 const NOW = Date.UTC(2026, 9, 9, 16, 30)
 const MINUTE = 60_000
@@ -126,20 +126,37 @@ const vitaminDOf = async (page: Page): Promise<string> => {
   return me.household.supplements.find(({ name }: { name: string }) => name === "Vitamin D").id
 }
 
-const dosed = (supplementId: string, audit: Audit): Dose => ({
+const dosed = (supplementId: string, audit: Audit, dose = "400 IU"): Dose => ({
   id: "dose-1",
   supplementId,
   occurredAt: NOW - 150 * MINUTE,
   localDate: "2026-10-09",
-  dose: "400 IU",
+  dose,
   ...audit,
 })
 
-const playDeleted = async (page: Page, entries: (andrew: string, emily: string) => Deleted) => {
+const supplementOf = (id: string, name: string) => ({
+  id,
+  name,
+  dose: "400 IU",
+  stoppedAt: null,
+  version: 1,
+  createdBy: null,
+  createdAt: NOW,
+  updatedBy: null,
+  updatedAt: NOW,
+})
+
+const playDeleted = async (
+  page: Page,
+  entries: (andrew: string, emily: string) => Deleted,
+  added: ReadonlyArray<ReturnType<typeof supplementOf>> = [],
+) => {
   const me = await (await page.request.get("/api/me")).json()
   const [andrew, emily] = me.household.caregivers
   const household = {
     ...me.household,
+    supplements: [...me.household.supplements, ...added],
     timeZone: "America/Vancouver",
     units: { volume: "ml", weight: "kg", length: "cm" },
   }
@@ -321,6 +338,40 @@ test("restores a dose by its supplement's name, then Undo deletes it again", asy
       ["DELETE", "/api/doses/dose-1", 3],
     ])
 })
+
+const LONGEST = [
+  {
+    written: "with spaces",
+    name: "Cholecalciferol (vitamin D3) liquid drops for infants, 400IU",
+    given: "1 dropperful each morning with breakfast",
+  },
+  { written: "with no spaces", name: "Multivitamin".repeat(5), given: "W".repeat(40) },
+]
+
+const spillsOut = (target: Locator) => target.evaluate((element) => element.scrollWidth > element.clientWidth)
+const widthOfPage = (page: Page) => page.locator("html").evaluate((root) => root.scrollWidth)
+
+for (const { written, name, given } of LONGEST) {
+  test(`wraps a deleted dose's longest name and dose ${written} instead of running off its row on a 360-pixel-wide phone`, async ({
+    page,
+  }) => {
+    expect([name.length, given.length]).toEqual([60, 40])
+    const longest = supplementOf("supplement-long", name)
+    await page.setViewportSize({ width: 360, height: 900 })
+    await playDeleted(
+      page,
+      (_andrew, emily) => ({ ...NOTHING, doses: [dosed(longest.id, deletedBy(emily, NOW - 5 * MINUTE), given)] }),
+      [longest],
+    )
+    await openDeleted(page)
+    const row = entries(page).getByRole("listitem")
+    await expect(row).toHaveCount(1)
+    expect(await widthOfPage(page)).toBeLessThanOrEqual(360)
+    expect(await spillsOut(entries(page))).toBe(false)
+    expect(await spillsOut(row.getByText(name))).toBe(false)
+    expect(await spillsOut(row.getByText(given).locator("xpath=.."))).toBe(false)
+  })
+}
 
 test("waits with a reason while there's no connection", async ({ page, context }) => {
   await playDeleted(page, (andrew) => ({ ...NOTHING, diapers: [diaper(deletedBy(andrew, NOW - 5 * MINUTE))] }))
