@@ -16,6 +16,12 @@ export interface SupplementFields {
   readonly stopped: boolean
 }
 
+export interface SupplementSave {
+  readonly shown: Supplement | null
+  readonly fields: SupplementFields
+  readonly addActionId: string
+}
+
 const checkNew = Schema.decodeUnknownResult(NewSupplement, { errors: "all" })
 const checkEdit = Schema.decodeUnknownResult(SupplementEdit, { errors: "all" })
 
@@ -33,8 +39,8 @@ const supplementEdit = (latest: Supplement, shown: Supplement, fields: Supplemen
   return edit.success
 }
 
-const addSupplement = (api: HouseholdApi, { name, dose }: SupplementFields) => {
-  const entry = checkNew({ actionId: crypto.randomUUID(), name, dose })
+const addSupplement = (api: HouseholdApi, { name, dose }: SupplementFields, actionId: string) => {
+  const entry = checkNew({ actionId, name, dose })
   if (Result.isFailure(entry)) throw invalidInputFrom(entry.failure.issue)
   return api.request((client) => client.supplements.addSupplement({ payload: entry.success }))
 }
@@ -43,8 +49,9 @@ export const saveSupplement = async (
   api: HouseholdApi,
   shown: Supplement | null,
   fields: SupplementFields,
+  addActionId: string,
 ): Promise<SavedSupplement> => {
-  if (shown === null) return addSupplement(api, fields)
+  if (shown === null) return addSupplement(api, fields, addActionId)
   const send = (latest: Supplement) => {
     const payload = supplementEdit(latest, shown, fields)
     return api.request((client) => client.supplements.editSupplement({ params: { id: shown.id }, payload }))

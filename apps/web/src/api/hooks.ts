@@ -1,4 +1,4 @@
-import type { Child, Household, IsoWeek, LocalDate, Supplement, YearMonth } from "@bt/contracts"
+import type { Child, Household, IsoWeek, LocalDate, YearMonth } from "@bt/contracts"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { useSyncExternalStore } from "react"
 import { useApp } from "../app-context.ts"
@@ -15,7 +15,7 @@ import {
   saveHousehold,
   withSavedHousehold,
 } from "./settings.ts"
-import { type SupplementFields, saveSupplement, withSavedSupplement } from "./supplements.ts"
+import { type SupplementSave, saveSupplement, withSavedSupplement } from "./supplements.ts"
 import { last24hQuery, todayQuery, untilNextDay } from "./today.ts"
 import { weekQuery } from "./week.ts"
 
@@ -96,8 +96,7 @@ export const useSaveSupplement = () => {
   const { api } = useApp()
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: ({ shown, fields }: { readonly shown: Supplement | null; readonly fields: SupplementFields }) =>
-      saveSupplement(api, shown, fields),
+    mutationFn: ({ shown, fields, addActionId }: SupplementSave) => saveSupplement(api, shown, fields, addActionId),
     onSuccess: ({ supplement, changed }) =>
       rememberSaved(queryClient, (me) => withSavedSupplement(me, supplement), changed),
   })

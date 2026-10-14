@@ -1,5 +1,5 @@
 import type { Supplement } from "@bt/contracts"
-import type { FormEvent } from "react"
+import { type FormEvent, useState } from "react"
 import { useSaveSupplement } from "../../api/hooks.ts"
 import { Button } from "../../components/ui/button.tsx"
 import { useSheets } from "../../sheets/sheets-context.ts"
@@ -11,9 +11,13 @@ import { TextField } from "./text-field.tsx"
 export const SupplementForm = ({ shown }: { readonly shown: Supplement | null }) => {
   const sheets = useSheets()
   const save = useSaveSupplement()
+  const [addActionId] = useState(() => crypto.randomUUID())
   const stopped = shown !== null && shown.stoppedAt !== null
   const send = (form: HTMLFormElement, stop: boolean) =>
-    save.mutate({ shown, fields: supplementFieldsOf(new FormData(form), stop) }, { onSuccess: () => sheets.close() })
+    save.mutate(
+      { shown, fields: supplementFieldsOf(new FormData(form), stop), addActionId },
+      { onSuccess: () => sheets.close() },
+    )
   const submit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     send(event.currentTarget, stopped)

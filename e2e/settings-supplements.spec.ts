@@ -94,6 +94,35 @@ test("adds a supplement from Settings with its dose, and Today then lists it", a
   await expect(page.getByRole("list", { name: "Supplements" })).toContainText("Iron not logged yet today")
 })
 
+test("adds a supplement under one actionId however often its sheet's Add is tapped, so a lost answer can't add it twice", async ({
+  page,
+}) => {
+  const { played } = await playSupplements(page)
+  const tapped: string[] = []
+  await page.route("**/api/supplements", async (route) => {
+    const { actionId }: { actionId: string } = route.request().postDataJSON()
+    tapped.push(actionId)
+    if (tapped.length === 1) return route.abort("internetdisconnected")
+    return route.fallback()
+  })
+  await page.goto("/settings")
+  await page.getByRole("button", { name: "Add a supplement" }).click()
+  const sheet = sheetOf(page, "Add a supplement")
+  await sheet.getByLabel("Name").fill("Iron")
+  await sheet.getByLabel("Dose").fill("1 mL")
+  await sheet.getByRole("button", { name: "Add supplement" }).click()
+  await expect(sheet.getByRole("alert")).toHaveText(/no connection/u)
+  await sheet.getByRole("button", { name: "Add supplement" }).click()
+  await expect(page.getByRole("dialog")).toHaveCount(0)
+  expect(tapped).toEqual([ACTION_ID, tapped[0]])
+  expect(played.sent).toHaveLength(1)
+  await page.getByRole("button", { name: "Add a supplement" }).click()
+  await sheetOf(page, "Add a supplement").getByLabel("Name").fill("Zinc")
+  await sheetOf(page, "Add a supplement").getByRole("button", { name: "Add supplement" }).click()
+  await expect.poll(() => tapped).toHaveLength(3)
+  expect(tapped[2]).not.toBe(tapped[0])
+})
+
 test("renames a supplement and changes its dose from the version it opened on", async ({ page }) => {
   const { played, vitaminD } = await playSupplements(page)
   await page.goto("/settings")
