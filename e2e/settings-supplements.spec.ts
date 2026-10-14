@@ -1,4 +1,5 @@
 import { expect, type Locator, type Page, test, type WebSocketRoute } from "@playwright/test"
+import { sheetTitlesSeen, watchSheetTitles } from "./sheet-titles.ts"
 
 const ACTION_ID = expect.stringMatching(/^[0-9a-f-]{36}$/u)
 const AT = Date.UTC(2026, 9, 9, 16, 30)
@@ -111,6 +112,19 @@ test("renames a supplement and changes its dose from the version it opened on", 
     },
   ])
   await expect(section(page)).toContainText("Vitamin D3 · 800 IU")
+})
+
+test("keeps the sheet on the supplement it opened while it slides away after a save", async ({ page }) => {
+  await playSupplements(page)
+  await page.goto("/settings")
+  await section(page).getByRole("button", { name: "Vitamin D · 400 IU" }).click()
+  const sheet = sheetOf(page, "Vitamin D")
+  await sheet.getByLabel("Dose").fill("600 IU")
+  await watchSheetTitles(page)
+  await sheet.getByRole("button", { name: "Save" }).click()
+  await expect(page.getByRole("dialog")).toHaveCount(0)
+  expect(await sheetTitlesSeen(page)).toEqual(["Vitamin D"])
+  await expect(section(page)).toContainText("Vitamin D · 600 IU")
 })
 
 test("stops giving a supplement, which then leaves Today, and gives it again", async ({ page }) => {

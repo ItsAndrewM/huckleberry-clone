@@ -11,6 +11,7 @@ import {
   type Sent,
   todayWith,
 } from "./played-household.ts"
+import { sheetTitlesSeen, watchSheetTitles } from "./sheet-titles.ts"
 
 const ACTION_ID = expect.stringMatching(/^[0-9a-f-]{36}$/u)
 
@@ -150,6 +151,18 @@ test.describe("Today's supplements, with the household's answers played by the t
     await expect(page.getByText("Dose saved")).toBeVisible()
     expect(sent).toHaveLength(2)
     expect(sent[1]).toEqual(sent[0])
+  })
+
+  test("keeps the dose sheet on its supplement while it slides away after a log", async ({ page }) => {
+    await playDoses(page)
+    await openToday(page)
+    await rowOf(page, "Vitamin D").click()
+    const log = doseSheet(page, "Vitamin D").getByRole("button", { name: "Log Vitamin D" })
+    await expect(log).toBeVisible()
+    await watchSheetTitles(page)
+    await log.click()
+    await expect(page.getByRole("dialog")).toHaveCount(0)
+    expect(await sheetTitlesSeen(page)).toEqual(["Vitamin D"])
   })
 
   test("logs a dose at the time picked, read on the household's clock", async ({ page }) => {
