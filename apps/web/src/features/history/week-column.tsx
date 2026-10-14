@@ -28,6 +28,7 @@ export const WeekColumnView = ({ column, name, search, locale }: WeekColumnProps
       <Link
         to="/history"
         search={search}
+        resetScroll={false}
         activeOptions={{ exact: true }}
         aria-label={name}
         className="absolute inset-0 rounded-md outline-none focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:ring-inset"

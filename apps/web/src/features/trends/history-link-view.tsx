@@ -7,6 +7,7 @@ export const HistoryLink = ({ date, today }: { readonly date: LocalDate; readonl
   <Link
     to="/history"
     search={historySearchOf(date, today)}
+    resetScroll={false}
     className="flex min-h-11 w-fit items-center gap-1 text-sm font-medium text-primary underline-offset-4 hover:underline"
   >
     Open in History

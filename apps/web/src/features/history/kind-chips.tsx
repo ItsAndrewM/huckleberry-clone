@@ -12,7 +12,12 @@ export const KindChips = ({ search }: { readonly search: HistorySearch }) => {
       aria-label="Show"
       value={SHOWN_KINDS.filter((kind) => !hidden.has(kind))}
       onValueChange={(shown) => {
-        void navigate({ to: "/history", search: { ...search, hide: hideOf(hiddenExcept(shown)) }, replace: true })
+        void navigate({
+          to: "/history",
+          search: { ...search, hide: hideOf(hiddenExcept(shown)) },
+          replace: true,
+          resetScroll: false,
+        })
       }}
       variant="outline"
       size="lg"
