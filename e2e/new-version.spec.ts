@@ -82,19 +82,38 @@ test("checks for a new version when the app comes back, and Open it now opens it
   expect(await buildOf(page)).toBe(`${build}-next`)
 })
 
-test("opens the saved new version when the app comes back without a connection", async ({ page, context, baseURL }) => {
+test("keeps Today and logging when the app comes back offline, and opens the new version on the next return online", async ({
+  page,
+  context,
+  baseURL,
+}) => {
+  let offline = false
+  await page.routeWebSocket(/\/api\/ws$/u, (socket) => {
+    if (offline) socket.close({ code: 1011, reason: "offline" })
+    else socket.connectToServer()
+  })
   await openWithSavedCopy(page)
   const build = await buildOf(page)
   await deploy(context, baseURL)
   await tab(page, "Settings")
   await leaveAndComeBack(page)
   await expect(page.getByText(NEWER)).toBeVisible({ timeout: SAVING_TAKES_MS })
-  await page.routeWebSocket(/\/api\/ws$/u, (socket) => socket.close({ code: 1011, reason: "offline" }))
+  await tab(page, "Today")
+  await expect(page.getByText("Totals")).toBeVisible()
+  offline = true
   await context.setOffline(true)
+  await markThisPage(page)
+  await leaveAndComeBack(page)
+  await afterItLooksAtItsCopy(page)
+  await expect(page.getByText("Totals")).toBeVisible()
+  await expect(quickAction(page, "Diaper")).toBeEnabled()
+  expect(await isSamePage(page)).toBe(true)
+  offline = false
+  await context.setOffline(false)
   const reloaded = page.waitForEvent("load")
   await leaveAndComeBack(page)
   await reloaded
-  await expect(page.getByText(SAVED)).toBeVisible()
+  expect(await isSamePage(page)).toBe(false)
   expect(await buildOf(page)).toBe(`${build}-next`)
 })
 
@@ -125,4 +144,24 @@ test("keeps an open sheet when the app comes back, and opens the new version on 
   await reloaded
   expect(await isSamePage(page)).toBe(false)
   expect(await buildOf(page)).toBe(`${build}-next`)
+})
+
+test("keeps a Settings change that isn't saved when the app comes back, even once its field has lost focus", async ({
+  page,
+  context,
+  baseURL,
+}) => {
+  await openWithSavedCopy(page)
+  await deploy(context, baseURL)
+  await tab(page, "Settings")
+  await leaveAndComeBack(page)
+  await expect(page.getByText(NEWER)).toBeVisible({ timeout: SAVING_TAKES_MS })
+  const name = page.getByRole("textbox", { name: "Name" })
+  await name.fill("Robin Jay")
+  await name.blur()
+  await markThisPage(page)
+  await leaveAndComeBack(page)
+  await afterItLooksAtItsCopy(page)
+  await expect(name).toHaveValue("Robin Jay")
+  expect(await isSamePage(page)).toBe(true)
 })

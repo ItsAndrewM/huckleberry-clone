@@ -1,7 +1,7 @@
 import type { Checked } from "../service-worker/updates.ts"
 import type { Sheets } from "../sheets/sheets-context.ts"
 
-type SheetsNow = Pick<Sheets, "open" | "busy" | "held" | "toast">
+type SheetsNow = Pick<Sheets, "open" | "held" | "toast">
 
 interface PageNow {
   readonly querySelector: (selectors: string) => Pick<Element, "matches"> | null
@@ -9,18 +9,23 @@ interface PageNow {
 }
 
 const OPEN_DIALOG = '[role="dialog"], [role="alertdialog"]'
+const UNSAVED_FORM = "[data-unsaved]"
 const TYPING = 'input, textarea, select, [contenteditable="true"]'
 
-export const isIdle = (sheets: SheetsNow, page: PageNow) =>
-  sheets.open === null &&
-  sheets.busy === null &&
-  sheets.held.length === 0 &&
-  sheets.toast === null &&
+const nothingPending = (sheets: SheetsNow, saving: number) =>
+  sheets.open === null && sheets.held.length === 0 && sheets.toast === null && saving === 0
+
+const nothingOnScreen = (page: PageNow) =>
   page.querySelector(OPEN_DIALOG) === null &&
+  page.querySelector(UNSAVED_FORM) === null &&
   !(page.activeElement?.matches(TYPING) ?? false)
+
+export const isIdle = (sheets: SheetsNow, page: PageNow, saving: number) =>
+  nothingPending(sheets, saving) && nothingOnScreen(page)
 
 export interface Return {
   readonly idle: () => boolean
+  readonly online: () => boolean
   readonly newerSaved: () => Promise<boolean>
   readonly reload: () => void
   readonly check: () => Promise<Checked>
@@ -28,10 +33,11 @@ export interface Return {
 
 export type Returned = "reloaded" | "waiting" | Checked
 
-export const returnToApp = async ({ idle, newerSaved, reload, check }: Return): Promise<Returned> => {
-  if (!idle()) return check()
-  if (!(await newerSaved())) return check()
-  if (!idle()) return "waiting"
+export const returnToApp = async ({ idle, online, newerSaved, reload, check }: Return): Promise<Returned> => {
+  if (!idle() || !online()) return check()
+  const checked = await check()
+  if (checked === "unavailable" || !(await newerSaved())) return checked
+  if (!idle() || !online()) return "waiting"
   reload()
   return "reloaded"
 }

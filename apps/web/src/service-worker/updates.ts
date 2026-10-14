@@ -15,10 +15,25 @@ export interface Updates {
   readonly check: () => Promise<Checked>
 }
 
+type Wait = (ms: number) => Promise<void>
+
+export const CHECK_LIMIT_MS = 3_000
+
+const pause: Wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
+
 const registrationOf = (source: UpdateSource | undefined) =>
   source === undefined ? Promise.resolve(undefined) : source.getRegistration().catch(() => undefined)
 
-export const watchUpdates = (source: UpdateSource | undefined): Updates => {
+const updated = (registration: Registration, wait: Wait): Promise<Checked> =>
+  Promise.race([
+    registration.update().then(
+      () => "checked" as const,
+      () => "unavailable" as const,
+    ),
+    wait(CHECK_LIMIT_MS).then(() => "unavailable" as const),
+  ])
+
+export const watchUpdates = (source: UpdateSource | undefined, wait: Wait = pause): Updates => {
   let changes = 0
   const listeners = new Set<() => void>()
   source?.addEventListener("controllerchange", () => {
@@ -35,11 +50,7 @@ export const watchUpdates = (source: UpdateSource | undefined): Updates => {
     },
     check: async () => {
       const registration = await registrationOf(source)
-      if (registration === undefined) return "unavailable"
-      return registration.update().then(
-        () => "checked" as const,
-        () => "unavailable" as const,
-      )
+      return registration === undefined ? "unavailable" : updated(registration, wait)
     },
   }
 }

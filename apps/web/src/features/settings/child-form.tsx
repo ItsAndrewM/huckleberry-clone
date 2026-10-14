@@ -23,7 +23,13 @@ export const ChildForm = ({ child, save }: ChildFormProps) => {
   const saved = !edited && save.data?.child.version === child.version
   const failure = save.variables?.child.version === child.version ? save.error : null
   return (
-    <form noValidate className="flex flex-col gap-4" onChange={() => setEdited(true)} onSubmit={submit}>
+    <form
+      noValidate
+      data-unsaved={edited || undefined}
+      className="flex flex-col gap-4"
+      onChange={() => setEdited(true)}
+      onSubmit={submit}
+    >
       <TextField name="name" label="Name" defaultValue={child.name} error={fieldMessage(failure, "name")} />
       <TextField
         name="birthDate"
