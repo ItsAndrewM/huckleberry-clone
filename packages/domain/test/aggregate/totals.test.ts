@@ -241,6 +241,11 @@ describe("totalsIn, for sleep", () => {
     expect(totalsIn(OCT_8, sleepsOnly(sleeps), NOW)).toMatchObject({ sleepSeconds: 3, napSeconds: 3 })
   })
 
+  it("rounds nap time and night time down to whole seconds each, so a nap and a night of 1.6 seconds are 2 seconds asleep, not 3", () => {
+    const sleeps = [asleep(NOW - HOUR, NOW - HOUR + 1600), asleep(NOW - 2 * HOUR, NOW - 2 * HOUR + 1600, "night")]
+    expect(totalsIn(OCT_8, sleepsOnly(sleeps), NOW)).toMatchObject({ sleepSeconds: 2, napSeconds: 1, nightSeconds: 1 })
+  })
+
   it("gives each day the sleep splitByDays gives it", () => {
     fc.assert(
       fc.property(zonedInstants, fc.integer({ min: 1, max: 3 * 24 * 60 }), ([instant, zone], minutes) => {

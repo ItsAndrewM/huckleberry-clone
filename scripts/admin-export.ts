@@ -12,6 +12,8 @@ export interface Places {
 
 const HOME_FOLDER = /^~(?=\/|$)/
 
+export const expandHome = (file: string, home: string): string => file.replace(HOME_FOLDER, home)
+
 const isWithin = (folder: string, path: string) => {
   const route = relative(folder, path)
   return route === "" || (route !== ".." && !route.startsWith(`..${sep}`) && !isAbsolute(route))
@@ -32,7 +34,7 @@ export const exportFileFromArgs = (args: ReadonlyArray<string>, places: Places):
   if (file === undefined || file.trim() === "" || rest.length > 0) {
     throw new Error("Give one file to save the export to, like: pnpm admin export ~/baby-tracker.json")
   }
-  const path = realPathOf(resolve(places.cwd, file.replace(HOME_FOLDER, places.home)))
+  const path = realPathOf(resolve(places.cwd, expandHome(file, places.home)))
   if (gitSees(path, realPathOf(places.checkout))) {
     throw new Error(
       `Save the export outside this checkout, or under its exports/ folder, which git ignores, not ${path}`,

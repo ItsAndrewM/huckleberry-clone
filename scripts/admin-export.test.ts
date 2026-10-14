@@ -3,7 +3,7 @@ import { mkdirSync, mkdtempSync, readFileSync, realpathSync, statSync, symlinkSy
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { afterEach, describe, expect, it, vi } from "vitest"
-import { exportFileFromArgs, exportFrom, exportSummary, saveExport } from "./admin-export.ts"
+import { expandHome, exportFileFromArgs, exportFrom, exportSummary, saveExport } from "./admin-export.ts"
 import { adminRequest } from "./admin-seed.ts"
 
 const ENV = {
@@ -41,6 +41,16 @@ const scratchFile = (name: string) => join(mkdtempSync(join(tmpdir(), "bt-export
 
 afterEach(() => {
   vi.restoreAllMocks()
+})
+
+describe("expandHome", () => {
+  it("reads a leading ~ as the home folder, and leaves every other path alone", () => {
+    expect(expandHome("~/baby-tracker.json", "/Users/andrew")).toBe("/Users/andrew/baby-tracker.json")
+    expect(expandHome("~", "/Users/andrew")).toBe("/Users/andrew")
+    expect(expandHome("~user/baby-tracker.json", "/Users/andrew")).toBe("~user/baby-tracker.json")
+    expect(expandHome("backups/~/baby-tracker.json", "/Users/andrew")).toBe("backups/~/baby-tracker.json")
+    expect(expandHome("/Users/andrew/baby-tracker.json", "/Users/other")).toBe("/Users/andrew/baby-tracker.json")
+  })
 })
 
 describe("pnpm admin export", () => {

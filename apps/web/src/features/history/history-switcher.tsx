@@ -7,10 +7,10 @@ import { GoToDate } from "./go-to-date.tsx"
 import type { HistorySearch } from "./history-date.ts"
 import { type Hidden, hiddenNotice } from "./history-kinds.ts"
 import { goToOpensOn, type HistoryNavigation, searchFor } from "./history-navigation.ts"
-import { type HistoryView, periodKey, periodOf } from "./history-period.ts"
+import { type HistoryUnit, periodKey, periodOf, unitOf } from "./history-period.ts"
 import { backLabel, currentLabel, periodTitle } from "./history-titles.ts"
 
-const NAMES = { day: "Days", week: "Weeks" } as const satisfies Record<HistoryView, string>
+const NAMES = { day: "Days", week: "Weeks" } as const satisfies Record<HistoryUnit, string>
 
 const LINK_TEXT =
   "-my-3.5 inline-flex min-h-11 items-center text-xs font-medium text-primary underline-offset-4 hover:underline"
@@ -51,14 +51,14 @@ export const HistorySwitcher = ({ navigation, today, birthDate, hidden }: Histor
   if (changingFor !== null && changingFor !== key) setChangingFor(null)
   const changing = changingFor === key
   const notice = hiddenNotice(hidden)
-  const noun = period.view
+  const noun = unitOf(period.view)
   const goTo = (date: LocalDate) => {
     setChangingFor(null)
     void navigate({ to: "/history", search: searchFor(periodOf(period.view, date), today, hidden) })
   }
   return (
     <div className="sticky top-[env(safe-area-inset-top)] z-[5] -mx-4 -mt-3 flex flex-col bg-background px-4 pb-1">
-      <nav aria-label={NAMES[period.view]} className="flex items-center justify-between gap-2">
+      <nav aria-label={NAMES[noun]} className="flex items-center justify-between gap-2">
         <Step search={navigation.previous} label={`Previous ${noun}`} Icon={ChevronLeftIcon} />
         <div className="flex min-h-11 flex-col items-center justify-center">
           <h2 className="text-lg font-semibold tabular-nums">{periodTitle(period)}</h2>

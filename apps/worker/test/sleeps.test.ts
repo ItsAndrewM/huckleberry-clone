@@ -215,6 +215,17 @@ describe("POST …/wake, PATCH, DELETE and POST …/restore", () => {
     })
     expect(response).toEqual({ status: 404, body: { _tag: "NotFound" } })
   })
+
+  it("answers 404 for a wake of a sleep that's already woken, though it's sent from the sleep's current version", async () => {
+    const household = await seededHousehold()
+    const sleep = await started(household)
+    const wake = (version: number) => ({ actionId: crypto.randomUUID(), version, occurredAt: NOW })
+    const woken = decodeSaved((await sendJson(household, "POST", `/api/sleeps/${sleep.id}/wake`, wake(1))).body).sleep
+    expect(await sendJson(household, "POST", `/api/sleeps/${sleep.id}/wake`, wake(woken.version))).toEqual({
+      status: 404,
+      body: { _tag: "NotFound" },
+    })
+  })
 })
 
 describe("the receipts the sleep endpoints keep", () => {

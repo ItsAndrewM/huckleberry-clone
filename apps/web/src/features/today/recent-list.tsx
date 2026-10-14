@@ -16,7 +16,7 @@ const RowContent = ({ row }: { readonly row: RecentRow }) => {
           <Parts parts={row.detail} freeText={row.kind === "dose"} />
         </span>
       </span>
-      <span className="flex shrink-0 flex-col items-end">
+      <span className="flex max-w-[40%] shrink-0 flex-col items-end text-right">
         <time dateTime={new Date(row.at).toISOString()} className="text-sm tabular-nums">
           {row.time}
         </time>
@@ -33,7 +33,7 @@ interface RecentItemProps {
   readonly onOpen: (row: RecentRow) => void
 }
 
-const RecentItem = ({ row, onOpen }: RecentItemProps) => (
+export const RecentItem = ({ row, onOpen }: RecentItemProps) => (
   <li>
     {row.opens === null ? (
       <div className={ROW}>

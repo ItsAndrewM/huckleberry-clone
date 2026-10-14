@@ -75,7 +75,7 @@ const doseRow = (dose: Dose, display: Display): RecentRow => ({
   opens: isPending(dose.id) ? null : "editDose",
 })
 
-const rowOf = (entry: RecentEntry, display: Display, now: number) => {
+export const recentRow = (entry: RecentEntry, display: Display, now: number) => {
   switch (entry.kind) {
     case "feed":
       return feedRow(entry.feed, display, now)
@@ -87,4 +87,4 @@ const rowOf = (entry: RecentEntry, display: Display, now: number) => {
 }
 
 export const recentRows = (recent: ReadonlyArray<RecentEntry>, display: Display, now: number) =>
-  recent.map((entry) => rowOf(entry, display, now))
+  recent.map((entry) => recentRow(entry, display, now))

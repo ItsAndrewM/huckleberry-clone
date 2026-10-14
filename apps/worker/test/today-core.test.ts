@@ -34,6 +34,9 @@ import { countingRowsRead } from "./rows-read.ts"
 const OCT_7_AT_23_50 = Date.UTC(2026, 9, 8, 6, 50)
 const ac4 = (minutes: number) => OCT_7_AT_23_50 + minutes * MINUTE_MS
 
+const OCT_7_AT_20_00 = Date.UTC(2026, 9, 8, 3)
+const OCT_8_AT_03_00 = Date.UTC(2026, 9, 8, 10)
+
 const FEED_ID_SCANS_THAT_CAN_END_EARLY = 2
 
 const OCT_25_AT_00_15_BST = Date.UTC(2026, 9, 24, 23, 15)
@@ -342,6 +345,15 @@ describe("todayOf, for sleep", () => {
       return todayOf(sql, NOW)
     })
     expect(today.totals).toEqual({ ...NO_TOTALS, sleepSeconds: 3600, nightSeconds: 3600 })
+  })
+
+  it("counts a night still running at 3 AM from midnight on, as asleep and night time, but not as a sleep started today or the longest", async () => {
+    const today = await inHousehold((sql) => {
+      const start = { actionId: ACTION_ID, kind: "night" as const, startedAt: OCT_7_AT_20_00 }
+      saved(startSleep(stampOf(sql, ANDREW.email, OCT_7_AT_20_00), start)(sql))
+      return todayOf(sql, OCT_8_AT_03_00)
+    })
+    expect(today.totals).toEqual({ ...NO_TOTALS, sleepSeconds: 10800, nightSeconds: 10800 })
   })
 
   it("leaves a deleted sleep out of the totals, the active sleep and the last sleep", async () => {

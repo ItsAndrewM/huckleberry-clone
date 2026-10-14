@@ -36,7 +36,19 @@ const bottled = (by: string): FeedAnswer => ({
   portions: [{ id: "p1", occurredAt: AT_8, breastMilkMl: 0, formulaMl: 90 }],
 })
 
+const playSocket = async (page: Page) => {
+  const sockets: WebSocketRoute[] = []
+  await page.routeWebSocket(/\/api\/ws$/u, (socket) => {
+    sockets.push(socket)
+  })
+  return async () => {
+    await expect.poll(() => sockets.length).toBeGreaterThan(0)
+    sockets.at(-1)?.send(JSON.stringify({ changed: [["today"]] }))
+  }
+}
+
 const playFeed = async (page: Page, kind: "nursed" | "bottled") => {
+  const todayChanged = await playSocket(page)
   const { andrew, emily } = await caregiversOf(page)
   const feed = kind === "nursed" ? nursed(andrew.id) : bottled(andrew.id)
   const household = await playHousehold(page, { ...todayWith(), recent: [{ kind: "feed", feed }] })
@@ -51,23 +63,12 @@ const playFeed = async (page: Page, kind: "nursed" | "bottled") => {
     return { status: 200, json: { feed: { ...feed, segments, portions, version: 2 }, changed: [] } }
   })
   await openToday(page)
-  return { ...household, feed, emily, showing }
+  return { ...household, feed, emily, showing, todayChanged }
 }
 
 const openFeed = async (page: Page, name: RegExp, title: string) => {
   await recent(page).getByRole("button", { name }).click()
   return page.getByRole("dialog", { name: title })
-}
-
-const playSocket = async (page: Page) => {
-  const sockets: WebSocketRoute[] = []
-  await page.routeWebSocket(/\/api\/ws$/u, (socket) => {
-    sockets.push(socket)
-  })
-  return async () => {
-    await expect.poll(() => sockets.length).toBeGreaterThan(0)
-    sockets.at(-1)?.send(JSON.stringify({ changed: [["today"]] }))
-  }
 }
 
 test("moves the switch earlier in one Save, and Today shows it before the household answers", async ({ page }) => {
@@ -165,8 +166,7 @@ test("offers only to delete the feed once every side is removed", async ({ page 
 test("loads Emily's sides and bottles into the form even when they reached this phone before the save", async ({
   page,
 }) => {
-  const todayChanged = await playSocket(page)
-  const { answer, showing, feed, emily } = await playFeed(page, "nursed")
+  const { answer, showing, feed, emily, todayChanged } = await playFeed(page, "nursed")
   const theirs = {
     ...feed,
     version: 2,

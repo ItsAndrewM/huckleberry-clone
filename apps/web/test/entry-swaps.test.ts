@@ -126,6 +126,23 @@ describe("an edit or delete swapped in before the household answers", () => {
     })
   })
 
+  it("keeps every sleep number in Today's totals as it was through an edit to a diaper and a delete of a feed", () => {
+    const asleep = {
+      sleepsStarted: 2,
+      sleepSeconds: 7200,
+      napSeconds: 5400,
+      nightSeconds: 1800,
+      longestSleepSeconds: 5400,
+    }
+    const counted = countedToday([feed(NURSED), diaper(PEE)])
+    const today = { ...counted, totals: { ...counted.totals, ...asleep } }
+    const both = { ...PEE, dirty: true }
+    const edited = swappedToday(today, PENDING, { before: diaper(PEE), after: diaper(both) }, NOW_ON_DAY)
+    const deleted = swappedToday(today, PENDING, { before: feed(NURSED), after: null }, NOW_ON_DAY)
+    expect(edited.totals).toEqual({ ...countedToday([feed(NURSED), diaper(both)]).totals, ...asleep })
+    expect(deleted.totals).toEqual({ ...countedToday([diaper(PEE)]).totals, ...asleep })
+  })
+
   it("adds a feed moved onto the day in its place, oldest first", () => {
     const day = countedDay({ feeds: [NURSED, BOTTLE], diapers: [] })
     const arriving = { ...NURSED, id: "arriving", startedAt: local("02:00"), endedAt: local("02:00") }
