@@ -149,7 +149,7 @@ describe("a day", () => {
   })
 
   it("still reads when a later version adds a field", () => {
-    expect(decodes(DayPeriod, { ...DAY, naps: [] })).toBe(true)
+    expect(decodes(DayPeriod, { ...DAY, fieldFromALaterVersion: [] })).toBe(true)
   })
 
   it.each([

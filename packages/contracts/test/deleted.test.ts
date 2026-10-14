@@ -94,7 +94,7 @@ describe("the household's recently deleted entries", () => {
   })
 
   it("still read when a later version adds a kind", () => {
-    expect(decodes({ ...DELETED, naps: [] })).toBe(true)
+    expect(decodes({ ...DELETED, fieldFromALaterVersion: [] })).toBe(true)
   })
 
   it.each([

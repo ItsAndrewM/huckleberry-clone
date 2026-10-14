@@ -114,7 +114,7 @@ describe("Today", () => {
   })
 
   it("still reads when a later version adds a field", () => {
-    expect(decodes(Today, { ...TODAY, naps: [] })).toBe(true)
+    expect(decodes(Today, { ...TODAY, fieldFromALaterVersion: [] })).toBe(true)
   })
 
   it.each(["activeSleep", "lastSleep", "doses"])("refuses an answer without its %s", (field) => {
