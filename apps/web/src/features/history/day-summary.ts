@@ -1,4 +1,4 @@
-import type { Measurement, Totals, Units, VolumeUnit } from "@bt/contracts"
+import type { DayPeriod, Measurement, Totals, Units, VolumeUnit } from "@bt/contracts"
 import { clockTime } from "../../clock-time.ts"
 import { formatMeasurement } from "../growth/format.ts"
 import { GROWTH_METRICS } from "../growth/metrics.ts"
@@ -31,6 +31,9 @@ export const totalsLines = (totals: Totals, volume: VolumeUnit): ReadonlyArray<R
       [totals.nightSeconds, `${formatMinutes(totals.nightSeconds)} night`],
     ]),
   ].filter((parts) => parts.length > 0)
+
+export const nothingLogged = ({ totals, measurements, doses }: DayPeriod, volume: VolumeUnit): boolean =>
+  totalsLines(totals, volume).length === 0 && measurements.length === 0 && doses.length === 0
 
 export const growthItems = (
   measurements: ReadonlyArray<Measurement>,

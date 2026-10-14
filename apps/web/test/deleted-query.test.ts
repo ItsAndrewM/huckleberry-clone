@@ -13,6 +13,7 @@ describe("deletedQuery", () => {
       diapers: [diaperAt(NOW, { version: 2, deletedAt: NOW })],
       sleeps: [],
       measurements: [],
+      doses: [],
     }
     const asked: string[] = []
     const api = connectApi({

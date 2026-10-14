@@ -1,6 +1,6 @@
-import type { Feed, NursingSegment, Sleep } from "@bt/contracts"
+import type { Dose, Feed, NursingSegment, Sleep } from "@bt/contracts"
 import { feedSummary, sessionBounds, sleepElapsed } from "@bt/domain"
-import type { Display } from "../today/display.ts"
+import { type Display, supplementName } from "../today/display.ts"
 import { feedTitle } from "../today/feed-parts.ts"
 import { formatMinutes, formatVolume, presentParts } from "../today/format.ts"
 import { sleepTitle } from "../today/sleep-parts.ts"
@@ -97,9 +97,18 @@ const sleepDetails = (sleep: Sleep, display: Display, now: number): EntryDetails
   by: byOf(display, sleep.createdBy),
 })
 
+const doseDetails = (dose: Dose, display: Display): EntryDetails => ({
+  id: dose.id,
+  title: supplementName(display, dose.supplementId),
+  when: whenOf(dose.occurredAt, dose.occurredAt, display),
+  lines: dose.dose === "" ? [] : [dose.dose],
+  by: byOf(display, dose.createdBy),
+})
+
 export const entryDetails = (entry: Entry, display: Display, now: number): EntryDetails => {
   if (entry.kind === "feed") return feedDetails(entry.feed, display, now)
   if (entry.kind === "sleep") return sleepDetails(entry.sleep, display, now)
+  if (entry.kind === "dose") return doseDetails(entry.dose, display)
   const { diaper } = entry
   return {
     id: diaper.id,

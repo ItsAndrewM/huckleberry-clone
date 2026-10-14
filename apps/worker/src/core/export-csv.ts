@@ -1,10 +1,12 @@
-import type { Diaper, Feed, Measurement, Sleep } from "@bt/contracts"
+import type { Diaper, Dose, Feed, Measurement, Sleep } from "@bt/contracts"
 import { feedSummary, type Instant, localDateTimeOf, sleepElapsed, type TimeZone } from "@bt/domain"
 import { calendarOf } from "./calendar.ts"
 import { liveDiapersSince } from "./diapers.ts"
 import { liveFeedsSince } from "./feeds/reads.ts"
 import { growthOf } from "./growth.ts"
 import { liveSleepsSince } from "./sleeps/reads.ts"
+import { supplementsOf } from "./supplements/definitions.ts"
+import { liveDosesSince } from "./supplements/doses.ts"
 
 const COLUMNS = [
   "Kind",
@@ -18,6 +20,8 @@ const COLUMNS = [
   "Dirty",
   "Asleep (min)",
   "Nap or night",
+  "Supplement",
+  "Dose",
   "Weight (g)",
   "Length (cm)",
   "Head (cm)",
@@ -35,6 +39,7 @@ interface Line {
 interface Context {
   readonly zone: TimeZone
   readonly names: ReadonlyMap<string, string>
+  readonly supplements: ReadonlyMap<string, string>
   readonly now: Instant
 }
 
@@ -89,6 +94,17 @@ const sleepLine = (sleep: Sleep, { zone, names, now }: Context): Line => ({
   },
 })
 
+const doseLine = (dose: Dose, { zone, names, supplements }: Context): Line => ({
+  at: dose.occurredAt,
+  cells: {
+    Kind: "Supplement",
+    Start: timeOf(dose.occurredAt, zone),
+    Supplement: supplements.get(dose.supplementId) ?? "",
+    Dose: dose.dose,
+    "Logged by": names.get(dose.createdBy) ?? "",
+  },
+})
+
 const measurementLine = (measurement: Measurement, { zone, names }: Context): Line => ({
   at: measurement.measuredAt,
   cells: {
@@ -116,12 +132,20 @@ const caregiverNames = (sql: SqlStorage) =>
       .map(({ id, display_name }) => [id, display_name]),
   )
 
+const supplementNames = (sql: SqlStorage) => new Map(supplementsOf(sql).map(({ id, name }) => [id, name]))
+
 export const householdCsvOf = (sql: SqlStorage, now: Instant): string => {
-  const context: Context = { zone: calendarOf(sql).zone, names: caregiverNames(sql), now }
+  const context: Context = {
+    zone: calendarOf(sql).zone,
+    names: caregiverNames(sql),
+    supplements: supplementNames(sql),
+    now,
+  }
   const lines = [
     ...liveFeedsSince(sql, BEGINNING).map((feed) => feedLine(feed, context)),
     ...liveDiapersSince(sql, BEGINNING).map((diaper) => diaperLine(diaper, context)),
     ...liveSleepsSince(sql, BEGINNING).map((sleep) => sleepLine(sleep, context)),
+    ...liveDosesSince(sql, BEGINNING).map((dose) => doseLine(dose, context)),
     ...growthOf(sql)
       .measurements.toReversed()
       .map((measurement) => measurementLine(measurement, context)),

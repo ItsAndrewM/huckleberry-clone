@@ -13,7 +13,7 @@ import { BOTTLE, BOUNDS, dayWith, local, NOW_ON_DAY, NURSED, PEE, POO, RUNNING }
 import { ANDREW, MINUTE, sleptAt, todayWith, ZONE } from "./today-fixtures.ts"
 
 const ACTION_ID = "4b1c2a5e-8f3d-4c6b-9a7e-2d1f0e3c5b6a"
-const PENDING = { by: ANDREW, now: NOW_ON_DAY, zone: ZONE }
+const PENDING = { by: ANDREW, now: NOW_ON_DAY, zone: ZONE, supplements: [] }
 const YESTERDAY = "2026-10-08"
 const COUNTED_AT = RUNNING.startedAt + 5_000
 const DELETED_AT = COUNTED_AT + 20 * MINUTE

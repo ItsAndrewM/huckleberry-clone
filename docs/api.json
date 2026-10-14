@@ -120,6 +120,86 @@
                             ],
                             "additionalProperties": false
                           }
+                        },
+                        "supplements": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "string"
+                              },
+                              "name": {
+                                "type": "string",
+                                "pattern": "^\\S[\\s\\S]*\\S$|^\\S$|^$",
+                                "minLength": 1,
+                                "maxLength": 60
+                              },
+                              "dose": {
+                                "type": "string",
+                                "pattern": "^\\S[\\s\\S]*\\S$|^\\S$|^$",
+                                "maxLength": 40
+                              },
+                              "stoppedAt": {
+                                "anyOf": [
+                                  {
+                                    "type": "integer",
+                                    "minimum": 946684800000,
+                                    "exclusiveMaximum": 4102444800000
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "version": {
+                                "type": "integer",
+                                "minimum": 1
+                              },
+                              "createdBy": {
+                                "anyOf": [
+                                  {
+                                    "type": "string"
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "createdAt": {
+                                "type": "integer",
+                                "minimum": 946684800000,
+                                "exclusiveMaximum": 4102444800000
+                              },
+                              "updatedBy": {
+                                "anyOf": [
+                                  {
+                                    "type": "string"
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "updatedAt": {
+                                "type": "integer",
+                                "minimum": 946684800000,
+                                "exclusiveMaximum": 4102444800000
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "name",
+                              "dose",
+                              "stoppedAt",
+                              "version",
+                              "createdBy",
+                              "createdAt",
+                              "updatedBy",
+                              "updatedAt"
+                            ],
+                            "additionalProperties": false
+                          }
                         }
                       },
                       "required": [
@@ -129,7 +209,8 @@
                         "version",
                         "updatedBy",
                         "updatedAt",
-                        "caregivers"
+                        "caregivers",
+                        "supplements"
                       ],
                       "additionalProperties": false
                     },
@@ -1822,8 +1903,169 @@
                             ],
                             "additionalProperties": false
                           },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "kind": {
+                                "type": "string",
+                                "enum": [
+                                  "dose"
+                                ]
+                              },
+                              "dose": {
+                                "type": "object",
+                                "properties": {
+                                  "id": {
+                                    "type": "string"
+                                  },
+                                  "supplementId": {
+                                    "type": "string"
+                                  },
+                                  "occurredAt": {
+                                    "type": "integer",
+                                    "minimum": 946684800000,
+                                    "exclusiveMaximum": 4102444800000
+                                  },
+                                  "localDate": {
+                                    "type": "string",
+                                    "format": "date"
+                                  },
+                                  "dose": {
+                                    "type": "string",
+                                    "pattern": "^\\S[\\s\\S]*\\S$|^\\S$|^$",
+                                    "maxLength": 40
+                                  },
+                                  "version": {
+                                    "type": "integer",
+                                    "minimum": 1
+                                  },
+                                  "createdBy": {
+                                    "type": "string"
+                                  },
+                                  "createdAt": {
+                                    "type": "integer",
+                                    "minimum": 946684800000,
+                                    "exclusiveMaximum": 4102444800000
+                                  },
+                                  "updatedBy": {
+                                    "type": "string"
+                                  },
+                                  "updatedAt": {
+                                    "type": "integer",
+                                    "minimum": 946684800000,
+                                    "exclusiveMaximum": 4102444800000
+                                  },
+                                  "deletedAt": {
+                                    "anyOf": [
+                                      {
+                                        "type": "integer",
+                                        "minimum": 946684800000,
+                                        "exclusiveMaximum": 4102444800000
+                                      },
+                                      {
+                                        "type": "null"
+                                      }
+                                    ]
+                                  }
+                                },
+                                "required": [
+                                  "id",
+                                  "supplementId",
+                                  "occurredAt",
+                                  "localDate",
+                                  "dose",
+                                  "version",
+                                  "createdBy",
+                                  "createdAt",
+                                  "updatedBy",
+                                  "updatedAt",
+                                  "deletedAt"
+                                ],
+                                "additionalProperties": false
+                              }
+                            },
+                            "required": [
+                              "kind",
+                              "dose"
+                            ],
+                            "additionalProperties": false
+                          },
                           {}
                         ]
+                      }
+                    },
+                    "doses": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string"
+                          },
+                          "supplementId": {
+                            "type": "string"
+                          },
+                          "occurredAt": {
+                            "type": "integer",
+                            "minimum": 946684800000,
+                            "exclusiveMaximum": 4102444800000
+                          },
+                          "localDate": {
+                            "type": "string",
+                            "format": "date"
+                          },
+                          "dose": {
+                            "type": "string",
+                            "pattern": "^\\S[\\s\\S]*\\S$|^\\S$|^$",
+                            "maxLength": 40
+                          },
+                          "version": {
+                            "type": "integer",
+                            "minimum": 1
+                          },
+                          "createdBy": {
+                            "type": "string"
+                          },
+                          "createdAt": {
+                            "type": "integer",
+                            "minimum": 946684800000,
+                            "exclusiveMaximum": 4102444800000
+                          },
+                          "updatedBy": {
+                            "type": "string"
+                          },
+                          "updatedAt": {
+                            "type": "integer",
+                            "minimum": 946684800000,
+                            "exclusiveMaximum": 4102444800000
+                          },
+                          "deletedAt": {
+                            "anyOf": [
+                              {
+                                "type": "integer",
+                                "minimum": 946684800000,
+                                "exclusiveMaximum": 4102444800000
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "supplementId",
+                          "occurredAt",
+                          "localDate",
+                          "dose",
+                          "version",
+                          "createdBy",
+                          "createdAt",
+                          "updatedBy",
+                          "updatedAt",
+                          "deletedAt"
+                        ],
+                        "additionalProperties": false
                       }
                     }
                   },
@@ -1835,7 +2077,8 @@
                     "activeSleep",
                     "lastSleep",
                     "prefill",
-                    "recent"
+                    "recent",
+                    "doses"
                   ],
                   "additionalProperties": false
                 }
@@ -10923,6 +11166,1816 @@
         }
       }
     },
+    "/api/supplements": {
+      "post": {
+        "tags": [
+          "supplements"
+        ],
+        "operationId": "supplements.addSupplement",
+        "parameters": [],
+        "security": [],
+        "responses": {
+          "201": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "supplement": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string"
+                        },
+                        "name": {
+                          "type": "string",
+                          "pattern": "^\\S[\\s\\S]*\\S$|^\\S$|^$",
+                          "minLength": 1,
+                          "maxLength": 60
+                        },
+                        "dose": {
+                          "type": "string",
+                          "pattern": "^\\S[\\s\\S]*\\S$|^\\S$|^$",
+                          "maxLength": 40
+                        },
+                        "stoppedAt": {
+                          "anyOf": [
+                            {
+                              "type": "integer",
+                              "minimum": 946684800000,
+                              "exclusiveMaximum": 4102444800000
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "version": {
+                          "type": "integer",
+                          "minimum": 1
+                        },
+                        "createdBy": {
+                          "anyOf": [
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "createdAt": {
+                          "type": "integer",
+                          "minimum": 946684800000,
+                          "exclusiveMaximum": 4102444800000
+                        },
+                        "updatedBy": {
+                          "anyOf": [
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "updatedAt": {
+                          "type": "integer",
+                          "minimum": 946684800000,
+                          "exclusiveMaximum": 4102444800000
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "name",
+                        "dose",
+                        "stoppedAt",
+                        "version",
+                        "createdBy",
+                        "createdAt",
+                        "updatedBy",
+                        "updatedAt"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "changed": {
+                      "type": "array",
+                      "items": {
+                        "anyOf": [
+                          {
+                            "type": "array",
+                            "prefixItems": [
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "me"
+                                ]
+                              }
+                            ],
+                            "maxItems": 1,
+                            "minItems": 1
+                          },
+                          {
+                            "type": "array",
+                            "prefixItems": [
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "today"
+                                ]
+                              }
+                            ],
+                            "maxItems": 1,
+                            "minItems": 1
+                          },
+                          {
+                            "type": "array",
+                            "prefixItems": [
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "last24h"
+                                ]
+                              }
+                            ],
+                            "maxItems": 1,
+                            "minItems": 1
+                          },
+                          {
+                            "type": "array",
+                            "prefixItems": [
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "day"
+                                ]
+                              },
+                              {
+                                "type": "string",
+                                "format": "date"
+                              }
+                            ],
+                            "maxItems": 2,
+                            "minItems": 2
+                          },
+                          {
+                            "type": "array",
+                            "prefixItems": [
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "week"
+                                ]
+                              },
+                              {
+                                "type": "string",
+                                "pattern": "^\\d{4}-W\\d{2}$"
+                              }
+                            ],
+                            "maxItems": 2,
+                            "minItems": 2
+                          },
+                          {
+                            "type": "array",
+                            "prefixItems": [
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "month"
+                                ]
+                              },
+                              {
+                                "type": "string",
+                                "pattern": "^\\d{4}-\\d{2}$"
+                              }
+                            ],
+                            "maxItems": 2,
+                            "minItems": 2
+                          },
+                          {
+                            "type": "array",
+                            "prefixItems": [
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "growth"
+                                ]
+                              }
+                            ],
+                            "maxItems": 1,
+                            "minItems": 1
+                          },
+                          {
+                            "type": "array",
+                            "prefixItems": [
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "deleted"
+                                ]
+                              }
+                            ],
+                            "maxItems": 1,
+                            "minItems": 1
+                          }
+                        ]
+                      }
+                    }
+                  },
+                  "required": [
+                    "supplement",
+                    "changed"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "InvalidInput",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvalidInputEncoded"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnauthorizedEncoded"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "SupplementConflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SupplementConflictEncoded"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "actionId": {
+                    "type": "string",
+                    "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|[fF]{8}-[fF]{4}-[fF]{4}-[fF]{4}-[fF]{12})$",
+                    "format": "uuid"
+                  },
+                  "name": {
+                    "type": "string",
+                    "pattern": "^\\S[\\s\\S]*\\S$|^\\S$|^$",
+                    "minLength": 1,
+                    "maxLength": 60
+                  },
+                  "dose": {
+                    "type": "string",
+                    "pattern": "^\\S[\\s\\S]*\\S$|^\\S$|^$",
+                    "maxLength": 40
+                  }
+                },
+                "required": [
+                  "actionId",
+                  "name",
+                  "dose"
+                ],
+                "additionalProperties": false
+              }
+            }
+          },
+          "required": true
+        }
+      }
+    },
+    "/api/supplements/{id}": {
+      "patch": {
+        "tags": [
+          "supplements"
+        ],
+        "operationId": "supplements.editSupplement",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "schema": {
+              "type": "string"
+            },
+            "required": true
+          }
+        ],
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "supplement": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string"
+                        },
+                        "name": {
+                          "type": "string",
+                          "pattern": "^\\S[\\s\\S]*\\S$|^\\S$|^$",
+                          "minLength": 1,
+                          "maxLength": 60
+                        },
+                        "dose": {
+                          "type": "string",
+                          "pattern": "^\\S[\\s\\S]*\\S$|^\\S$|^$",
+                          "maxLength": 40
+                        },
+                        "stoppedAt": {
+                          "anyOf": [
+                            {
+                              "type": "integer",
+                              "minimum": 946684800000,
+                              "exclusiveMaximum": 4102444800000
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "version": {
+                          "type": "integer",
+                          "minimum": 1
+                        },
+                        "createdBy": {
+                          "anyOf": [
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "createdAt": {
+                          "type": "integer",
+                          "minimum": 946684800000,
+                          "exclusiveMaximum": 4102444800000
+                        },
+                        "updatedBy": {
+                          "anyOf": [
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "updatedAt": {
+                          "type": "integer",
+                          "minimum": 946684800000,
+                          "exclusiveMaximum": 4102444800000
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "name",
+                        "dose",
+                        "stoppedAt",
+                        "version",
+                        "createdBy",
+                        "createdAt",
+                        "updatedBy",
+                        "updatedAt"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "changed": {
+                      "type": "array",
+                      "items": {
+                        "anyOf": [
+                          {
+                            "type": "array",
+                            "prefixItems": [
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "me"
+                                ]
+                              }
+                            ],
+                            "maxItems": 1,
+                            "minItems": 1
+                          },
+                          {
+                            "type": "array",
+                            "prefixItems": [
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "today"
+                                ]
+                              }
+                            ],
+                            "maxItems": 1,
+                            "minItems": 1
+                          },
+                          {
+                            "type": "array",
+                            "prefixItems": [
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "last24h"
+                                ]
+                              }
+                            ],
+                            "maxItems": 1,
+                            "minItems": 1
+                          },
+                          {
+                            "type": "array",
+                            "prefixItems": [
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "day"
+                                ]
+                              },
+                              {
+                                "type": "string",
+                                "format": "date"
+                              }
+                            ],
+                            "maxItems": 2,
+                            "minItems": 2
+                          },
+                          {
+                            "type": "array",
+                            "prefixItems": [
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "week"
+                                ]
+                              },
+                              {
+                                "type": "string",
+                                "pattern": "^\\d{4}-W\\d{2}$"
+                              }
+                            ],
+                            "maxItems": 2,
+                            "minItems": 2
+                          },
+                          {
+                            "type": "array",
+                            "prefixItems": [
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "month"
+                                ]
+                              },
+                              {
+                                "type": "string",
+                                "pattern": "^\\d{4}-\\d{2}$"
+                              }
+                            ],
+                            "maxItems": 2,
+                            "minItems": 2
+                          },
+                          {
+                            "type": "array",
+                            "prefixItems": [
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "growth"
+                                ]
+                              }
+                            ],
+                            "maxItems": 1,
+                            "minItems": 1
+                          },
+                          {
+                            "type": "array",
+                            "prefixItems": [
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "deleted"
+                                ]
+                              }
+                            ],
+                            "maxItems": 1,
+                            "minItems": 1
+                          }
+                        ]
+                      }
+                    }
+                  },
+                  "required": [
+                    "supplement",
+                    "changed"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "InvalidInput",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvalidInputEncoded"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnauthorizedEncoded"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "NotFound",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotFoundEncoded"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "SupplementConflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SupplementConflictEncoded"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "actionId": {
+                    "type": "string",
+                    "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|[fF]{8}-[fF]{4}-[fF]{4}-[fF]{4}-[fF]{12})$",
+                    "format": "uuid"
+                  },
+                  "version": {
+                    "type": "integer",
+                    "minimum": 1
+                  },
+                  "name": {
+                    "type": "string",
+                    "pattern": "^\\S[\\s\\S]*\\S$|^\\S$|^$",
+                    "minLength": 1,
+                    "maxLength": 60
+                  },
+                  "dose": {
+                    "type": "string",
+                    "pattern": "^\\S[\\s\\S]*\\S$|^\\S$|^$",
+                    "maxLength": 40
+                  },
+                  "stopped": {
+                    "type": "boolean"
+                  }
+                },
+                "required": [
+                  "actionId",
+                  "version",
+                  "name",
+                  "dose",
+                  "stopped"
+                ],
+                "additionalProperties": false
+              }
+            }
+          },
+          "required": true
+        }
+      }
+    },
+    "/api/doses": {
+      "post": {
+        "tags": [
+          "doses"
+        ],
+        "operationId": "doses.logDose",
+        "parameters": [],
+        "security": [],
+        "responses": {
+          "201": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "dose": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string"
+                        },
+                        "supplementId": {
+                          "type": "string"
+                        },
+                        "occurredAt": {
+                          "type": "integer",
+                          "minimum": 946684800000,
+                          "exclusiveMaximum": 4102444800000
+                        },
+                        "localDate": {
+                          "type": "string",
+                          "format": "date"
+                        },
+                        "dose": {
+                          "type": "string",
+                          "pattern": "^\\S[\\s\\S]*\\S$|^\\S$|^$",
+                          "maxLength": 40
+                        },
+                        "version": {
+                          "type": "integer",
+                          "minimum": 1
+                        },
+                        "createdBy": {
+                          "type": "string"
+                        },
+                        "createdAt": {
+                          "type": "integer",
+                          "minimum": 946684800000,
+                          "exclusiveMaximum": 4102444800000
+                        },
+                        "updatedBy": {
+                          "type": "string"
+                        },
+                        "updatedAt": {
+                          "type": "integer",
+                          "minimum": 946684800000,
+                          "exclusiveMaximum": 4102444800000
+                        },
+                        "deletedAt": {
+                          "anyOf": [
+                            {
+                              "type": "integer",
+                              "minimum": 946684800000,
+                              "exclusiveMaximum": 4102444800000
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "supplementId",
+                        "occurredAt",
+                        "localDate",
+                        "dose",
+                        "version",
+                        "createdBy",
+                        "createdAt",
+                        "updatedBy",
+                        "updatedAt",
+                        "deletedAt"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "changed": {
+                      "type": "array",
+                      "items": {
+                        "anyOf": [
+                          {
+                            "type": "array",
+                            "prefixItems": [
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "me"
+                                ]
+                              }
+                            ],
+                            "maxItems": 1,
+                            "minItems": 1
+                          },
+                          {
+                            "type": "array",
+                            "prefixItems": [
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "today"
+                                ]
+                              }
+                            ],
+                            "maxItems": 1,
+                            "minItems": 1
+                          },
+                          {
+                            "type": "array",
+                            "prefixItems": [
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "last24h"
+                                ]
+                              }
+                            ],
+                            "maxItems": 1,
+                            "minItems": 1
+                          },
+                          {
+                            "type": "array",
+                            "prefixItems": [
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "day"
+                                ]
+                              },
+                              {
+                                "type": "string",
+                                "format": "date"
+                              }
+                            ],
+                            "maxItems": 2,
+                            "minItems": 2
+                          },
+                          {
+                            "type": "array",
+                            "prefixItems": [
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "week"
+                                ]
+                              },
+                              {
+                                "type": "string",
+                                "pattern": "^\\d{4}-W\\d{2}$"
+                              }
+                            ],
+                            "maxItems": 2,
+                            "minItems": 2
+                          },
+                          {
+                            "type": "array",
+                            "prefixItems": [
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "month"
+                                ]
+                              },
+                              {
+                                "type": "string",
+                                "pattern": "^\\d{4}-\\d{2}$"
+                              }
+                            ],
+                            "maxItems": 2,
+                            "minItems": 2
+                          },
+                          {
+                            "type": "array",
+                            "prefixItems": [
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "growth"
+                                ]
+                              }
+                            ],
+                            "maxItems": 1,
+                            "minItems": 1
+                          },
+                          {
+                            "type": "array",
+                            "prefixItems": [
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "deleted"
+                                ]
+                              }
+                            ],
+                            "maxItems": 1,
+                            "minItems": 1
+                          }
+                        ]
+                      }
+                    }
+                  },
+                  "required": [
+                    "dose",
+                    "changed"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "InvalidInput",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvalidInputEncoded"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnauthorizedEncoded"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "NotFound",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotFoundEncoded"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "DoseConflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DoseConflictEncoded"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "actionId": {
+                    "type": "string",
+                    "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|[fF]{8}-[fF]{4}-[fF]{4}-[fF]{4}-[fF]{12})$",
+                    "format": "uuid"
+                  },
+                  "supplementId": {
+                    "type": "string"
+                  },
+                  "occurredAt": {
+                    "type": "integer",
+                    "minimum": 946684800000,
+                    "exclusiveMaximum": 4102444800000
+                  },
+                  "confirmedDuplicate": {
+                    "type": "boolean"
+                  }
+                },
+                "required": [
+                  "actionId",
+                  "supplementId",
+                  "occurredAt",
+                  "confirmedDuplicate"
+                ],
+                "additionalProperties": false
+              }
+            }
+          },
+          "required": true
+        }
+      }
+    },
+    "/api/doses/{id}": {
+      "patch": {
+        "tags": [
+          "doses"
+        ],
+        "operationId": "doses.editDose",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "schema": {
+              "type": "string"
+            },
+            "required": true
+          }
+        ],
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "dose": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string"
+                        },
+                        "supplementId": {
+                          "type": "string"
+                        },
+                        "occurredAt": {
+                          "type": "integer",
+                          "minimum": 946684800000,
+                          "exclusiveMaximum": 4102444800000
+                        },
+                        "localDate": {
+                          "type": "string",
+                          "format": "date"
+                        },
+                        "dose": {
+                          "type": "string",
+                          "pattern": "^\\S[\\s\\S]*\\S$|^\\S$|^$",
+                          "maxLength": 40
+                        },
+                        "version": {
+                          "type": "integer",
+                          "minimum": 1
+                        },
+                        "createdBy": {
+                          "type": "string"
+                        },
+                        "createdAt": {
+                          "type": "integer",
+                          "minimum": 946684800000,
+                          "exclusiveMaximum": 4102444800000
+                        },
+                        "updatedBy": {
+                          "type": "string"
+                        },
+                        "updatedAt": {
+                          "type": "integer",
+                          "minimum": 946684800000,
+                          "exclusiveMaximum": 4102444800000
+                        },
+                        "deletedAt": {
+                          "anyOf": [
+                            {
+                              "type": "integer",
+                              "minimum": 946684800000,
+                              "exclusiveMaximum": 4102444800000
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "supplementId",
+                        "occurredAt",
+                        "localDate",
+                        "dose",
+                        "version",
+                        "createdBy",
+                        "createdAt",
+                        "updatedBy",
+                        "updatedAt",
+                        "deletedAt"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "changed": {
+                      "type": "array",
+                      "items": {
+                        "anyOf": [
+                          {
+                            "type": "array",
+                            "prefixItems": [
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "me"
+                                ]
+                              }
+                            ],
+                            "maxItems": 1,
+                            "minItems": 1
+                          },
+                          {
+                            "type": "array",
+                            "prefixItems": [
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "today"
+                                ]
+                              }
+                            ],
+                            "maxItems": 1,
+                            "minItems": 1
+                          },
+                          {
+                            "type": "array",
+                            "prefixItems": [
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "last24h"
+                                ]
+                              }
+                            ],
+                            "maxItems": 1,
+                            "minItems": 1
+                          },
+                          {
+                            "type": "array",
+                            "prefixItems": [
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "day"
+                                ]
+                              },
+                              {
+                                "type": "string",
+                                "format": "date"
+                              }
+                            ],
+                            "maxItems": 2,
+                            "minItems": 2
+                          },
+                          {
+                            "type": "array",
+                            "prefixItems": [
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "week"
+                                ]
+                              },
+                              {
+                                "type": "string",
+                                "pattern": "^\\d{4}-W\\d{2}$"
+                              }
+                            ],
+                            "maxItems": 2,
+                            "minItems": 2
+                          },
+                          {
+                            "type": "array",
+                            "prefixItems": [
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "month"
+                                ]
+                              },
+                              {
+                                "type": "string",
+                                "pattern": "^\\d{4}-\\d{2}$"
+                              }
+                            ],
+                            "maxItems": 2,
+                            "minItems": 2
+                          },
+                          {
+                            "type": "array",
+                            "prefixItems": [
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "growth"
+                                ]
+                              }
+                            ],
+                            "maxItems": 1,
+                            "minItems": 1
+                          },
+                          {
+                            "type": "array",
+                            "prefixItems": [
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "deleted"
+                                ]
+                              }
+                            ],
+                            "maxItems": 1,
+                            "minItems": 1
+                          }
+                        ]
+                      }
+                    }
+                  },
+                  "required": [
+                    "dose",
+                    "changed"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "InvalidInput",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvalidInputEncoded"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnauthorizedEncoded"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "NotFound",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotFoundEncoded"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "DoseConflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DoseConflictEncoded"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "actionId": {
+                    "type": "string",
+                    "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|[fF]{8}-[fF]{4}-[fF]{4}-[fF]{4}-[fF]{12})$",
+                    "format": "uuid"
+                  },
+                  "version": {
+                    "type": "integer",
+                    "minimum": 1
+                  },
+                  "occurredAt": {
+                    "type": "integer",
+                    "minimum": 946684800000,
+                    "exclusiveMaximum": 4102444800000
+                  }
+                },
+                "required": [
+                  "actionId",
+                  "version",
+                  "occurredAt"
+                ],
+                "additionalProperties": false
+              }
+            }
+          },
+          "required": true
+        }
+      },
+      "delete": {
+        "tags": [
+          "doses"
+        ],
+        "operationId": "doses.deleteDose",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "schema": {
+              "type": "string"
+            },
+            "required": true
+          }
+        ],
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "dose": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string"
+                        },
+                        "supplementId": {
+                          "type": "string"
+                        },
+                        "occurredAt": {
+                          "type": "integer",
+                          "minimum": 946684800000,
+                          "exclusiveMaximum": 4102444800000
+                        },
+                        "localDate": {
+                          "type": "string",
+                          "format": "date"
+                        },
+                        "dose": {
+                          "type": "string",
+                          "pattern": "^\\S[\\s\\S]*\\S$|^\\S$|^$",
+                          "maxLength": 40
+                        },
+                        "version": {
+                          "type": "integer",
+                          "minimum": 1
+                        },
+                        "createdBy": {
+                          "type": "string"
+                        },
+                        "createdAt": {
+                          "type": "integer",
+                          "minimum": 946684800000,
+                          "exclusiveMaximum": 4102444800000
+                        },
+                        "updatedBy": {
+                          "type": "string"
+                        },
+                        "updatedAt": {
+                          "type": "integer",
+                          "minimum": 946684800000,
+                          "exclusiveMaximum": 4102444800000
+                        },
+                        "deletedAt": {
+                          "anyOf": [
+                            {
+                              "type": "integer",
+                              "minimum": 946684800000,
+                              "exclusiveMaximum": 4102444800000
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "supplementId",
+                        "occurredAt",
+                        "localDate",
+                        "dose",
+                        "version",
+                        "createdBy",
+                        "createdAt",
+                        "updatedBy",
+                        "updatedAt",
+                        "deletedAt"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "changed": {
+                      "type": "array",
+                      "items": {
+                        "anyOf": [
+                          {
+                            "type": "array",
+                            "prefixItems": [
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "me"
+                                ]
+                              }
+                            ],
+                            "maxItems": 1,
+                            "minItems": 1
+                          },
+                          {
+                            "type": "array",
+                            "prefixItems": [
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "today"
+                                ]
+                              }
+                            ],
+                            "maxItems": 1,
+                            "minItems": 1
+                          },
+                          {
+                            "type": "array",
+                            "prefixItems": [
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "last24h"
+                                ]
+                              }
+                            ],
+                            "maxItems": 1,
+                            "minItems": 1
+                          },
+                          {
+                            "type": "array",
+                            "prefixItems": [
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "day"
+                                ]
+                              },
+                              {
+                                "type": "string",
+                                "format": "date"
+                              }
+                            ],
+                            "maxItems": 2,
+                            "minItems": 2
+                          },
+                          {
+                            "type": "array",
+                            "prefixItems": [
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "week"
+                                ]
+                              },
+                              {
+                                "type": "string",
+                                "pattern": "^\\d{4}-W\\d{2}$"
+                              }
+                            ],
+                            "maxItems": 2,
+                            "minItems": 2
+                          },
+                          {
+                            "type": "array",
+                            "prefixItems": [
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "month"
+                                ]
+                              },
+                              {
+                                "type": "string",
+                                "pattern": "^\\d{4}-\\d{2}$"
+                              }
+                            ],
+                            "maxItems": 2,
+                            "minItems": 2
+                          },
+                          {
+                            "type": "array",
+                            "prefixItems": [
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "growth"
+                                ]
+                              }
+                            ],
+                            "maxItems": 1,
+                            "minItems": 1
+                          },
+                          {
+                            "type": "array",
+                            "prefixItems": [
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "deleted"
+                                ]
+                              }
+                            ],
+                            "maxItems": 1,
+                            "minItems": 1
+                          }
+                        ]
+                      }
+                    }
+                  },
+                  "required": [
+                    "dose",
+                    "changed"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "InvalidInput",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvalidInputEncoded"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnauthorizedEncoded"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "NotFound",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotFoundEncoded"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "DoseConflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DoseConflictEncoded"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "actionId": {
+                    "type": "string",
+                    "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|[fF]{8}-[fF]{4}-[fF]{4}-[fF]{4}-[fF]{12})$",
+                    "format": "uuid"
+                  },
+                  "version": {
+                    "type": "integer",
+                    "minimum": 1
+                  }
+                },
+                "required": [
+                  "actionId",
+                  "version"
+                ],
+                "additionalProperties": false
+              }
+            }
+          },
+          "required": true
+        }
+      }
+    },
+    "/api/doses/{id}/restore": {
+      "post": {
+        "tags": [
+          "doses"
+        ],
+        "operationId": "doses.restoreDose",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "schema": {
+              "type": "string"
+            },
+            "required": true
+          }
+        ],
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "dose": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string"
+                        },
+                        "supplementId": {
+                          "type": "string"
+                        },
+                        "occurredAt": {
+                          "type": "integer",
+                          "minimum": 946684800000,
+                          "exclusiveMaximum": 4102444800000
+                        },
+                        "localDate": {
+                          "type": "string",
+                          "format": "date"
+                        },
+                        "dose": {
+                          "type": "string",
+                          "pattern": "^\\S[\\s\\S]*\\S$|^\\S$|^$",
+                          "maxLength": 40
+                        },
+                        "version": {
+                          "type": "integer",
+                          "minimum": 1
+                        },
+                        "createdBy": {
+                          "type": "string"
+                        },
+                        "createdAt": {
+                          "type": "integer",
+                          "minimum": 946684800000,
+                          "exclusiveMaximum": 4102444800000
+                        },
+                        "updatedBy": {
+                          "type": "string"
+                        },
+                        "updatedAt": {
+                          "type": "integer",
+                          "minimum": 946684800000,
+                          "exclusiveMaximum": 4102444800000
+                        },
+                        "deletedAt": {
+                          "anyOf": [
+                            {
+                              "type": "integer",
+                              "minimum": 946684800000,
+                              "exclusiveMaximum": 4102444800000
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "supplementId",
+                        "occurredAt",
+                        "localDate",
+                        "dose",
+                        "version",
+                        "createdBy",
+                        "createdAt",
+                        "updatedBy",
+                        "updatedAt",
+                        "deletedAt"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "changed": {
+                      "type": "array",
+                      "items": {
+                        "anyOf": [
+                          {
+                            "type": "array",
+                            "prefixItems": [
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "me"
+                                ]
+                              }
+                            ],
+                            "maxItems": 1,
+                            "minItems": 1
+                          },
+                          {
+                            "type": "array",
+                            "prefixItems": [
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "today"
+                                ]
+                              }
+                            ],
+                            "maxItems": 1,
+                            "minItems": 1
+                          },
+                          {
+                            "type": "array",
+                            "prefixItems": [
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "last24h"
+                                ]
+                              }
+                            ],
+                            "maxItems": 1,
+                            "minItems": 1
+                          },
+                          {
+                            "type": "array",
+                            "prefixItems": [
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "day"
+                                ]
+                              },
+                              {
+                                "type": "string",
+                                "format": "date"
+                              }
+                            ],
+                            "maxItems": 2,
+                            "minItems": 2
+                          },
+                          {
+                            "type": "array",
+                            "prefixItems": [
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "week"
+                                ]
+                              },
+                              {
+                                "type": "string",
+                                "pattern": "^\\d{4}-W\\d{2}$"
+                              }
+                            ],
+                            "maxItems": 2,
+                            "minItems": 2
+                          },
+                          {
+                            "type": "array",
+                            "prefixItems": [
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "month"
+                                ]
+                              },
+                              {
+                                "type": "string",
+                                "pattern": "^\\d{4}-\\d{2}$"
+                              }
+                            ],
+                            "maxItems": 2,
+                            "minItems": 2
+                          },
+                          {
+                            "type": "array",
+                            "prefixItems": [
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "growth"
+                                ]
+                              }
+                            ],
+                            "maxItems": 1,
+                            "minItems": 1
+                          },
+                          {
+                            "type": "array",
+                            "prefixItems": [
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "deleted"
+                                ]
+                              }
+                            ],
+                            "maxItems": 1,
+                            "minItems": 1
+                          }
+                        ]
+                      }
+                    }
+                  },
+                  "required": [
+                    "dose",
+                    "changed"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "InvalidInput",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvalidInputEncoded"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnauthorizedEncoded"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "NotFound",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotFoundEncoded"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "DoseConflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DoseConflictEncoded"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "actionId": {
+                    "type": "string",
+                    "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|[fF]{8}-[fF]{4}-[fF]{4}-[fF]{4}-[fF]{12})$",
+                    "format": "uuid"
+                  },
+                  "version": {
+                    "type": "integer",
+                    "minimum": 1
+                  }
+                },
+                "required": [
+                  "actionId",
+                  "version"
+                ],
+                "additionalProperties": false
+              }
+            }
+          },
+          "required": true
+        }
+      }
+    },
     "/api/growth": {
       "get": {
         "tags": [
@@ -13097,6 +15150,80 @@
                         ],
                         "additionalProperties": false
                       }
+                    },
+                    "doses": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string"
+                          },
+                          "supplementId": {
+                            "type": "string"
+                          },
+                          "occurredAt": {
+                            "type": "integer",
+                            "minimum": 946684800000,
+                            "exclusiveMaximum": 4102444800000
+                          },
+                          "localDate": {
+                            "type": "string",
+                            "format": "date"
+                          },
+                          "dose": {
+                            "type": "string",
+                            "pattern": "^\\S[\\s\\S]*\\S$|^\\S$|^$",
+                            "maxLength": 40
+                          },
+                          "version": {
+                            "type": "integer",
+                            "minimum": 1
+                          },
+                          "createdBy": {
+                            "type": "string"
+                          },
+                          "createdAt": {
+                            "type": "integer",
+                            "minimum": 946684800000,
+                            "exclusiveMaximum": 4102444800000
+                          },
+                          "updatedBy": {
+                            "type": "string"
+                          },
+                          "updatedAt": {
+                            "type": "integer",
+                            "minimum": 946684800000,
+                            "exclusiveMaximum": 4102444800000
+                          },
+                          "deletedAt": {
+                            "anyOf": [
+                              {
+                                "type": "integer",
+                                "minimum": 946684800000,
+                                "exclusiveMaximum": 4102444800000
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "supplementId",
+                          "occurredAt",
+                          "localDate",
+                          "dose",
+                          "version",
+                          "createdBy",
+                          "createdAt",
+                          "updatedBy",
+                          "updatedAt",
+                          "deletedAt"
+                        ],
+                        "additionalProperties": false
+                      }
                     }
                   },
                   "required": [
@@ -13107,7 +15234,8 @@
                     "feeds",
                     "diapers",
                     "sleeps",
-                    "measurements"
+                    "measurements",
+                    "doses"
                   ],
                   "additionalProperties": false
                 }
@@ -13789,6 +15917,80 @@
                         ],
                         "additionalProperties": false
                       }
+                    },
+                    "doses": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string"
+                          },
+                          "supplementId": {
+                            "type": "string"
+                          },
+                          "occurredAt": {
+                            "type": "integer",
+                            "minimum": 946684800000,
+                            "exclusiveMaximum": 4102444800000
+                          },
+                          "localDate": {
+                            "type": "string",
+                            "format": "date"
+                          },
+                          "dose": {
+                            "type": "string",
+                            "pattern": "^\\S[\\s\\S]*\\S$|^\\S$|^$",
+                            "maxLength": 40
+                          },
+                          "version": {
+                            "type": "integer",
+                            "minimum": 1
+                          },
+                          "createdBy": {
+                            "type": "string"
+                          },
+                          "createdAt": {
+                            "type": "integer",
+                            "minimum": 946684800000,
+                            "exclusiveMaximum": 4102444800000
+                          },
+                          "updatedBy": {
+                            "type": "string"
+                          },
+                          "updatedAt": {
+                            "type": "integer",
+                            "minimum": 946684800000,
+                            "exclusiveMaximum": 4102444800000
+                          },
+                          "deletedAt": {
+                            "anyOf": [
+                              {
+                                "type": "integer",
+                                "minimum": 946684800000,
+                                "exclusiveMaximum": 4102444800000
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "supplementId",
+                          "occurredAt",
+                          "localDate",
+                          "dose",
+                          "version",
+                          "createdBy",
+                          "createdAt",
+                          "updatedBy",
+                          "updatedAt",
+                          "deletedAt"
+                        ],
+                        "additionalProperties": false
+                      }
                     }
                   },
                   "required": [
@@ -13800,7 +16002,8 @@
                     "feeds",
                     "diapers",
                     "sleeps",
-                    "measurements"
+                    "measurements",
+                    "doses"
                   ],
                   "additionalProperties": false
                 }
@@ -14482,6 +16685,80 @@
                         ],
                         "additionalProperties": false
                       }
+                    },
+                    "doses": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string"
+                          },
+                          "supplementId": {
+                            "type": "string"
+                          },
+                          "occurredAt": {
+                            "type": "integer",
+                            "minimum": 946684800000,
+                            "exclusiveMaximum": 4102444800000
+                          },
+                          "localDate": {
+                            "type": "string",
+                            "format": "date"
+                          },
+                          "dose": {
+                            "type": "string",
+                            "pattern": "^\\S[\\s\\S]*\\S$|^\\S$|^$",
+                            "maxLength": 40
+                          },
+                          "version": {
+                            "type": "integer",
+                            "minimum": 1
+                          },
+                          "createdBy": {
+                            "type": "string"
+                          },
+                          "createdAt": {
+                            "type": "integer",
+                            "minimum": 946684800000,
+                            "exclusiveMaximum": 4102444800000
+                          },
+                          "updatedBy": {
+                            "type": "string"
+                          },
+                          "updatedAt": {
+                            "type": "integer",
+                            "minimum": 946684800000,
+                            "exclusiveMaximum": 4102444800000
+                          },
+                          "deletedAt": {
+                            "anyOf": [
+                              {
+                                "type": "integer",
+                                "minimum": 946684800000,
+                                "exclusiveMaximum": 4102444800000
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "supplementId",
+                          "occurredAt",
+                          "localDate",
+                          "dose",
+                          "version",
+                          "createdBy",
+                          "createdAt",
+                          "updatedBy",
+                          "updatedAt",
+                          "deletedAt"
+                        ],
+                        "additionalProperties": false
+                      }
                     }
                   },
                   "required": [
@@ -14493,7 +16770,8 @@
                     "feeds",
                     "diapers",
                     "sleeps",
-                    "measurements"
+                    "measurements",
+                    "doses"
                   ],
                   "additionalProperties": false
                 }
@@ -14940,13 +17218,88 @@
                         ],
                         "additionalProperties": false
                       }
+                    },
+                    "doses": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string"
+                          },
+                          "supplementId": {
+                            "type": "string"
+                          },
+                          "occurredAt": {
+                            "type": "integer",
+                            "minimum": 946684800000,
+                            "exclusiveMaximum": 4102444800000
+                          },
+                          "localDate": {
+                            "type": "string",
+                            "format": "date"
+                          },
+                          "dose": {
+                            "type": "string",
+                            "pattern": "^\\S[\\s\\S]*\\S$|^\\S$|^$",
+                            "maxLength": 40
+                          },
+                          "version": {
+                            "type": "integer",
+                            "minimum": 1
+                          },
+                          "createdBy": {
+                            "type": "string"
+                          },
+                          "createdAt": {
+                            "type": "integer",
+                            "minimum": 946684800000,
+                            "exclusiveMaximum": 4102444800000
+                          },
+                          "updatedBy": {
+                            "type": "string"
+                          },
+                          "updatedAt": {
+                            "type": "integer",
+                            "minimum": 946684800000,
+                            "exclusiveMaximum": 4102444800000
+                          },
+                          "deletedAt": {
+                            "anyOf": [
+                              {
+                                "type": "integer",
+                                "minimum": 946684800000,
+                                "exclusiveMaximum": 4102444800000
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "supplementId",
+                          "occurredAt",
+                          "localDate",
+                          "dose",
+                          "version",
+                          "createdBy",
+                          "createdAt",
+                          "updatedBy",
+                          "updatedAt",
+                          "deletedAt"
+                        ],
+                        "additionalProperties": false
+                      }
                     }
                   },
                   "required": [
                     "feeds",
                     "diapers",
                     "sleeps",
-                    "measurements"
+                    "measurements",
+                    "doses"
                   ],
                   "additionalProperties": false
                 }
@@ -15170,6 +17523,203 @@
         },
         "required": [
           "_tag"
+        ],
+        "additionalProperties": false
+      },
+      "DoseConflictEncoded": {
+        "type": "object",
+        "properties": {
+          "_tag": {
+            "type": "string",
+            "enum": [
+              "Conflict"
+            ]
+          },
+          "code": {
+            "type": "string",
+            "enum": [
+              "SUPPLEMENT_DUPLICATE_DAY",
+              "STALE_VERSION",
+              "ACTION_REPLAY_MISMATCH"
+            ]
+          },
+          "current": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "supplementId": {
+                "type": "string"
+              },
+              "occurredAt": {
+                "type": "integer",
+                "minimum": 946684800000,
+                "exclusiveMaximum": 4102444800000
+              },
+              "localDate": {
+                "type": "string",
+                "format": "date"
+              },
+              "dose": {
+                "type": "string",
+                "pattern": "^\\S[\\s\\S]*\\S$|^\\S$|^$",
+                "maxLength": 40
+              },
+              "version": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "createdBy": {
+                "type": "string"
+              },
+              "createdAt": {
+                "type": "integer",
+                "minimum": 946684800000,
+                "exclusiveMaximum": 4102444800000
+              },
+              "updatedBy": {
+                "type": "string"
+              },
+              "updatedAt": {
+                "type": "integer",
+                "minimum": 946684800000,
+                "exclusiveMaximum": 4102444800000
+              },
+              "deletedAt": {
+                "anyOf": [
+                  {
+                    "type": "integer",
+                    "minimum": 946684800000,
+                    "exclusiveMaximum": 4102444800000
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              }
+            },
+            "required": [
+              "id",
+              "supplementId",
+              "occurredAt",
+              "localDate",
+              "dose",
+              "version",
+              "createdBy",
+              "createdAt",
+              "updatedBy",
+              "updatedAt",
+              "deletedAt"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "_tag",
+          "code",
+          "current"
+        ],
+        "additionalProperties": false
+      },
+      "SupplementConflictEncoded": {
+        "type": "object",
+        "properties": {
+          "_tag": {
+            "type": "string",
+            "enum": [
+              "Conflict"
+            ]
+          },
+          "code": {
+            "type": "string",
+            "enum": [
+              "STALE_VERSION",
+              "ACTION_REPLAY_MISMATCH"
+            ]
+          },
+          "current": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "name": {
+                "type": "string",
+                "pattern": "^\\S[\\s\\S]*\\S$|^\\S$|^$",
+                "minLength": 1,
+                "maxLength": 60
+              },
+              "dose": {
+                "type": "string",
+                "pattern": "^\\S[\\s\\S]*\\S$|^\\S$|^$",
+                "maxLength": 40
+              },
+              "stoppedAt": {
+                "anyOf": [
+                  {
+                    "type": "integer",
+                    "minimum": 946684800000,
+                    "exclusiveMaximum": 4102444800000
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "version": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "createdBy": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "createdAt": {
+                "type": "integer",
+                "minimum": 946684800000,
+                "exclusiveMaximum": 4102444800000
+              },
+              "updatedBy": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "updatedAt": {
+                "type": "integer",
+                "minimum": 946684800000,
+                "exclusiveMaximum": 4102444800000
+              }
+            },
+            "required": [
+              "id",
+              "name",
+              "dose",
+              "stoppedAt",
+              "version",
+              "createdBy",
+              "createdAt",
+              "updatedBy",
+              "updatedAt"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "_tag",
+          "code",
+          "current"
         ],
         "additionalProperties": false
       },
@@ -15752,6 +18302,12 @@
     },
     {
       "name": "sleeps"
+    },
+    {
+      "name": "supplements"
+    },
+    {
+      "name": "doses"
     },
     {
       "name": "growth"

@@ -5,7 +5,20 @@ import type { Display } from "../src/features/today/display.ts"
 import { feedParts, feedTitle } from "../src/features/today/feed-parts.ts"
 import { recentRows } from "../src/features/today/recent-rows.ts"
 import { totalsRows } from "../src/features/today/totals-rows.ts"
-import { ANDREW, diaperAt, EMILY, feedAt, MINUTE, NO_TOTALS, NOW, nursedFor, sleptAt, ZONE } from "./today-fixtures.ts"
+import {
+  ANDREW,
+  diaperAt,
+  dosedAt,
+  EMILY,
+  feedAt,
+  MINUTE,
+  NO_TOTALS,
+  NOW,
+  nursedFor,
+  sleptAt,
+  supplementOf,
+  ZONE,
+} from "./today-fixtures.ts"
 
 const TWO_TEN = Date.UTC(2026, 9, 9, 9, 10)
 const BOTTLE = { id: "bottle", occurredAt: TWO_TEN, breastMilkMl: 40, formulaMl: 20 }
@@ -19,6 +32,7 @@ const DISPLAY: Display = {
     { id: ANDREW, displayName: "Andrew" },
     { id: EMILY, displayName: "Emily" },
   ],
+  supplements: [],
 }
 
 describe("a feed's title and parts", () => {
@@ -180,6 +194,25 @@ describe("recentRows", () => {
     expect(rows.map((row) => row.kind)).toEqual(["bottle", "diaper"])
   })
 
+  it("shows a dose by its supplement's name as it is now, with the dose it was given at and who gave it", () => {
+    const display = { ...DISPLAY, supplements: [supplementOf({ name: "Vitamin D3" })] }
+    const rows = recentRows(
+      [
+        { kind: "dose", dose: dosedAt(TWO_TEN) },
+        { kind: "dose", dose: dosedAt(TWO_TEN, { id: pendingId("action-4"), dose: "" }) },
+        { kind: "dose", dose: dosedAt(TWO_TEN, { supplementId: "gone" }) },
+      ],
+      display,
+      NOW,
+      null,
+    )
+    expect(rows.map(({ kind, title, detail, by, saving, opens }) => [kind, title, detail, by, saving, opens])).toEqual([
+      ["dose", "Vitamin D3", ["400 IU"], "Emily", false, "editDose"],
+      ["dose", "Vitamin D3", [], "Emily", true, null],
+      ["dose", "Supplement", ["400 IU"], "Emily", false, "editDose"],
+    ])
+  })
+
   it("names no one for a caregiver the household doesn't list", () => {
     const [row] = recentRows([{ kind: "diaper", diaper: diaperAt(TWO_TEN, { createdBy: "gone" }) }], DISPLAY, NOW, null)
     expect(row?.by).toBe("")
@@ -247,28 +280,39 @@ describe("recentRows", () => {
   describe("a record with an action still on its way", () => {
     const sleep = sleptAt(TWO_TEN)
     const diaper = diaperAt(TWO_TEN)
+    const dose = dosedAt(TWO_TEN)
     const recent: ReadonlyArray<RecentEntry> = [
       { kind: "sleep", sleep },
       { kind: "diaper", diaper },
       { kind: "feed", feed: NURSED },
+      { kind: "dose", dose },
     ]
     const shown = (busy: string | null) =>
       recentRows(recent, DISPLAY, NOW, busy).map(({ saving, opens }) => [saving, opens])
 
-    it("shows its row as saving and opens it in nothing, whether it's a sleep, a diaper or a finished feed, and leaves the other rows as they were", () => {
+    it("shows its row as saving and opens it in nothing, whether it's a sleep, a diaper, a finished feed or a dose, and leaves the other rows as they were", () => {
       expect(shown(sleep.id)).toEqual([
         [true, null],
         [false, "editDiaper"],
         [false, "editFeed"],
+        [false, "editDose"],
       ])
       expect(shown(diaper.id)).toEqual([
         [false, "editSleep"],
         [true, null],
         [false, "editFeed"],
+        [false, "editDose"],
       ])
       expect(shown(NURSED.id)).toEqual([
         [false, "editSleep"],
         [false, "editDiaper"],
+        [true, null],
+        [false, "editDose"],
+      ])
+      expect(shown(dose.id)).toEqual([
+        [false, "editSleep"],
+        [false, "editDiaper"],
+        [false, "editFeed"],
         [true, null],
       ])
     })
@@ -278,6 +322,7 @@ describe("recentRows", () => {
         [false, "editSleep"],
         [false, "editDiaper"],
         [false, "editFeed"],
+        [false, "editDose"],
       ]
       expect(shown(null)).toEqual(settled)
       expect(shown("measurement-1")).toEqual(settled)

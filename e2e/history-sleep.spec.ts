@@ -74,7 +74,7 @@ test("hides the sleeps behind the Sleep chip, and says so", async ({ page }) => 
   await expect(page).toHaveURL(/hide=sleep/u)
 })
 
-test("fits all four chips on a 360-pixel-wide phone, on one row, without scrolling the page sideways", async ({
+test("fits the five chips on a 360-pixel-wide phone in two rows, Sleep on the first, without scrolling the page sideways", async ({
   page,
 }) => {
   await page.setViewportSize({ width: 360, height: 640 })
@@ -85,10 +85,12 @@ test("fits all four chips on a 360-pixel-wide phone, on one row, without scrolli
     "Diapers",
     "Sleep",
     "Growth",
+    "Supplements",
   ])
   await expect(grid(page)).toBeVisible()
   const tops = await chipTops(page)
-  expect(new Set(tops).size, `the chips' tops are ${tops.join(", ")}`).toBe(1)
+  expect(new Set(tops.slice(0, 4)).size, `the chips' tops are ${tops.join(", ")}`).toBe(1)
+  expect(new Set(tops).size, `the chips' tops are ${tops.join(", ")}`).toBe(2)
   expect(await page.evaluate("document.documentElement.scrollWidth <= window.innerWidth")).toBe(true)
 })
 

@@ -21,6 +21,7 @@ const DISPLAY: Display = {
     { id: ANDREW, displayName: "Andrew" },
     { id: EMILY, displayName: "Emily" },
   ],
+  supplements: [],
 }
 
 describe("a finished sleep's edit", () => {

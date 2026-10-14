@@ -18,6 +18,7 @@ const meFor = (email: string) =>
       updatedBy: null,
       updatedAt: Date.UTC(2026, 9, 8),
       caregivers: [],
+      supplements: [],
     },
     child: {
       name: "Robin",

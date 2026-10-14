@@ -17,6 +17,7 @@ export const DISPLAY: Display = {
     { id: ANDREW, displayName: "Andrew" },
     { id: EMILY, displayName: "Emily" },
   ],
+  supplements: [],
   locale: LOCALE,
 }
 
@@ -73,5 +74,6 @@ export const dayWith = (change: Partial<DayPeriod> = {}): DayPeriod => ({
   diapers: [PEE, POO, BOTH],
   sleeps: [],
   measurements: [WEIGHED],
+  doses: [],
   ...change,
 })

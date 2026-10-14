@@ -11,9 +11,9 @@ const RowContent = ({ row }: { readonly row: RecentRow }) => {
         <Icon aria-hidden="true" className="size-4" />
       </span>
       <span className="flex min-w-0 flex-1 flex-col">
-        <span className="font-medium">{row.title}</span>
+        <span className="font-medium break-words">{row.title}</span>
         <span className="text-sm tabular-nums text-muted-foreground">
-          <Parts parts={row.detail} />
+          <Parts parts={row.detail} freeText={row.kind === "dose"} />
         </span>
       </span>
       <span className="flex max-w-[40%] shrink-0 flex-col items-end text-right">

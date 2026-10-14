@@ -6,6 +6,7 @@ import feeds from "./migrations/0004-feeds.sql"
 import householdSettings from "./migrations/0005-household-settings.sql"
 import growth from "./migrations/0006-growth.sql"
 import sleeps from "./migrations/0007-sleeps.sql"
+import supplements from "./migrations/0008-supplements.sql"
 
 export const MIGRATIONS: ReadonlyArray<Migration> = [
   { name: "0001-household", sql: household },
@@ -15,4 +16,5 @@ export const MIGRATIONS: ReadonlyArray<Migration> = [
   { name: "0005-household-settings", sql: householdSettings },
   { name: "0006-growth", sql: growth },
   { name: "0007-sleeps", sql: sleeps },
+  { name: "0008-supplements", sql: supplements },
 ]

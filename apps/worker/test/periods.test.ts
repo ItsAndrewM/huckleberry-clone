@@ -39,6 +39,7 @@ describe("GET /api/days/:date", () => {
       diapers: [],
       sleeps: [],
       measurements: [],
+      doses: [],
     })
   })
 

@@ -1,4 +1,4 @@
-import type { DayPeriod, Diaper, Feed, Sleep } from "@bt/contracts"
+import type { DayPeriod, Diaper, Dose, Feed, Sleep } from "@bt/contracts"
 import type { Interval } from "@bt/domain"
 import { clockTime, dayClockTime, formatterFor } from "../../clock-time.ts"
 import type { Display } from "../today/display.ts"
@@ -10,6 +10,7 @@ interface Kept {
   readonly feeds: ReadonlyArray<Feed>
   readonly diapers: ReadonlyArray<Diaper>
   readonly sleeps: ReadonlyArray<Sleep>
+  readonly doses: ReadonlyArray<Dose>
 }
 
 const startOf = (entry: Entry) => {
@@ -20,14 +21,17 @@ const startOf = (entry: Entry) => {
       return entry.diaper.occurredAt
     case "sleep":
       return entry.sleep.startedAt
+    case "dose":
+      return entry.dose.occurredAt
   }
 }
 
-const entriesOf = ({ feeds, diapers, sleeps }: Kept): ReadonlyArray<Entry> =>
+const entriesOf = ({ feeds, diapers, sleeps, doses }: Kept): ReadonlyArray<Entry> =>
   [
     ...feeds.map((feed) => ({ kind: "feed", feed }) as const),
     ...diapers.map((diaper) => ({ kind: "diaper", diaper }) as const),
     ...sleeps.map((sleep) => ({ kind: "sleep", sleep }) as const),
+    ...doses.map((dose) => ({ kind: "dose", dose }) as const),
   ].toSorted((a, b) => startOf(a) - startOf(b))
 
 const nursedSpan = (feed: Feed): Interval | null => {
@@ -43,6 +47,7 @@ const spanOf = (entry: Entry): Interval | null => {
     case "feed":
       return nursedSpan(entry.feed)
     case "diaper":
+    case "dose":
       return null
     case "sleep":
       return sleptSpan(entry.sleep)
@@ -70,6 +75,6 @@ export const listRows = (day: DayPeriod, display: Display, now: number, hidden: 
 
 export const listNote = (day: DayPeriod, rows: ReadonlyArray<RecentRow>) => {
   if (rows.length > 0) return null
-  if (day.feeds.length > 0 || day.diapers.length > 0 || day.sleeps.length > 0) return "Nothing shown."
-  return day.measurements.length > 0 ? "No feeds, diapers or sleep." : null
+  if ([day.feeds, day.diapers, day.sleeps, day.doses].some((logged) => logged.length > 0)) return "Nothing shown."
+  return day.measurements.length > 0 ? "No feeds, diapers, sleep or supplements." : null
 }

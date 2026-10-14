@@ -1,5 +1,6 @@
 import {
   DiaperConflict,
+  DoseConflict,
   FeedConflict,
   InvalidInput,
   MeasurementConflict,
@@ -14,7 +15,7 @@ import type { DeletedRecord } from "../src/features/deleted/deleted-rows.ts"
 import { restoreFailure, restoreOf, restoreWaitReason, withoutEntry } from "../src/features/deleted/restore.ts"
 import type { Household } from "../src/sheets/failure.ts"
 import { measurement } from "./growth-fixtures.ts"
-import { ANDREW, diaperAt, EMILY, feedAt, MINUTE, NOW, nursedFor, sleptAt, ZONE } from "./today-fixtures.ts"
+import { ANDREW, diaperAt, dosedAt, EMILY, feedAt, MINUTE, NOW, nursedFor, sleptAt, ZONE } from "./today-fixtures.ts"
 
 const HOUSEHOLD = {
   caregivers: [
@@ -51,14 +52,17 @@ describe("restoreOf", () => {
     const diaper = diaperAt(NOW, { id: "diaper-1", version: 2, deletedAt: NOW })
     const feed = feedAt(NOW, { id: "feed-1", version: 4, deletedAt: NOW })
     const measured = { ...measurement("m1", NOW, { weightG: 4300 }), version: 3, deletedAt: NOW }
+    const dose = dosedAt(NOW, { id: "dose-1", version: 2, deletedAt: NOW })
     expect([
       restoreOf({ kind: "diaper", diaper }, ACTION_ID),
       restoreOf({ kind: "feed", feed }, ACTION_ID),
       restoreOf({ kind: "measurement", measurement: measured }, ACTION_ID),
+      restoreOf({ kind: "dose", dose }, ACTION_ID),
     ]).toEqual([
       { kind: "restoreDiaper", id: "diaper-1", payload: { actionId: ACTION_ID, version: 2 } },
       { kind: "restoreFeed", id: "feed-1", payload: { actionId: ACTION_ID, version: 4 } },
       { kind: "restoreMeasurement", id: "m1", payload: { actionId: ACTION_ID, version: 3 } },
+      { kind: "restoreDose", id: "dose-1", payload: { actionId: ACTION_ID, version: 2 } },
     ])
   })
 })
@@ -70,11 +74,13 @@ describe("withoutEntry", () => {
     const feed = feedAt(NOW, { id: "feed-1", deletedAt: NOW })
     const measured = { ...measurement("m1", NOW, { weightG: 4300 }), deletedAt: NOW }
     const nap = sleptAt(NOW - 120 * MINUTE, { id: "sleep-1", deletedAt: NOW })
-    const deleted = { feeds: [feed], diapers: [diaper, kept], sleeps: [nap], measurements: [measured] }
+    const dose = dosedAt(NOW - 180 * MINUTE, { id: "dose-1", deletedAt: NOW })
+    const deleted = { feeds: [feed], diapers: [diaper, kept], sleeps: [nap], measurements: [measured], doses: [dose] }
     expect(withoutEntry(deleted, "diaper-1")).toEqual({ ...deleted, diapers: [kept] })
     expect(withoutEntry(deleted, "feed-1")).toEqual({ ...deleted, feeds: [] })
     expect(withoutEntry(deleted, "m1")).toEqual({ ...deleted, measurements: [] })
     expect(withoutEntry(deleted, "sleep-1")).toEqual({ ...deleted, sleeps: [] })
+    expect(withoutEntry(deleted, "dose-1")).toEqual({ ...deleted, doses: [] })
   })
 })
 
@@ -125,6 +131,10 @@ describe("restoreFailure", () => {
     )
     expect(failure(new MeasurementConflict({ code: "STALE_VERSION", current: redeleted }))).toBe(
       "Emily changed this a moment ago.",
+    )
+    const dose = dosedAt(NOW, { version: 3, updatedBy: EMILY })
+    expect(failure(new DoseConflict({ code: "STALE_VERSION", current: dose }))).toBe(
+      "Emily restored this a moment ago.",
     )
   })
 

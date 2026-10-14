@@ -6,7 +6,7 @@ import { StaleNote } from "./stale-note.tsx"
 import { staleOf } from "./stale.ts"
 
 interface EditFailureProps {
-  readonly sheet: "editDiaper" | "editFeed" | "editSleep"
+  readonly sheet: "editDiaper" | "editFeed" | "editSleep" | "editDose"
   readonly display: Display
   readonly onUseTheirs: (current: RecentEntry) => void
 }

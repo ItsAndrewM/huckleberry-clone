@@ -3,7 +3,7 @@ import { heldFor } from "./held.ts"
 import type { Failed, Sending, SheetKind } from "./sending.ts"
 import type { Toast } from "./undo.ts"
 
-export type TimedSheet = "bottle" | "pastFeed" | "diaper" | "measurement" | "pastSleep" | "logAt"
+export type TimedSheet = "bottle" | "pastFeed" | "diaper" | "measurement" | "pastSleep" | "dose" | "logAt"
 
 export interface Sheets {
   readonly open: SheetKind | null
@@ -17,7 +17,7 @@ export interface Sheets {
   readonly queued: boolean
   readonly keeping: boolean
   readonly show: (sheet: SheetKind, editing?: string) => void
-  readonly showAt: (sheet: TimedSheet, at: number) => void
+  readonly showAt: (sheet: TimedSheet, at: number, editing?: string) => void
   readonly close: () => void
   readonly dismiss: (sheet: SheetKind) => void
   readonly keep: () => void

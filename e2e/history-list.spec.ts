@@ -4,12 +4,14 @@ import {
   DAY,
   type DayAnswer,
   dayHeading,
+  dose,
   emptyDay,
   local,
   NO_TOTALS,
   openHistory,
   playHistory,
   sleep,
+  stopVitaminD,
 } from "./played-day.ts"
 
 test.use({ timezoneId: "Europe/London" })
@@ -38,6 +40,7 @@ const playToday = (page: Page, activeFeed: DayAnswer["feeds"][number] | null = n
         lastSleep: null,
         prefill: { lastBottle: { breastMilkMl: 0, formulaMl: 90 }, lastSide: "left" },
         recent: [],
+        doses: [],
       },
     }),
   )
@@ -59,6 +62,24 @@ test("lists the day's feeds and diapers earliest first, each as Today shows it",
   await expect(rows.nth(5)).toContainText(/Bottle\s*90 mL\s*4:00\sAM/u)
   await expect(rows.nth(6)).toContainText(/Diaper\s*Pee and poo\s*5:30\sAM/u)
   await expect(rows.nth(7)).toContainText(/Nursing\s*In progress · Left 20 min\s*9:10\sAM/u)
+})
+
+test("lists a dose by its time among the feeds and diapers, and opens its details with Edit", async ({ page }) => {
+  const me = await (await page.request.get("/api/me")).json()
+  const vitaminD = me.household.supplements.find(({ name }: { name: string }) => name === "Vitamin D")
+  const { played, andrew, emily } = await playHistory(page, [emptyDay("2026-10-08")])
+  played.days.push({ ...busyDay(andrew, emily), doses: [dose("dose-1", vitaminD.id, local("02:15"), emily)] })
+  await openHistory(page, "?view=list")
+  const rows = theList(page).getByRole("listitem")
+  await expect(rows).toHaveCount(9)
+  await expect(rows.nth(3)).toContainText(/Vitamin D\s*400 IU\s*2:15\sAM\s*Emily \(local\)/u)
+  await theList(page)
+    .getByRole("button", { name: /^Vitamin D/u })
+    .click()
+  const details = page.getByRole("dialog", { name: "Vitamin D" })
+  await expect(details).toContainText("400 IU")
+  await details.getByRole("button", { name: "Edit" }).click()
+  await expect(page.getByRole("dialog", { name: "Edit dose" })).toContainText("Vitamin D · 400 IU")
 })
 
 test.describe("on a 320-pixel-wide phone", () => {
@@ -180,6 +201,44 @@ test("logs on an earlier day at the same clock time", async ({ page }) => {
     .getByRole("button", { name: "Bottle" })
     .click()
   await expect(page.getByRole("dialog", { name: "Bottle" }).getByLabel("When")).toHaveCount(0)
+})
+
+test("logs a supplement's dose at the same clock time on an earlier day, and at now on today", async ({ page }) => {
+  await playBusyDay(page)
+  await playToday(page)
+  await openHistory(page, "?view=list&date=2026-10-08")
+  await theList(page).getByRole("button", { name: "Log on this day…" }).click()
+  await page.getByRole("dialog", { name: "Log at 9:30 AM" }).getByRole("button", { name: "Vitamin D" }).click()
+  await expect(page.getByRole("dialog", { name: "Vitamin D" }).getByLabel("When")).toHaveValue("2026-10-08T09:30")
+  await page.keyboard.press("Escape")
+  await page.getByRole("link", { name: "Next day" }).click()
+  await theList(page).getByRole("button", { name: "Log on this day…" }).click()
+  await page
+    .getByRole("dialog", { name: /^Log\b/u })
+    .getByRole("button", { name: "Vitamin D" })
+    .click()
+  const sheet = page.getByRole("dialog", { name: "Vitamin D" })
+  await expect(sheet.getByText("Now", { exact: true })).toBeVisible()
+  await expect(sheet.getByLabel("When")).toHaveCount(0)
+})
+
+test("offers a supplement stopped since on an earlier day's menu, as it was in use then, but not at now on today", async ({
+  page,
+}) => {
+  const { played, andrew, emily, me } = await playHistory(page, [emptyDay("2026-10-08")])
+  played.days.push(busyDay(andrew, emily))
+  await stopVitaminD(page, me, local("07:00"))
+  await playToday(page)
+  await openHistory(page, "?view=list&date=2026-10-08")
+  await theList(page).getByRole("button", { name: "Log on this day…" }).click()
+  await page.getByRole("dialog", { name: "Log at 9:30 AM" }).getByRole("button", { name: "Vitamin D" }).click()
+  await expect(page.getByRole("dialog", { name: "Vitamin D" }).getByLabel("When")).toHaveValue("2026-10-08T09:30")
+  await page.keyboard.press("Escape")
+  await page.getByRole("link", { name: "Next day" }).click()
+  await theList(page).getByRole("button", { name: "Log on this day…" }).click()
+  const menu = page.getByRole("dialog", { name: /^Log\b/u })
+  await expect(menu.getByRole("button", { name: "Diaper" })).toBeVisible()
+  await expect(menu.getByRole("button", { name: "Vitamin D" })).toHaveCount(0)
 })
 
 test("logs on today as Today's buttons do: a diaper now, and a past feed from half an hour back", async ({ page }) => {

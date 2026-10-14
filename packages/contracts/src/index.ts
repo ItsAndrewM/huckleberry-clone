@@ -92,6 +92,22 @@ export {
   SleepStart,
 } from "./sleeps.ts"
 export { CAREGIVER_DISABLED, ChangedMessage, HEARTBEAT, SOCKET_PATH } from "./socket.ts"
+export {
+  Dose,
+  DoseConflict,
+  DoseEdit,
+  DosesGroup,
+  DoseText,
+  MAX_DOSE_LENGTH,
+  NewDose,
+  NewSupplement,
+  SavedDose,
+  SavedSupplement,
+  Supplement,
+  SupplementConflict,
+  SupplementEdit,
+  SupplementsGroup,
+} from "./supplements.ts"
 export { Instant, IsoWeek, LocalDate, TimeZone, YearMonth } from "./time.ts"
 export { Last24h, Prefill, RecentEntries, RecentEntry, Today, TodayGroup, Totals } from "./today.ts"
 export { Version, VersionedAction } from "./version.ts"

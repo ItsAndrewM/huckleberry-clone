@@ -4,7 +4,7 @@ import type { Action } from "../src/api/actions.ts"
 import { pendingToday, withdrawnToday } from "../src/api/today-cache.ts"
 import { ANDREW, feedAt, MINUTE, NOW, nursedFor, todayWith, ZONE } from "./today-fixtures.ts"
 
-const pending = { by: ANDREW, now: NOW, zone: ZONE }
+const pending = { by: ANDREW, now: NOW, zone: ZONE, supplements: [] }
 const EARLIER = feedAt(NOW - 180 * MINUTE)
 const TODAY = todayWith({
   totals: { ...todayWith().totals, feedsStarted: 1 },

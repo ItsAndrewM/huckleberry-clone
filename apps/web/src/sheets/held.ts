@@ -1,6 +1,6 @@
 import { FeedConflict, NotFound } from "@bt/contracts"
 import { StaleDraft } from "./drafts.ts"
-import { editsARecord, type Failed, type Sending, type SheetKind } from "./sending.ts"
+import { type Failed, opensOnOne, type Sending, type SheetKind } from "./sending.ts"
 
 const CANT_SAVE_AS_IS = new Set(["ACTION_REPLAY_MISMATCH", "FEED_ALREADY_ACTIVE", "SLEEP_ALREADY_ACTIVE"])
 
@@ -11,8 +11,13 @@ export const withoutAction = (held: ReadonlyArray<Failed>, actionId: string) =>
 
 export const recordOf = ({ action }: Sending): string | null => ("id" in action ? action.id : null)
 
+const supplementOf = ({ action }: Sending): string | null =>
+  action.kind === "logDose" ? action.payload.supplementId : null
+
+export const editingOf = (sending: Sending) => recordOf(sending) ?? supplementOf(sending)
+
 export const isOnOpening = ({ sending }: Failed, sheet: SheetKind | null, editing: string | null) =>
-  sending.sheet === sheet && (!editsARecord(sending.sheet) || recordOf(sending) === editing)
+  sending.sheet === sheet && (!opensOnOne(sending.sheet) || editingOf(sending) === editing)
 
 export const heldFor = (held: ReadonlyArray<Failed>, sheet: SheetKind, editing: string | null = null) =>
   held.find((failed) => isOnOpening(failed, sheet, editing)) ?? null

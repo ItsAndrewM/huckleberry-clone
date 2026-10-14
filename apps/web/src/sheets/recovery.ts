@@ -1,4 +1,4 @@
-import { DiaperConflict, FeedConflict, MeasurementConflict, SleepConflict } from "@bt/contracts"
+import { DiaperConflict, DoseConflict, FeedConflict, MeasurementConflict, SleepConflict } from "@bt/contracts"
 import { joined, mineAnyway, redone, redoneSleep } from "./redo.ts"
 import { diaperEdit, feedReplay, measurementReplay, sleepReplay } from "./save-changes.ts"
 import type { Failed, Recovery, Sending } from "./sending.ts"
@@ -45,7 +45,8 @@ const isConflict = (error: Error) =>
   error instanceof FeedConflict ||
   error instanceof DiaperConflict ||
   error instanceof MeasurementConflict ||
-  error instanceof SleepConflict
+  error instanceof SleepConflict ||
+  error instanceof DoseConflict
 
 export const offersOk = ({ sending, error }: Failed) =>
   isConflict(error) &&

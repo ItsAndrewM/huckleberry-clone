@@ -10,6 +10,8 @@ import { dayOf, monthOf, weekOf } from "../src/core/periods.ts"
 import { deleteSleep } from "../src/core/sleeps/edits.ts"
 import { startSleep } from "../src/core/sleeps/lifecycle.ts"
 import { logSleep } from "../src/core/sleeps/log.ts"
+import { deleteDose } from "../src/core/supplements/dose-writes.ts"
+import { dosedAt } from "./dose-fixtures.ts"
 import { bottle, newFeed, segment } from "./feed-fixtures.ts"
 import {
   ACTION_ID,
@@ -79,6 +81,7 @@ describe("dayOf", () => {
       diapers: [],
       sleeps: [],
       measurements: [],
+      doses: [],
     })
   })
 
@@ -271,6 +274,20 @@ describe("dayOf, for sleep", () => {
       return { first, second, day: dayOf(sql, "2026-10-08", NOW) }
     })
     expect(day.sleeps).toEqual([first, second])
+  })
+})
+
+describe("dayOf, for doses", () => {
+  it("lists the day's doses in time order, from its first moment to before the next day's, counting none in the totals and leaving a deleted one out", async () => {
+    const { first, later, day } = await inHousehold((sql) => {
+      const later = dosedAt(sql, minutesAgo(30))
+      const first = dosedAt(sql, OCT_8.start)
+      dosedAt(sql, OCT_8.end, OCT_8.end)
+      const deleted = dosedAt(sql, minutesAgo(90))
+      saved(deleteDose(stampOf(sql), deleted.id, { actionId: crypto.randomUUID(), version: 1 })(sql))
+      return { first, later, day: dayOf(sql, "2026-10-08", NOW) }
+    })
+    expect(day).toMatchObject({ totals: NO_TOTALS, doses: [first, later] })
   })
 })
 

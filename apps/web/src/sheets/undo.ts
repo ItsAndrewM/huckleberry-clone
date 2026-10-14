@@ -1,4 +1,4 @@
-import type { Diaper, Feed, Sleep, VersionedPortion } from "@bt/contracts"
+import type { Diaper, Dose, Feed, Sleep, VersionedPortion } from "@bt/contracts"
 import type { Action } from "../api/actions.ts"
 import { Offline } from "../api/errors.ts"
 import type { Saved } from "../api/send.ts"
@@ -43,9 +43,15 @@ const undoSleep = (action: Action, { id, version }: Sleep, actionId: string): Ac
   return action.kind === "deleteSleep" ? { kind: "restoreSleep", id, payload: { actionId, version } } : null
 }
 
+const undoDose = (action: Action, { id, version }: Dose, actionId: string): Action | null => {
+  if (action.kind === "logDose") return { kind: "deleteDose", id, payload: { actionId, version } }
+  return action.kind === "deleteDose" ? { kind: "restoreDose", id, payload: { actionId, version } } : null
+}
+
 export const undoOf = ({ action }: Sending, saved: Saved, actionId: string): Action | null => {
   if ("sleep" in saved) return undoSleep(action, saved.sleep, actionId)
   if ("feed" in saved) return undoFeed(action, saved.feed, actionId)
+  if ("dose" in saved) return undoDose(action, saved.dose, actionId)
   return "diaper" in saved ? undoDiaper(action, saved.diaper, actionId) : null
 }
 
@@ -59,6 +65,8 @@ const MESSAGES = new Map<Action["kind"], string>([
   ["logSleep", "Sleep saved"],
   ["startSleep", "Sleep started"],
   ["deleteSleep", "Sleep deleted"],
+  ["logDose", "Dose saved"],
+  ["deleteDose", "Dose deleted"],
 ])
 
 const messageOf = ({ sheet, action }: Sending, saved: Saved): string | null => {
@@ -76,6 +84,11 @@ export const toastFor = (sending: Sending, saved: Saved, now: number): Toast | n
 
 export const restoredToast = (saved: Saved, now: number, actionId: string): Toast => {
   const until = now + TOAST_MS
+  if ("dose" in saved) {
+    const { id, version } = saved.dose
+    const action = { kind: "deleteDose", id, payload: { actionId, version } } as const
+    return { message: "Dose restored", undo: { sheet: "undo", action }, until }
+  }
   if ("diaper" in saved) {
     const { id, version } = saved.diaper
     const action = { kind: "deleteDiaper", id, payload: { actionId, version } } as const

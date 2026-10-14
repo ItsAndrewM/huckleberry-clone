@@ -21,7 +21,12 @@ interface DayGridProps {
   readonly onOpen: (ids: ReadonlyArray<string>) => void
 }
 
-const MARKER_ICONS = { bottle: KIND_ICONS.bottle, diaper: KIND_ICONS.diaper, several: LayersIcon } as const
+const MARKER_ICONS = {
+  bottle: KIND_ICONS.bottle,
+  diaper: KIND_ICONS.diaper,
+  dose: KIND_ICONS.dose,
+  several: LayersIcon,
+} as const
 
 const scrollIntoMiddle = (node: HTMLDivElement | null) => node?.scrollIntoView({ block: "center" })
 

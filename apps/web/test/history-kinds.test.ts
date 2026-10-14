@@ -15,6 +15,7 @@ describe("History's filters", () => {
 
   it("keeps a tidy address: known kinds in order, or none", () => {
     expect(hideInSearch("growth,sleep,diapers,growth")).toBe("diapers,sleep,growth")
+    expect(hideInSearch("supplements,growth,sleep")).toBe("sleep,growth,supplements")
     expect(hideInSearch("unknown")).toBeUndefined()
     expect(hideInSearch("")).toBeUndefined()
     expect(hideInSearch(3)).toBeUndefined()
@@ -22,8 +23,8 @@ describe("History's filters", () => {
   })
 
   it("hides every kind a filter's chips leave off", () => {
-    expect([...hiddenExcept(["feeds"])]).toEqual(["diapers", "sleep", "growth"])
-    expect(hiddenExcept(["feeds", "diapers", "sleep", "growth"]).size).toBe(0)
+    expect([...hiddenExcept(["feeds"])]).toEqual(["diapers", "sleep", "growth", "supplements"])
+    expect(hiddenExcept(["feeds", "diapers", "sleep", "growth", "supplements"]).size).toBe(0)
   })
 })
 

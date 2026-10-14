@@ -1,8 +1,9 @@
-import type { Deleted, Diaper, Feed, Me, Measurement, Sleep } from "@bt/contracts"
+import type { Deleted, Diaper, Dose, Feed, Me, Measurement, Sleep } from "@bt/contracts"
 import { sleepElapsed } from "@bt/domain"
 import { dateClockTime } from "../../clock-time.ts"
 import { formatMeasurement } from "../growth/format.ts"
 import { GROWTH_METRICS } from "../growth/metrics.ts"
+import { supplementName } from "../today/display.ts"
 import { feedParts, feedTitle } from "../today/feed-parts.ts"
 import { runningSide } from "../today/feed-status.ts"
 import { formatMinutes } from "../today/format.ts"
@@ -13,8 +14,9 @@ export type DeletedRecord =
   | { readonly kind: "diaper"; readonly diaper: Diaper }
   | { readonly kind: "measurement"; readonly measurement: Measurement }
   | { readonly kind: "sleep"; readonly sleep: Sleep }
+  | { readonly kind: "dose"; readonly dose: Dose }
 
-export type DeletedIcon = "nursing" | "bottle" | "diaper" | "measurement" | "sleep"
+export type DeletedIcon = "nursing" | "bottle" | "diaper" | "measurement" | "sleep" | "dose"
 
 export interface DeletedRow {
   readonly id: string
@@ -104,10 +106,19 @@ const sleepDescribed = (sleep: Sleep): Described => ({
   at: sleep.startedAt,
 })
 
+const doseDescribed = (dose: Dose, me: Me): Described => ({
+  record: { kind: "dose", dose },
+  icon: "dose",
+  title: supplementName(me.household, dose.supplementId),
+  detail: dose.dose === "" ? [] : [dose.dose],
+  at: dose.occurredAt,
+})
+
 export const deletedRows = (deleted: Deleted, me: Me, locale?: string): ReadonlyArray<DeletedRow> =>
   [
     ...deleted.feeds.map((feed) => rowOf(me, feed, feedDescribed(feed, me), locale)),
     ...deleted.diapers.map((diaper) => rowOf(me, diaper, diaperDescribed(diaper), locale)),
     ...deleted.sleeps.map((sleep) => rowOf(me, sleep, sleepDescribed(sleep), locale)),
     ...deleted.measurements.map((measurement) => rowOf(me, measurement, measurementDescribed(measurement, me), locale)),
+    ...deleted.doses.map((dose) => rowOf(me, dose, doseDescribed(dose, me), locale)),
   ].toSorted((a, b) => b.deletedAt - a.deletedAt)

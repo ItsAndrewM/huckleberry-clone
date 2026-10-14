@@ -5,7 +5,7 @@ import { useApp } from "../app-context.ts"
 import type { SheetKind } from "./sending.ts"
 import type { SheetsState } from "./sheets-state.ts"
 
-const TODAY_SHEETS = new Set<SheetKind>(["diaper", "bottle", "nursing", "pastFeed", "sleep", "pastSleep"])
+const TODAY_SHEETS = new Set<SheetKind>(["diaper", "bottle", "nursing", "pastFeed", "sleep", "pastSleep", "dose"])
 
 export const useReopenWhenReady = (state: SheetsState, reopen: () => void) => {
   const { api } = useApp()

@@ -32,7 +32,7 @@ export const StaleNote = ({ failed, stale, display, onUseTheirs }: StaleNoteProp
   }
   return (
     <div role="alert" className="flex flex-col gap-3 rounded-lg bg-destructive/10 p-3 text-sm text-destructive">
-      <p>{staleMessage(display, stale, now)}</p>
+      <p className="break-words">{staleMessage(display, stale, now)}</p>
       {gone ? (
         <Button variant="outline" size="lg" onClick={leave}>
           OK

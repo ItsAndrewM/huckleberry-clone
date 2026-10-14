@@ -49,6 +49,8 @@ describe("GET /api/export.json", () => {
       "household",
       "nursing_segments",
       "sleeps",
+      "supplement_logs",
+      "supplements",
     ])
   })
 
@@ -137,7 +139,7 @@ describe("GET /api/export.csv", () => {
     expect(response.headers.get("content-type")).toBe("text/csv; charset=utf-8")
     const [header, diaper] = (await response.text()).split("\r\n")
     expect(header?.startsWith("Kind,Start,End,")).toBe(true)
-    expect(diaper).toBe("Diaper,2026-10-08 11:00,,,,,,yes,,,,,,,Andrew")
+    expect(diaper).toBe("Diaper,2026-10-08 11:00,,,,,,yes,,,,,,,,,Andrew")
   })
 
   it("is refused to someone who isn't a caregiver", async () => {

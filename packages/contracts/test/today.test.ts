@@ -1,6 +1,16 @@
 import { Exit, Schema } from "effect"
 import { describe, expect, it } from "vitest"
-import { type Diaper, Last24h, Prefill, RecentEntries, RecentEntry, type Sleep, Today, Totals } from "../src/index.ts"
+import {
+  type Diaper,
+  type Dose,
+  Last24h,
+  Prefill,
+  RecentEntries,
+  RecentEntry,
+  type Sleep,
+  Today,
+  Totals,
+} from "../src/index.ts"
 
 const AT = Date.UTC(2026, 9, 8, 14, 30)
 
@@ -48,6 +58,20 @@ const SLEEP: Sleep = {
   deletedAt: null,
 }
 
+const DOSE: Dose = {
+  id: "dose-1",
+  supplementId: "supplement-1",
+  occurredAt: AT,
+  localDate: "2026-10-08",
+  dose: "400 IU",
+  version: 1,
+  createdBy: "caregiver-1",
+  createdAt: AT,
+  updatedBy: "caregiver-1",
+  updatedAt: AT,
+  deletedAt: null,
+}
+
 const TODAY = {
   date: "2026-10-08",
   totals: TOTALS,
@@ -57,6 +81,7 @@ const TODAY = {
   lastSleep: null,
   prefill: { lastBottle: null, lastSide: null },
   recent: [],
+  doses: [],
 }
 
 const decodes = <A, I extends Schema.Json>(schema: Schema.Codec<A, I>, input: Schema.Json) =>
@@ -98,6 +123,11 @@ describe("a recent entry", () => {
     expect(decodes(RecentEntry, { kind: "sleep", sleep: { ...SLEEP, endedAt: AT + 3_600_000 } })).toBe(true)
     expect(decodes(RecentEntry, { kind: "sleep", sleep: DIAPER })).toBe(false)
   })
+
+  it("carries a dose of a supplement", () => {
+    expect(decodes(RecentEntry, { kind: "dose", dose: DOSE })).toBe(true)
+    expect(decodes(RecentEntry, { kind: "dose", diaper: DIAPER })).toBe(false)
+  })
 })
 
 describe("Last24h", () => {
@@ -112,11 +142,11 @@ describe("Today", () => {
     expect(decodes(Today, TODAY)).toBe(true)
   })
 
-  it("still reads when a later version adds a field, as M3.3's doses will be", () => {
-    expect(decodes(Today, { ...TODAY, doses: [] })).toBe(true)
+  it("still reads when a later version adds a field", () => {
+    expect(decodes(Today, { ...TODAY, fieldFromALaterVersion: [] })).toBe(true)
   })
 
-  it.each(["activeSleep", "lastSleep"])("refuses an answer without its %s", (field) => {
+  it.each(["activeSleep", "lastSleep", "doses"])("refuses an answer without its %s", (field) => {
     const without = Object.fromEntries(Object.entries(TODAY).filter(([key]) => key !== field))
     expect(decodes(Today, without)).toBe(false)
   })
@@ -125,17 +155,19 @@ describe("Today", () => {
 describe("Today's recent entries", () => {
   const decodeRecent = Schema.decodeUnknownSync(Schema.toCodecJson(RecentEntries))
   const SECOND = { kind: "diaper", diaper: { ...DIAPER, id: "diaper-2" } }
-  const DOSE = { kind: "dose", dose: { id: "dose-1", takenAt: AT } }
+  const LATER = { kind: "kindFromALaterVersion", kindFromALaterVersion: { id: "later-1", at: AT } }
 
-  it("skips an entry of a kind this app doesn't know yet, such as M3.3's dose, and keeps the rest in order", () => {
-    expect(decodeRecent([{ kind: "diaper", diaper: DIAPER }, DOSE, SECOND])).toEqual([
+  it("skips an entry of a kind this app doesn't know yet, as a later version may add, and keeps the rest in order", () => {
+    expect(decodeRecent([{ kind: "diaper", diaper: DIAPER }, LATER, SECOND])).toEqual([
       { kind: "diaper", diaper: DIAPER },
       SECOND,
     ])
   })
 
-  it("keeps a sleep, beside the feeds and diapers", () => {
-    expect(decodeRecent([{ kind: "sleep", sleep: SLEEP }, SECOND])).toEqual([{ kind: "sleep", sleep: SLEEP }, SECOND])
+  it("keeps a sleep and a dose, beside the feeds and diapers", () => {
+    const sleep = { kind: "sleep", sleep: SLEEP }
+    const dose = { kind: "dose", dose: DOSE }
+    expect(decodeRecent([sleep, dose, SECOND])).toEqual([sleep, dose, SECOND])
   })
 
   it("skips an entry it can't read, as the socket skips a key it can't read", () => {
@@ -149,6 +181,6 @@ describe("Today's recent entries", () => {
   })
 
   it("lets Today decode while its recent list holds a kind this app doesn't know", () => {
-    expect(decodes(Today, { ...TODAY, recent: [DOSE, { kind: "diaper", diaper: DIAPER }] })).toBe(true)
+    expect(decodes(Today, { ...TODAY, recent: [LATER, { kind: "diaper", diaper: DIAPER }] })).toBe(true)
   })
 })

@@ -1,5 +1,7 @@
+import { SavedSupplement } from "@bt/contracts"
 import { addDaysToDate, isoWeekOfDate, localDateOf, monthOfDate } from "@bt/domain"
 import { runInDurableObject } from "cloudflare:test"
+import { Schema } from "effect"
 import { expect, it } from "vitest"
 import { calendarOf } from "../src/core/calendar.ts"
 import { ANDREW, SEED, seededHousehold } from "./fixtures.ts"
@@ -66,6 +68,27 @@ const timeSleepWrites = async (household: Household, end: number): Promise<Timin
   return { label: "A sleep write, with its overlap check", times, bytes: null }
 }
 
+const timeDoseWrites = async (household: Household, end: number): Promise<Timing> => {
+  const added = await send(
+    household,
+    "POST",
+    "/api/supplements",
+    JSON.stringify({ actionId: crypto.randomUUID(), name: "Iron", dose: "1 mL" }),
+  )
+  const { supplement } = Schema.decodeUnknownSync(Schema.toCodecJson(SavedSupplement))(await added.json())
+  const times: number[] = []
+  for (let run = 0; run < RUNS; run++) {
+    const occurredAt = end - (run + 1) * 24 * 60 * MINUTE_MS
+    const dose = { actionId: crypto.randomUUID(), supplementId: supplement.id, occurredAt, confirmedDuplicate: false }
+    const begun = performance.now()
+    const response = await send(household, "POST", "/api/doses", JSON.stringify(dose))
+    const body = await response.text()
+    times.push(performance.now() - begun)
+    if (!response.ok) throw new Error(`POST /api/doses answered ${response.status}: ${body}`)
+  }
+  return { label: "A dose write, with its same-day check", times, bytes: null }
+}
+
 const milliseconds = (value: number) => `${value.toFixed(0)} ms`
 
 const row = (timing: Timing) =>
@@ -84,7 +107,7 @@ const report = (counts: ReadonlyArray<readonly [string, number]>, timings: Reado
     ...timings.map(row),
   ].join("\n")
 
-it("times the reads and two writes over two years of heavy logging", { timeout: 600_000 }, async () => {
+it("times the reads and three writes over two years of heavy logging", { timeout: 600_000 }, async () => {
   const household = await seededHousehold({ ...SEED, child: { ...SEED.child, birthDate: "2024-10-01" } })
   const end = Date.now()
   const { zone, counts } = await runInDurableObject(household, (_instance, state) => {
@@ -98,6 +121,7 @@ it("times the reads and two writes over two years of heavy logging", { timeout: 
     ["bottle_portions", feeds],
     ["diapers", TWO_YEARS.days * TWO_YEARS.diapersADay],
     ["sleeps", TWO_YEARS.days * TWO_YEARS.sleepsADay],
+    ["supplement_logs", TWO_YEARS.days * TWO_YEARS.dosesADay],
     ["growth_measurements", Math.ceil(TWO_YEARS.days / 7)],
   ])
   const today = localDateOf(end, zone)
@@ -117,6 +141,7 @@ it("times the reads and two writes over two years of heavy logging", { timeout: 
     await timeRead(household, "Export, JSON", "/api/export.json"),
     await timeFeedWrites(household, end),
     await timeSleepWrites(household, end),
+    await timeDoseWrites(household, end),
   ]
   console.log(report(counts, timings))
 })

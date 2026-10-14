@@ -1,4 +1,4 @@
-import type { Feed, RecentEntry, Today, Totals } from "@bt/contracts"
+import type { Feed, Me, RecentEntry, Supplement, Today, Totals } from "@bt/contracts"
 import {
   type DiaperChange,
   type Instant,
@@ -12,7 +12,15 @@ import type { Author } from "./pending.ts"
 
 export interface Pending extends Author {
   readonly zone: string
+  readonly supplements: ReadonlyArray<Supplement>
 }
+
+export const pendingOf = (me: Me, now: Instant): Pending => ({
+  by: me.caregiver.id,
+  now,
+  zone: me.household.timeZone,
+  supplements: me.household.supplements,
+})
 
 export interface Change {
   readonly feeds: ReadonlyArray<StartedFeed>
@@ -29,6 +37,8 @@ export const recordOf = (entry: RecentEntry) => {
       return entry.diaper
     case "sleep":
       return entry.sleep
+    case "dose":
+      return entry.dose
   }
 }
 
@@ -42,14 +52,24 @@ export const timeOf = (entry: RecentEntry) => {
       return entry.diaper.occurredAt
     case "sleep":
       return entry.sleep.startedAt
+    case "dose":
+      return entry.dose.occurredAt
   }
 }
 
 export const versionOf = (entry: RecentEntry) => recordOf(entry).version
 
 export const changeOf = (entry: RecentEntry | null): Change => {
-  if (entry === null || entry.kind === "sleep") return NOTHING
-  return entry.kind === "feed" ? { feeds: [entry.feed], diapers: [] } : { feeds: [], diapers: [entry.diaper] }
+  if (entry === null) return NOTHING
+  switch (entry.kind) {
+    case "feed":
+      return { feeds: [entry.feed], diapers: [] }
+    case "diaper":
+      return { feeds: [], diapers: [entry.diaper] }
+    case "sleep":
+    case "dose":
+      return NOTHING
+  }
 }
 
 export const without = (recent: ReadonlyArray<RecentEntry>, id: string) => recent.filter((entry) => idOf(entry) !== id)

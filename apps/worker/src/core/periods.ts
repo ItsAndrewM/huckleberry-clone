@@ -19,6 +19,7 @@ import { liveDiapersIn } from "./diapers.ts"
 import { liveFeedsTouching } from "./feeds/reads.ts"
 import { liveMeasurementsIn } from "./growth.ts"
 import { liveSleepsTouching } from "./sleeps/reads.ts"
+import { liveDosesIn } from "./supplements/doses.ts"
 
 const read = (sql: SqlStorage, zone: TimeZone, bounds: Interval, dates: ReadonlyArray<LocalDate>, now: Instant) => {
   const feeds = liveFeedsTouching(sql, bounds, now)
@@ -27,7 +28,8 @@ const read = (sql: SqlStorage, zone: TimeZone, bounds: Interval, dates: Readonly
   const days = totalsByDay(dates, zone, { feeds, diapers, sleeps }, now)
   const totals = sumTotals(days.map((day) => day.totals))
   const measurements = liveMeasurementsIn(sql, bounds)
-  return { days, period: { bounds, asOf: now, totals, feeds, diapers, sleeps, measurements } }
+  const doses = liveDosesIn(sql, bounds)
+  return { days, period: { bounds, asOf: now, totals, feeds, diapers, sleeps, measurements, doses } }
 }
 
 export const dayOf = (sql: SqlStorage, date: LocalDate, now: Instant): DayPeriod => {

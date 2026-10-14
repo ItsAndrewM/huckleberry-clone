@@ -7,7 +7,15 @@ import { deletedQuery } from "./deleted.ts"
 import { growthQuery } from "./growth.ts"
 import { meQuery } from "./me.ts"
 import { monthQuery } from "./month.ts"
-import { type ChildFields, type HouseholdChange, rememberSaved, saveChild, saveHousehold } from "./settings.ts"
+import {
+  type ChildFields,
+  type HouseholdChange,
+  rememberSaved,
+  saveChild,
+  saveHousehold,
+  withSavedHousehold,
+} from "./settings.ts"
+import { type SupplementSave, saveSupplement, withSavedSupplement } from "./supplements.ts"
 import { last24hQuery, todayQuery, untilNextDay } from "./today.ts"
 import { weekQuery } from "./week.ts"
 
@@ -68,11 +76,7 @@ export const useSaveHousehold = () => {
     mutationFn: ({ household, change }: { readonly household: Household; readonly change: HouseholdChange }) =>
       saveHousehold(api, household, change),
     onSuccess: ({ household, changed }) =>
-      rememberSaved(
-        queryClient,
-        (me) => ({ ...me, household: { ...household, caregivers: me.household.caregivers } }),
-        changed,
-      ),
+      rememberSaved(queryClient, (me) => withSavedHousehold(me, household), changed),
   })
 }
 
@@ -87,3 +91,15 @@ export const useSaveChild = () => {
 }
 
 export type SaveChild = ReturnType<typeof useSaveChild>
+
+export const useSaveSupplement = () => {
+  const { api } = useApp()
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ shown, fields, addActionId }: SupplementSave) => saveSupplement(api, shown, fields, addActionId),
+    onSuccess: ({ supplement, changed }) =>
+      rememberSaved(queryClient, (me) => withSavedSupplement(me, supplement), changed),
+  })
+}
+
+export type SaveSupplement = ReturnType<typeof useSaveSupplement>

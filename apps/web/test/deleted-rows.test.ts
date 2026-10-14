@@ -2,7 +2,18 @@ import type { Deleted, Me } from "@bt/contracts"
 import { describe, expect, it } from "vitest"
 import { type DeletedRow, deletedRows } from "../src/features/deleted/deleted-rows.ts"
 import { measurement, meWith } from "./growth-fixtures.ts"
-import { ANDREW, diaperAt, EMILY, feedAt, MINUTE, NOW, nursedFor, sleptAt } from "./today-fixtures.ts"
+import {
+  ANDREW,
+  diaperAt,
+  dosedAt,
+  EMILY,
+  feedAt,
+  MINUTE,
+  NOW,
+  nursedFor,
+  sleptAt,
+  supplementOf,
+} from "./today-fixtures.ts"
 
 const ME = {
   ...meWith(),
@@ -15,7 +26,7 @@ const ME = {
   },
 } satisfies Me
 
-const NOTHING = { feeds: [], diapers: [], sleeps: [], measurements: [] } satisfies Deleted
+const NOTHING = { feeds: [], diapers: [], sleeps: [], measurements: [], doses: [] } satisfies Deleted
 
 const deletedBy = (by: string, at: number) => ({ updatedBy: by, updatedAt: at, deletedAt: at })
 
@@ -38,6 +49,7 @@ describe("deletedRows", () => {
       measurements: [
         { ...measurement("m1", NOW - 120 * MINUTE, { weightG: 4210.5 }), ...deletedBy(ANDREW, NOW - 20 * MINUTE) },
       ],
+      doses: [],
     } satisfies Deleted
     expect(deletedRows(deleted, ME, "en-US").map(({ id }) => id)).toEqual(["diaper-1", "m1", "feed-1"])
   })
@@ -94,6 +106,19 @@ describe("deletedRows", () => {
     const [row] = deletedRows({ ...NOTHING, measurements: [measured] }, ME, "en-US")
     expect(row).toMatchObject({ icon: "measurement", record: { kind: "measurement", measurement: measured } })
     expect(spaced(row)).toMatchObject({ title: "Measurement", detail: ["Weight 4.21 kg", "Head 37.5 cm"] })
+  })
+
+  it("names a deleted dose by its supplement as it is now, with the dose it was given at", () => {
+    const me = { ...ME, household: { ...ME.household, supplements: [supplementOf({ name: "Vitamin D3" })] } }
+    const dose = dosedAt(NOW - 120 * MINUTE, { id: "dose-1", ...deletedBy(EMILY, NOW - 10 * MINUTE) })
+    const [row] = deletedRows({ ...NOTHING, doses: [dose] }, me, "en-US")
+    expect(row).toMatchObject({ id: "dose-1", icon: "dose", record: { kind: "dose", dose } })
+    expect(spaced(row)).toEqual({
+      title: "Vitamin D3",
+      detail: ["400 IU"],
+      when: "Fri, Oct 9, 7:30 AM",
+      deleted: ["Deleted by Emily", "Fri, Oct 9, 9:20 AM"],
+    })
   })
 
   it("says only when an entry was deleted when it can't name who did", () => {

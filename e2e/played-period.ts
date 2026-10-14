@@ -72,6 +72,7 @@ export const periodOf = (dates: ReadonlyArray<string>, days: Readonly<Record<str
     diapers: [],
     sleeps: [],
     measurements: [],
+    doses: [],
   }
 }
 

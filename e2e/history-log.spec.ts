@@ -1,5 +1,5 @@
 import { expect, type Page, test } from "@playwright/test"
-import { DAY, diaper, emptyDay, local, NO_TOTALS, openHistory, playHistory } from "./played-day.ts"
+import { DAY, diaper, dose, emptyDay, local, NO_TOTALS, openHistory, playHistory, stopVitaminD } from "./played-day.ts"
 
 const HOUR_PX = 60
 const BOTTLE_WAITS = "Bottle opens once Today loads."
@@ -9,6 +9,7 @@ const OPENS_WITHOUT_TODAY = [
   { choice: "Diaper", sheet: "Diaper", field: "When" },
   { choice: "Sleep", sheet: "Past sleep", field: "Fell asleep" },
   { choice: "Measurement", sheet: "Add measurement", field: "When" },
+  { choice: "Vitamin D", sheet: "Vitamin D", field: "When" },
 ]
 
 test.use({ timezoneId: "Europe/London" })
@@ -31,6 +32,7 @@ const playToday = (page: Page) =>
         lastSleep: null,
         prefill: { lastBottle: { breastMilkMl: 0, formulaMl: 90 }, lastSide: null },
         recent: [],
+        doses: [],
       },
     }),
   )
@@ -72,7 +74,7 @@ test("opens Nursing at the slot as a past feed, and Bottle there too", async ({ 
   await expect(page.getByRole("dialog", { name: "Bottle" }).getByLabel("When")).toHaveValue("2026-10-09T04:45")
 })
 
-test("keeps Bottle waiting while Today can't be loaded, and says why, while the other four open at the slot", async ({
+test("keeps Bottle waiting while Today can't be loaded, and says why, while the rest open at the slot", async ({
   page,
 }) => {
   await playHistory(page, [emptyDay(DAY)])
@@ -94,6 +96,43 @@ test("keeps Bottle waiting while Today can't be loaded, and says why, while the 
     await page.keyboard.press("Escape")
     await expect(opened).toBeHidden()
   }
+})
+
+test("opens a supplement's dose sheet at the slot, and logs the dose there", async ({ page }) => {
+  const me = await (await page.request.get("/api/me")).json()
+  const vitaminD = me.household.supplements.find(({ name }: { name: string }) => name === "Vitamin D")
+  const { played, andrew } = await playHistory(page, [emptyDay(DAY)])
+  const sent: Array<{ supplementId: string; occurredAt: number }> = []
+  await page.route("**/api/doses", async (route) => {
+    const body = route.request().postDataJSON()
+    sent.push({ supplementId: body.supplementId, occurredAt: body.occurredAt })
+    const saved = dose(`dose-${body.actionId}`, body.supplementId, body.occurredAt, andrew)
+    played.days.splice(0, 1, { ...emptyDay(DAY), doses: [saved] })
+    await route.fulfill({ status: 201, json: { dose: saved, changed: [["today"], ["day", DAY]] } })
+  })
+  await openHistory(page)
+  await tapHour(page, "7 AM", 40)
+  await page.getByRole("dialog", { name: "Log at 7:30 AM" }).getByRole("button", { name: "Vitamin D" }).click()
+  const sheet = page.getByRole("dialog", { name: "Vitamin D" })
+  await expect(sheet.getByLabel("When")).toHaveValue("2026-10-09T07:30")
+  await sheet.getByRole("button", { name: "Log Vitamin D" }).click()
+  await expect.poll(() => sent).toEqual([{ supplementId: vitaminD.id, occurredAt: local("07:30") }])
+  await expect(page.getByRole("button", { name: /^Vitamin D at 7:30\sAM: 400 IU$/u })).toBeVisible()
+})
+
+test("offers a supplement stopped at 8:00 at a slot before it, and leaves it out of one after", async ({ page }) => {
+  const { me } = await playHistory(page, [emptyDay(DAY)])
+  await stopVitaminD(page, me, local("08:00"))
+  await openHistory(page)
+  await tapHour(page, "7 AM", 40)
+  const before = page.getByRole("dialog", { name: "Log at 7:30 AM" })
+  await expect(before.getByRole("button", { name: "Vitamin D" })).toBeVisible()
+  await page.keyboard.press("Escape")
+  await expect(page.getByRole("dialog")).toHaveCount(0)
+  await tapHour(page, "8 AM", 50)
+  const after = page.getByRole("dialog", { name: "Log at 8:45 AM" })
+  await expect(after.getByRole("button", { name: "Diaper" })).toBeVisible()
+  await expect(after.getByRole("button", { name: "Vitamin D" })).toHaveCount(0)
 })
 
 test("opens Measurement at the slot", async ({ page }) => {

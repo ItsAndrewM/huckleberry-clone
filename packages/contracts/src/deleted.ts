@@ -4,6 +4,7 @@ import { Diaper } from "./diapers.ts"
 import { Feed } from "./feeds.ts"
 import { Measurement } from "./growth.ts"
 import { Sleep } from "./sleeps.ts"
+import { Dose } from "./supplements.ts"
 
 export const RECENTLY_DELETED_DAYS = 30
 
@@ -12,6 +13,7 @@ export const Deleted = Schema.Struct({
   diapers: Schema.Array(Diaper),
   sleeps: Schema.Array(Sleep),
   measurements: Schema.Array(Measurement),
+  doses: Schema.Array(Dose),
 })
 export type Deleted = typeof Deleted.Type
 

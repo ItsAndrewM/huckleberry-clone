@@ -63,7 +63,7 @@ export const SheetsProvider = ({ restored, children }: SheetsProviderProps) => {
     keeping: kept.keeping,
     busy: mutation.isPending ? (mutation.variables ?? null) : null,
     show: (sheet, record) => setState((current) => shownState(current, sheet, record ?? null)),
-    showAt: (sheet, time) => setState((current) => shownState(current, sheet, null, time)),
+    showAt: (sheet, time, record) => setState((current) => shownState(current, sheet, record ?? null, time)),
     close: () => setState(dismissedState),
     dismiss,
     keep: () => setState(keptState),

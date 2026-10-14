@@ -126,10 +126,25 @@ interface DiaperAnswer {
   readonly deletedAt: number | null
 }
 
+export interface DoseAnswer {
+  readonly id: string
+  readonly supplementId: string
+  readonly occurredAt: number
+  readonly localDate: string
+  readonly dose: string
+  readonly version: number
+  readonly createdBy: string
+  readonly createdAt: number
+  readonly updatedBy: string
+  readonly updatedAt: number
+  readonly deletedAt: number | null
+}
+
 type RecentAnswer =
   | { readonly kind: "feed"; readonly feed: FeedAnswer }
   | { readonly kind: "diaper"; readonly diaper: DiaperAnswer }
   | { readonly kind: "sleep"; readonly sleep: SleepAnswer }
+  | { readonly kind: "dose"; readonly dose: DoseAnswer }
 
 export interface TodayAnswer {
   readonly date: string
@@ -140,6 +155,7 @@ export interface TodayAnswer {
   readonly lastSleep: SleepAnswer | null
   readonly prefill: Prefill
   readonly recent: ReadonlyArray<RecentAnswer>
+  readonly doses: ReadonlyArray<DoseAnswer>
 }
 
 export const todayWith = (activeFeed: FeedAnswer | null = null, prefill = NO_PREFILL): TodayAnswer => ({
@@ -151,6 +167,7 @@ export const todayWith = (activeFeed: FeedAnswer | null = null, prefill = NO_PRE
   lastSleep: null,
   prefill,
   recent: activeFeed === null ? [] : [{ kind: "feed", feed: activeFeed }],
+  doses: [],
 })
 
 interface SentSegment {
@@ -180,6 +197,8 @@ interface Body {
   readonly formulaMl?: number
   readonly segments?: ReadonlyArray<SentSegment>
   readonly portions?: ReadonlyArray<SentPortion>
+  readonly supplementId?: string
+  readonly confirmedDuplicate?: boolean
 }
 
 export interface Sent {

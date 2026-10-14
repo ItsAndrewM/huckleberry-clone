@@ -1,10 +1,12 @@
-import type { Diaper, Feed, Sleep, Today, Totals } from "@bt/contracts"
+import type { Diaper, Dose, Feed, Sleep, Supplement, Today, Totals } from "@bt/contracts"
+import { localDateOf } from "@bt/domain"
 
 export const ZONE = "America/Vancouver"
 export const MINUTE = 60_000
 export const NOW = Date.UTC(2026, 9, 9, 16, 30)
 export const ANDREW = "caregiver-andrew"
 export const EMILY = "caregiver-emily"
+export const VITAMIN_D = "supplement-vitamin-d"
 
 export const NO_TOTALS: Totals = {
   feedsStarted: 0,
@@ -51,6 +53,29 @@ export const sleptAt = (startedAt: number, change: Partial<Sleep> = {}): Sleep =
   ...change,
 })
 
+export const supplementOf = (change: Partial<Supplement> = {}): Supplement => ({
+  id: VITAMIN_D,
+  name: "Vitamin D",
+  dose: "400 IU",
+  stoppedAt: null,
+  version: 1,
+  createdBy: null,
+  createdAt: Date.UTC(2026, 9, 1),
+  updatedBy: null,
+  updatedAt: Date.UTC(2026, 9, 1),
+  ...change,
+})
+
+export const dosedAt = (occurredAt: number, change: Partial<Dose> = {}): Dose => ({
+  id: `dose-${occurredAt}`,
+  supplementId: VITAMIN_D,
+  occurredAt,
+  localDate: localDateOf(occurredAt, ZONE),
+  dose: "400 IU",
+  ...audit(occurredAt, EMILY),
+  ...change,
+})
+
 export const feedAt = (startedAt: number, change: Partial<Feed> = {}): Feed => ({
   id: `feed-${startedAt}`,
   status: "completed",
@@ -78,5 +103,6 @@ export const todayWith = (change: Partial<Today> = {}): Today => ({
   lastSleep: null,
   prefill: { lastBottle: null, lastSide: null },
   recent: [],
+  doses: [],
   ...change,
 })

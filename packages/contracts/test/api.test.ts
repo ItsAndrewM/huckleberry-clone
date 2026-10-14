@@ -38,6 +38,12 @@ describe("the API the household serves", () => {
       "PATCH /api/sleeps/:id",
       "DELETE /api/sleeps/:id",
       "POST /api/sleeps/:id/restore",
+      "POST /api/supplements",
+      "PATCH /api/supplements/:id",
+      "POST /api/doses",
+      "PATCH /api/doses/:id",
+      "DELETE /api/doses/:id",
+      "POST /api/doses/:id/restore",
       "GET /api/growth",
       "POST /api/growth",
       "PATCH /api/growth/:id",
@@ -65,12 +71,14 @@ describe("the API the household serves", () => {
     expect(Object.keys(OpenApi.fromApi(Api).components.schemas).toSorted()).toEqual([
       "ChildConflictEncoded",
       "DiaperConflictEncoded",
+      "DoseConflictEncoded",
       "FeedConflictEncoded",
       "HouseholdConflictEncoded",
       "InvalidInputEncoded",
       "MeasurementConflictEncoded",
       "NotFoundEncoded",
       "SleepConflictEncoded",
+      "SupplementConflictEncoded",
       "UnauthorizedEncoded",
     ])
   })

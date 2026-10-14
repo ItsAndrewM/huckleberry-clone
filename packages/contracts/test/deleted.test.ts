@@ -4,6 +4,7 @@ import {
   Deleted,
   DeletedGroup,
   type Diaper,
+  type Dose,
   type Feed,
   type Measurement,
   RECENTLY_DELETED_DAYS,
@@ -69,17 +70,31 @@ const SLEEP: Sleep = {
   deletedAt: DELETED_AT,
 }
 
-const DELETED = { feeds: [FEED], diapers: [DIAPER], sleeps: [SLEEP], measurements: [MEASUREMENT] }
+const DOSE: Dose = {
+  id: "dose-1",
+  supplementId: "supplement-1",
+  occurredAt: AT - 60 * MINUTE_MS,
+  localDate: "2026-10-12",
+  dose: "400 IU",
+  version: 1,
+  createdBy: "caregiver-1",
+  createdAt: AT,
+  updatedBy: "caregiver-1",
+  updatedAt: AT,
+  deletedAt: DELETED_AT,
+}
+
+const DELETED = { feeds: [FEED], diapers: [DIAPER], sleeps: [SLEEP], measurements: [MEASUREMENT], doses: [DOSE] }
 
 const decodes = (input: Schema.Json) => Exit.isSuccess(Schema.decodeUnknownExit(Schema.toCodecJson(Deleted))(input))
 
 describe("the household's recently deleted entries", () => {
-  it("hold every deleted feed, diaper, sleep and measurement, each as it was when deleted", () => {
+  it("hold every deleted feed, diaper, sleep, measurement and dose, each as it was when deleted", () => {
     expect(decodes(DELETED)).toBe(true)
   })
 
-  it("still read when a later version adds a kind, as M3.3's doses will", () => {
-    expect(decodes({ ...DELETED, doses: [] })).toBe(true)
+  it("still read when a later version adds a kind", () => {
+    expect(decodes({ ...DELETED, fieldFromALaterVersion: [] })).toBe(true)
   })
 
   it.each([
@@ -87,6 +102,7 @@ describe("the household's recently deleted entries", () => {
     ["diapers that are null", { diapers: null }],
     ["sleeps that are null", { sleeps: null }],
     ["measurements that are null", { measurements: null }],
+    ["doses that are null", { doses: null }],
   ])("refuse %s", (_label, change) => {
     expect(decodes({ ...DELETED, ...change })).toBe(false)
   })

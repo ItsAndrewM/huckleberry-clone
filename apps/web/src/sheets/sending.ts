@@ -14,6 +14,9 @@ export const SheetKind = Schema.Literals([
   "sleep",
   "pastSleep",
   "editSleep",
+  "dose",
+  "editDose",
+  "supplement",
   "undo",
 ])
 export type SheetKind = typeof SheetKind.Type
@@ -51,15 +54,19 @@ const CLOSES_ON_SEND = new Set<Action["kind"]>([
   "startSleep",
   "wakeSleep",
   "deleteSleep",
+  "logDose",
+  "deleteDose",
 ])
 
 const CLOSES_ON_SAVE = new Set<Action["kind"]>(["editDiaper", "editPortion", "editFeed"])
 
 const savesAPastSleep = ({ sheet, action }: Sending) => sheet === "pastSleep" && action.kind === "editSleep"
 
-const EDIT_SHEETS = new Set<SheetKind>(["editDiaper", "editFeed", "editSleep"])
+const EDIT_SHEETS = new Set<SheetKind>(["editDiaper", "editFeed", "editSleep", "editDose"])
 
 export const editsARecord = (sheet: SheetKind) => EDIT_SHEETS.has(sheet)
+
+export const opensOnOne = (sheet: SheetKind) => editsARecord(sheet) || sheet === "dose"
 
 export const isUndo = ({ sheet }: Sending) => sheet === "undo"
 

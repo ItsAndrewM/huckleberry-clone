@@ -1,6 +1,7 @@
 import {
   type Deleted,
   DiaperConflict,
+  DoseConflict,
   FeedConflict,
   InvalidInput,
   MeasurementConflict,
@@ -28,6 +29,8 @@ export const restoreOf = (record: DeletedRecord, actionId: string): Action => {
     }
     case "sleep":
       return { kind: "restoreSleep", id: record.sleep.id, payload: { actionId, version: record.sleep.version } }
+    case "dose":
+      return { kind: "restoreDose", id: record.dose.id, payload: { actionId, version: record.dose.version } }
   }
 }
 
@@ -36,6 +39,7 @@ export const withoutEntry = (deleted: Deleted, id: string): Deleted => ({
   diapers: deleted.diapers.filter((diaper) => diaper.id !== id),
   sleeps: deleted.sleeps.filter((sleep) => sleep.id !== id),
   measurements: deleted.measurements.filter((measurement) => measurement.id !== id),
+  doses: deleted.doses.filter((dose) => dose.id !== id),
 })
 
 export const restoreWaitReason = (connectivity: Connectivity): string | null => {
@@ -98,7 +102,9 @@ const sleepSentence = ({ code, current }: SleepConflict, household: Household, r
 const conflictSentence = (error: Error, household: Household, record: DeletedRecord): string | null => {
   if (error instanceof SleepConflict) return sleepSentence(error, household, stillRunning(record))
   if (error instanceof FeedConflict) return feedSentence(error, household, stillRunning(record))
-  if (!(error instanceof DiaperConflict) && !(error instanceof MeasurementConflict)) return null
+  if (!(error instanceof DiaperConflict || error instanceof MeasurementConflict || error instanceof DoseConflict)) {
+    return null
+  }
   return error.code === "STALE_VERSION" ? staleSentence(household, error.current) : NOT_RESTORED
 }
 

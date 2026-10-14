@@ -44,6 +44,7 @@ test("opens the Nursing sheet for a feed that's still going, as Today does", asy
         lastSleep: null,
         prefill: { lastBottle: null, lastSide: "left" },
         recent: [],
+        doses: [],
       },
     }),
   )

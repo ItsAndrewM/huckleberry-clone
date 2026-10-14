@@ -323,7 +323,7 @@ describe("pnpm migrations:dry-run", () => {
   it("reads a leading ~ as the home folder, as the shell does only for an unquoted path, and says what it applied", () => {
     const home = homeHolding("baby-tracker.json", JSON.stringify(exportOf(names(BEFORE_SLEEPS))))
     const { status, stdout } = inHome(home, "~/baby-tracker.json")
-    expect(stdout).toBe(`${dryRunSummary({ applied: ["0007-sleeps"], rows: 5, tables: 8 })}\n`)
+    expect(stdout).toBe(`${dryRunSummary({ applied: names(MIGRATIONS.slice(6)), rows: 5, tables: 8 })}\n`)
     expect(status).toBe(0)
   })
 

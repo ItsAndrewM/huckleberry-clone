@@ -1,10 +1,12 @@
-import { FeedConflict } from "@bt/contracts"
+import { DoseConflict, FeedConflict } from "@bt/contracts"
 import { describe, expect, it } from "vitest"
 import type { Action } from "../src/api/actions.ts"
 import { Offline } from "../src/api/errors.ts"
-import { closesOnSend, type Sending } from "../src/sheets/sending.ts"
+import { heldFor } from "../src/sheets/held.ts"
+import { closesOnSend, type Failed, type Sending } from "../src/sheets/sending.ts"
 import {
   CLOSED,
+  dismissedState,
   expiredState,
   failedState,
   isEntry,
@@ -16,7 +18,7 @@ import {
 } from "../src/sheets/sheets-state.ts"
 import { TOAST_MS } from "../src/sheets/undo.ts"
 import { measurement } from "./growth-fixtures.ts"
-import { diaperAt, feedAt, NOW, sleptAt } from "./today-fixtures.ts"
+import { diaperAt, dosedAt, feedAt, NOW, sleptAt } from "./today-fixtures.ts"
 
 const ACTION_ID = "4b1c2a5e-8f3d-4c6b-9a7e-2d1f0e3c5b6a"
 const RENEWED = "9d2e1f3c-5b4a-4e6d-8c7b-1a0f2e3d4c5b"
@@ -180,6 +182,24 @@ const MEASUREMENT_DELETED: Sending = {
   action: { kind: "deleteMeasurement", id: "measurement-1", payload: { actionId: ACTION_ID, version: 2 } },
 }
 
+const DOSE: Sending = {
+  sheet: "dose",
+  action: {
+    kind: "logDose",
+    payload: { actionId: ACTION_ID, supplementId: "supplement-1", occurredAt: NOW, confirmedDuplicate: false },
+  },
+}
+
+const DOSE_MOVED: Sending = {
+  sheet: "editDose",
+  action: { kind: "editDose", id: "dose-1", payload: { actionId: ACTION_ID, version: 1, occurredAt: NOW - 60_000 } },
+}
+
+const DOSE_DELETED: Sending = {
+  sheet: "editDose",
+  action: { kind: "deleteDose", id: "dose-1", payload: { actionId: ACTION_ID, version: 1 } },
+}
+
 const SLEEP_LOGGED: Sending = {
   sheet: "pastSleep",
   action: {
@@ -212,10 +232,9 @@ const SLEEP_DELETED: Sending = {
   action: { kind: "deleteSleep", id: "sleep-1", payload: { actionId: ACTION_ID, version: 2 } },
 }
 
-const restoring = (
-  sheet: Sending["sheet"],
-  kind: "restoreDiaper" | "restoreFeed" | "restoreMeasurement" | "restoreSleep",
-): Sending => ({
+type Restore = "restoreDiaper" | "restoreFeed" | "restoreMeasurement" | "restoreSleep" | "restoreDose"
+
+const restoring = (sheet: Sending["sheet"], kind: Restore): Sending => ({
   sheet,
   action: { kind, id: "record-1", payload: { actionId: ACTION_ID, version: 2 } },
 })
@@ -224,6 +243,10 @@ const CLOSING = {
   restoreDiaper: { sending: restoring("diaper", "restoreDiaper"), closes: false, entry: false },
   restoreFeed: { sending: restoring("pastFeed", "restoreFeed"), closes: false, entry: false },
   restoreMeasurement: { sending: restoring("measurement", "restoreMeasurement"), closes: false, entry: false },
+  restoreDose: { sending: restoring("dose", "restoreDose"), closes: false, entry: false },
+  logDose: { sending: DOSE, closes: true, entry: true },
+  editDose: { sending: DOSE_MOVED, closes: true, entry: false },
+  deleteDose: { sending: DOSE_DELETED, closes: true, entry: false },
   logDiaper: { sending: DIAPER, closes: true, entry: true },
   deleteDiaper: { sending: UNDO_DIAPER, closes: false, entry: false },
   logFeed: { sending: BOTTLE_FEED, closes: true, entry: true },
@@ -516,5 +539,85 @@ describe("a failed Undo", () => {
       ...CLOSED,
       toast: { message: "That wasn't undone.", undo: null, until: NOW + TOAST_MS },
     })
+  })
+})
+
+describe("a dose that fails while another supplement's sheet is open", () => {
+  const OTHER_DOSE: Sending = {
+    sheet: "dose",
+    action: {
+      kind: "logDose",
+      payload: { actionId: RENEWED, supplementId: "supplement-2", occurredAt: NOW, confirmedDuplicate: false },
+    },
+  }
+  const failed = { sending: DOSE, error: new Offline() }
+  const waiting = failedState(shownState(CLOSED, "dose", "supplement-2"), failed, NOW)
+
+  it("reopens its own supplement's sheet, with the tap held, when no sheet is open", () => {
+    expect(failedState(CLOSED, failed, NOW)).toMatchObject({
+      open: "dose",
+      editing: "supplement-1",
+      queued: true,
+      held: [failed],
+    })
+  })
+
+  it("leaves the open sheet on its own supplement, and holds the failure for its own sheet", () => {
+    expect(waiting).toMatchObject({ open: "dose", editing: "supplement-2", queued: false, held: [failed] })
+    expect(heldFor(waiting.held, "dose", "supplement-2")).toBeNull()
+    expect(heldFor(waiting.held, "dose", "supplement-1")).toBe(failed)
+  })
+
+  it("opens its own supplement's sheet, with the tap held, once the open sheet's dose is sent", () => {
+    expect(sendingState(waiting, OTHER_DOSE, true)).toMatchObject({
+      open: "dose",
+      editing: "supplement-1",
+      queued: true,
+      held: [failed],
+    })
+  })
+
+  it("opens its own supplement's sheet without asking when the open sheet is closed unsent", () => {
+    expect(dismissedState(waiting)).toMatchObject({
+      open: "dose",
+      editing: "supplement-1",
+      asking: false,
+      queued: true,
+    })
+  })
+
+  it("isn't let go with the open sheet, though the household says it was already saved", () => {
+    const replayed = {
+      sending: DOSE,
+      error: new DoseConflict({ code: "ACTION_REPLAY_MISMATCH", current: dosedAt(NOW) }),
+    }
+    const sheetOpen = failedState(shownState(CLOSED, "dose", "supplement-2"), replayed, NOW)
+    expect(sendingState(sheetOpen, OTHER_DOSE, true).held).toEqual([replayed])
+  })
+})
+
+describe("a dose sheet opened from History's Log at menu", () => {
+  const AT = NOW - 2 * 60 * 60_000
+  const OWN: Failed = { sending: DOSE, error: new Offline() }
+  const OTHER: Failed = {
+    sending: {
+      sheet: "dose",
+      action: {
+        kind: "logDose",
+        payload: { actionId: RENEWED, supplementId: "supplement-2", occurredAt: NOW, confirmedDuplicate: false },
+      },
+    },
+    error: new Offline(),
+  }
+
+  const doseSheetFrom = (held: ReadonlyArray<Failed>) =>
+    shownState(shownState(restoredState(held), "logAt", null, AT), "dose", "supplement-1", AT)
+
+  it("finds the held dose of its own supplement, at the time tapped, and not one of another supplement", () => {
+    const shown = doseSheetFrom([OTHER, OWN])
+    expect(shown).toMatchObject({ open: "dose", editing: "supplement-1", at: AT })
+    expect(heldFor(shown.held, "dose", shown.editing)).toBe(OWN)
+    const onlyOther = doseSheetFrom([OTHER])
+    expect(heldFor(onlyOther.held, "dose", onlyOther.editing)).toBeNull()
   })
 })

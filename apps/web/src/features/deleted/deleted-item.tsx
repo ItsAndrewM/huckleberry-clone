@@ -23,10 +23,10 @@ export const DeletedItem = ({ row, household, reasonId }: DeletedItemProps) => {
           <Icon aria-hidden="true" className="size-4" />
         </span>
         <div className="flex min-w-0 flex-1 flex-col">
-          <p className="font-medium">{row.title}</p>
+          <p className="font-medium break-words">{row.title}</p>
           {row.detail.length === 0 ? null : (
             <p className="text-sm tabular-nums text-muted-foreground">
-              <Parts parts={row.detail} />
+              <Parts parts={row.detail} freeText={row.record.kind === "dose"} />
             </p>
           )}
           <time dateTime={new Date(row.at).toISOString()} className="text-sm tabular-nums">

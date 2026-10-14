@@ -1,12 +1,14 @@
 import {
   ComponentDelete,
   DiaperEdit,
+  DoseEdit,
   FeedEdit,
   FeedFinish,
   FeedResume,
   FeedStart,
   MeasurementEdit,
   NewDiaper,
+  NewDose,
   NewFeed,
   NewMeasurement,
   NewSleep,
@@ -76,8 +78,20 @@ export const SleepAction = Schema.Union([
 ])
 export type SleepAction = typeof SleepAction.Type
 
-export const Action = Schema.Union([DiaperAction, FeedAction, MeasurementAction, SleepAction])
+export const DoseAction = Schema.Union([
+  created("logDose", NewDose),
+  onRecord("editDose", DoseEdit),
+  onRecord("deleteDose", VersionedAction),
+  onRecord("restoreDose", VersionedAction),
+])
+export type DoseAction = typeof DoseAction.Type
+
+export const Action = Schema.Union([DiaperAction, FeedAction, MeasurementAction, SleepAction, DoseAction])
 export type Action = typeof Action.Type
+
+const DOSE_KINDS = new Set<Action["kind"]>(["logDose", "editDose", "deleteDose", "restoreDose"])
+
+export const isDoseAction = (action: Action): action is DoseAction => DOSE_KINDS.has(action.kind)
 
 const DIAPER_KINDS = new Set<Action["kind"]>(["logDiaper", "editDiaper", "deleteDiaper", "restoreDiaper"])
 

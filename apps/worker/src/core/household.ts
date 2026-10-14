@@ -11,6 +11,7 @@ import type {
 } from "@bt/contracts"
 import { canonicalTimeZone } from "@bt/domain"
 import type { HouseholdSeed, SeedResult } from "../seed.ts"
+import { seedVitaminD, supplementsOf } from "./supplements/definitions.ts"
 
 export type HouseholdRow = {
   name: string
@@ -106,6 +107,7 @@ const insertHousehold = (sql: SqlStorage, seed: HouseholdSeed, now: number) => {
     now,
     now,
   )
+  seedVitaminD(sql, now)
 }
 
 export const seedHousehold = (storage: DurableObjectStorage, seed: HouseholdSeed, now: number): SeedResult =>
@@ -127,6 +129,6 @@ const caregiverNames = (sql: SqlStorage): CaregiverName[] =>
 
 export const meOf = (sql: SqlStorage, caregiver: Caregiver): Me => ({
   caregiver,
-  household: { ...householdOf(sql), caregivers: caregiverNames(sql) },
+  household: { ...householdOf(sql), caregivers: caregiverNames(sql), supplements: supplementsOf(sql) },
   child: childOf(sql),
 })

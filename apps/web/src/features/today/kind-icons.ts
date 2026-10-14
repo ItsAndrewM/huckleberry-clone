@@ -1,4 +1,4 @@
-import { BabyIcon, DropletsIcon, MilkIcon, MoonStarIcon } from "lucide-react"
+import { BabyIcon, DropletsIcon, MilkIcon, MoonStarIcon, PillIcon } from "lucide-react"
 import type { RowKind } from "./recent-rows.ts"
 
 export const KIND_ICONS = {
@@ -6,4 +6,5 @@ export const KIND_ICONS = {
   bottle: MilkIcon,
   diaper: DropletsIcon,
   sleep: MoonStarIcon,
+  dose: PillIcon,
 } as const satisfies Record<RowKind, typeof BabyIcon>

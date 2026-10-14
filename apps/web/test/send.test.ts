@@ -1,10 +1,10 @@
-import { FeedConflict, MeasurementConflict } from "@bt/contracts"
+import { DoseConflict, FeedConflict, MeasurementConflict } from "@bt/contracts"
 import { describe, expect, it } from "vitest"
 import type { Action } from "../src/api/actions.ts"
 import { connectApi } from "../src/api/client.ts"
 import { send } from "../src/api/send.ts"
 import { measurement } from "./growth-fixtures.ts"
-import { diaperAt, feedAt, MINUTE, NOW, sleptAt } from "./today-fixtures.ts"
+import { diaperAt, dosedAt, feedAt, MINUTE, NOW, sleptAt, VITAMIN_D } from "./today-fixtures.ts"
 
 const ORIGIN = "https://bt.example.test"
 const ACTION_ID = "4b1c2a5e-8f3d-4c6b-9a7e-2d1f0e3c5b6a"
@@ -188,6 +188,44 @@ describe("send", () => {
       ["PATCH", `${ORIGIN}/api/growth/m1`, actions[1]?.[0].payload],
       ["DELETE", `${ORIGIN}/api/growth/m1`, actions[2]?.[0].payload],
     ])
+  })
+
+  it("logs, moves, deletes and restores doses at /api/doses", async () => {
+    const saved = JSON.stringify({ dose: dosedAt(NOW, { id: "dose-1" }), changed: [["today"]] })
+    const versioned = { actionId: ACTION_ID, version: 1 }
+    const actions: ReadonlyArray<readonly [Action, number]> = [
+      [
+        {
+          kind: "logDose",
+          payload: { actionId: ACTION_ID, supplementId: VITAMIN_D, occurredAt: NOW, confirmedDuplicate: false },
+        },
+        201,
+      ],
+      [{ kind: "editDose", id: "dose-1", payload: { ...versioned, occurredAt: NOW - 60_000 } }, 200],
+      [{ kind: "deleteDose", id: "dose-1", payload: versioned }, 200],
+      [{ kind: "restoreDose", id: "dose-1", payload: versioned }, 200],
+    ]
+    const sent = []
+    for (const [action, status] of actions) {
+      const { api, requests } = household(status, saved)
+      await expect(send(api, action)).resolves.toMatchObject({ dose: { id: "dose-1" } })
+      for (const request of requests) sent.push([request.method, request.url, await request.json()])
+    }
+    expect(sent).toEqual([
+      ["POST", `${ORIGIN}/api/doses`, actions[0]?.[0].payload],
+      ["PATCH", `${ORIGIN}/api/doses/dose-1`, actions[1]?.[0].payload],
+      ["DELETE", `${ORIGIN}/api/doses/dose-1`, versioned],
+      ["POST", `${ORIGIN}/api/doses/dose-1/restore`, versioned],
+    ])
+  })
+
+  it("decodes the household's second-dose answer with the dose already logged that day", async () => {
+    const current = dosedAt(NOW - 3 * 60 * 60_000, { id: "dose-0" })
+    const { api } = household(409, JSON.stringify({ _tag: "Conflict", code: "SUPPLEMENT_DUPLICATE_DAY", current }))
+    const payload = { actionId: ACTION_ID, supplementId: VITAMIN_D, occurredAt: NOW, confirmedDuplicate: false }
+    const failure = send(api, { kind: "logDose", payload })
+    await expect(failure).rejects.toBeInstanceOf(DoseConflict)
+    await expect(failure).rejects.toMatchObject({ code: "SUPPLEMENT_DUPLICATE_DAY", current: { id: "dose-0" } })
   })
 
   it("restores a diaper, a feed and a measurement at their restore endpoints, with the version the delete answered", async () => {

@@ -4,6 +4,7 @@ import {
   DayPeriod,
   DayTotals,
   type Diaper,
+  type Dose,
   type Feed,
   type Measurement,
   MonthPeriod,
@@ -91,6 +92,20 @@ const SLEEP: Sleep = {
   deletedAt: null,
 }
 
+const DOSE: Dose = {
+  id: "dose-1",
+  supplementId: "supplement-1",
+  occurredAt: AT - 60 * MINUTE_MS,
+  localDate: "2026-10-12",
+  dose: "400 IU",
+  version: 1,
+  createdBy: "caregiver-1",
+  createdAt: AT,
+  updatedBy: "caregiver-1",
+  updatedAt: AT,
+  deletedAt: null,
+}
+
 const PERIOD = {
   bounds: OCT_12,
   asOf: AT + 15 * MINUTE_MS,
@@ -99,6 +114,7 @@ const PERIOD = {
   diapers: [DIAPER],
   sleeps: [SLEEP],
   measurements: [MEASUREMENT],
+  doses: [DOSE],
 }
 
 const DAY = { date: "2026-10-12", ...PERIOD }
@@ -128,12 +144,12 @@ describe("a day's totals", () => {
 })
 
 describe("a day", () => {
-  it("holds its bounds, when the household answered, its totals, and every feed, diaper and measurement in it", () => {
+  it("holds its bounds, when the household answered, its totals, and every feed, diaper, measurement and dose in it", () => {
     expect(decodes(DayPeriod, DAY)).toBe(true)
   })
 
-  it("still reads when a later version adds a field, as M3.3's doses will be", () => {
-    expect(decodes(DayPeriod, { ...DAY, doses: [] })).toBe(true)
+  it("still reads when a later version adds a field", () => {
+    expect(decodes(DayPeriod, { ...DAY, fieldFromALaterVersion: [] })).toBe(true)
   })
 
   it.each([
@@ -143,6 +159,7 @@ describe("a day", () => {
     ["an answer whose diapers are null", { diapers: null }],
     ["an answer whose sleeps are null", { sleeps: null }],
     ["an answer whose measurements are null", { measurements: null }],
+    ["an answer whose doses are null", { doses: null }],
   ])("refuses %s", (_label, change) => {
     expect(decodes(DayPeriod, { ...DAY, ...change })).toBe(false)
   })

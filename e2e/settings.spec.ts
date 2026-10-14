@@ -61,7 +61,15 @@ const playHousehold = async (page: Page): Promise<Played> => {
   const played: Played = { household: householdOf(me.household), child: me.child, sent: [] }
   await page.route("**/api/me", (route) =>
     route.fulfill({
-      json: { ...me, household: { ...played.household, caregivers: me.household.caregivers }, child: played.child },
+      json: {
+        ...me,
+        household: {
+          ...played.household,
+          caregivers: me.household.caregivers,
+          supplements: me.household.supplements,
+        },
+        child: played.child,
+      },
     }),
   )
   await page.route("**/api/household", (route) => {

@@ -1,4 +1,4 @@
-import { DiaperConflict, FeedConflict, type RecentEntry, SleepConflict } from "@bt/contracts"
+import { DiaperConflict, DoseConflict, FeedConflict, type RecentEntry, SleepConflict } from "@bt/contracts"
 import type { Action } from "../../api/actions.ts"
 import { recordOf } from "../../api/today-change.ts"
 import type { Failed, Sending } from "../../sheets/sending.ts"
@@ -10,20 +10,20 @@ export interface Stale {
   readonly deleting: boolean
 }
 
-const DELETES = new Set<Action["kind"]>(["deleteDiaper", "deleteFeed", "deleteSleep"])
+const DELETES = new Set<Action["kind"]>(["deleteDiaper", "deleteFeed", "deleteSleep", "deleteDose"])
+
+const currentOf = (error: Error): RecentEntry | null => {
+  if (error instanceof DiaperConflict && error.code === "STALE_VERSION")
+    return { kind: "diaper", diaper: error.current }
+  if (error instanceof FeedConflict && error.code === "STALE_VERSION") return { kind: "feed", feed: error.current }
+  if (error instanceof SleepConflict && error.code === "STALE_VERSION") return { kind: "sleep", sleep: error.current }
+  if (error instanceof DoseConflict && error.code === "STALE_VERSION") return { kind: "dose", dose: error.current }
+  return null
+}
 
 export const staleOf = ({ sending, error }: Failed): Stale | null => {
-  const deleting = DELETES.has(sending.action.kind)
-  if (error instanceof DiaperConflict && error.code === "STALE_VERSION") {
-    return { current: { kind: "diaper", diaper: error.current }, deleting }
-  }
-  if (error instanceof FeedConflict && error.code === "STALE_VERSION") {
-    return { current: { kind: "feed", feed: error.current }, deleting }
-  }
-  if (error instanceof SleepConflict && error.code === "STALE_VERSION") {
-    return { current: { kind: "sleep", sleep: error.current }, deleting }
-  }
-  return null
+  const current = currentOf(error)
+  return current === null ? null : { current, deleting: DELETES.has(sending.action.kind) }
 }
 
 const withVersion = <Sent extends Action>(action: Sent, version: number): Sent => ({

@@ -1,4 +1,4 @@
-import type { DayPeriod, Diaper, Feed, LocalDate, RecentEntry, Sleep } from "@bt/contracts"
+import type { DayPeriod, Diaper, Dose, Feed, LocalDate, RecentEntry, Sleep } from "@bt/contracts"
 import {
   type CalendarBlock,
   type CalendarPoint,
@@ -20,6 +20,7 @@ export interface DaySlice {
   readonly feeds: ReadonlyArray<Feed>
   readonly diapers: ReadonlyArray<Diaper>
   readonly sleeps: ReadonlyArray<Sleep>
+  readonly doses: ReadonlyArray<Dose>
 }
 
 export interface DayPieces {
@@ -27,6 +28,7 @@ export interface DayPieces {
   readonly bottles: ReadonlyArray<CalendarPoint>
   readonly diapers: ReadonlyArray<CalendarPoint>
   readonly sleeps: ReadonlyArray<CalendarBlock<Side>>
+  readonly doses: ReadonlyArray<CalendarPoint>
 }
 
 export type Entry = RecentEntry
@@ -57,15 +59,17 @@ export const shownSlice = <Slice extends DaySlice>(slice: Slice, hidden: Hidden)
   feeds: hidden.has("feeds") ? [] : slice.feeds,
   diapers: hidden.has("diapers") ? [] : slice.diapers,
   sleeps: hidden.has("sleep") ? [] : slice.sleeps,
+  doses: hidden.has("supplements") ? [] : slice.doses,
 })
 
 const sleepBlockOf = ({ id, startedAt, endedAt }: Sleep): CalendarBlock<Side> => ({ id, startedAt, endedAt, bands: [] })
 
-export const piecesOf = ({ feeds, diapers, sleeps, bounds }: DaySlice): DayPieces => ({
+export const piecesOf = ({ feeds, diapers, sleeps, doses, bounds }: DaySlice): DayPieces => ({
   blocks: feeds.filter((feed) => isBlock(feed, bounds)).flatMap(blockOf),
   bottles: feeds.filter((feed) => !isBlock(feed, bounds)).map((feed) => ({ id: feed.id, at: pointAt(feed, bounds) })),
   diapers: diapers.map(({ id, occurredAt }) => ({ id, at: occurredAt })),
   sleeps: sleeps.map(sleepBlockOf),
+  doses: doses.map(({ id, occurredAt }) => ({ id, at: occurredAt })),
 })
 
 const entriesOf = (day: DayPeriod): ReadonlyMap<string, Entry> =>
@@ -73,13 +77,14 @@ const entriesOf = (day: DayPeriod): ReadonlyMap<string, Entry> =>
     ...day.feeds.map((feed) => [feed.id, { kind: "feed", feed }] as const),
     ...day.diapers.map((diaper) => [diaper.id, { kind: "diaper", diaper }] as const),
     ...day.sleeps.map((sleep) => [sleep.id, { kind: "sleep", sleep }] as const),
+    ...day.doses.map((dose) => [dose.id, { kind: "dose", dose }] as const),
   ])
 
 export const dayModel = (day: DayPeriod, zone: string, now: number, hidden: Hidden = new Set()): DayModel => {
-  const { blocks, bottles, diapers, sleeps } = piecesOf(shownSlice(day, hidden))
+  const { blocks, bottles, diapers, sleeps, doses } = piecesOf(shownSlice(day, hidden))
   const input = { date: day.date, zone, bounds: day.bounds, now }
   return {
-    grid: layoutDay({ ...input, blocks, points: [...bottles, ...diapers] }, SCALE),
+    grid: layoutDay({ ...input, blocks, points: [...bottles, ...diapers, ...doses] }, SCALE),
     sleeps: layoutDay({ ...input, blocks: sleeps, points: [] }, SCALE).blocks,
     entries: entriesOf(day),
   }
@@ -91,7 +96,7 @@ export const entriesIn = (model: DayModel, ids: ReadonlyArray<string>): Readonly
     return entry === undefined ? [] : [entry]
   })
 
-export type EntrySheet = "editDiaper" | "editFeed" | "nursing" | "editSleep" | "sleep"
+export type EntrySheet = "editDiaper" | "editFeed" | "nursing" | "editSleep" | "sleep" | "editDose"
 
 export const editSheetOf = (entry: Entry): EntrySheet => {
   switch (entry.kind) {
@@ -101,6 +106,8 @@ export const editSheetOf = (entry: Entry): EntrySheet => {
       return entry.feed.status === "active" ? "nursing" : "editFeed"
     case "sleep":
       return entry.sleep.endedAt === null ? "sleep" : "editSleep"
+    case "dose":
+      return "editDose"
   }
 }
 

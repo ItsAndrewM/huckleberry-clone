@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest"
-import { growthItems, totalsLines } from "../src/features/history/day-summary.ts"
+import { growthItems, nothingLogged, totalsLines } from "../src/features/history/day-summary.ts"
 import { measurement, UNITS } from "./growth-fixtures.ts"
-import { LOCALE, local, WEIGHED } from "./history-fixtures.ts"
-import { NO_TOTALS, ZONE } from "./today-fixtures.ts"
+import { dayWith, LOCALE, local, WEIGHED } from "./history-fixtures.ts"
+import { dosedAt, NO_TOTALS, ZONE } from "./today-fixtures.ts"
 
 const DAY_TOTALS = {
   ...NO_TOTALS,
@@ -43,6 +43,25 @@ describe("a day's sleep line", () => {
   it("says how long she slept, in naps and at night, after the feeds and diapers", () => {
     const slept = { ...NO_TOTALS, sleepsStarted: 3, sleepSeconds: 40_800, napSeconds: 10_200, nightSeconds: 30_600 }
     expect(totalsLines(slept, "ml")).toEqual([["11 h 20 min asleep", "2 h 50 min naps", "8 h 30 min night"]])
+  })
+})
+
+describe("nothingLogged", () => {
+  const EMPTY_DAY = dayWith({ feeds: [], diapers: [], measurements: [], doses: [] })
+
+  it("is said of a day with nothing in it", () => {
+    expect(nothingLogged(EMPTY_DAY, "ml")).toBe(true)
+  })
+
+  it("isn't said of a day holding only a dose", () => {
+    expect(nothingLogged({ ...EMPTY_DAY, doses: [dosedAt(local("08:00"))] }, "ml")).toBe(false)
+  })
+
+  it("isn't said of a day holding only feeds or diapers, only a measurement, or only sleep", () => {
+    expect(nothingLogged({ ...EMPTY_DAY, totals: DAY_TOTALS }, "ml")).toBe(false)
+    expect(nothingLogged({ ...EMPTY_DAY, measurements: [WEIGHED] }, "ml")).toBe(false)
+    const napped = { ...NO_TOTALS, sleepsStarted: 1, sleepSeconds: 3600, napSeconds: 3600, longestSleepSeconds: 3600 }
+    expect(nothingLogged({ ...EMPTY_DAY, totals: napped }, "ml")).toBe(false)
   })
 })
 

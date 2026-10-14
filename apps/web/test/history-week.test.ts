@@ -59,6 +59,7 @@ const weekWith = (change: Partial<WeekPeriod> = {}): WeekPeriod => {
     diapers: [PEE, POO, BOTH],
     sleeps: [],
     measurements: [WEIGHED],
+    doses: [],
     ...change,
   }
 }
@@ -145,6 +146,7 @@ describe("weekModel", () => {
       diapers: [diaperAt(Date.UTC(2026, 10, 1, 8, 30)), diaperAt(Date.UTC(2026, 10, 1, 9, 30), { dirty: true })],
       sleeps: [],
       measurements: [],
+      doses: [],
     }
     const context = { ...CONTEXT, zone: LOS_ANGELES, now: Date.UTC(2026, 10, 2, 12), today: "2026-11-02" }
     const sunday = weekModel(week, context).find(({ date }) => date === "2026-11-01")

@@ -54,21 +54,24 @@ const Stripe = ({ block }: { readonly block: PlacedBlock<Side> }) => (
 
 export const WeekMarks = ({ column }: { readonly column: WeekColumn }) => (
   <div aria-hidden="true" className="pointer-events-none absolute inset-0">
-    <div className="absolute inset-y-0 left-0.5 w-[10%]">
+    <div className="absolute inset-y-0 left-0.5 w-[9%]">
       {column.sleeps.map((block) => (
         <Stripe key={block.id} block={block} />
       ))}
     </div>
-    <div className="absolute inset-y-0 left-[15%] w-[43%]">
+    <div className="absolute inset-y-0 left-[14%] w-[36%]">
       {column.grid.blocks.map((block) => (
         <Bar key={block.id} block={block} />
       ))}
     </div>
-    <div className="absolute inset-y-0 left-[60%] w-[18%]">
+    <div className="absolute inset-y-0 left-[51%] w-[15%]">
       <Dots clusters={column.grid.clusters} className="bg-primary" />
     </div>
-    <div className="absolute inset-y-0 left-[80%] w-[18%]">
+    <div className="absolute inset-y-0 left-[67%] w-[15%]">
       <Dots clusters={column.diapers} className="bg-foreground/55" />
+    </div>
+    <div className="absolute inset-y-0 left-[83%] w-[15%]">
+      <Dots clusters={column.doses} className="border border-primary bg-card" />
     </div>
     {column.grid.now === null ? null : (
       <>

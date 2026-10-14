@@ -1,7 +1,7 @@
-import type { Diaper, Feed, RecentEntry, Sleep, VolumeUnit } from "@bt/contracts"
+import type { Diaper, Dose, Feed, RecentEntry, Sleep, VolumeUnit } from "@bt/contracts"
 import { feedSummary, sleepElapsed } from "@bt/domain"
 import { clockTime } from "../../clock-time.ts"
-import type { Display } from "../today/display.ts"
+import { type Display, supplementName } from "../today/display.ts"
 import { feedParts, feedTitle } from "../today/feed-parts.ts"
 import { formatVolume, presentParts } from "../today/format.ts"
 import { sleepParts, sleepTitle } from "../today/sleep-parts.ts"
@@ -46,15 +46,22 @@ const diaperChip = ({ wet, dirty }: Diaper) => {
   return wet ? "Pee" : "Poo"
 }
 
-export const markerText = (entry: Entry, volume: VolumeUnit, now: number) => {
+export const markerText = (entry: Entry, display: Display, now: number) => {
   switch (entry.kind) {
     case "diaper":
       return diaperChip(entry.diaper)
     case "feed":
-      return formatVolume(feedSummary(entry.feed, now).bottleMl, volume)
+      return formatVolume(feedSummary(entry.feed, now).bottleMl, display.volume)
     case "sleep":
       return sleepTitle(entry.sleep)
+    case "dose":
+      return supplementName(display, entry.dose.supplementId)
   }
+}
+
+const doseName = (dose: Dose, display: Display, time: string) => {
+  const name = `${supplementName(display, dose.supplementId)} at ${time}`
+  return dose.dose === "" ? name : `${name}: ${dose.dose}`
 }
 
 const sleepName = (sleep: Sleep, display: Display, now: number) =>
@@ -64,6 +71,7 @@ export const entryName = (entry: RecentEntry, display: Display, now: number) => 
   const time = (at: number) => clockTime(at, display.timeZone, display.locale)
   if (entry.kind === "diaper") return `Diaper at ${time(entry.diaper.occurredAt)}: ${diaperText(entry.diaper)}`
   if (entry.kind === "sleep") return sleepName(entry.sleep, display, now)
+  if (entry.kind === "dose") return doseName(entry.dose, display, time(entry.dose.occurredAt))
   const { feed } = entry
   const details = [...progressOf(feed, "in progress"), ...feedParts(feed, display.volume, now)]
   const name = `${feedTitle(feed)} at ${time(feed.startedAt)}`
