@@ -279,11 +279,11 @@ describe("what a release reports", () => {
     )
   })
 
-  it("names the commit once it's live, and reminds about the phones", () => {
+  it("names the commit once it's live, and says how the phones pick it up", () => {
     expect(releasedReport(COMMIT)).toBe(
       [
         "Released 20390a3 to https://baby.andamonium.dev.",
-        "Open the app online on each phone, so its offline copy updates to this build.",
+        "Each phone opens this build the next time the app comes back with nothing open. Settings › Offline copy says which build a phone has.",
       ].join("\n\n"),
     )
   })
