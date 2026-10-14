@@ -71,3 +71,16 @@ test("shows a dose on the Week view in its own lane, named in its day's link and
   await expect(weekGrid(page).getByRole("link", { name: "Fri, Oct 9: a dose" })).toBeVisible()
   await expect(page.getByText("Dose", { exact: true })).toBeVisible()
 })
+
+test("hides the Week view's dose lane and its legend entry with the Supplements chip", async ({ page }) => {
+  const { day } = await playDosedDay(page)
+  await playWeeks(page, { [THIS_WEEK]: weekOf(THIS_WEEK, [day]) })
+  const doseDots = weekGrid(page).getByRole("listitem").locator("span.rounded-full.border-primary.bg-card")
+  await openHistory(page, "?view=week")
+  await expect(doseDots).toHaveCount(1)
+  await expect(weekGrid(page).getByText("Dose", { exact: true })).toBeVisible()
+  await openHistory(page, "?view=week&hide=supplements")
+  await expect(weekGrid(page).getByRole("link", { name: /^Fri, Oct 9/u })).toBeVisible()
+  await expect(weekGrid(page).getByText("Dose", { exact: true })).toHaveCount(0)
+  await expect(doseDots).toHaveCount(0)
+})
