@@ -1,3 +1,4 @@
+import type { RecentEntry } from "@bt/contracts"
 import { describe, expect, it } from "vitest"
 import { pendingId } from "../src/api/pending.ts"
 import type { Display } from "../src/features/today/display.ts"
@@ -95,7 +96,7 @@ describe("totalsRows", () => {
 
 describe("recentRows", () => {
   it("shows a feed at its start, in the household's zone, with its parts and who logged it", () => {
-    const rows = recentRows([{ kind: "feed", feed: { ...NURSED, portions: [BOTTLE] } }], DISPLAY, NOW)
+    const rows = recentRows([{ kind: "feed", feed: { ...NURSED, portions: [BOTTLE] } }], DISPLAY, NOW, null)
     expect(rows.map((row) => ({ ...row, time: row.time.replace(/\s/gu, " ") }))).toEqual([
       {
         id: NURSED.id,
@@ -122,6 +123,7 @@ describe("recentRows", () => {
       ],
       DISPLAY,
       NOW,
+      null,
     ).map((row) => row.detail)
     expect(details).toEqual([
       ["In progress", "Left 17 min", "Right 8 min"],
@@ -142,6 +144,7 @@ describe("recentRows", () => {
       ],
       DISPLAY,
       NOW,
+      null,
     )
     expect(rows.map(({ opens }) => opens)).toEqual(["editDiaper", "editFeed", "nursing", null, null])
   })
@@ -155,6 +158,7 @@ describe("recentRows", () => {
       ],
       DISPLAY,
       NOW,
+      null,
     )
     expect(rows.map(({ title, detail, by }) => [title, detail, by])).toEqual([
       ["Diaper", ["Pee"], "Emily"],
@@ -171,12 +175,13 @@ describe("recentRows", () => {
       ],
       DISPLAY,
       NOW,
+      null,
     )
     expect(rows.map((row) => row.kind)).toEqual(["bottle", "diaper"])
   })
 
   it("names no one for a caregiver the household doesn't list", () => {
-    const [row] = recentRows([{ kind: "diaper", diaper: diaperAt(TWO_TEN, { createdBy: "gone" }) }], DISPLAY, NOW)
+    const [row] = recentRows([{ kind: "diaper", diaper: diaperAt(TWO_TEN, { createdBy: "gone" }) }], DISPLAY, NOW, null)
     expect(row?.by).toBe("")
   })
 
@@ -190,6 +195,7 @@ describe("recentRows", () => {
       ],
       DISPLAY,
       NOW,
+      null,
     )
     expect(rows.map(({ id, saving }) => [id, saving])).toEqual([
       [NURSED.id, true],
@@ -199,7 +205,7 @@ describe("recentRows", () => {
 
   it("shows a sleep at its start as a nap or a night, with how long she slept, when she woke and who logged it", () => {
     const nap = sleptAt(TWO_TEN, { endedAt: TWO_TEN + 80 * MINUTE })
-    const rows = recentRows([{ kind: "sleep", sleep: nap }], DISPLAY, NOW)
+    const rows = recentRows([{ kind: "sleep", sleep: nap }], DISPLAY, NOW, null)
     const plain = (text: string) => text.replace(/\s/gu, " ")
     expect(rows.map((row) => ({ ...row, time: plain(row.time), detail: row.detail.map(plain) }))).toEqual([
       {
@@ -218,7 +224,7 @@ describe("recentRows", () => {
 
   it("says she's asleep now while a sleep runs, counting up to now", () => {
     const night = sleptAt(NOW - 42 * MINUTE, { kind: "night", endedAt: null })
-    const [row] = recentRows([{ kind: "sleep", sleep: night }], DISPLAY, NOW)
+    const [row] = recentRows([{ kind: "sleep", sleep: night }], DISPLAY, NOW, null)
     expect([row?.title, row?.detail, row?.opens]).toEqual(["Night", ["Asleep now", "42 min"], "sleep"])
   })
 
@@ -233,7 +239,48 @@ describe("recentRows", () => {
       ],
       DISPLAY,
       NOW,
+      null,
     )
     expect(rows.map((row) => row.saving)).toEqual([true, true, true, false, false])
+  })
+
+  describe("a record with an action still on its way", () => {
+    const sleep = sleptAt(TWO_TEN)
+    const diaper = diaperAt(TWO_TEN)
+    const recent: ReadonlyArray<RecentEntry> = [
+      { kind: "sleep", sleep },
+      { kind: "diaper", diaper },
+      { kind: "feed", feed: NURSED },
+    ]
+    const shown = (busy: string | null) =>
+      recentRows(recent, DISPLAY, NOW, busy).map(({ saving, opens }) => [saving, opens])
+
+    it("shows its row as saving and opens it in nothing, whether it's a sleep, a diaper or a finished feed, and leaves the other rows as they were", () => {
+      expect(shown(sleep.id)).toEqual([
+        [true, null],
+        [false, "editDiaper"],
+        [false, "editFeed"],
+      ])
+      expect(shown(diaper.id)).toEqual([
+        [false, "editSleep"],
+        [true, null],
+        [false, "editFeed"],
+      ])
+      expect(shown(NURSED.id)).toEqual([
+        [false, "editSleep"],
+        [false, "editDiaper"],
+        [true, null],
+      ])
+    })
+
+    it("leaves every row as it was when nothing is busy, or the busy record isn't one of them", () => {
+      const settled = [
+        [false, "editSleep"],
+        [false, "editDiaper"],
+        [false, "editFeed"],
+      ]
+      expect(shown(null)).toEqual(settled)
+      expect(shown("measurement-1")).toEqual(settled)
+    })
   })
 })

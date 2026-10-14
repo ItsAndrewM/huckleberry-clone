@@ -35,3 +35,5 @@ export const useSheets = () => {
 }
 
 export const failedFor = (sheets: Sheets, sheet: SheetKind) => heldFor(sheets.held, sheet, sheets.editing)
+
+export const busyRecord = ({ busy }: Sheets) => (busy !== null && "id" in busy.action ? busy.action.id : null)

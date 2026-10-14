@@ -92,5 +92,8 @@ export const recentRow = (entry: RecentEntry, display: Display, now: number) => 
   }
 }
 
-export const recentRows = (recent: ReadonlyArray<RecentEntry>, display: Display, now: number) =>
-  recent.map((entry) => recentRow(entry, display, now))
+const whileBusy = (row: RecentRow, busy: string | null): RecentRow =>
+  row.id === busy ? { ...row, saving: true, opens: null } : row
+
+export const recentRows = (recent: ReadonlyArray<RecentEntry>, display: Display, now: number, busy: string | null) =>
+  recent.map((entry) => whileBusy(recentRow(entry, display, now), busy))
