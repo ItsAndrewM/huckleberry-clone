@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest"
 import type { Action } from "../src/api/actions.ts"
 import { Offline } from "../src/api/errors.ts"
 import { heldFor } from "../src/sheets/held.ts"
-import { closesOnSend, type Sending } from "../src/sheets/sending.ts"
+import { closesOnSend, type Failed, type Sending } from "../src/sheets/sending.ts"
 import {
   CLOSED,
   dismissedState,
@@ -540,5 +540,31 @@ describe("a dose that fails while another supplement's sheet is open", () => {
     }
     const sheetOpen = failedState(shownState(CLOSED, "dose", "supplement-2"), replayed, NOW)
     expect(sendingState(sheetOpen, OTHER_DOSE, true).held).toEqual([replayed])
+  })
+})
+
+describe("a dose sheet opened from History's Log at menu", () => {
+  const AT = NOW - 2 * 60 * 60_000
+  const OWN: Failed = { sending: DOSE, error: new Offline() }
+  const OTHER: Failed = {
+    sending: {
+      sheet: "dose",
+      action: {
+        kind: "logDose",
+        payload: { actionId: RENEWED, supplementId: "supplement-2", occurredAt: NOW, confirmedDuplicate: false },
+      },
+    },
+    error: new Offline(),
+  }
+
+  const doseSheetFrom = (held: ReadonlyArray<Failed>) =>
+    shownState(shownState(restoredState(held), "logAt", null, AT), "dose", "supplement-1", AT)
+
+  it("finds the held dose of its own supplement, at the time tapped, and not one of another supplement", () => {
+    const shown = doseSheetFrom([OTHER, OWN])
+    expect(shown).toMatchObject({ open: "dose", editing: "supplement-1", at: AT })
+    expect(heldFor(shown.held, "dose", shown.editing)).toBe(OWN)
+    const onlyOther = doseSheetFrom([OTHER])
+    expect(heldFor(onlyOther.held, "dose", onlyOther.editing)).toBeNull()
   })
 })
