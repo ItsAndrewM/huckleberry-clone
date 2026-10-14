@@ -102,6 +102,7 @@ describe("the household's recently deleted entries", () => {
     ["diapers that are null", { diapers: null }],
     ["sleeps that are null", { sleeps: null }],
     ["measurements that are null", { measurements: null }],
+    ["doses that are null", { doses: null }],
   ])("refuse %s", (_label, change) => {
     expect(decodes({ ...DELETED, ...change })).toBe(false)
   })

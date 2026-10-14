@@ -117,7 +117,7 @@ describe("Today", () => {
     expect(decodes(Today, { ...TODAY, naps: [] })).toBe(true)
   })
 
-  it.each(["activeSleep", "lastSleep"])("refuses an answer without its %s", (field) => {
+  it.each(["activeSleep", "lastSleep", "doses"])("refuses an answer without its %s", (field) => {
     const without = Object.fromEntries(Object.entries(TODAY).filter(([key]) => key !== field))
     expect(decodes(Today, without)).toBe(false)
   })
