@@ -324,8 +324,8 @@ test.describe("Today, with the household's answers played by the test", () => {
     await playToday(page, todayWith({}))
     await openToday(page)
     const actions = page.getByRole("region", { name: "Log", exact: true }).getByRole("button")
-    await expect(actions).toHaveText(["Bottle", "Nursing", "Diaper"])
-    for (const name of ["Bottle", "Nursing", "Diaper"]) {
+    await expect(actions).toHaveText(["Bottle", "Nursing", "Diaper", "Sleep"])
+    for (const name of ["Bottle", "Nursing", "Diaper", "Sleep"]) {
       await actions.filter({ hasText: name }).click()
       await expect(page.getByRole("dialog", { name })).toBeVisible()
       await page.keyboard.press("Escape")
@@ -381,19 +381,24 @@ test.describe("Today, with the household's answers played by the test", () => {
     expect(last.y + last.height).toBeLessThanOrEqual(bar.y)
   })
 
-  test("fits the quick actions on a 360-pixel-wide phone, resting on the tab bar", async ({ page }) => {
+  test("fits all four quick actions on a 360-pixel-wide phone, each a 44-pixel target, resting on the tab bar", async ({
+    page,
+  }) => {
     const width = 360
     const gutter = 16
     await page.setViewportSize({ width, height: 640 })
     await playToday(page, todayWith({}))
     await openToday(page)
     const log = page.getByRole("region", { name: "Log", exact: true })
-    const bottle = await boxOf(log.getByRole("button", { name: "Bottle" }))
-    const diaper = await boxOf(log.getByRole("button", { name: "Diaper" }))
+    const boxes = await Promise.all(
+      ["Bottle", "Nursing", "Diaper", "Sleep"].map((name) => boxOf(log.getByRole("button", { name }))),
+    )
     const bar = await boxOf(log)
     const tabs = await boxOf(page.getByRole("navigation", { name: "Main" }))
-    expect(bottle.x).toBeGreaterThanOrEqual(gutter)
-    expect(diaper.x + diaper.width).toBeLessThanOrEqual(width - gutter)
+    expect(boxes[0]?.x).toBeGreaterThanOrEqual(gutter)
+    const last = boxes.at(-1)
+    expect((last?.x ?? 0) + (last?.width ?? width)).toBeLessThanOrEqual(width - gutter)
+    for (const box of boxes) expect(Math.min(box.width, box.height)).toBeGreaterThanOrEqual(44)
     expect(Math.abs(bar.y + bar.height - tabs.y)).toBeLessThanOrEqual(1)
   })
 })

@@ -7,8 +7,10 @@ import {
   type Interval,
   layoutDay,
   onWallClock,
+  type PlacedBlock,
   type PlacedCluster,
   type Side,
+  sleepTouches,
 } from "@bt/domain"
 import { piecesOf, shownSlice } from "./day-model.ts"
 import type { Hidden } from "./history-kinds.ts"
@@ -21,6 +23,7 @@ export interface WeekColumn {
   readonly isToday: boolean
   readonly grid: DayGrid<Side>
   readonly diapers: ReadonlyArray<PlacedCluster>
+  readonly sleeps: ReadonlyArray<PlacedBlock<Side>>
   readonly doses: ReadonlyArray<PlacedCluster>
   readonly dosesShown: number
   readonly measured: boolean
@@ -45,8 +48,9 @@ const dosesIn = (doses: ReadonlyArray<Dose>, { start, end }: Interval) =>
 export const weekModel = (week: WeekPeriod, context: WeekContext): ReadonlyArray<WeekColumn> =>
   week.days.map(({ date, bounds, totals }) => {
     const feeds = week.feeds.filter((feed) => feedTouches(bounds, feed, context.now))
-    const slice = shownSlice({ date, bounds, feeds, diapers: week.diapers, doses: week.doses }, context.hidden)
-    const { blocks, bottles, diapers, doses } = piecesOf(slice)
+    const sleeps = week.sleeps.filter((sleep) => sleepTouches(bounds, sleep, context.now))
+    const slice = shownSlice({ date, bounds, feeds, diapers: week.diapers, sleeps, doses: week.doses }, context.hidden)
+    const { blocks, bottles, diapers, sleeps: slept, doses } = piecesOf(slice)
     const day = { date, zone: context.zone, bounds, now: context.now, blocks, points: bottles }
     const lane = (points: typeof doses) => layoutDay(onWallClock({ ...day, blocks: [], points }), WEEK_SCALE).clusters
     const weighed = measuredIn(week.measurements, bounds)
@@ -57,6 +61,7 @@ export const weekModel = (week: WeekPeriod, context: WeekContext): ReadonlyArray
       isToday: date === context.today,
       grid: layoutDay(onWallClock(day), WEEK_SCALE),
       diapers: lane(diapers),
+      sleeps: layoutDay(onWallClock({ ...day, blocks: slept, points: [] }), WEEK_SCALE).blocks,
       doses: lane(doses),
       dosesShown: context.hidden.has("supplements") ? 0 : dosed,
       measured: !context.hidden.has("growth") && weighed,

@@ -6,15 +6,18 @@ import {
   MeasurementConflict,
   NotFound,
   ServiceUnavailable,
+  type Sleep,
+  SleepConflict,
   Unauthorized,
 } from "@bt/contracts"
 import { describe, expect, it } from "vitest"
+import type { Action } from "../src/api/actions.ts"
 import { AuthRequired, Offline } from "../src/api/errors.ts"
 import { StaleDraft } from "../src/sheets/drafts.ts"
 import { failureNote, type Household } from "../src/sheets/failure.ts"
 import { Unsaved } from "../src/sheets/kept.ts"
 import { measurement } from "./growth-fixtures.ts"
-import { ANDREW, diaperAt, dosedAt, EMILY, feedAt, MINUTE, NOW, ZONE } from "./today-fixtures.ts"
+import { ANDREW, diaperAt, dosedAt, EMILY, feedAt, MINUTE, NOW, sleptAt, ZONE } from "./today-fixtures.ts"
 
 const HOUSEHOLD: Household = {
   caregivers: [
@@ -27,6 +30,11 @@ const HOUSEHOLD: Household = {
 }
 
 const message = (error: Error) => failureNote(error, HOUSEHOLD, { keptOn: "phone" }).message.replace(/\s/gu, " ")
+
+const staleSleep = (current: Sleep, action: Action["kind"]) => {
+  const error = new SleepConflict({ code: "STALE_VERSION", current })
+  return failureNote(error, HOUSEHOLD, { keptOn: null, sheet: "sleep", action }).message.replace(/\s/gu, " ")
+}
 
 describe("failureNote", () => {
   it("says an entry with no connection is kept on this phone, and offers to try again", () => {
@@ -106,6 +114,76 @@ describe("failureNote", () => {
     expect(refused("end_not_after_start")).toBe("Pick a time after this side started.")
     expect(refused("out_of_range")).toBe("A side can run for 4 hours at most.")
     expect(refused("invalid")).toBe("Check the times and amounts, then try again.")
+  })
+
+  it("names who started the running sleep, and when", () => {
+    const current = sleptAt(NOW - 20 * MINUTE, { createdBy: EMILY, endedAt: null })
+    expect(message(new SleepConflict({ code: "SLEEP_ALREADY_ACTIVE", current }))).toBe(
+      "Emily started a sleep at 9:10 AM.",
+    )
+  })
+
+  it("names the nap or night a sleep overlaps, running or not", () => {
+    const nap = sleptAt(NOW - 60 * MINUTE, { endedAt: NOW - 45 * MINUTE })
+    const night = sleptAt(NOW - 10 * MINUTE, { kind: "night", endedAt: null })
+    expect(message(new SleepConflict({ code: "SLEEP_OVERLAP", current: nap }))).toBe(
+      "This overlaps the nap at 8:30 AM–8:45 AM.",
+    )
+    expect(message(new SleepConflict({ code: "SLEEP_OVERLAP", current: night }))).toBe(
+      "This overlaps the night at 9:20 AM–now.",
+    )
+  })
+
+  it("says who changed or deleted a sleep a moment ago, or that it was already saved", () => {
+    const changed = sleptAt(NOW, { updatedBy: EMILY, version: 2 })
+    expect(message(new SleepConflict({ code: "STALE_VERSION", current: changed }))).toBe(
+      "Emily changed this sleep a moment ago.",
+    )
+    expect(message(new SleepConflict({ code: "STALE_VERSION", current: { ...changed, deletedAt: NOW } }))).toBe(
+      "Emily deleted this sleep a moment ago.",
+    )
+    expect(message(new SleepConflict({ code: "ACTION_REPLAY_MISMATCH", current: changed }))).toBe(
+      "This was already saved as you first entered it.",
+    )
+  })
+
+  it("says who woke her, and when, when the other phone's wake reached the household first", () => {
+    const woken = sleptAt(NOW - 60 * MINUTE, { updatedBy: EMILY, endedAt: NOW - 20 * MINUTE, version: 3 })
+    expect(staleSleep(woken, "wakeSleep")).toBe("Emily woke her at 9:10 AM.")
+  })
+
+  it("keeps changed and deleted for a stale edit or delete, for a wake that finds her asleep, and for a deleted sleep", () => {
+    const woken = sleptAt(NOW - 60 * MINUTE, { updatedBy: EMILY, endedAt: NOW - 20 * MINUTE, version: 3 })
+    expect(staleSleep(woken, "editSleep")).toBe("Emily changed this sleep a moment ago.")
+    expect(staleSleep(woken, "deleteSleep")).toBe("Emily changed this sleep a moment ago.")
+    expect(staleSleep({ ...woken, endedAt: null }, "wakeSleep")).toBe("Emily changed this sleep a moment ago.")
+    expect(staleSleep({ ...woken, deletedAt: NOW }, "wakeSleep")).toBe("Emily deleted this sleep a moment ago.")
+  })
+
+  it("explains a refused sleep time in a sleep's words", () => {
+    const refused = (issue: "end_not_after_start" | "out_of_range", sheet: "sleep" | "pastSleep" | "editSleep") =>
+      failureNote(new InvalidInput({ fieldErrors: [{ path: "endedAt", issue }] }), HOUSEHOLD, { keptOn: null, sheet })
+        .message
+    expect(refused("end_not_after_start", "sleep")).toBe("Pick a time after she fell asleep.")
+    expect(refused("out_of_range", "pastSleep")).toBe("A sleep can last a day at most.")
+    expect(refused("end_not_after_start", "editSleep")).toBe("Pick a time after she fell asleep.")
+  })
+
+  it("asks a sleep sheet to check only the times when the household refuses a field with no message of its own", () => {
+    const refused = (sheet: "sleep" | "pastSleep" | "editSleep" | "pastFeed" | "diaper") =>
+      failureNote(new InvalidInput({ fieldErrors: [{ path: "kind", issue: "invalid" }] }), HOUSEHOLD, {
+        keptOn: null,
+        sheet,
+      }).message
+    expect([refused("sleep"), refused("pastSleep"), refused("editSleep")]).toEqual([
+      "Check the times, then try again.",
+      "Check the times, then try again.",
+      "Check the times, then try again.",
+    ])
+    expect([refused("pastFeed"), refused("diaper")]).toEqual([
+      "Check the times and amounts, then try again.",
+      "Check the times and amounts, then try again.",
+    ])
   })
 
   it("says the running feed changed when the household no longer has it as it was", () => {

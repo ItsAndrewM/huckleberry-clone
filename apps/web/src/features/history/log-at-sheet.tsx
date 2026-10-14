@@ -15,6 +15,7 @@ const CHOICES = [
   { label: "Bottle", sheet: "bottle", Icon: KIND_ICONS.bottle, needsToday: true },
   { label: "Nursing", sheet: "pastFeed", Icon: KIND_ICONS.nursing, needsToday: false },
   { label: "Diaper", sheet: "diaper", Icon: KIND_ICONS.diaper, needsToday: false },
+  { label: "Sleep", sheet: "pastSleep", Icon: KIND_ICONS.sleep, needsToday: false },
   { label: "Measurement", sheet: "measurement", Icon: RulerIcon, needsToday: false },
 ] as const satisfies ReadonlyArray<{ label: string; sheet: TimedSheet; Icon: LucideIcon; needsToday: boolean }>
 

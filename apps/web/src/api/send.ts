@@ -1,4 +1,4 @@
-import type { SavedDiaper, SavedDose, SavedFeed, SavedMeasurement } from "@bt/contracts"
+import type { SavedDiaper, SavedDose, SavedFeed, SavedMeasurement, SavedSleep } from "@bt/contracts"
 import {
   type Action,
   type DiaperAction,
@@ -7,11 +7,13 @@ import {
   isDiaperAction,
   isDoseAction,
   isMeasurementAction,
+  isSleepAction,
   type MeasurementAction,
+  type SleepAction,
 } from "./actions.ts"
 import type { HouseholdApi } from "./client.ts"
 
-export type Saved = SavedDiaper | SavedFeed | SavedMeasurement | SavedDose
+export type Saved = SavedDiaper | SavedFeed | SavedMeasurement | SavedSleep | SavedDose
 
 type OnFeed = Extract<FeedAction, { readonly id: string }>
 type NewFeed = Exclude<FeedAction, OnFeed>
@@ -98,6 +100,23 @@ const sendMeasurement = (api: HouseholdApi, action: MeasurementAction): Promise<
   }
 }
 
+const sendSleep = (api: HouseholdApi, action: SleepAction): Promise<SavedSleep> => {
+  switch (action.kind) {
+    case "logSleep":
+      return api.request((client) => client.sleeps.logSleep({ payload: action.payload }))
+    case "startSleep":
+      return api.request((client) => client.sleeps.startSleep({ payload: action.payload }))
+    case "wakeSleep":
+      return api.request((client) => client.sleeps.wakeSleep({ params: { id: action.id }, payload: action.payload }))
+    case "editSleep":
+      return api.request((client) => client.sleeps.editSleep({ params: { id: action.id }, payload: action.payload }))
+    case "deleteSleep":
+      return api.request((client) => client.sleeps.deleteSleep({ params: { id: action.id }, payload: action.payload }))
+    case "restoreSleep":
+      return api.request((client) => client.sleeps.restoreSleep({ params: { id: action.id }, payload: action.payload }))
+  }
+}
+
 const sendDose = (api: HouseholdApi, action: DoseAction): Promise<SavedDose> => {
   switch (action.kind) {
     case "logDose":
@@ -112,6 +131,7 @@ const sendDose = (api: HouseholdApi, action: DoseAction): Promise<SavedDose> => 
 }
 
 export const send = (api: HouseholdApi, action: Action): Promise<Saved> => {
+  if (isSleepAction(action)) return sendSleep(api, action)
   if (isDoseAction(action)) return sendDose(api, action)
   if (isMeasurementAction(action)) return sendMeasurement(api, action)
   if (isDiaperAction(action)) return sendDiaper(api, action)

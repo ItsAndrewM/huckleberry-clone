@@ -46,14 +46,14 @@ test("doesn't say Nothing logged. on a day holding only a dose, with its chip on
   await expect(page.getByText("Nothing logged.")).toHaveCount(0)
 })
 
-test("fits the four chips on a 360-pixel-wide phone, wrapping them rather than scrolling the page", async ({
+test("fits the five chips on a 360-pixel-wide phone, wrapping them rather than scrolling the page", async ({
   page,
 }) => {
   await page.setViewportSize({ width: 360, height: 640 })
   await playDosedDay(page)
   await openHistory(page)
   const chips = page.getByRole("group", { name: "Show" }).getByRole("button")
-  await expect(chips).toHaveText(["Feeds", "Diapers", "Growth", "Supplements"])
+  await expect(chips).toHaveText(["Feeds", "Diapers", "Sleep", "Growth", "Supplements"])
   const edges = await chips.evaluateAll((nodes) =>
     nodes.map((node) => {
       const { left, right } = node.getBoundingClientRect()

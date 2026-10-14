@@ -39,6 +39,13 @@ describe("totalsLines", () => {
   })
 })
 
+describe("a day's sleep line", () => {
+  it("says how long she slept, in naps and at night, after the feeds and diapers", () => {
+    const slept = { ...NO_TOTALS, sleepsStarted: 3, sleepSeconds: 40_800, napSeconds: 10_200, nightSeconds: 30_600 }
+    expect(totalsLines(slept, "ml")).toEqual([["11 h 20 min asleep", "2 h 50 min naps", "8 h 30 min night"]])
+  })
+})
+
 describe("nothingLogged", () => {
   const EMPTY_DAY = dayWith({ feeds: [], diapers: [], measurements: [], doses: [] })
 
@@ -50,9 +57,11 @@ describe("nothingLogged", () => {
     expect(nothingLogged({ ...EMPTY_DAY, doses: [dosedAt(local("08:00"))] }, "ml")).toBe(false)
   })
 
-  it("isn't said of a day holding only feeds or diapers, or only a measurement", () => {
+  it("isn't said of a day holding only feeds or diapers, only a measurement, or only sleep", () => {
     expect(nothingLogged({ ...EMPTY_DAY, totals: DAY_TOTALS }, "ml")).toBe(false)
     expect(nothingLogged({ ...EMPTY_DAY, measurements: [WEIGHED] }, "ml")).toBe(false)
+    const napped = { ...NO_TOTALS, sleepsStarted: 1, sleepSeconds: 3600, napSeconds: 3600, longestSleepSeconds: 3600 }
+    expect(nothingLogged({ ...EMPTY_DAY, totals: napped }, "ml")).toBe(false)
   })
 })
 

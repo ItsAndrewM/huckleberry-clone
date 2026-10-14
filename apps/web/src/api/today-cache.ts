@@ -1,14 +1,35 @@
-import type { Dose, Feed, RecentEntry, Today } from "@bt/contracts"
+import type { Dose, Feed, RecentEntry, Sleep, Today } from "@bt/contracts"
 import { contains, type Instant, last24hPeriod, localDateOf } from "@bt/domain"
 import type { Action } from "./actions.ts"
-import { isPending, pendingDiaper, pendingDose, pendingFeed, pendingId, startedFeed, withBottle } from "./pending.ts"
+import {
+  isPending,
+  pendingDiaper,
+  pendingDose,
+  pendingFeed,
+  pendingId,
+  pendingSleep,
+  startedFeed,
+  startedSleep,
+  withBottle,
+} from "./pending.ts"
 import type { Saved } from "./send.ts"
 import { isSwapping } from "./swap.ts"
 import { idOf, later, NOTHING, type Pending, shifted, timeOf, without, withEntry, withFeed } from "./today-change.ts"
 import { doseTextOf, withoutTodaysDose, withTodaysDose } from "./today-doses.ts"
 
+const withSleep = (today: Today, sleep: Sleep): Today => ({
+  ...today,
+  activeSleep: sleep.endedAt === null ? sleep : today.activeSleep,
+  lastSleep: later(today.lastSleep, sleep),
+  recent: withEntry(today.recent, { kind: "sleep", sleep }),
+})
+
 export const pendingToday = (today: Today, action: Action, pending: Pending): Today => {
   switch (action.kind) {
+    case "logSleep":
+      return withSleep(today, pendingSleep(action.payload, pending))
+    case "startSleep":
+      return withSleep(today, startedSleep(action.payload, pending))
     case "logDiaper": {
       const diaper = pendingDiaper(action.payload, pending)
       const recent = withEntry(today.recent, { kind: "diaper", diaper })
@@ -63,6 +84,23 @@ const withoutFeed = (today: Today, pending: Pending, id: string, before: Today):
   }
 }
 
+const settledSleep = (sleep: Sleep | null) => (sleep === null || isPending(sleep.id) ? null : sleep)
+
+const latestSleep = (recent: ReadonlyArray<RecentEntry>, before: Sleep | null) =>
+  recent.reduce((latest, entry) => (entry.kind === "sleep" ? later(latest, entry.sleep) : latest), settledSleep(before))
+
+const withoutSleep = (today: Today, id: string, before: Today): Today => {
+  const entry = entryOf(today, id)
+  if (entry?.kind !== "sleep") return today
+  const recent = without(today.recent, id)
+  return {
+    ...today,
+    activeSleep: today.activeSleep?.id === id ? before.activeSleep : today.activeSleep,
+    lastSleep: today.lastSleep?.id === id ? latestSleep(recent, before.lastSleep) : today.lastSleep,
+    recent,
+  }
+}
+
 const withoutBottle = (today: Today, pending: Pending, feedId: string, portionId: string): Today => {
   const active = today.activeFeed
   if (active?.id !== feedId || !active.portions.some(({ id }) => id === portionId)) return today
@@ -81,6 +119,9 @@ export const withdrawnToday = (today: Today, action: Action, pending: Pending, b
     case "logFeed":
     case "startFeed":
       return withoutFeed(today, pending, pendingId(action.payload.actionId), before)
+    case "logSleep":
+    case "startSleep":
+      return withoutSleep(today, pendingId(action.payload.actionId), before)
     case "addBottle":
       return withoutBottle(today, pending, action.id, pendingId(action.payload.actionId))
     default:
@@ -100,6 +141,21 @@ const savedFeed = (today: Today, feed: Feed, recent: ReadonlyArray<RecentEntry>,
     activeFeed: activeAfter(today.activeFeed, feed),
     lastFeed: live ? later(today.lastFeed, feed) : today.lastFeed,
     recent: live && shown ? withEntry(recent, { kind: "feed", feed }) : without(recent, feed.id),
+  }
+}
+
+const sleepActiveAfter = (active: Sleep | null, sleep: Sleep): Sleep | null => {
+  if (sleep.deletedAt === null && sleep.endedAt === null) return sleep
+  return active !== null && active.id === sleep.id ? null : active
+}
+
+const savedSleep = (today: Today, sleep: Sleep, recent: ReadonlyArray<RecentEntry>, shown: boolean): Today => {
+  const live = sleep.deletedAt === null
+  return {
+    ...today,
+    activeSleep: sleepActiveAfter(today.activeSleep, sleep),
+    lastSleep: live ? later(today.lastSleep, sleep) : today.lastSleep,
+    recent: live && shown ? withEntry(recent, { kind: "sleep", sleep }) : without(recent, sleep.id),
   }
 }
 
@@ -123,6 +179,10 @@ export const savedToday = (today: Today, saved: Saved, action: Action, now: Inst
   if ("dose" in saved) {
     const { dose } = saved
     return savedDose(today, dose, recent, isShown(today, action, { kind: "dose", dose }, now), pending)
+  }
+  if ("sleep" in saved) {
+    const { sleep } = saved
+    return savedSleep(today, sleep, recent, isShown(today, action, { kind: "sleep", sleep }, now))
   }
   if ("feed" in saved) {
     const { feed } = saved

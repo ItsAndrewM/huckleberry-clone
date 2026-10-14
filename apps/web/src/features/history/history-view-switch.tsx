@@ -2,7 +2,7 @@ import type { LocalDate } from "@bt/contracts"
 import { useNavigate } from "@tanstack/react-router"
 import { ToggleGroup, ToggleGroupItem } from "../../components/ui/toggle-group.tsx"
 import type { Hidden } from "./history-kinds.ts"
-import { viewSearch } from "./history-navigation.ts"
+import { opensAtTop, viewSearch } from "./history-navigation.ts"
 import type { HistoryPeriod, HistoryView } from "./history-period.ts"
 
 const VIEWS = [
@@ -26,8 +26,9 @@ export const HistoryViewSwitch = ({ period, today, birthDate, hidden }: HistoryV
       value={[period.view]}
       onValueChange={([next]) => {
         const view = VIEWS.find(({ value }) => value === next)?.value
-        if (view !== undefined)
-          void navigate({ to: "/history", search: viewSearch(view, period, today, birthDate, hidden) })
+        if (view === undefined) return
+        const search = viewSearch(view, period, today, birthDate, hidden)
+        void navigate({ to: "/history", search, resetScroll: opensAtTop(search) })
       }}
       variant="outline"
       size="lg"

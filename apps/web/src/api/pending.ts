@@ -8,6 +8,9 @@ import type {
   NewDose,
   NewFeed,
   NewMeasurement,
+  NewSleep,
+  Sleep,
+  SleepStart,
   VersionedPortion,
 } from "@bt/contracts"
 import { type Instant, sessionBounds } from "@bt/domain"
@@ -80,4 +83,20 @@ export const startedFeed = ({ actionId, side, startedAt }: FeedStart, author: Au
 export const withBottle = (feed: Feed, { actionId, occurredAt, breastMilkMl, formulaMl }: VersionedPortion): Feed => ({
   ...feed,
   portions: [...feed.portions, { id: pendingId(actionId), occurredAt, breastMilkMl, formulaMl }],
+})
+
+export const pendingSleep = ({ actionId, kind, startedAt, endedAt }: NewSleep, author: Author): Sleep => ({
+  id: pendingId(actionId),
+  kind,
+  startedAt,
+  endedAt,
+  ...audit(author),
+})
+
+export const startedSleep = ({ actionId, kind, startedAt }: SleepStart, author: Author): Sleep => ({
+  id: pendingId(actionId),
+  kind,
+  startedAt,
+  endedAt: null,
+  ...audit(author),
 })

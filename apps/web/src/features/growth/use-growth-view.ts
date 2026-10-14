@@ -2,14 +2,12 @@ import type { Measurement, Me } from "@bt/contracts"
 import { ageInDays, localDateOf } from "@bt/domain"
 import { useMemo } from "react"
 import { isPending } from "../../api/pending.ts"
-import { type Sheets, useSheets } from "../../sheets/sheets-context.ts"
+import { busyRecord, useSheets } from "../../sheets/sheets-context.ts"
 import { useMinute } from "../../timer/use-now.ts"
 import { latestTiles, measurementCards } from "./cards.ts"
 import { ageWindowFor, axisLabel, axisUnitOf, curvesFor, growthRows } from "./chart-model.ts"
 import { plottedRows } from "./growth-chart-definition.ts"
 import type { GrowthMetricInfo } from "./metrics.ts"
-
-const busyRecord = ({ busy }: Sheets) => (busy !== null && "id" in busy.action ? busy.action.id : null)
 
 export const useGrowthView = (me: Me, measurements: ReadonlyArray<Measurement>, info: GrowthMetricInfo) => {
   const now = useMinute()

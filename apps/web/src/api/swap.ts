@@ -1,4 +1,15 @@
-import type { DayPeriod, Diaper, Dose, DoseEdit, Feed, FeedEdit, RecentEntry, Today } from "@bt/contracts"
+import type {
+  DayPeriod,
+  Diaper,
+  Dose,
+  DoseEdit,
+  Feed,
+  FeedEdit,
+  RecentEntry,
+  Sleep,
+  SleepEdit,
+  Today,
+} from "@bt/contracts"
 import {
   contains,
   feedTouches,
@@ -7,6 +18,7 @@ import {
   last24hPeriod,
   localDateOf,
   sessionBounds,
+  sleepTouches,
   totalsIn,
 } from "@bt/domain"
 import type { Action } from "./actions.ts"
@@ -24,13 +36,25 @@ const SWAPS = new Set<Action["kind"]>([
   "deleteDiaper",
   "editFeed",
   "deleteFeed",
+  "editSleep",
+  "deleteSleep",
   "editDose",
   "deleteDose",
 ])
 
 export type Swapping = Extract<
   Action,
-  { readonly kind: "editDiaper" | "deleteDiaper" | "editFeed" | "deleteFeed" | "editDose" | "deleteDose" }
+  {
+    readonly kind:
+      | "editDiaper"
+      | "deleteDiaper"
+      | "editFeed"
+      | "deleteFeed"
+      | "editSleep"
+      | "deleteSleep"
+      | "editDose"
+      | "deleteDose"
+  }
 >
 
 export const isSwapping = (action: Action): action is Swapping => SWAPS.has(action.kind)
@@ -50,6 +74,15 @@ const editedDiaper = (diaper: Diaper, action: Extract<Swapping, { kind: "editDia
   return { ...diaper, occurredAt, wet, dirty, updatedBy: author.by, updatedAt: author.now }
 }
 
+const editedSleep = (sleep: Sleep, { kind, startedAt, endedAt }: SleepEdit, author: Author): Sleep => ({
+  ...sleep,
+  kind,
+  startedAt,
+  endedAt,
+  updatedBy: author.by,
+  updatedAt: author.now,
+})
+
 const editedDose = (dose: Dose, { occurredAt }: DoseEdit, pending: Pending): Dose => ({
   ...dose,
   occurredAt,
@@ -59,6 +92,9 @@ const editedDose = (dose: Dose, { occurredAt }: DoseEdit, pending: Pending): Dos
 })
 
 export const swappedEntry = (entry: RecentEntry, action: Swapping, pending: Pending): RecentEntry | null => {
+  if (action.kind === "editSleep" && entry.kind === "sleep") {
+    return { kind: "sleep", sleep: editedSleep(entry.sleep, action.payload, pending) }
+  }
   if (action.kind === "editDiaper" && entry.kind === "diaper") {
     return { kind: "diaper", diaper: editedDiaper(entry.diaper, action, pending) }
   }
@@ -84,6 +120,19 @@ const activeAfter = (today: Today, id: string, feed: Feed | null) => {
   return today.activeFeed?.id === id ? null : today.activeFeed
 }
 
+const sleepsOf = (recent: ReadonlyArray<RecentEntry>) =>
+  recent.flatMap((entry) => (entry.kind === "sleep" ? [entry.sleep] : []))
+
+const lastSleepAfter = (today: Today, id: string, recent: ReadonlyArray<RecentEntry>, sleep: Sleep | null) => {
+  const other = today.lastSleep?.id === id ? null : today.lastSleep
+  return [...sleepsOf(recent), ...(sleep === null ? [] : [sleep])].reduce(later, other)
+}
+
+const activeSleepAfter = (today: Today, id: string, sleep: Sleep | null) => {
+  if (sleep?.endedAt === null) return sleep
+  return today.activeSleep?.id === id ? null : today.activeSleep
+}
+
 const swapId = ({ before, after }: Swap) => {
   const entry = before ?? after
   if (entry === null) throw new Error("A swap changes an entry, so it has one before or after it")
@@ -96,18 +145,31 @@ export const swappedToday = (today: Today, pending: Pending, swap: Swap, asOf: I
   const kept = without(today.recent, id)
   const recent = after !== null && contains(last24hPeriod(pending.now), timeOf(after)) ? withEntry(kept, after) : kept
   const feed = after?.kind === "feed" ? after.feed : null
+  const sleep = after?.kind === "sleep" ? after.sleep : null
   const swapped = {
     ...today,
     totals: shifted(today, { ...pending, now: asOf }, changeOf(swap.before), changeOf(after)),
     activeFeed: activeAfter(today, id, feed),
     lastFeed: lastFeedAfter(today, id, recent, feed),
+    activeSleep: activeSleepAfter(today, id, sleep),
+    lastSleep: lastSleepAfter(today, id, recent, sleep),
     recent,
   }
   return after?.kind === "dose" ? withTodaysDose(swapped, after.dose) : withoutTodaysDose(swapped, id)
 }
 
-const touches = (period: Interval, entry: RecentEntry, now: Instant) =>
-  entry.kind === "feed" ? feedTouches(period, entry.feed, now) : contains(period, timeOf(entry))
+const touches = (period: Interval, entry: RecentEntry, now: Instant) => {
+  switch (entry.kind) {
+    case "feed":
+      return feedTouches(period, entry.feed, now)
+    case "diaper":
+      return contains(period, entry.diaper.occurredAt)
+    case "sleep":
+      return sleepTouches(period, entry.sleep, now)
+    case "dose":
+      return contains(period, entry.dose.occurredAt)
+  }
+}
 
 const inPeriod = <R extends { readonly id: string }>(
   records: ReadonlyArray<R>,
@@ -116,24 +178,26 @@ const inPeriod = <R extends { readonly id: string }>(
   at: (r: R) => number,
 ) => [...records.filter((one) => one.id !== id), ...(record === null ? [] : [record])].toSorted((a, b) => at(a) - at(b))
 
+const byKind = (entry: RecentEntry | null) => ({
+  feed: entry?.kind === "feed" ? entry.feed : null,
+  diaper: entry?.kind === "diaper" ? entry.diaper : null,
+  sleep: entry?.kind === "sleep" ? entry.sleep : null,
+  dose: entry?.kind === "dose" ? entry.dose : null,
+})
+
 export const swappedDay = (day: DayPeriod, now: Instant, swap: Swap): DayPeriod => {
   const id = swapId(swap)
-  const after = swap.after !== null && touches(day.bounds, swap.after, now) ? swap.after : null
-  const feeds = inPeriod(day.feeds, id, after?.kind === "feed" ? after.feed : null, (feed) => feed.startedAt)
-  const diapers = inPeriod(
-    day.diapers,
-    id,
-    after?.kind === "diaper" ? after.diaper : null,
-    (diaper) => diaper.occurredAt,
-  )
-  const doses = inPeriod(day.doses, id, after?.kind === "dose" ? after.dose : null, (dose) => dose.occurredAt)
-  return {
-    ...day,
-    totals: totalsIn(day.bounds, { feeds, diapers, sleeps: day.sleeps }, now),
-    feeds,
-    diapers,
-    doses,
-  }
+  const after = byKind(swap.after !== null && touches(day.bounds, swap.after, now) ? swap.after : null)
+  const feeds = inPeriod(day.feeds, id, after.feed, (feed) => feed.startedAt)
+  const diapers = inPeriod(day.diapers, id, after.diaper, (diaper) => diaper.occurredAt)
+  const sleeps = inPeriod(day.sleeps, id, after.sleep, (sleep) => sleep.startedAt)
+  const doses = inPeriod(day.doses, id, after.dose, (dose) => dose.occurredAt)
+  return { ...day, totals: totalsIn(day.bounds, { feeds, diapers, sleeps }, now), feeds, diapers, sleeps, doses }
+}
+
+const activeCopy = (today: Today, id: string): RecentEntry | null => {
+  if (today.activeFeed?.id === id) return { kind: "feed", feed: today.activeFeed }
+  return today.activeSleep?.id === id ? { kind: "sleep", sleep: today.activeSleep } : null
 }
 
 const todaysDose = (today: Today, id: string): RecentEntry | null => {
@@ -142,14 +206,15 @@ const todaysDose = (today: Today, id: string): RecentEntry | null => {
 }
 
 export const todayCopy = (today: Today, id: string): RecentEntry | null =>
-  today.recent.find((entry) => idOf(entry) === id) ??
-  (today.activeFeed?.id === id ? { kind: "feed", feed: today.activeFeed } : todaysDose(today, id))
+  today.recent.find((entry) => idOf(entry) === id) ?? activeCopy(today, id) ?? todaysDose(today, id)
 
 export const dayCopy = (day: DayPeriod, id: string): RecentEntry | null => {
   const feed = day.feeds.find((one) => one.id === id)
   if (feed !== undefined) return { kind: "feed", feed }
   const diaper = day.diapers.find((one) => one.id === id)
   if (diaper !== undefined) return { kind: "diaper", diaper }
+  const sleep = day.sleeps.find((one) => one.id === id)
+  if (sleep !== undefined) return { kind: "sleep", sleep }
   const dose = day.doses.find((one) => one.id === id)
   return dose === undefined ? null : { kind: "dose", dose }
 }

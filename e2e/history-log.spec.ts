@@ -7,6 +7,7 @@ const BOTTLE_WAITS = "Bottle opens once Today loads."
 const OPENS_WITHOUT_TODAY = [
   { choice: "Nursing", sheet: "Past feed", field: "Started" },
   { choice: "Diaper", sheet: "Diaper", field: "When" },
+  { choice: "Sleep", sheet: "Past sleep", field: "Fell asleep" },
   { choice: "Measurement", sheet: "Add measurement", field: "When" },
   { choice: "Vitamin D", sheet: "Vitamin D", field: "When" },
 ]

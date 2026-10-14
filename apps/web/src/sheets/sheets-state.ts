@@ -34,6 +34,8 @@ const NEW_ENTRIES = new Set<Action["kind"]>([
   "startFeed",
   "addBottle",
   "logMeasurement",
+  "logSleep",
+  "startSleep",
   "logDose",
 ])
 

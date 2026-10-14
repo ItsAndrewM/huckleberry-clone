@@ -3,7 +3,7 @@ import { type BrowserContext, expect, type Locator, type Page, test } from "@pla
 const NOW = Date.UTC(2026, 9, 9, 16, 30)
 const MINUTE = 60_000
 const ACTION_ID = expect.stringMatching(/^[0-9a-f-]{36}$/u)
-const RECORD_ROUTE = /\/api\/(diapers|feeds|growth|doses)\/[^/]+(\/restore)?$/u
+const RECORD_ROUTE = /\/api\/(diapers|feeds|growth|sleeps|doses)\/[^/]+(\/restore)?$/u
 
 interface Audit {
   readonly version: number
@@ -38,6 +38,13 @@ interface Measurement extends Audit {
   readonly headCm: number | null
 }
 
+interface Sleep extends Audit {
+  readonly id: string
+  readonly kind: "nap" | "night"
+  readonly startedAt: number
+  readonly endedAt: number | null
+}
+
 interface Dose extends Audit {
   readonly id: string
   readonly supplementId: string
@@ -49,7 +56,7 @@ interface Dose extends Audit {
 interface Deleted {
   readonly feeds: ReadonlyArray<Feed>
   readonly diapers: ReadonlyArray<Diaper>
-  readonly sleeps: ReadonlyArray<never>
+  readonly sleeps: ReadonlyArray<Sleep>
   readonly measurements: ReadonlyArray<Measurement>
   readonly doses: ReadonlyArray<Dose>
 }
@@ -65,6 +72,7 @@ type Changed = ReadonlyArray<ReadonlyArray<string>>
 type Answer =
   | { readonly diaper: Diaper; readonly changed: Changed }
   | { readonly measurement: Measurement; readonly changed: Changed }
+  | { readonly sleep: Sleep; readonly changed: Changed }
   | { readonly dose: Dose; readonly changed: Changed }
   | { readonly _tag: "Conflict"; readonly code: "FEED_ALREADY_ACTIVE"; readonly current: Feed }
   | {
@@ -118,6 +126,14 @@ const weighed = (audit: Audit): Measurement => ({
   weightG: 4210.5,
   lengthCm: null,
   headCm: 37.5,
+  ...audit,
+})
+
+const nap = (audit: Audit): Sleep => ({
+  id: "sleep-1",
+  kind: "nap",
+  startedAt: NOW - 150 * MINUTE,
+  endedAt: NOW - 70 * MINUTE,
   ...audit,
 })
 
@@ -379,4 +395,21 @@ test("waits with a reason while there's no connection", async ({ page, context }
   await goOfflineLikeAPhone(page, context)
   await expect(page.getByText("Restoring needs a connection.")).toBeVisible()
   await expect(page.getByRole("button", { name: /^Restore Diaper/u })).toBeDisabled()
+})
+
+test("restores a deleted nap with a tap, offering Undo", async ({ page }) => {
+  const { played, answer, emily } = await playDeleted(page, (_andrew, deleter) => ({
+    ...NOTHING,
+    sleeps: [nap(deletedBy(deleter, NOW - 5 * MINUTE))],
+  }))
+  await answer(200, { sleep: { ...nap(deletedBy(emily, NOW, 3)), deletedAt: null }, changed: [["deleted"]] }, NOTHING)
+  await openDeleted(page)
+  await expect(entries(page)).toContainText("Nap")
+  await expect(entries(page)).toContainText("1 h 20 min")
+  await page.getByRole("button", { name: /^Restore Nap/u }).click()
+  await expect(page.getByText("Sleep restored")).toBeVisible()
+  await expect(page.getByRole("button", { name: "Undo" })).toBeVisible()
+  expect(played.sent).toEqual([
+    { method: "POST", path: "/api/sleeps/sleep-1/restore", body: { actionId: ACTION_ID, version: 2 } },
+  ])
 })

@@ -45,7 +45,7 @@ describe("the Supplements chip", () => {
   it("joins History's filters after Growth, read from and written to the address", () => {
     expect([...hiddenIn("supplements,diapers")]).toEqual(["supplements", "diapers"])
     expect(hideOf(new Set(["supplements", "feeds"]))).toBe("feeds,supplements")
-    expect([...hiddenExcept(["feeds", "diapers", "growth"])]).toEqual(["supplements"])
+    expect([...hiddenExcept(["feeds", "diapers", "sleep", "growth"])]).toEqual(["supplements"])
     expect(hiddenNotice(hiddenIn("supplements"))).toBe("Supplements hidden")
   })
 })

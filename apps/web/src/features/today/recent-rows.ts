@@ -1,13 +1,14 @@
-import type { Diaper, Dose, Feed, RecentEntry } from "@bt/contracts"
+import type { Diaper, Dose, Feed, RecentEntry, Sleep } from "@bt/contracts"
 import { isPending, isSaving } from "../../api/pending.ts"
 import { clockTime } from "../../clock-time.ts"
 import { type Display, supplementName } from "./display.ts"
 import { feedParts, feedTitle } from "./feed-parts.ts"
 import { runningSide } from "./feed-status.ts"
+import { sleepParts, sleepTitle } from "./sleep-parts.ts"
 
-export type RowKind = "nursing" | "bottle" | "diaper" | "dose"
+export type RowKind = "nursing" | "bottle" | "diaper" | "sleep" | "dose"
 
-export type RowSheet = "editDiaper" | "editFeed" | "nursing" | "editDose"
+export type RowSheet = "editDiaper" | "editFeed" | "nursing" | "editSleep" | "sleep" | "editDose"
 
 export interface RecentRow {
   readonly id: string
@@ -63,6 +64,23 @@ const diaperRow = (diaper: Diaper, display: Display): RecentRow => ({
   opens: isPending(diaper.id) ? null : "editDiaper",
 })
 
+const sleepOpens = (sleep: Sleep): RowSheet | null => {
+  if (isPending(sleep.id)) return null
+  return sleep.endedAt === null ? "sleep" : "editSleep"
+}
+
+const sleepRow = (sleep: Sleep, display: Display, now: number): RecentRow => ({
+  id: sleep.id,
+  kind: "sleep",
+  at: sleep.startedAt,
+  time: clockTime(sleep.startedAt, display.timeZone, display.locale),
+  title: sleepTitle(sleep),
+  detail: sleepParts(sleep, display.timeZone, now, display.locale),
+  by: nameOf(display, sleep.createdBy),
+  saving: isPending(sleep.id),
+  opens: sleepOpens(sleep),
+})
+
 const doseRow = (dose: Dose, display: Display): RecentRow => ({
   id: dose.id,
   kind: "dose",
@@ -81,10 +99,15 @@ export const recentRow = (entry: RecentEntry, display: Display, now: number) => 
       return feedRow(entry.feed, display, now)
     case "diaper":
       return diaperRow(entry.diaper, display)
+    case "sleep":
+      return sleepRow(entry.sleep, display, now)
     case "dose":
       return doseRow(entry.dose, display)
   }
 }
 
-export const recentRows = (recent: ReadonlyArray<RecentEntry>, display: Display, now: number) =>
-  recent.map((entry) => recentRow(entry, display, now))
+const whileBusy = (row: RecentRow, busy: string | null): RecentRow =>
+  row.id === busy ? { ...row, saving: true, opens: null } : row
+
+export const recentRows = (recent: ReadonlyArray<RecentEntry>, display: Display, now: number, busy: string | null) =>
+  recent.map((entry) => whileBusy(recentRow(entry, display, now), busy))

@@ -4,7 +4,7 @@ export const MINUTE = 60_000
 export const NOW = Date.UTC(2026, 9, 9, 16, 30)
 const DAY = 24 * 60 * MINUTE
 
-const NO_TOTALS = {
+export const NO_TOTALS = {
   feedsStarted: 0,
   leftSeconds: 0,
   rightSeconds: 0,
@@ -68,6 +68,44 @@ export const runningFeed = (by: string, startedAt: number, side: Side, version =
   deletedAt: null,
 })
 
+export interface SleepAnswer {
+  readonly id: string
+  readonly kind: "nap" | "night"
+  readonly startedAt: number
+  readonly endedAt: number | null
+  readonly version: number
+  readonly createdBy: string
+  readonly createdAt: number
+  readonly updatedBy: string
+  readonly updatedAt: number
+  readonly deletedAt: number | null
+}
+
+export const runningSleep = (
+  by: string,
+  startedAt: number,
+  kind: "nap" | "night" = "nap",
+  version = 1,
+): SleepAnswer => ({
+  id: "sleep-1",
+  kind,
+  startedAt,
+  endedAt: null,
+  version,
+  createdBy: by,
+  createdAt: startedAt,
+  updatedBy: by,
+  updatedAt: startedAt,
+  deletedAt: null,
+})
+
+export const sleepingToday = (sleep: SleepAnswer): TodayAnswer => ({
+  ...todayWith(),
+  activeSleep: sleep.endedAt === null ? sleep : null,
+  lastSleep: sleep,
+  recent: [{ kind: "sleep", sleep }],
+})
+
 interface Prefill {
   readonly lastBottle: { readonly breastMilkMl: number; readonly formulaMl: number } | null
   readonly lastSide: Side | null
@@ -105,6 +143,7 @@ export interface DoseAnswer {
 type RecentAnswer =
   | { readonly kind: "feed"; readonly feed: FeedAnswer }
   | { readonly kind: "diaper"; readonly diaper: DiaperAnswer }
+  | { readonly kind: "sleep"; readonly sleep: SleepAnswer }
   | { readonly kind: "dose"; readonly dose: DoseAnswer }
 
 export interface TodayAnswer {
@@ -112,8 +151,8 @@ export interface TodayAnswer {
   readonly totals: typeof NO_TOTALS
   readonly activeFeed: FeedAnswer | null
   readonly lastFeed: FeedAnswer | null
-  readonly activeSleep: null
-  readonly lastSleep: null
+  readonly activeSleep: SleepAnswer | null
+  readonly lastSleep: SleepAnswer | null
   readonly prefill: Prefill
   readonly recent: ReadonlyArray<RecentAnswer>
   readonly doses: ReadonlyArray<DoseAnswer>
@@ -148,6 +187,8 @@ interface Body {
   readonly version?: number
   readonly occurredAt?: number
   readonly startedAt?: number
+  readonly endedAt?: number | null
+  readonly kind?: "nap" | "night"
   readonly side?: Side
   readonly wet?: boolean
   readonly dirty?: boolean

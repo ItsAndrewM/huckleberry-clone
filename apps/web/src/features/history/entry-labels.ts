@@ -1,13 +1,15 @@
-import type { Diaper, Dose, Feed, VolumeUnit } from "@bt/contracts"
-import { feedSummary } from "@bt/domain"
+import type { Diaper, Dose, Feed, RecentEntry, Sleep, VolumeUnit } from "@bt/contracts"
+import { feedSummary, sleepElapsed } from "@bt/domain"
 import { clockTime } from "../../clock-time.ts"
 import { type Display, supplementName } from "../today/display.ts"
 import { feedParts, feedTitle } from "../today/feed-parts.ts"
 import { formatVolume, presentParts } from "../today/format.ts"
+import { sleepParts, sleepTitle } from "../today/sleep-parts.ts"
 import type { Entry } from "./day-model.ts"
 
 const MINUTE_S = 60
 const HOUR_MIN = 60
+const STEPS_FOR_TWO_LINES = 7
 
 export const shortMinutes = (seconds: number) => {
   if (seconds > 0 && seconds < MINUTE_S) return "<1m"
@@ -48,10 +50,12 @@ export const markerText = (entry: Entry, display: Display, now: number) => {
   switch (entry.kind) {
     case "diaper":
       return diaperChip(entry.diaper)
-    case "dose":
-      return supplementName(display, entry.dose.supplementId)
     case "feed":
       return formatVolume(feedSummary(entry.feed, now).bottleMl, display.volume)
+    case "sleep":
+      return sleepTitle(entry.sleep)
+    case "dose":
+      return supplementName(display, entry.dose.supplementId)
   }
 }
 
@@ -60,9 +64,13 @@ const doseName = (dose: Dose, display: Display, time: string) => {
   return dose.dose === "" ? name : `${name}: ${dose.dose}`
 }
 
-export const entryName = (entry: Entry, display: Display, now: number) => {
+const sleepName = (sleep: Sleep, display: Display, now: number) =>
+  `${sleepTitle(sleep)} at ${clockTime(sleep.startedAt, display.timeZone, display.locale)}: ${sleepParts(sleep, display.timeZone, now, display.locale).join(", ")}`
+
+export const entryName = (entry: RecentEntry, display: Display, now: number) => {
   const time = (at: number) => clockTime(at, display.timeZone, display.locale)
   if (entry.kind === "diaper") return `Diaper at ${time(entry.diaper.occurredAt)}: ${diaperText(entry.diaper)}`
+  if (entry.kind === "sleep") return sleepName(entry.sleep, display, now)
   if (entry.kind === "dose") return doseName(entry.dose, display, time(entry.dose.occurredAt))
   const { feed } = entry
   const details = [...progressOf(feed, "in progress"), ...feedParts(feed, display.volume, now)]
@@ -72,3 +80,19 @@ export const entryName = (entry: Entry, display: Display, now: number) => {
 
 export const clusterName = (count: number, first: number, display: Display) =>
   `${count} entries from ${clockTime(first, display.timeZone, display.locale)}`
+
+export const compactLength = (seconds: number) => {
+  if (seconds < MINUTE_S) return "<1m"
+  const minutes = Math.floor(seconds / MINUTE_S)
+  const hours = Math.floor(minutes / HOUR_MIN)
+  const rest = minutes % HOUR_MIN
+  if (hours === 0) return `${minutes}m`
+  return rest === 0 ? `${hours}h` : `${hours}h${String(rest).padStart(2, "0")}`
+}
+
+export const sleepBlockText = (sleep: Sleep, now: number) => ({
+  title: sleepTitle(sleep),
+  length: sleep.endedAt === null ? "now" : compactLength(sleepElapsed(sleep, now)),
+})
+
+export const showsLength = (steps: number) => steps >= STEPS_FOR_TWO_LINES

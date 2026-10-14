@@ -153,5 +153,5 @@ export const restorePointReport = (restorePoint: string): string =>
 export const releasedReport = (commit: string): string =>
   [
     `Released ${commit.slice(0, 7)} to https://${PRODUCTION_HOSTNAME}.`,
-    "Open the app online on each phone, so its offline copy updates to this build.",
+    "Each phone saves this build the next time it's online, and opens it the next time the app comes back online with nothing open. Settings › Offline copy says when a newer version is waiting.",
   ].join("\n\n")

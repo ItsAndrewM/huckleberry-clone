@@ -4,6 +4,7 @@ import { describe, expect, it, vi } from "vitest"
 import type { Action } from "../src/api/actions.ts"
 import { pendIn, rollBack, settle } from "../src/api/optimistic.ts"
 import { pendingId } from "../src/api/pending.ts"
+import { idOf } from "../src/api/today-change.ts"
 import { at, MEASUREMENTS, measurement, meWith } from "./growth-fixtures.ts"
 import { diaperAt, todayWith } from "./today-fixtures.ts"
 
@@ -58,12 +59,7 @@ const growthIds = (queryClient: QueryClient) =>
     .getQueryData<{ readonly measurements: ReadonlyArray<{ readonly id: string }> }>(queryKeys.growth)
     ?.measurements.map(({ id }) => id)
 
-const recentIds = (queryClient: QueryClient) =>
-  queryClient
-    .getQueryData<Today>(queryKeys.today)
-    ?.recent.map((entry) =>
-      entry.kind === "feed" ? entry.feed.id : entry.kind === "diaper" ? entry.diaper.id : entry.dose.id,
-    )
+const recentIds = (queryClient: QueryClient) => queryClient.getQueryData<Today>(queryKeys.today)?.recent.map(idOf)
 
 describe("optimistic measurements", () => {
   it("lists a measurement being saved in the growth cache, and leaves Today alone", async () => {

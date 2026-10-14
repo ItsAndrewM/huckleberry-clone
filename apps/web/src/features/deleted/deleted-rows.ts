@@ -1,17 +1,22 @@
-import type { Deleted, Diaper, Dose, Feed, Me, Measurement } from "@bt/contracts"
+import type { Deleted, Diaper, Dose, Feed, Me, Measurement, Sleep } from "@bt/contracts"
+import { sleepElapsed } from "@bt/domain"
 import { dateClockTime } from "../../clock-time.ts"
 import { formatMeasurement } from "../growth/format.ts"
 import { GROWTH_METRICS } from "../growth/metrics.ts"
+import { supplementName } from "../today/display.ts"
 import { feedParts, feedTitle } from "../today/feed-parts.ts"
 import { runningSide } from "../today/feed-status.ts"
+import { formatMinutes } from "../today/format.ts"
+import { sleepTitle } from "../today/sleep-parts.ts"
 
 export type DeletedRecord =
   | { readonly kind: "feed"; readonly feed: Feed }
   | { readonly kind: "diaper"; readonly diaper: Diaper }
   | { readonly kind: "measurement"; readonly measurement: Measurement }
+  | { readonly kind: "sleep"; readonly sleep: Sleep }
   | { readonly kind: "dose"; readonly dose: Dose }
 
-export type DeletedIcon = "nursing" | "bottle" | "diaper" | "measurement" | "dose"
+export type DeletedIcon = "nursing" | "bottle" | "diaper" | "measurement" | "sleep" | "dose"
 
 export interface DeletedRow {
   readonly id: string
@@ -93,10 +98,18 @@ const measurementDescribed = (measurement: Measurement, me: Me): Described => ({
   at: measurement.measuredAt,
 })
 
+const sleepDescribed = (sleep: Sleep): Described => ({
+  record: { kind: "sleep", sleep },
+  icon: "sleep",
+  title: sleepTitle(sleep),
+  detail: sleep.endedAt === null ? ["Running when deleted"] : [formatMinutes(sleepElapsed(sleep, sleep.endedAt))],
+  at: sleep.startedAt,
+})
+
 const doseDescribed = (dose: Dose, me: Me): Described => ({
   record: { kind: "dose", dose },
   icon: "dose",
-  title: me.household.supplements.find(({ id }) => id === dose.supplementId)?.name ?? "Supplement",
+  title: supplementName(me.household, dose.supplementId),
   detail: dose.dose === "" ? [] : [dose.dose],
   at: dose.occurredAt,
 })
@@ -105,6 +118,7 @@ export const deletedRows = (deleted: Deleted, me: Me, locale?: string): Readonly
   [
     ...deleted.feeds.map((feed) => rowOf(me, feed, feedDescribed(feed, me), locale)),
     ...deleted.diapers.map((diaper) => rowOf(me, diaper, diaperDescribed(diaper), locale)),
+    ...deleted.sleeps.map((sleep) => rowOf(me, sleep, sleepDescribed(sleep), locale)),
     ...deleted.measurements.map((measurement) => rowOf(me, measurement, measurementDescribed(measurement, me), locale)),
     ...deleted.doses.map((dose) => rowOf(me, dose, doseDescribed(dose, me), locale)),
   ].toSorted((a, b) => b.deletedAt - a.deletedAt)

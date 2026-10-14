@@ -1,4 +1,4 @@
-import type { Diaper, Dose, Feed, VersionedPortion } from "@bt/contracts"
+import type { Diaper, Dose, Feed, Sleep, VersionedPortion } from "@bt/contracts"
 import type { Action } from "../api/actions.ts"
 import { Offline } from "../api/errors.ts"
 import type { Saved } from "../api/send.ts"
@@ -36,12 +36,20 @@ const undoDiaper = (action: Action, { id, version }: Diaper, actionId: string): 
   return action.kind === "deleteDiaper" ? { kind: "restoreDiaper", id, payload: { actionId, version } } : null
 }
 
+const undoSleep = (action: Action, { id, version }: Sleep, actionId: string): Action | null => {
+  if (action.kind === "logSleep" || action.kind === "startSleep") {
+    return { kind: "deleteSleep", id, payload: { actionId, version } }
+  }
+  return action.kind === "deleteSleep" ? { kind: "restoreSleep", id, payload: { actionId, version } } : null
+}
+
 const undoDose = (action: Action, { id, version }: Dose, actionId: string): Action | null => {
   if (action.kind === "logDose") return { kind: "deleteDose", id, payload: { actionId, version } }
   return action.kind === "deleteDose" ? { kind: "restoreDose", id, payload: { actionId, version } } : null
 }
 
 export const undoOf = ({ action }: Sending, saved: Saved, actionId: string): Action | null => {
+  if ("sleep" in saved) return undoSleep(action, saved.sleep, actionId)
   if ("feed" in saved) return undoFeed(action, saved.feed, actionId)
   if ("dose" in saved) return undoDose(action, saved.dose, actionId)
   return "diaper" in saved ? undoDiaper(action, saved.diaper, actionId) : null
@@ -49,27 +57,22 @@ export const undoOf = ({ action }: Sending, saved: Saved, actionId: string): Act
 
 const feedNoun = (saved: Saved) => ("feed" in saved && saved.feed.segments.length === 0 ? "Bottle" : "Feed")
 
+const MESSAGES = new Map<Action["kind"], string>([
+  ["logDiaper", "Diaper saved"],
+  ["startFeed", "Feed started"],
+  ["addBottle", "Bottle added to the feed"],
+  ["deleteDiaper", "Diaper deleted"],
+  ["logSleep", "Sleep saved"],
+  ["startSleep", "Sleep started"],
+  ["deleteSleep", "Sleep deleted"],
+  ["logDose", "Dose saved"],
+  ["deleteDose", "Dose deleted"],
+])
+
 const messageOf = ({ sheet, action }: Sending, saved: Saved): string | null => {
-  switch (action.kind) {
-    case "logDiaper":
-      return "Diaper saved"
-    case "logFeed":
-      return sheet === "pastFeed" ? "Feed saved" : "Bottle saved"
-    case "startFeed":
-      return "Feed started"
-    case "addBottle":
-      return "Bottle added to the feed"
-    case "deleteDiaper":
-      return "Diaper deleted"
-    case "deleteFeed":
-      return `${feedNoun(saved)} deleted`
-    case "logDose":
-      return "Dose saved"
-    case "deleteDose":
-      return "Dose deleted"
-    default:
-      return null
-  }
+  if (action.kind === "logFeed") return sheet === "pastFeed" ? "Feed saved" : "Bottle saved"
+  if (action.kind === "deleteFeed") return `${feedNoun(saved)} deleted`
+  return MESSAGES.get(action.kind) ?? null
 }
 
 export const toastFor = (sending: Sending, saved: Saved, now: number): Toast | null => {
@@ -90,6 +93,11 @@ export const restoredToast = (saved: Saved, now: number, actionId: string): Toas
     const { id, version } = saved.diaper
     const action = { kind: "deleteDiaper", id, payload: { actionId, version } } as const
     return { message: "Diaper restored", undo: { sheet: "undo", action }, until }
+  }
+  if ("sleep" in saved) {
+    const { id, version } = saved.sleep
+    const action = { kind: "deleteSleep", id, payload: { actionId, version } } as const
+    return { message: "Sleep restored", undo: { sheet: "undo", action }, until }
   }
   if (!("feed" in saved)) return { message: "Measurement restored", undo: null, until }
   const { id, version } = saved.feed

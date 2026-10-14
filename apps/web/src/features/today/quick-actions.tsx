@@ -10,6 +10,7 @@ const ACTIONS = [
   { label: "Bottle", sheet: "bottle", Icon: KIND_ICONS.bottle },
   { label: "Nursing", sheet: "nursing", Icon: KIND_ICONS.nursing },
   { label: "Diaper", sheet: "diaper", Icon: KIND_ICONS.diaper },
+  { label: "Sleep", sheet: "sleep", Icon: KIND_ICONS.sleep },
 ] as const satisfies ReadonlyArray<{ label: string; sheet: SheetKind; Icon: LucideIcon }>
 
 export const QuickActions = () => {
@@ -30,7 +31,7 @@ export const QuickActions = () => {
               key={label}
               variant="secondary"
               size="lg"
-              className="h-12 flex-1 gap-1.5 px-2"
+              className="h-12 min-w-0 flex-1 flex-col gap-0.5 px-1 text-xs"
               disabled={!ready}
               aria-describedby={ready ? undefined : waitsId}
               onClick={() => sheets.show(sheet)}

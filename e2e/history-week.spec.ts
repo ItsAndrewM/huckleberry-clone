@@ -1,5 +1,16 @@
 import { expect, type Locator, type Page, test } from "@playwright/test"
-import { busyDay, DAY, dayHeading, emptyDay, measurement, NO_TOTALS, openHistory, playHistory } from "./played-day.ts"
+import {
+  busyDay,
+  DAY,
+  dayHeading,
+  emptyDay,
+  local,
+  measurement,
+  NO_TOTALS,
+  openHistory,
+  playHistory,
+  sleep,
+} from "./played-day.ts"
 import { LAST_WEEK, playWeeks, THIS_WEEK, weekGrid, weekHeading, weekOf } from "./played-week.ts"
 
 test.use({ timezoneId: "Europe/London" })
@@ -395,4 +406,40 @@ test("keeps the day switcher at the top while the day scrolls", async ({ page })
   await page.evaluate("window.scrollTo(0, 800)")
   await expect.poll(() => page.evaluate<number>("window.scrollY")).toBeGreaterThan(400)
   await expect(page.getByRole("navigation", { name: "Days" })).toBeInViewport()
+})
+
+const stripesIn = (page: Page, day: RegExp) =>
+  weekGrid(page)
+    .getByRole("listitem")
+    .filter({ has: page.getByRole("link", { name: day }) })
+    .locator('[data-kind="sleep"]')
+
+test("draws a night as a stripe down the left of both days' columns, says it in their names, and hides it behind the Sleep chip", async ({
+  page,
+}) => {
+  const { played, emily } = await playHistory(page, [])
+  const night = sleep("night", local("19:40", "2026-10-08"), local("06:10"), "night", emily)
+  const thursday = {
+    ...emptyDay("2026-10-08"),
+    sleeps: [night],
+    totals: { ...NO_TOTALS, sleepsStarted: 1, sleepSeconds: 15_600, nightSeconds: 15_600, longestSleepSeconds: 37_800 },
+  }
+  const friday = {
+    ...emptyDay(DAY),
+    sleeps: [night],
+    totals: { ...NO_TOTALS, sleepSeconds: 22_200, nightSeconds: 22_200 },
+  }
+  played.days.push(thursday, friday)
+  await playWeeks(page, { [THIS_WEEK]: weekOf(THIS_WEEK, [thursday, friday]) })
+  await openHistory(page, "?view=week")
+  const thu = weekGrid(page).getByRole("link", { name: "Thu, Oct 8: 4 h 20 min asleep, 4 h 20 min night" })
+  const fri = weekGrid(page).getByRole("link", { name: "Fri, Oct 9: 6 h 10 min asleep, 6 h 10 min night" })
+  await expect(thu).toBeVisible()
+  await expect(fri).toBeVisible()
+  await expect(stripesIn(page, /^Thu, Oct 8/u)).toHaveCount(1)
+  await expect(stripesIn(page, /^Fri, Oct 9/u)).toHaveCount(1)
+  await expect(weekGrid(page).getByText("Sleep", { exact: true })).toBeVisible()
+  await page.getByRole("group", { name: "Show" }).getByRole("button", { name: "Sleep" }).click()
+  await expect(weekGrid(page).getByRole("link", { name: "Fri, Oct 9: nothing shown" })).toBeVisible()
+  await expect(stripesIn(page, /^Fri, Oct 9/u)).toHaveCount(0)
 })

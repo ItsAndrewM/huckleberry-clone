@@ -11,8 +11,11 @@ import {
   NewDose,
   NewFeed,
   NewMeasurement,
+  NewSleep,
   SegmentEdit,
   Side,
+  SleepEdit,
+  SleepStart,
   TimedAction,
   VersionedAction,
   VersionedPortion,
@@ -65,6 +68,16 @@ export const MeasurementAction = Schema.Union([
 ])
 export type MeasurementAction = typeof MeasurementAction.Type
 
+export const SleepAction = Schema.Union([
+  created("logSleep", NewSleep),
+  created("startSleep", SleepStart),
+  onRecord("wakeSleep", TimedAction),
+  onRecord("editSleep", SleepEdit),
+  onRecord("deleteSleep", VersionedAction),
+  onRecord("restoreSleep", VersionedAction),
+])
+export type SleepAction = typeof SleepAction.Type
+
 export const DoseAction = Schema.Union([
   created("logDose", NewDose),
   onRecord("editDose", DoseEdit),
@@ -73,7 +86,7 @@ export const DoseAction = Schema.Union([
 ])
 export type DoseAction = typeof DoseAction.Type
 
-export const Action = Schema.Union([DiaperAction, FeedAction, MeasurementAction, DoseAction])
+export const Action = Schema.Union([DiaperAction, FeedAction, MeasurementAction, SleepAction, DoseAction])
 export type Action = typeof Action.Type
 
 const DOSE_KINDS = new Set<Action["kind"]>(["logDose", "editDose", "deleteDose", "restoreDose"])
@@ -92,3 +105,14 @@ const MEASUREMENT_KINDS = new Set<Action["kind"]>([
 export const isDiaperAction = (action: Action): action is DiaperAction => DIAPER_KINDS.has(action.kind)
 
 export const isMeasurementAction = (action: Action): action is MeasurementAction => MEASUREMENT_KINDS.has(action.kind)
+
+const SLEEP_KINDS = new Set<Action["kind"]>([
+  "logSleep",
+  "startSleep",
+  "wakeSleep",
+  "editSleep",
+  "deleteSleep",
+  "restoreSleep",
+])
+
+export const isSleepAction = (action: Action): action is SleepAction => SLEEP_KINDS.has(action.kind)

@@ -1,6 +1,15 @@
 import { describe, expect, it } from "vitest"
 import { dayModel } from "../src/features/history/day-model.ts"
-import { blockText, clusterName, entryName, markerText, shortMinutes } from "../src/features/history/entry-labels.ts"
+import {
+  blockText,
+  clusterName,
+  compactLength,
+  entryName,
+  markerText,
+  shortMinutes,
+  showsLength,
+  sleepBlockText,
+} from "../src/features/history/entry-labels.ts"
 import { markersOf } from "../src/features/history/grid-markers.ts"
 import {
   BOTH,
@@ -15,11 +24,32 @@ import {
   POO,
   RUNNING,
 } from "./history-fixtures.ts"
-import { dosedAt, supplementOf, ZONE } from "./today-fixtures.ts"
+import { dosedAt, sleptAt, supplementOf, ZONE } from "./today-fixtures.ts"
 
 describe("shortMinutes", () => {
   it("keeps a block's label short", () => {
     expect([0, 30, 60, 14 * 60, 3600, 3900].map(shortMinutes)).toEqual(["0m", "<1m", "1m", "14m", "1h", "1h 5m"])
+  })
+})
+
+describe("a sleep block's label", () => {
+  it("fits a sleep's length into its narrow column: minutes, whole hours, or hours and two-digit minutes", () => {
+    expect([30, 45 * 60, 2 * 3600, 70 * 60, 630 * 60].map(compactLength)).toEqual(["<1m", "45m", "2h", "1h10", "10h30"])
+  })
+
+  it("names a sleep a nap or a night, and says now while it runs", () => {
+    expect(sleepBlockText(sleptAt(local("01:10"), { endedAt: local("02:20") }), NOW_ON_DAY)).toEqual({
+      title: "Nap",
+      length: "1h10",
+    })
+    expect(sleepBlockText(sleptAt(local("08:48"), { kind: "night", endedAt: null }), NOW_ON_DAY)).toEqual({
+      title: "Night",
+      length: "now",
+    })
+  })
+
+  it("shows the length under the name only from 7 steps tall, where two lines fit, so a short nap shows its name alone", () => {
+    expect([4, 6, 7, 72].map(showsLength)).toEqual([false, false, true, true])
   })
 })
 
@@ -89,6 +119,18 @@ describe("what a screen reader hears for an entry", () => {
       segments: [{ id: "zero-0", side: "left" as const, startedAt: local("01:05"), endedAt: local("01:05") }],
     }
     expect(entryName({ kind: "feed", feed: instant }, DISPLAY, NOW_ON_DAY)).toBe("Nursing at 1:05 AM")
+  })
+
+  it("names a sleep as a nap or a night, with how long she slept and when she woke, or that she's asleep now", () => {
+    const plain = (text: string) => text.replace(/\s/gu, " ")
+    const nap = sleptAt(local("01:10"), { endedAt: local("02:30") })
+    const asleep = sleptAt(local("08:48"), { kind: "night", endedAt: null })
+    expect(plain(entryName({ kind: "sleep", sleep: nap }, DISPLAY, NOW_ON_DAY))).toBe(
+      "Nap at 1:10 AM: 1 h 20 min, Woke 2:30 AM",
+    )
+    expect(plain(entryName({ kind: "sleep", sleep: asleep }, DISPLAY, NOW_ON_DAY))).toBe(
+      "Night at 8:48 AM: Asleep now, 42 min",
+    )
   })
 
   it("counts the entries gathered in one marker, from the first one's time", () => {

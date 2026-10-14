@@ -6,7 +6,7 @@ import { buttonVariants } from "../../components/ui/button.tsx"
 import { GoToDate } from "./go-to-date.tsx"
 import type { HistorySearch } from "./history-date.ts"
 import { type Hidden, hiddenNotice } from "./history-kinds.ts"
-import { goToOpensOn, type HistoryNavigation, searchFor } from "./history-navigation.ts"
+import { goToOpensOn, type HistoryNavigation, opensAtTop, searchFor } from "./history-navigation.ts"
 import { type HistoryUnit, periodKey, periodOf, unitOf } from "./history-period.ts"
 import { backLabel, currentLabel, periodTitle } from "./history-titles.ts"
 
@@ -28,6 +28,7 @@ const Step = ({ search, label, Icon }: StepProps) =>
     <Link
       to="/history"
       search={search}
+      resetScroll={opensAtTop(search)}
       activeOptions={{ exact: true }}
       aria-label={label}
       className={buttonVariants({ variant: "ghost", size: "icon-lg" })}
@@ -54,7 +55,8 @@ export const HistorySwitcher = ({ navigation, today, birthDate, hidden }: Histor
   const noun = unitOf(period.view)
   const goTo = (date: LocalDate) => {
     setChangingFor(null)
-    void navigate({ to: "/history", search: searchFor(periodOf(period.view, date), today, hidden) })
+    const search = searchFor(periodOf(period.view, date), today, hidden)
+    void navigate({ to: "/history", search, resetScroll: opensAtTop(search) })
   }
   return (
     <div className="sticky top-[env(safe-area-inset-top)] z-[5] -mx-4 -mt-3 flex flex-col bg-background px-4 pb-1">
@@ -66,7 +68,13 @@ export const HistorySwitcher = ({ navigation, today, birthDate, hidden }: Histor
             {isCurrent ? (
               <p className="text-muted-foreground">{currentLabel(period.view)}</p>
             ) : (
-              <Link to="/history" search={navigation.current} activeOptions={{ exact: true }} className={LINK_TEXT}>
+              <Link
+                to="/history"
+                search={navigation.current}
+                resetScroll={opensAtTop(navigation.current)}
+                activeOptions={{ exact: true }}
+                className={LINK_TEXT}
+              >
                 {backLabel(period.view)}
               </Link>
             )}

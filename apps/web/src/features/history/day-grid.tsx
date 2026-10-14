@@ -6,12 +6,13 @@ import { tapTime } from "../../sheets/tap-time.ts"
 import type { Display } from "../today/display.ts"
 import { KIND_ICONS } from "../today/kind-icons.ts"
 import { anchorOf, type DayModel } from "./day-model.ts"
-import { blockText, entryName } from "./entry-labels.ts"
+import { blockText, entryName, sleepBlockText } from "./entry-labels.ts"
 import { GridBlock } from "./grid-block.tsx"
 import { atStep, stepsTall } from "./grid-classes.ts"
 import { GridMarker } from "./grid-marker.tsx"
 import { markersOf } from "./grid-markers.ts"
 import { HourRows } from "./hour-rows.tsx"
+import { SleepBlock } from "./sleep-block.tsx"
 
 interface DayGridProps {
   readonly model: DayModel
@@ -42,7 +43,22 @@ export const DayGrid = ({ model, display, now, onOpen }: DayGridProps) => {
       className={cn("relative isolate mt-2 mb-4 [--cal-step:5px]", stepsTall(grid.steps))}
     >
       <div ref={scrollIntoMiddle} aria-hidden="true" className={cn("absolute", atStep(anchorOf(model)))} />
-      <div className="pointer-events-none absolute inset-y-0 right-26 left-14 z-10">
+      <div className="pointer-events-none absolute inset-y-0 left-14 z-10 w-11">
+        {model.sleeps.map((block) => {
+          const entry = model.entries.get(block.id)
+          if (entry?.kind !== "sleep") return null
+          return (
+            <SleepBlock
+              key={block.id}
+              block={block}
+              {...sleepBlockText(entry.sleep, now)}
+              name={entryName(entry, display, now)}
+              onOpen={() => onOpen([block.id])}
+            />
+          )
+        })}
+      </div>
+      <div className="pointer-events-none absolute inset-y-0 right-26 left-26 z-10">
         {grid.blocks.map((block) => {
           const entry = model.entries.get(block.id)
           if (entry?.kind !== "feed") return null

@@ -15,5 +15,5 @@ export const displayOf = ({ timeZone, units, caregivers, supplements }: Me["hous
   supplements,
 })
 
-export const supplementName = ({ supplements }: Display, id: string) =>
+export const supplementName = ({ supplements }: Pick<Display, "supplements">, id: string) =>
   supplements.find((supplement) => supplement.id === id)?.name ?? "Supplement"

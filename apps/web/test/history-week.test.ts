@@ -18,7 +18,7 @@ import {
   RUNNING,
   WEIGHED,
 } from "./history-fixtures.ts"
-import { diaperAt, feedAt, NO_TOTALS, ZONE } from "./today-fixtures.ts"
+import { diaperAt, feedAt, NO_TOTALS, sleptAt, ZONE } from "./today-fixtures.ts"
 
 const WEEK = "2026-W41"
 const MONDAY = "2026-10-05"
@@ -211,5 +211,40 @@ describe("shownTotals", () => {
   it("zeroes the hidden kinds' totals and keeps the rest", () => {
     expect(shownTotals(FRIDAY_TOTALS, hiddenIn("diapers"))).toEqual({ ...FRIDAY_TOTALS, diapers: 0, wetDiapers: 0 })
     expect(shownTotals(FRIDAY_TOTALS, hiddenIn(undefined))).toBe(FRIDAY_TOTALS)
+  })
+})
+
+describe("a week's sleeps", () => {
+  const NIGHT = sleptAt(local("19:50", THURSDAY), { id: "night", kind: "night", endedAt: local("06:10") })
+  const week = weekWith({ sleeps: [NIGHT] })
+
+  it("draws a night across midnight as a stripe in both days, each at ten-minute steps on the household's clock", () => {
+    expect(columnOn(THURSDAY, CONTEXT, week).sleeps).toEqual([
+      expect.objectContaining({ id: "night", top: 119, height: 25, endsAfter: true }),
+    ])
+    expect(columnOn(DATE, CONTEXT, week).sleeps).toEqual([
+      expect.objectContaining({ id: "night", top: 0, height: 37, startsBefore: true }),
+    ])
+  })
+
+  it("leaves the stripe out behind the Sleep chip", () => {
+    expect(columnOn(DATE, { ...CONTEXT, hidden: hiddenIn("sleep") }, week).sleeps).toEqual([])
+  })
+
+  it("says the day's sleep in a column's name, and nothing of it behind the Sleep chip, naps included", () => {
+    const totals = {
+      ...NO_TOTALS,
+      sleepsStarted: 2,
+      sleepSeconds: 25_800,
+      napSeconds: 3_000,
+      nightSeconds: 22_800,
+      longestSleepSeconds: 22_800,
+    }
+    expect(shownTotals(totals, hiddenIn("sleep"))).toEqual(NO_TOTALS)
+    const column = { ...columnOn(DATE, CONTEXT, week), totals }
+    expect(columnName(column, "ml", hiddenIn(undefined), LOCALE)).toBe(
+      "Fri, Oct 9: 7 h 10 min asleep, 50 min naps, 6 h 20 min night; a measurement",
+    )
+    expect(columnName(column, "ml", hiddenIn("sleep"), LOCALE)).toBe("Fri, Oct 9: a measurement")
   })
 })

@@ -7,6 +7,9 @@ import { NursingSheet } from "../features/feed/nursing-sheet.tsx"
 import { PastFeedSheet } from "../features/feed/past-feed-sheet.tsx"
 import { MeasurementSheet } from "../features/growth/measurement-sheet.tsx"
 import { SupplementSheet } from "../features/settings/supplement-sheet.tsx"
+import { EditSleepSheet } from "../features/sleep/edit-sleep-sheet.tsx"
+import { PastSleepSheet } from "../features/sleep/past-sleep-sheet.tsx"
+import { SleepSheet } from "../features/sleep/sleep-sheet.tsx"
 import { DoseSheet } from "../features/supplement/dose-sheet.tsx"
 
 export const LogSheets = () => (
@@ -15,10 +18,13 @@ export const LogSheets = () => (
     <NursingSheet />
     <PastFeedSheet />
     <DiaperSheet />
+    <SleepSheet />
+    <PastSleepSheet />
     <DoseSheet />
     <MeasurementSheet />
     <EditDiaperSheet />
     <EditFeedSheet />
+    <EditSleepSheet />
     <EditDoseSheet />
     <SupplementSheet />
   </>

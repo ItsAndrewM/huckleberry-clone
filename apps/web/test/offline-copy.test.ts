@@ -3,6 +3,7 @@ import {
   BUILD_META_NAME,
   checkOfflineCopy,
   offlineCopyOf,
+  openNowReason,
   pageBuild,
   SHELL_CACHE_PREFIX,
   SHELL_PATH,
@@ -12,6 +13,7 @@ import { cacheName, SHELL_URL } from "../src/service-worker/shell-cache.ts"
 
 const BUILD = "0123456789abcdef"
 const OLDER = "fedcba9876543210"
+const NEWER = "00112233aabbccdd"
 
 const storage = (held: Record<string, ReadonlyArray<string>>) => {
   const asked: Array<[string, MultiCacheQueryOptions | undefined]> = []
@@ -28,29 +30,51 @@ const storage = (held: Record<string, ReadonlyArray<string>>) => {
 
 describe("checkOfflineCopy", () => {
   it("counts a copy only when its cache holds the shell, so an empty cache isn't a saved copy", async () => {
-    expect(await checkOfflineCopy(storage({ [cacheName(BUILD)]: [] }), BUILD)).toBe("none")
-    expect(await checkOfflineCopy(storage({ [cacheName(BUILD)]: ["/"] }), BUILD)).toBe("saved")
-    expect(await checkOfflineCopy(storage({ [cacheName(BUILD)]: [], [cacheName(OLDER)]: ["/"] }), BUILD)).toBe("older")
-    expect(await checkOfflineCopy(storage({ "another-cache": ["/"] }), BUILD)).toBe("none")
+    expect(await checkOfflineCopy(storage({ [cacheName(BUILD)]: [] }), BUILD, false)).toBe("none")
+    expect(await checkOfflineCopy(storage({ [cacheName(BUILD)]: ["/"] }), BUILD, false)).toBe("saved")
+    expect(await checkOfflineCopy(storage({ [cacheName(BUILD)]: [], [cacheName(OLDER)]: ["/"] }), BUILD, false)).toBe(
+      "older",
+    )
+    expect(await checkOfflineCopy(storage({ "another-cache": ["/"] }), BUILD, false)).toBe("none")
+  })
+
+  it("calls another build's copy newer once a service worker has taken over while the page was open", async () => {
+    expect(await checkOfflineCopy(storage({ [cacheName(NEWER)]: ["/"] }), BUILD, true)).toBe("newer")
+    expect(await checkOfflineCopy(storage({ [cacheName(BUILD)]: ["/"], [cacheName(NEWER)]: ["/"] }), BUILD, true)).toBe(
+      "newer",
+    )
+    expect(await checkOfflineCopy(storage({ [cacheName(BUILD)]: ["/"] }), BUILD, true)).toBe("saved")
+    expect(await checkOfflineCopy(storage({ [cacheName(BUILD)]: ["/"], [cacheName(NEWER)]: [] }), BUILD, true)).toBe(
+      "saved",
+    )
   })
 
   it("looks for the shell as the service worker does: in each copy's own cache, whatever its Vary", async () => {
     const shells = storage({ [cacheName(BUILD)]: ["/"], "another-cache": ["/"] })
-    await checkOfflineCopy(shells, BUILD)
+    await checkOfflineCopy(shells, BUILD, false)
     expect(shells.asked).toEqual([["/", { cacheName: cacheName(BUILD), ignoreVary: true }]])
   })
 })
 
 describe("offlineCopyOf", () => {
   it.each([
-    [[cacheName(BUILD)], "saved"],
-    [[cacheName("fedcba9876543210"), cacheName(BUILD)], "saved"],
-    [[cacheName("fedcba9876543210")], "older"],
-    [[], "none"],
-    [["another-cache"], "none"],
-  ])("with the caches %j, the offline copy is %s", (names, copy) => {
-    expect(offlineCopyOf(names, BUILD)).toBe(copy)
-  })
+    [[cacheName(BUILD)], false, "saved"],
+    [[cacheName(OLDER), cacheName(BUILD)], false, "saved"],
+    [[cacheName(OLDER)], false, "older"],
+    [[], false, "none"],
+    [["another-cache"], false, "none"],
+    [[cacheName(BUILD)], true, "saved"],
+    [[cacheName(NEWER)], true, "newer"],
+    [[cacheName(BUILD), cacheName(NEWER)], true, "newer"],
+    [[cacheName(NEWER), cacheName(BUILD)], true, "saved"],
+    [[], true, "none"],
+    [["another-cache"], true, "none"],
+  ])(
+    "with the caches %j, and a service worker taken over while open %s, the offline copy is %s",
+    (names, changed, copy) => {
+      expect(offlineCopyOf(names, BUILD, changed)).toBe(copy)
+    },
+  )
 })
 
 describe("pageBuild", () => {
@@ -78,5 +102,13 @@ describe("the names the page and the service worker share", () => {
 
   it("looks in that cache for the shell the service worker opens", () => {
     expect(SHELL_PATH).toBe(SHELL_URL)
+  })
+})
+
+describe("openNowReason", () => {
+  it("says Open it now waits while there's no connection, since a reload offline can't load Today", () => {
+    expect(openNowReason("offline")).toBe("Opening it now needs a connection.")
+    expect(openNowReason("online")).toBeNull()
+    expect(openNowReason("auth-required")).toBeNull()
   })
 })

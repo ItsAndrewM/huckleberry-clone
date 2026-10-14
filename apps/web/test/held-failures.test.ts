@@ -25,7 +25,7 @@ import {
   SAVED_DIAPER,
   start,
 } from "./held-fixtures.ts"
-import { diaperAt, feedAt, NOW } from "./today-fixtures.ts"
+import { diaperAt, feedAt, MINUTE, NOW, sleptAt } from "./today-fixtures.ts"
 
 const sheetsOf = (state: SheetsState): Sheets => ({
   ...state,
@@ -203,10 +203,57 @@ describe("a start that met the other phone's feed, when the parent carries on wi
 
 describe("saving the changes as an edit", () => {
   const editing = sendingState(shownState(CLOSED, "diaper"), EDIT, true)
+  const PAST_SLEEP = sleptAt(NOW - 60 * MINUTE, { id: "sleep-1", kind: "night", endedAt: NOW, version: 2 })
+  const PAST_SLEEP_EDIT: Sending = {
+    sheet: "pastSleep",
+    action: {
+      kind: "editSleep",
+      id: "sleep-1",
+      payload: {
+        actionId: "action-past-sleep",
+        version: 1,
+        kind: "night",
+        startedAt: NOW - 60 * MINUTE,
+        endedAt: NOW,
+      },
+    },
+  }
+  const RUNNING_SLEEP = sleptAt(NOW - 10 * MINUTE, { id: "sleep-2", endedAt: null, version: 2 })
+  const RUNNING_SLEEP_EDIT: Sending = {
+    sheet: "sleep",
+    action: {
+      kind: "editSleep",
+      id: "sleep-2",
+      payload: {
+        actionId: "action-running-sleep",
+        version: 1,
+        kind: "nap",
+        startedAt: NOW - 10 * MINUTE,
+        endedAt: null,
+      },
+    },
+  }
 
   it("keeps the sheet open until the edit lands, then closes it", () => {
     expect(editing).toMatchObject({ open: "diaper", keptOpen: "action-edit" })
     expect(savedState(editing, EDIT, SAVED_DIAPER, NOW).open).toBeNull()
+  })
+
+  it("keeps a past sleep's sheet open until its replayed edit lands, then closes it", () => {
+    const saving = sendingState(shownState(CLOSED, "pastSleep"), PAST_SLEEP_EDIT, true)
+    expect(saving).toMatchObject({ open: "pastSleep", keptOpen: "action-past-sleep" })
+    expect(savedState(saving, PAST_SLEEP_EDIT, { sleep: PAST_SLEEP, changed: [] }, NOW)).toMatchObject({
+      open: null,
+      keptOpen: null,
+    })
+  })
+
+  it("keeps the running sleep's sheet open once its own changes are saved", () => {
+    const saving = sendingState(shownState(CLOSED, "sleep"), RUNNING_SLEEP_EDIT, true)
+    expect(savedState(saving, RUNNING_SLEEP_EDIT, { sleep: RUNNING_SLEEP, changed: [] }, NOW)).toMatchObject({
+      open: "sleep",
+      keptOpen: null,
+    })
   })
 
   it("holds a failed edit in the sheet it was saved from, keeping that sheet's form", () => {

@@ -25,6 +25,11 @@ export const totalsLines = (totals: Totals, volume: VolumeUnit): ReadonlyArray<R
       [totals.wetDiapers, `${totals.wetDiapers} pee`],
       [totals.dirtyDiapers, `${totals.dirtyDiapers} poo`],
     ]),
+    presentParts([
+      [totals.sleepSeconds, `${formatMinutes(totals.sleepSeconds)} asleep`],
+      [totals.napSeconds, `${formatMinutes(totals.napSeconds)} naps`],
+      [totals.nightSeconds, `${formatMinutes(totals.nightSeconds)} night`],
+    ]),
   ].filter((parts) => parts.length > 0)
 
 export const nothingLogged = ({ totals, measurements, doses }: DayPeriod, volume: VolumeUnit): boolean =>

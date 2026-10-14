@@ -2,7 +2,18 @@ import type { Deleted, Me } from "@bt/contracts"
 import { describe, expect, it } from "vitest"
 import { type DeletedRow, deletedRows } from "../src/features/deleted/deleted-rows.ts"
 import { measurement, meWith } from "./growth-fixtures.ts"
-import { ANDREW, diaperAt, dosedAt, EMILY, feedAt, MINUTE, NOW, nursedFor, supplementOf } from "./today-fixtures.ts"
+import {
+  ANDREW,
+  diaperAt,
+  dosedAt,
+  EMILY,
+  feedAt,
+  MINUTE,
+  NOW,
+  nursedFor,
+  sleptAt,
+  supplementOf,
+} from "./today-fixtures.ts"
 
 const ME = {
   ...meWith(),
@@ -114,5 +125,17 @@ describe("deletedRows", () => {
     const diaper = diaperAt(NOW - 50 * MINUTE, deletedBy("caregiver-gone", NOW))
     const [row] = deletedRows({ ...NOTHING, diapers: [diaper] }, ME, "en-US")
     expect(spaced(row)?.deleted).toEqual(["Deleted", "Fri, Oct 9, 9:30 AM"])
+  })
+})
+
+describe("a deleted sleep", () => {
+  it("is a nap or a night, with how long she slept, or says it was running when it was deleted", () => {
+    const nap = sleptAt(NOW - 120 * MINUTE, { endedAt: NOW - 40 * MINUTE, ...deletedBy(EMILY, NOW - 5 * MINUTE) })
+    const night = sleptAt(NOW - 60 * MINUTE, { kind: "night", endedAt: null, ...deletedBy(ANDREW, NOW) })
+    const rows = deletedRows({ ...NOTHING, sleeps: [nap, night] }, ME)
+    expect(rows.map((row) => [row.icon, spaced(row)?.title, spaced(row)?.detail, row.record.kind])).toEqual([
+      ["sleep", "Night", ["Running when deleted"], "sleep"],
+      ["sleep", "Nap", ["1 h 20 min"], "sleep"],
+    ])
   })
 })

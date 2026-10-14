@@ -371,6 +371,22 @@ describe("todayOf, for sleep", () => {
     })
   })
 
+  it("lists the last 24 hours' sleeps among the diapers by their start, newest first, a running one too, but not a night begun over 24 hours ago that ended since", async () => {
+    const { older, diaper, running, today } = await inHousehold((sql) => {
+      slept(sql, minutesAgo(25 * 60), minutesAgo(23 * 60), "night")
+      const older = slept(sql, minutesAgo(300), minutesAgo(200))
+      const diaper = diaperAt(sql, minutesAgo(120))
+      const start = { actionId: ACTION_ID, kind: "nap" as const, startedAt: minutesAgo(40) }
+      const running = saved(startSleep(stampOf(sql), start)(sql))
+      return { older, diaper, running, today: todayOf(sql, NOW) }
+    })
+    expect(today.recent).toEqual([
+      { kind: "sleep", sleep: running },
+      { kind: "diaper", diaper },
+      { kind: "sleep", sleep: older },
+    ])
+  })
+
   it("reads the same few rows for the last sleep however long the history, since it walks the sleeps' time index", async () => {
     const readsAfter = (sleeps: number) =>
       inHousehold((sql) => {
