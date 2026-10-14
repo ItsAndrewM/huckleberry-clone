@@ -1,3 +1,6 @@
+import { localDateOf, type TimeZone } from "@bt/domain"
+import { calendarOf } from "../src/core/calendar.ts"
+
 const MINUTE_MS = 60_000
 const DAY_MS = 24 * 60 * MINUTE_MS
 
@@ -82,14 +85,14 @@ const insertSleep = (sql: SqlStorage, who: string, at: number, kind: "nap" | "ni
     at,
   )
 
-const insertDose = (sql: SqlStorage, who: string, at: number) =>
+const insertDose = (sql: SqlStorage, who: string, at: number, zone: TimeZone) =>
   sql.exec(
     `INSERT INTO supplement_logs
        (id, supplement_id, occurred_at, local_date, dose, version, created_by, created_at, updated_by, updated_at)
      VALUES (?, (SELECT id FROM supplements ORDER BY rowid LIMIT 1), ?, ?, '400 IU', 1, ?, ?, ?, ?)`,
     crypto.randomUUID(),
     at,
-    new Date(at).toISOString().slice(0, 10),
+    localDateOf(at, zone),
     who,
     at,
     who,
@@ -111,7 +114,7 @@ const insertMeasurement = (sql: SqlStorage, who: string, at: number, day: number
     at,
   )
 
-const seedDay = (sql: SqlStorage, who: string, dayStart: number, day: number) => {
+const seedDay = (sql: SqlStorage, who: string, zone: TimeZone, dayStart: number, day: number) => {
   for (let feed = 0; feed < TWO_YEARS.feedsADay; feed++) {
     const at = dayStart + feed * 120 * MINUTE_MS
     const count = day * TWO_YEARS.feedsADay + feed
@@ -124,15 +127,16 @@ const seedDay = (sql: SqlStorage, who: string, dayStart: number, day: number) =>
     insertSleep(sql, who, dayStart + sleep * 240 * MINUTE_MS + 30 * MINUTE_MS, sleep % 2 === 0 ? "night" : "nap")
   }
   for (let dose = 0; dose < TWO_YEARS.dosesADay; dose++) {
-    insertDose(sql, who, dayStart + (9 * 60 + dose) * MINUTE_MS)
+    insertDose(sql, who, dayStart + (9 * 60 + dose) * MINUTE_MS, zone)
   }
   if (day % 7 === 0) insertMeasurement(sql, who, dayStart + 10 * 60 * MINUTE_MS, day)
 }
 
 export const seedTwoYears = (sql: SqlStorage, end: number) => {
   const who = sql.exec<{ id: string }>("SELECT id FROM caregivers ORDER BY rowid LIMIT 1").one().id
+  const { zone } = calendarOf(sql)
   const start = end - TWO_YEARS.days * DAY_MS
-  for (let day = 0; day < TWO_YEARS.days; day++) seedDay(sql, who, start + day * DAY_MS, day)
+  for (let day = 0; day < TWO_YEARS.days; day++) seedDay(sql, who, zone, start + day * DAY_MS, day)
 }
 
 export const rowCounts = (sql: SqlStorage) =>
