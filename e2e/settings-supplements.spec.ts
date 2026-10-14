@@ -1,4 +1,5 @@
 import { expect, type Locator, type Page, test, type WebSocketRoute } from "@playwright/test"
+import { gate, holdRequests } from "./played-household.ts"
 import { sheetTitlesSeen, watchSheetTitles } from "./sheet-titles.ts"
 
 const ACTION_ID = expect.stringMatching(/^[0-9a-f-]{36}$/u)
@@ -214,6 +215,37 @@ test("says what a name needs before sending a supplement with none", async ({ pa
   await sheet.getByRole("button", { name: "Add supplement" }).click()
   await expect(sheet.getByText("Enter a name of up to 60 characters.")).toBeVisible()
   expect(played.sent).toEqual([])
+})
+
+test("clears a field's message as soon as the parent edits that field", async ({ page }) => {
+  await playSupplements(page)
+  await page.goto("/settings")
+  await page.getByRole("button", { name: "Add a supplement" }).click()
+  const sheet = sheetOf(page, "Add a supplement")
+  await sheet.getByRole("button", { name: "Add supplement" }).click()
+  const message = sheet.getByText("Enter a name of up to 60 characters.")
+  await expect(message).toBeVisible()
+  await expect(sheet.getByLabel("Name")).toHaveAttribute("aria-invalid", "true")
+  await sheet.getByLabel("Name").fill("Iron")
+  await expect(message).toBeHidden()
+  await expect(sheet.getByLabel("Name")).toHaveAttribute("aria-invalid", "false")
+})
+
+test("still closes the sheet once a save is answered when the parent types in it while it's on its way", async ({
+  page,
+}) => {
+  await playSupplements(page)
+  const answered = gate()
+  await holdRequests(page, "**/api/supplements", () => answered.opened)
+  await page.goto("/settings")
+  await page.getByRole("button", { name: "Add a supplement" }).click()
+  const sheet = sheetOf(page, "Add a supplement")
+  await sheet.getByLabel("Name").fill("Iron")
+  await sheet.getByRole("button", { name: "Add supplement" }).click()
+  await expect(sheet.getByRole("button", { name: "Add supplement" })).toBeDisabled()
+  await sheet.getByLabel("Dose").fill("1 mL")
+  answered.open()
+  await expect(sheet).toBeHidden()
 })
 
 const LONGEST = [

@@ -22,8 +22,11 @@ export const SupplementForm = ({ shown }: { readonly shown: Supplement | null })
     event.preventDefault()
     send(event.currentTarget, stopped)
   }
+  const clearStaleError = () => {
+    if (save.isError) save.reset()
+  }
   return (
-    <form noValidate className="flex flex-col gap-4" onSubmit={submit}>
+    <form noValidate className="flex flex-col gap-4" onChange={clearStaleError} onSubmit={submit}>
       <TextField
         name="supplement-name"
         label="Name"
