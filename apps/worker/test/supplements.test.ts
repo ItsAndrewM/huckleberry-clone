@@ -2,7 +2,7 @@ import { Me, SavedSupplement } from "@bt/contracts"
 import { Schema } from "effect"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { ANDREW, EMILY, NOW, seededHousehold } from "./fixtures.ts"
-import { type Household, get, inStorage, send, sendJson } from "./requests.ts"
+import { type Household, get, inStorage, send, sendJson, sha256 } from "./requests.ts"
 
 const decodeSaved = Schema.decodeUnknownSync(Schema.toCodecJson(SavedSupplement))
 const decodeMe = Schema.decodeUnknownSync(Schema.toCodecJson(Me))
@@ -56,6 +56,18 @@ describe("POST /api/supplements", () => {
     expect(me.household.supplements.map(({ name }) => name)).toEqual(["Vitamin D", "Iron"])
   })
 
+  it("answers a retry with another name with 409 ACTION_REPLAY_MISMATCH and the supplement it added, and adds nothing", async () => {
+    const household = await seededHousehold()
+    const request = iron()
+    const first = decodeSaved((await sendJson(household, "POST", "/api/supplements", request)).body)
+    expect(await sendJson(household, "POST", "/api/supplements", { ...request, name: "Iron drops" })).toEqual({
+      status: 409,
+      body: { _tag: "Conflict", code: "ACTION_REPLAY_MISMATCH", current: first.supplement },
+    })
+    const me = decodeMe(await (await get(household, "/api/me", ANDREW.email)).json())
+    expect(me.household.supplements.map(({ name }) => name)).toEqual(["Vitamin D", "Iron"])
+  })
+
   it("answers 400 naming name for a name that's empty", async () => {
     expect(await sendJson(await seededHousehold(), "POST", "/api/supplements", { ...iron(), name: "" })).toEqual({
       status: 400,
@@ -103,5 +115,35 @@ describe("PATCH /api/supplements/:id", () => {
       status: 404,
       body: { _tag: "NotFound" },
     })
+  })
+})
+
+describe("the receipts the supplement endpoints keep", () => {
+  it("hold each request's route and the hash of its canonical body, which a retry sent before a deploy must still match", async () => {
+    const household = await seededHousehold()
+    const adding = crypto.randomUUID()
+    const editing = crypto.randomUUID()
+    const posted = { dose: "1 mL", name: "Iron", actionId: adding }
+    const { supplement } = decodeSaved((await sendJson(household, "POST", "/api/supplements", posted)).body)
+    const path = `/api/supplements/${supplement.id}`
+    const edit = { stopped: true, dose: "0.5 mL", name: "Iron drops", version: 1, actionId: editing }
+    await sendJson(household, "PATCH", path, edit)
+    const receipts = await inStorage(household, (sql) =>
+      sql.exec("SELECT action_id, route, request_hash FROM receipts ORDER BY rowid").toArray(),
+    )
+    expect(receipts).toEqual([
+      {
+        action_id: adding,
+        route: "POST /api/supplements",
+        request_hash: await sha256(`POST /api/supplements\n{"actionId":"${adding}","name":"Iron","dose":"1 mL"}`),
+      },
+      {
+        action_id: editing,
+        route: `PATCH ${path}`,
+        request_hash: await sha256(
+          `PATCH ${path}\n{"actionId":"${editing}","version":1,"name":"Iron drops","dose":"0.5 mL","stopped":true}`,
+        ),
+      },
+    ])
   })
 })

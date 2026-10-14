@@ -2,7 +2,7 @@ import { Me, SavedDose } from "@bt/contracts"
 import { Schema } from "effect"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { ANDREW, CHANGED_TODAY, EMILY, HOUR_MS, MINUTE_MS, NOW, seededHousehold } from "./fixtures.ts"
-import { type Household, get, inStorage, send, sendJson } from "./requests.ts"
+import { type Household, get, inStorage, send, sendJson, sha256 } from "./requests.ts"
 
 const decodeSaved = Schema.decodeUnknownSync(Schema.toCodecJson(SavedDose))
 const decodeMe = Schema.decodeUnknownSync(Schema.toCodecJson(Me))
@@ -179,5 +179,51 @@ describe("PATCH, DELETE and POST …/restore", () => {
       version: 1,
     })
     expect(response).toEqual({ status: 404, body: { _tag: "NotFound" } })
+  })
+})
+
+describe("the receipts the dose endpoints keep", () => {
+  it("hold each request's route and the hash of its canonical body, which a retry sent before a deploy must still match", async () => {
+    const household = await seededHousehold()
+    const vitaminD = await vitaminDOf(household)
+    const logging = crypto.randomUUID()
+    const moving = crypto.randomUUID()
+    const deleting = crypto.randomUUID()
+    const restoring = crypto.randomUUID()
+    const at = NOW - HOUR_MS
+    const movedTo = NOW - 2 * HOUR_MS
+    const posted = { confirmedDuplicate: false, occurredAt: at, supplementId: vitaminD, actionId: logging }
+    const { dose } = decodeSaved((await sendJson(household, "POST", "/api/doses", posted)).body)
+    const path = `/api/doses/${dose.id}`
+    await sendJson(household, "PATCH", path, { occurredAt: movedTo, version: 1, actionId: moving })
+    await sendJson(household, "DELETE", path, { version: 2, actionId: deleting })
+    await sendJson(household, "POST", `${path}/restore`, { version: 3, actionId: restoring })
+    const receipts = await inStorage(household, (sql) =>
+      sql.exec("SELECT action_id, route, request_hash FROM receipts ORDER BY rowid").toArray(),
+    )
+    expect(receipts).toEqual([
+      {
+        action_id: logging,
+        route: "POST /api/doses",
+        request_hash: await sha256(
+          `POST /api/doses\n{"actionId":"${logging}","supplementId":"${vitaminD}","occurredAt":${at},"confirmedDuplicate":false}`,
+        ),
+      },
+      {
+        action_id: moving,
+        route: `PATCH ${path}`,
+        request_hash: await sha256(`PATCH ${path}\n{"actionId":"${moving}","version":1,"occurredAt":${movedTo}}`),
+      },
+      {
+        action_id: deleting,
+        route: `DELETE ${path}`,
+        request_hash: await sha256(`DELETE ${path}\n{"actionId":"${deleting}","version":2}`),
+      },
+      {
+        action_id: restoring,
+        route: `POST ${path}/restore`,
+        request_hash: await sha256(`POST ${path}/restore\n{"actionId":"${restoring}","version":3}`),
+      },
+    ])
   })
 })
