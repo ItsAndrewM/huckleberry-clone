@@ -12,10 +12,9 @@ export interface TableRow {
 
 const SHOWN: ReadonlySet<DayStatus> = new Set(["counted", "no-entries", "today"])
 
-const UNIT_THEN_NUMBER = /(\p{L})\s+(\p{N})/gu
-const PART_BREAK = "\n"
+const BETWEEN_PARTS = /(?<=\p{L})\s+(?=\p{N})/u
 
-export const valueParts = (value: string) => value.replace(UNIT_THEN_NUMBER, `$1${PART_BREAK}$2`).split(PART_BREAK)
+export const valueParts = (value: string) => value.split(BETWEEN_PARTS)
 
 export const tableRows = (days: ReadonlyArray<TrendDay>, volume: VolumeUnit, locale?: string): TableRow[] =>
   days
