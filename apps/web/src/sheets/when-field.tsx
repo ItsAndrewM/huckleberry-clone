@@ -10,6 +10,7 @@ interface WhenFieldProps {
   readonly zone: string
   readonly now: number
   readonly earliest?: number | undefined
+  readonly tooEarly?: string
 }
 
 const MESSAGES = {
@@ -32,10 +33,11 @@ const NowRow = ({ label, onChange }: { readonly label: string; readonly onChange
   </div>
 )
 
-export const WhenField = ({ label, when, onChange, zone, now, earliest }: WhenFieldProps) => {
+export const WhenField = ({ label, when, onChange, zone, now, earliest, tooEarly }: WhenFieldProps) => {
   if (when.kind === "now") return <NowRow label={label} onChange={() => onChange(whenAt(now, zone))} />
   const resolved = resolveWhen(when, zone, now, earliest)
-  const message = resolved.ok ? "" : MESSAGES[resolved.issue]
+  const messages = tooEarly === undefined ? MESSAGES : { ...MESSAGES, too_early: tooEarly }
+  const message = resolved.ok ? "" : messages[resolved.issue]
   return (
     <div className="flex flex-col gap-2">
       <div className="flex items-end gap-2">

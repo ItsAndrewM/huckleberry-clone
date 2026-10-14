@@ -1729,6 +1729,99 @@
                             ],
                             "additionalProperties": false
                           },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "kind": {
+                                "type": "string",
+                                "enum": [
+                                  "sleep"
+                                ]
+                              },
+                              "sleep": {
+                                "type": "object",
+                                "properties": {
+                                  "id": {
+                                    "type": "string"
+                                  },
+                                  "kind": {
+                                    "type": "string",
+                                    "enum": [
+                                      "nap",
+                                      "night"
+                                    ]
+                                  },
+                                  "startedAt": {
+                                    "type": "integer",
+                                    "minimum": 946684800000,
+                                    "exclusiveMaximum": 4102444800000
+                                  },
+                                  "endedAt": {
+                                    "anyOf": [
+                                      {
+                                        "type": "integer",
+                                        "minimum": 946684800000,
+                                        "exclusiveMaximum": 4102444800000
+                                      },
+                                      {
+                                        "type": "null"
+                                      }
+                                    ]
+                                  },
+                                  "version": {
+                                    "type": "integer",
+                                    "minimum": 1
+                                  },
+                                  "createdBy": {
+                                    "type": "string"
+                                  },
+                                  "createdAt": {
+                                    "type": "integer",
+                                    "minimum": 946684800000,
+                                    "exclusiveMaximum": 4102444800000
+                                  },
+                                  "updatedBy": {
+                                    "type": "string"
+                                  },
+                                  "updatedAt": {
+                                    "type": "integer",
+                                    "minimum": 946684800000,
+                                    "exclusiveMaximum": 4102444800000
+                                  },
+                                  "deletedAt": {
+                                    "anyOf": [
+                                      {
+                                        "type": "integer",
+                                        "minimum": 946684800000,
+                                        "exclusiveMaximum": 4102444800000
+                                      },
+                                      {
+                                        "type": "null"
+                                      }
+                                    ]
+                                  }
+                                },
+                                "required": [
+                                  "id",
+                                  "kind",
+                                  "startedAt",
+                                  "endedAt",
+                                  "version",
+                                  "createdBy",
+                                  "createdAt",
+                                  "updatedBy",
+                                  "updatedAt",
+                                  "deletedAt"
+                                ],
+                                "additionalProperties": false
+                              }
+                            },
+                            "required": [
+                              "kind",
+                              "sleep"
+                            ],
+                            "additionalProperties": false
+                          },
                           {}
                         ]
                       }

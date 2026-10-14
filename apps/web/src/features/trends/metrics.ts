@@ -2,7 +2,7 @@ import type { Totals, VolumeUnit } from "@bt/contracts"
 import { flOzFromMl, type RunningPoint, type RunningTotals } from "@bt/domain"
 import { formatMinutes, formatVolume, presentParts } from "../today/format.ts"
 
-export type MetricId = "feeds" | "nursing" | "bottles" | "diapers"
+export type MetricId = "feeds" | "nursing" | "bottles" | "diapers" | "sleep"
 
 export interface MetricPart {
   readonly key: string
@@ -99,4 +99,27 @@ const DIAPERS: TrendsMetric = {
     ]),
 }
 
-export const TRENDS_METRICS = [FEEDS, NURSING, BOTTLES, DIAPERS] as const
+const SECONDS_PER_HOUR = 3600
+
+const SLEEP: TrendsMetric = {
+  id: "sleep",
+  title: "Sleep",
+  parts: [
+    { key: "naps", label: "Naps", amount: (totals) => totals.napSeconds },
+    { key: "night", label: "Night", amount: (totals) => totals.nightSeconds },
+  ],
+  total: (totals) => totals.sleepSeconds,
+  running: (running) => running.sleepSeconds,
+  unit: () => "hours",
+  axisFloor: () => 6,
+  plotted: (seconds) => seconds / SECONDS_PER_HOUR,
+  format: formatMinutes,
+  detail: (totals) =>
+    presentParts([
+      [totals.napSeconds, `Naps ${formatMinutes(totals.napSeconds)}`],
+      [totals.nightSeconds, `Night ${formatMinutes(totals.nightSeconds)}`],
+      [totals.longestSleepSeconds, `Longest ${formatMinutes(totals.longestSleepSeconds)}`],
+    ]),
+}
+
+export const TRENDS_METRICS = [FEEDS, NURSING, BOTTLES, DIAPERS, SLEEP] as const

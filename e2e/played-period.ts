@@ -91,12 +91,12 @@ const answerPeriods = (page: Page, path: string, name: string, periods: Readonly
       : route.fulfill({ json: { ...period, [name]: key } })
   })
 
-export const playTrends = async (page: Page, { weeks, months }: PlayedPeriods) => {
+export const playTrends = async (page: Page, { weeks, months }: PlayedPeriods, volume: "ml" | "fl_oz" = "ml") => {
   const me = await (await page.request.get("/api/me")).json()
   const household = {
     ...me.household,
     timeZone: "America/Vancouver",
-    units: { volume: "ml", weight: "kg", length: "cm" },
+    units: { volume, weight: "kg", length: "cm" },
   }
   const child = { ...me.child, birthDate: BIRTH_DATE }
   await page.route("**/api/me", (route) => route.fulfill({ json: { ...me, household, child } }))

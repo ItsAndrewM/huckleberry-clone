@@ -3,7 +3,7 @@ import { heldFor } from "./held.ts"
 import type { Failed, Sending, SheetKind } from "./sending.ts"
 import type { Toast } from "./undo.ts"
 
-export type TimedSheet = "bottle" | "pastFeed" | "diaper" | "measurement" | "logAt"
+export type TimedSheet = "bottle" | "pastFeed" | "diaper" | "measurement" | "pastSleep" | "logAt"
 
 export interface Sheets {
   readonly open: SheetKind | null
@@ -35,3 +35,5 @@ export const useSheets = () => {
 }
 
 export const failedFor = (sheets: Sheets, sheet: SheetKind) => heldFor(sheets.held, sheet, sheets.editing)
+
+export const busyRecord = ({ busy }: Sheets) => (busy !== null && "id" in busy.action ? busy.action.id : null)

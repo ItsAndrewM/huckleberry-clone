@@ -1,11 +1,25 @@
+import type { Sleep } from "@bt/contracts"
 import { describe, expect, it } from "vitest"
 import { pendingId } from "../src/api/pending.ts"
 import { hiddenIn } from "../src/features/history/history-kinds.ts"
 import { listNote, listRows } from "../src/features/history/list-rows.ts"
 import { logTimeOn } from "../src/features/history/log-time.ts"
 import type { RecentRow } from "../src/features/today/recent-rows.ts"
-import { BOTH, DISPLAY, dayWith, local, NOW_ON_DAY, NURSED, PEE, RUNNING, WEIGHED } from "./history-fixtures.ts"
-import { ANDREW, diaperAt, feedAt, nursedFor } from "./today-fixtures.ts"
+import {
+  BOTH,
+  BOTTLE,
+  DISPLAY,
+  dayWith,
+  local,
+  NOW_ON_DAY,
+  NURSED,
+  PAUSED,
+  PEE,
+  POO,
+  RUNNING,
+  WEIGHED,
+} from "./history-fixtures.ts"
+import { ANDREW, diaperAt, feedAt, nursedFor, sleptAt } from "./today-fixtures.ts"
 
 const LOS_ANGELES = "America/Los_Angeles"
 const NONE = hiddenIn(undefined)
@@ -13,10 +27,15 @@ const NONE = hiddenIn(undefined)
 const spaced = (text: string) => text.replace(/\s/gu, " ")
 
 const shown = (rows: ReadonlyArray<RecentRow>) =>
-  rows.map(({ title, time, detail, by }) => `${spaced(time)} ${title}: ${detail.join(", ")} (${by})`)
+  rows.map(({ title, time, detail, by }) => spaced(`${time} ${title}: ${detail.join(", ")} (${by})`))
 
 const FROM_YESTERDAY = nursedFor(feedAt(local("23:40", "2026-10-08")), "left", 35)
 const INTO_TOMORROW = nursedFor(feedAt(local("23:50")), "right", 20)
+
+const NAP = sleptAt(local("06:15"), { endedAt: local("07:05") })
+const NIGHT = sleptAt(local("19:45", "2026-10-08"), { kind: "night", endedAt: local("05:10") })
+
+const sleptDay = (...sleeps: ReadonlyArray<Sleep>) => dayWith({ feeds: [], diapers: [], sleeps })
 
 describe("listRows", () => {
   it("lists every feed and diaper earliest first, as Today's rows read, with a finished feed's span", () => {
@@ -68,6 +87,61 @@ describe("listRows", () => {
     const rows = listRows(dayWith({ feeds: [NURSED], diapers: [together] }), DISPLAY, NOW_ON_DAY, NONE)
     expect(rows.map(({ id }) => id)).toEqual([NURSED.id, together.id])
   })
+
+  it("shows a finished nap with its span, how long she slept and when she woke, as Today's row reads", () => {
+    const rows = listRows(sleptDay(NAP), DISPLAY, NOW_ON_DAY, NONE)
+    expect(shown(rows)).toEqual(["6:15 – 7:05 AM Nap: 50 min, Woke 7:05 AM (Andrew)"])
+    expect(rows.map(({ opens }) => opens)).toEqual(["editSleep"])
+  })
+
+  it("names the other day where a sleep crosses midnight, on its start or on its end", () => {
+    const intoTomorrow = sleptAt(local("20:30"), { kind: "night", endedAt: local("05:45", "2026-10-10") })
+    expect(listRows(sleptDay(intoTomorrow, NIGHT), DISPLAY, NOW_ON_DAY, NONE).map(({ time }) => spaced(time))).toEqual([
+      "Thu 7:45 PM – 5:10 AM",
+      "8:30 PM – Sat 5:45 AM",
+    ])
+  })
+
+  it("shows a sleep still going at its start, asleep now first and counting up, opening the Sleep sheet", () => {
+    const napping = listRows(sleptDay(sleptAt(local("08:50"), { endedAt: null })), DISPLAY, NOW_ON_DAY, NONE)
+    expect(shown(napping)).toEqual(["8:50 AM Nap: Asleep now, 40 min (Andrew)"])
+    expect(napping.map(({ opens }) => opens)).toEqual(["sleep"])
+    const sinceLastNight = sleptAt(local("21:15", "2026-10-08"), { kind: "night", endedAt: null })
+    expect(shown(listRows(sleptDay(sinceLastNight), DISPLAY, NOW_ON_DAY, NONE))).toEqual([
+      "Thu 9:15 PM Night: Asleep now, 12 h 15 min (Andrew)",
+    ])
+  })
+
+  it("puts each sleep among the feeds and diapers by its start", () => {
+    const rows = listRows(dayWith({ sleeps: [NAP, NIGHT] }), DISPLAY, NOW_ON_DAY, NONE)
+    expect(rows.map(({ id }) => id)).toEqual([
+      NIGHT.id,
+      NURSED.id,
+      PEE.id,
+      POO.id,
+      PAUSED.id,
+      BOTTLE.id,
+      BOTH.id,
+      NAP.id,
+      RUNNING.id,
+    ])
+  })
+
+  it("puts a sleep after a feed and a diaper at the same moment, as Today's list is built", () => {
+    const together = { feeds: [NURSED], diapers: [diaperAt(NURSED.startedAt)], sleeps: [sleptAt(NURSED.startedAt)] }
+    const rows = listRows(dayWith(together), DISPLAY, NOW_ON_DAY, NONE)
+    expect(rows.map(({ kind }) => kind)).toEqual(["nursing", "diaper", "sleep"])
+  })
+
+  it("leaves out sleeps behind the Sleep chip, and shows only them with feeds and diapers hidden", () => {
+    const day = dayWith({ sleeps: [NAP] })
+    expect(listRows(day, DISPLAY, NOW_ON_DAY, hiddenIn("sleep"))).toEqual(
+      listRows(dayWith(), DISPLAY, NOW_ON_DAY, NONE),
+    )
+    expect(shown(listRows(day, DISPLAY, NOW_ON_DAY, hiddenIn("feeds,diapers")))).toEqual([
+      "6:15 – 7:05 AM Nap: 50 min, Woke 7:05 AM (Andrew)",
+    ])
+  })
 })
 
 describe("listNote", () => {
@@ -81,8 +155,16 @@ describe("listNote", () => {
     expect(listNote(dayWith({ feeds: [], diapers: [BOTH] }), [])).toBe("Nothing shown.")
   })
 
-  it("says there were no feeds or diapers on a day with only a measurement", () => {
-    expect(listNote(dayWith({ feeds: [], diapers: [], measurements: [WEIGHED] }), [])).toBe("No feeds or diapers.")
+  it("says there were no feeds, diapers or sleep on a day with only a measurement", () => {
+    expect(listNote(dayWith({ feeds: [], diapers: [], measurements: [WEIGHED] }), [])).toBe(
+      "No feeds, diapers or sleep.",
+    )
+  })
+
+  it("counts a day's sleeps: nothing to say while they show, and nothing shown when the Sleep chip hides them", () => {
+    const day = sleptDay(NAP)
+    expect(listNote(day, listRows(day, DISPLAY, NOW_ON_DAY, NONE))).toBeNull()
+    expect(listNote(day, listRows(day, DISPLAY, NOW_ON_DAY, hiddenIn("sleep")))).toBe("Nothing shown.")
   })
 })
 

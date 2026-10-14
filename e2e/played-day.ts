@@ -61,6 +61,14 @@ export const measurement = (id: string, at: number, weightG: number, lengthCm: n
   ...audit(at, by),
 })
 
+export const sleep = (id: string, from: number, to: number | null, kind: "nap" | "night", by: string) => ({
+  id,
+  kind,
+  startedAt: from,
+  endedAt: to,
+  ...audit(from, by),
+})
+
 export const NO_TOTALS = {
   feedsStarted: 0,
   leftSeconds: 0,
@@ -86,7 +94,7 @@ export interface DayAnswer {
   readonly totals: typeof NO_TOTALS
   readonly feeds: ReadonlyArray<ReturnType<typeof feed>>
   readonly diapers: ReadonlyArray<ReturnType<typeof diaper>>
-  readonly sleeps: ReadonlyArray<never>
+  readonly sleeps: ReadonlyArray<ReturnType<typeof sleep>>
   readonly measurements: ReadonlyArray<ReturnType<typeof measurement>>
 }
 

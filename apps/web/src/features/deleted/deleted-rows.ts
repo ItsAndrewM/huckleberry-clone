@@ -1,16 +1,20 @@
-import type { Deleted, Diaper, Feed, Me, Measurement } from "@bt/contracts"
+import type { Deleted, Diaper, Feed, Me, Measurement, Sleep } from "@bt/contracts"
+import { sleepElapsed } from "@bt/domain"
 import { dateClockTime } from "../../clock-time.ts"
 import { formatMeasurement } from "../growth/format.ts"
 import { GROWTH_METRICS } from "../growth/metrics.ts"
 import { feedParts, feedTitle } from "../today/feed-parts.ts"
 import { runningSide } from "../today/feed-status.ts"
+import { formatMinutes } from "../today/format.ts"
+import { sleepTitle } from "../today/sleep-parts.ts"
 
 export type DeletedRecord =
   | { readonly kind: "feed"; readonly feed: Feed }
   | { readonly kind: "diaper"; readonly diaper: Diaper }
   | { readonly kind: "measurement"; readonly measurement: Measurement }
+  | { readonly kind: "sleep"; readonly sleep: Sleep }
 
-export type DeletedIcon = "nursing" | "bottle" | "diaper" | "measurement"
+export type DeletedIcon = "nursing" | "bottle" | "diaper" | "measurement" | "sleep"
 
 export interface DeletedRow {
   readonly id: string
@@ -92,9 +96,18 @@ const measurementDescribed = (measurement: Measurement, me: Me): Described => ({
   at: measurement.measuredAt,
 })
 
+const sleepDescribed = (sleep: Sleep): Described => ({
+  record: { kind: "sleep", sleep },
+  icon: "sleep",
+  title: sleepTitle(sleep),
+  detail: sleep.endedAt === null ? ["Running when deleted"] : [formatMinutes(sleepElapsed(sleep, sleep.endedAt))],
+  at: sleep.startedAt,
+})
+
 export const deletedRows = (deleted: Deleted, me: Me, locale?: string): ReadonlyArray<DeletedRow> =>
   [
     ...deleted.feeds.map((feed) => rowOf(me, feed, feedDescribed(feed, me), locale)),
     ...deleted.diapers.map((diaper) => rowOf(me, diaper, diaperDescribed(diaper), locale)),
+    ...deleted.sleeps.map((sleep) => rowOf(me, sleep, sleepDescribed(sleep), locale)),
     ...deleted.measurements.map((measurement) => rowOf(me, measurement, measurementDescribed(measurement, me), locale)),
   ].toSorted((a, b) => b.deletedAt - a.deletedAt)

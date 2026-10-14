@@ -12,10 +12,10 @@ import {
   runningChartModel,
 } from "../src/features/trends/running-chart-definition.ts"
 import { trendDays } from "../src/features/trends/trends-numbers.ts"
-import { diaperAt, feedAt, nursedFor, ZONE } from "./today-fixtures.ts"
+import { diaperAt, feedAt, NO_TOTALS, nursedFor, sleptAt, ZONE } from "./today-fixtures.ts"
 import { BIRTH, dated, LOCALE, MONDAY, TODAY, WEEK } from "./trends-fixtures.ts"
 
-const [FEEDS, NURSING, BOTTLES, DIAPERS] = TRENDS_METRICS
+const [FEEDS, NURSING, BOTTLES, DIAPERS, SLEEP] = TRENDS_METRICS
 const SIZE = { width: 358, height: 150 }
 const DAYS = trendDays(WEEK, TODAY, BIRTH)
 const THEME_PAINT =
@@ -39,12 +39,14 @@ describe("chartName", () => {
       "Nursing each day, in minutes",
       "Bottles each day, in mL",
       "Diapers each day",
+      "Sleep each day, in hours",
     ])
     expect(TRENDS_METRICS.map((metric) => chartName(metric, "fl_oz", "through the day"))).toEqual([
       "Feeds started through the day",
       "Nursing through the day, in minutes",
       "Bottles through the day, in fl oz",
       "Diapers through the day",
+      "Sleep through the day, in hours",
     ])
   })
 })
@@ -64,7 +66,7 @@ describe("barChartModel", () => {
 
   it("keeps each chart tall enough to read on a quiet day, and taller for the tallest day", () => {
     const quiet = trendDays([dated("2026-10-12")], TODAY, BIRTH)
-    expect(TRENDS_METRICS.map((metric) => barChartModel(metric, quiet, "ml", null).top)).toEqual([4, 60, 100, 4])
+    expect(TRENDS_METRICS.map((metric) => barChartModel(metric, quiet, "ml", null).top)).toEqual([4, 60, 100, 4, 6])
     expect(barChartModel(BOTTLES, DAYS, "fl_oz", null).top).toBeCloseTo(610 / 29.5735295625, 6)
   })
 })
@@ -113,7 +115,7 @@ describe("barChartDefinition", () => {
 const DAY = zonedDayBounds("2026-10-09", ZONE)
 const at = (time: string) => Date.parse(`2026-10-09T${time}:00-07:00`)
 const FED = [nursedFor(feedAt(at("01:05")), "left", 14), nursedFor(feedAt(at("05:00")), "right", 20)]
-const RUNNING = runningTotals(DAY, FED, [diaperAt(at("02:10"))], at("09:30"))
+const RUNNING = runningTotals(DAY, { feeds: FED, diapers: [diaperAt(at("02:10"))], sleeps: [] }, at("09:30"))
 
 const runningInput = (
   usual: Parameters<typeof runningChartModel>[2]["usual"],
@@ -129,7 +131,7 @@ const runningInput = (
 })
 
 const USUAL = { days: 6, totals: { ...MONDAY, nursingSeconds: 5940 } }
-const NOTHING_LOGGED = runningTotals(DAY, [], [], DAY.end)
+const NOTHING_LOGGED = runningTotals(DAY, { feeds: [], diapers: [], sleeps: [] }, DAY.end)
 
 describe("runningChartDefinition", () => {
   it("climbs in minutes for nursing, up to now", () => {
@@ -156,7 +158,7 @@ describe("runningChartDefinition", () => {
   })
 
   it("still draws today's line along zero up to now before anything is logged", () => {
-    const sinceMidnight = runningTotals(DAY, [], [], at("09:30"))
+    const sinceMidnight = runningTotals(DAY, { feeds: [], diapers: [], sleeps: [] }, at("09:30"))
     const model = runningChartModel(BOTTLES, "ml", runningInput(null, "today", sinceMidnight))
     expect(model.points).toEqual([
       { at: DAY.start, value: 0 },
@@ -214,5 +216,34 @@ describe("runningChartDefinition", () => {
     )
     expect(new Set(scenes.map(widestYLabel)).size).toBeGreaterThan(1)
     expect(scenes.map(({ chart }) => chart.x)).toEqual(scenes.map(() => PLOT_LEFT_MARGIN))
+  })
+})
+
+describe("the sleep chart", () => {
+  const SLEPT = {
+    ...NO_TOTALS,
+    sleepsStarted: 4,
+    sleepSeconds: 47_400,
+    napSeconds: 11_100,
+    nightSeconds: 36_300,
+    longestSleepSeconds: 22_200,
+  }
+
+  it("plots hours, stacks naps and night, and gives the longest sleep among its numbers", () => {
+    expect(SLEEP.plotted(SLEEP.total(SLEPT), "ml")).toBeCloseTo(13.1667, 4)
+    expect(SLEEP.parts.map(({ label, amount }) => [label, amount(SLEPT)])).toEqual([
+      ["Naps", 11_100],
+      ["Night", 36_300],
+    ])
+    expect(SLEEP.format(SLEEP.total(SLEPT), "ml")).toBe("13 h 10 min")
+    expect(SLEEP.detail(SLEPT, "ml")).toEqual(["Naps 3 h 5 min", "Night 10 h 5 min", "Longest 6 h 10 min"])
+  })
+
+  it("climbs through the day as she sleeps, in hours", () => {
+    const day = zonedDayBounds("2026-10-14", ZONE)
+    const nap = sleptAt(day.start + 9 * 3_600_000, { endedAt: day.start + 10.5 * 3_600_000 })
+    const running = runningTotals(day, { feeds: [], diapers: [], sleeps: [nap] }, day.start + 12 * 3_600_000)
+    const input = { running, status: "today" as const, usual: null, bounds: day, ticks: [], tickLabel: String }
+    expect(runningChartModel(SLEEP, "ml", input).points.at(-1)).toEqual({ at: day.start + 12 * 3_600_000, value: 1.5 })
   })
 })

@@ -2,7 +2,7 @@ import { FeedConflict, NotFound } from "@bt/contracts"
 import { StaleDraft } from "./drafts.ts"
 import { editsARecord, type Failed, type Sending, type SheetKind } from "./sending.ts"
 
-const CANT_SAVE_AS_IS = new Set(["ACTION_REPLAY_MISMATCH", "FEED_ALREADY_ACTIVE"])
+const CANT_SAVE_AS_IS = new Set(["ACTION_REPLAY_MISMATCH", "FEED_ALREADY_ACTIVE", "SLEEP_ALREADY_ACTIVE"])
 
 export const actionIdOf = ({ action }: Sending) => action.payload.actionId
 

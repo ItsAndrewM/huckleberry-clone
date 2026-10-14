@@ -21,14 +21,34 @@ export interface Change {
 
 export const NOTHING: Change = { feeds: [], diapers: [] }
 
-export const idOf = (entry: RecentEntry) => (entry.kind === "feed" ? entry.feed.id : entry.diaper.id)
+export const recordOf = (entry: RecentEntry) => {
+  switch (entry.kind) {
+    case "feed":
+      return entry.feed
+    case "diaper":
+      return entry.diaper
+    case "sleep":
+      return entry.sleep
+  }
+}
 
-export const timeOf = (entry: RecentEntry) => (entry.kind === "feed" ? entry.feed.startedAt : entry.diaper.occurredAt)
+export const idOf = (entry: RecentEntry) => recordOf(entry).id
 
-export const versionOf = (entry: RecentEntry) => (entry.kind === "feed" ? entry.feed.version : entry.diaper.version)
+export const timeOf = (entry: RecentEntry) => {
+  switch (entry.kind) {
+    case "feed":
+      return entry.feed.startedAt
+    case "diaper":
+      return entry.diaper.occurredAt
+    case "sleep":
+      return entry.sleep.startedAt
+  }
+}
+
+export const versionOf = (entry: RecentEntry) => recordOf(entry).version
 
 export const changeOf = (entry: RecentEntry | null): Change => {
-  if (entry === null) return NOTHING
+  if (entry === null || entry.kind === "sleep") return NOTHING
   return entry.kind === "feed" ? { feeds: [entry.feed], diapers: [] } : { feeds: [], diapers: [entry.diaper] }
 }
 
@@ -37,8 +57,13 @@ export const without = (recent: ReadonlyArray<RecentEntry>, id: string) => recen
 export const withEntry = (recent: ReadonlyArray<RecentEntry>, entry: RecentEntry) =>
   [...without(recent, idOf(entry)), entry].toSorted((a, b) => timeOf(b) - timeOf(a))
 
-export const later = (current: Feed | null, feed: Feed) =>
-  current === null || current.id === feed.id || feed.startedAt >= current.startedAt ? feed : current
+interface Started {
+  readonly id: string
+  readonly startedAt: number
+}
+
+export const later = <Logged extends Started>(current: Logged | null, record: Logged) =>
+  current === null || current.id === record.id || record.startedAt >= current.startedAt ? record : current
 
 const shiftedTotals = (totals: Totals, period: Interval, now: Instant, before: Change, after: Change): Totals => {
   const added = totalsIn(period, { ...after, sleeps: [] }, now)

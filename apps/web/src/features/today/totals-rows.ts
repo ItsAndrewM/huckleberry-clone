@@ -33,4 +33,12 @@ export const totalsRows = (totals: Totals, volume: VolumeUnit): ReadonlyArray<To
       [totals.dirtyDiapers, `${totals.dirtyDiapers} poo`],
     ]),
   },
+  {
+    label: "Sleep",
+    value: formatMinutes(totals.sleepSeconds),
+    detail: presentParts([
+      [totals.napSeconds, `Naps ${formatMinutes(totals.napSeconds)}`],
+      [totals.nightSeconds, `Night ${formatMinutes(totals.nightSeconds)}`],
+    ]),
+  },
 ]

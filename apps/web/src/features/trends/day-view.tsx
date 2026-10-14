@@ -26,7 +26,7 @@ export const DayView = ({ day, usual, me, now, today }: DayViewProps) => {
     const totals = totalsIn(day.bounds, day, now)
     const trend = trendDay({ date: day.date, totals }, today, birthDate)
     const input = {
-      running: runningTotals(day.bounds, day.feeds, day.diapers, now),
+      running: runningTotals(day.bounds, day, now),
       status: trend.status,
       usual,
       bounds: day.bounds,

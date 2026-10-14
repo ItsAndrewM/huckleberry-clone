@@ -16,9 +16,12 @@ const NO_FEEDS = {
 
 const NO_DIAPERS = { diapers: 0, wetDiapers: 0, dirtyDiapers: 0 }
 
+const NO_SLEEP = { sleepsStarted: 0, sleepSeconds: 0, napSeconds: 0, nightSeconds: 0, longestSleepSeconds: 0 }
+
 export const shownTotals = (totals: Totals, hidden: Hidden): Totals => {
   const fed = hidden.has("feeds") ? { ...totals, ...NO_FEEDS } : totals
-  return hidden.has("diapers") ? { ...fed, ...NO_DIAPERS } : fed
+  const changed = hidden.has("diapers") ? { ...fed, ...NO_DIAPERS } : fed
+  return hidden.has("sleep") ? { ...changed, ...NO_SLEEP } : changed
 }
 
 export const columnName = (column: WeekColumn, volume: VolumeUnit, hidden: Hidden, locale?: string) => {

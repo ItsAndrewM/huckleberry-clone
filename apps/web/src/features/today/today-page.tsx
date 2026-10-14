@@ -1,7 +1,7 @@
 import type { Me, Today } from "@bt/contracts"
 import { useLast24h, useMe, useToday } from "../../api/hooks.ts"
 import { retryOf } from "../../api/retry.ts"
-import { useSheets } from "../../sheets/sheets-context.ts"
+import { busyRecord, useSheets } from "../../sheets/sheets-context.ts"
 import { NotLoaded } from "../../shell/not-loaded.tsx"
 import { Page } from "../../shell/page.tsx"
 import { useNow } from "../../timer/use-now.ts"
@@ -10,6 +10,7 @@ import { FeedCard } from "./feed-card.tsx"
 import { QuickActions } from "./quick-actions.tsx"
 import { RecentList } from "./recent-list.tsx"
 import { recentRows } from "./recent-rows.ts"
+import { SleepCard } from "./sleep-card.tsx"
 import { type Last24h, TotalsCard } from "./totals-card.tsx"
 
 interface TodayCardsProps {
@@ -25,9 +26,10 @@ const TodayCards = ({ today, last24h, household }: TodayCardsProps) => {
   return (
     <>
       <FeedCard today={today} display={display} now={now} />
+      <SleepCard today={today} display={display} now={now} />
       <TotalsCard today={today.totals} last24h={last24h} volume={display.volume} />
       <RecentList
-        rows={recentRows(today.recent, display, now)}
+        rows={recentRows(today.recent, display, now, busyRecord(sheets))}
         onOpen={({ opens, id }) => opens !== null && sheets.show(opens, id)}
       />
     </>

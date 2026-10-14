@@ -39,17 +39,35 @@ const Dots = ({
     />
   ))
 
+const Stripe = ({ block }: { readonly block: PlacedBlock<Side> }) => (
+  <span
+    data-kind="sleep"
+    className={cn(
+      "absolute inset-x-0 rounded-[2px] bg-muted-foreground/45",
+      atStep(block.top),
+      stepsTall(block.height),
+      block.startsBefore && "rounded-t-none",
+      block.endsAfter && "rounded-b-none",
+    )}
+  />
+)
+
 export const WeekMarks = ({ column }: { readonly column: WeekColumn }) => (
   <div aria-hidden="true" className="pointer-events-none absolute inset-0">
-    <div className="absolute inset-y-0 left-0.5 w-[52%]">
+    <div className="absolute inset-y-0 left-0.5 w-[10%]">
+      {column.sleeps.map((block) => (
+        <Stripe key={block.id} block={block} />
+      ))}
+    </div>
+    <div className="absolute inset-y-0 left-[15%] w-[43%]">
       {column.grid.blocks.map((block) => (
         <Bar key={block.id} block={block} />
       ))}
     </div>
-    <div className="absolute inset-y-0 left-[56%] w-[20%]">
+    <div className="absolute inset-y-0 left-[60%] w-[18%]">
       <Dots clusters={column.grid.clusters} className="bg-primary" />
     </div>
-    <div className="absolute inset-y-0 left-[78%] w-[20%]">
+    <div className="absolute inset-y-0 left-[80%] w-[18%]">
       <Dots clusters={column.diapers} className="bg-foreground/55" />
     </div>
     {column.grid.now === null ? null : (

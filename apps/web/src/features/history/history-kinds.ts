@@ -1,6 +1,6 @@
 import { flow, Option, Schema } from "effect"
 
-export const SHOWN_KINDS = ["feeds", "diapers", "growth"] as const
+export const SHOWN_KINDS = ["feeds", "diapers", "sleep", "growth"] as const
 
 export type ShownKind = (typeof SHOWN_KINDS)[number]
 
@@ -9,6 +9,7 @@ export type Hidden = ReadonlySet<ShownKind>
 export const KIND_LABELS = {
   feeds: "Feeds",
   diapers: "Diapers",
+  sleep: "Sleep",
   growth: "Growth",
 } as const satisfies Record<ShownKind, string>
 

@@ -7,6 +7,7 @@ const BOTTLE_WAITS = "Bottle opens once Today loads."
 const OPENS_WITHOUT_TODAY = [
   { choice: "Nursing", sheet: "Past feed", field: "Started" },
   { choice: "Diaper", sheet: "Diaper", field: "When" },
+  { choice: "Sleep", sheet: "Past sleep", field: "Fell asleep" },
   { choice: "Measurement", sheet: "Add measurement", field: "When" },
 ]
 
@@ -71,7 +72,7 @@ test("opens Nursing at the slot as a past feed, and Bottle there too", async ({ 
   await expect(page.getByRole("dialog", { name: "Bottle" }).getByLabel("When")).toHaveValue("2026-10-09T04:45")
 })
 
-test("keeps Bottle waiting while Today can't be loaded, and says why, while the other three open at the slot", async ({
+test("keeps Bottle waiting while Today can't be loaded, and says why, while the other four open at the slot", async ({
   page,
 }) => {
   await playHistory(page, [emptyDay(DAY)])

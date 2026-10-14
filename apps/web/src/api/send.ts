@@ -1,15 +1,17 @@
-import type { SavedDiaper, SavedFeed, SavedMeasurement } from "@bt/contracts"
+import type { SavedDiaper, SavedFeed, SavedMeasurement, SavedSleep } from "@bt/contracts"
 import {
   type Action,
   type DiaperAction,
   type FeedAction,
   isDiaperAction,
   isMeasurementAction,
+  isSleepAction,
   type MeasurementAction,
+  type SleepAction,
 } from "./actions.ts"
 import type { HouseholdApi } from "./client.ts"
 
-export type Saved = SavedDiaper | SavedFeed | SavedMeasurement
+export type Saved = SavedDiaper | SavedFeed | SavedMeasurement | SavedSleep
 
 type OnFeed = Extract<FeedAction, { readonly id: string }>
 type NewFeed = Exclude<FeedAction, OnFeed>
@@ -96,7 +98,25 @@ const sendMeasurement = (api: HouseholdApi, action: MeasurementAction): Promise<
   }
 }
 
+const sendSleep = (api: HouseholdApi, action: SleepAction): Promise<SavedSleep> => {
+  switch (action.kind) {
+    case "logSleep":
+      return api.request((client) => client.sleeps.logSleep({ payload: action.payload }))
+    case "startSleep":
+      return api.request((client) => client.sleeps.startSleep({ payload: action.payload }))
+    case "wakeSleep":
+      return api.request((client) => client.sleeps.wakeSleep({ params: { id: action.id }, payload: action.payload }))
+    case "editSleep":
+      return api.request((client) => client.sleeps.editSleep({ params: { id: action.id }, payload: action.payload }))
+    case "deleteSleep":
+      return api.request((client) => client.sleeps.deleteSleep({ params: { id: action.id }, payload: action.payload }))
+    case "restoreSleep":
+      return api.request((client) => client.sleeps.restoreSleep({ params: { id: action.id }, payload: action.payload }))
+  }
+}
+
 export const send = (api: HouseholdApi, action: Action): Promise<Saved> => {
+  if (isSleepAction(action)) return sendSleep(api, action)
   if (isMeasurementAction(action)) return sendMeasurement(api, action)
   if (isDiaperAction(action)) return sendDiaper(api, action)
   return "id" in action ? sendOnFeed(api, action) : sendNewFeed(api, action)

@@ -5,9 +5,11 @@ import {
   type DayAnswer,
   dayHeading,
   emptyDay,
+  local,
   NO_TOTALS,
   openHistory,
   playHistory,
+  sleep,
 } from "./played-day.ts"
 
 test.use({ timezoneId: "Europe/London" })
@@ -122,6 +124,23 @@ test("opens a row's details with Edit, as the grid does", async ({ page }) => {
   await expect(sheet).toBeHidden()
 })
 
+test("lists a nap by its span among the feeds, and opens its Edit sleep sheet from its details", async ({ page }) => {
+  const { played, andrew, emily } = await playHistory(page, [emptyDay("2026-10-08")])
+  const nap = sleep("nap", local("07:10"), local("08:20"), "nap", andrew)
+  played.days.push({ ...busyDay(andrew, emily), sleeps: [nap] })
+  await openHistory(page, "?view=list")
+  const rows = theList(page).getByRole("listitem")
+  await expect(rows).toHaveCount(9)
+  await expect(rows.nth(7)).toContainText(/Nap\s*1 h 10 min · Woke 8:20\sAM\s*7:10\s–\s8:20\sAM\s*Andrew \(local\)/u)
+  await rows.nth(7).getByRole("button").click()
+  const details = page.getByRole("dialog", { name: "Nap" })
+  await expect(details).toContainText(/Fri, Oct 9, 7:10\s–\s8:20\sAM/u)
+  await details.getByRole("button", { name: "Edit" }).click()
+  const edit = page.getByRole("dialog", { name: "Edit sleep" })
+  await expect(edit.getByLabel("Fell asleep")).toHaveValue("2026-10-09T07:10")
+  await expect(edit.getByLabel("Woke")).toHaveValue("2026-10-09T08:20")
+})
+
 test("opens the Nursing sheet for a feed that's still going", async ({ page }) => {
   const day = await playBusyDay(page)
   await playToday(page, day.feeds.find(({ id }) => id === "running") ?? null)
@@ -186,4 +205,17 @@ test("logs on today as Today's buttons do: a diaper now, and a past feed from ha
   await expect(pastFeed.getByLabel("Started")).toHaveValue("2026-10-09T09:00")
   await pastFeed.getByRole("textbox", { name: "Left" }).fill("15")
   await expect(pastFeed.getByRole("button", { name: "Save" })).toBeEnabled()
+})
+
+test("logs a sleep on today as the Sleep sheet's Log a past sleep does: from an hour back to now", async ({ page }) => {
+  await playBusyDay(page)
+  await openHistory(page, "?view=list")
+  await theList(page).getByRole("button", { name: "Log on this day…" }).click()
+  await page
+    .getByRole("dialog", { name: /^Log\b/u })
+    .getByRole("button", { name: "Sleep" })
+    .click()
+  const pastSleep = page.getByRole("dialog", { name: "Past sleep" })
+  await expect(pastSleep.getByLabel("Fell asleep")).toHaveValue("2026-10-09T08:30")
+  await expect(pastSleep.getByLabel("Woke")).toHaveValue("2026-10-09T09:30")
 })

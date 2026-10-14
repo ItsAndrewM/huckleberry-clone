@@ -1,6 +1,7 @@
 import type { PlacedCluster } from "@bt/domain"
+import { timeOf } from "../../api/today-change.ts"
 import type { Display } from "../today/display.ts"
-import { type DayModel, type Entry, entriesIn } from "./day-model.ts"
+import { type DayModel, entriesIn } from "./day-model.ts"
 import { clusterName, entryName, markerText } from "./entry-labels.ts"
 
 export type MarkerKind = "bottle" | "diaper" | "several"
@@ -13,8 +14,6 @@ export interface Marker {
   readonly text: string
   readonly name: string
 }
-
-const timeOf = (entry: Entry) => (entry.kind === "diaper" ? entry.diaper.occurredAt : entry.feed.startedAt)
 
 const markerOf = (cluster: PlacedCluster, model: DayModel, display: Display, now: number): Marker => {
   const entries = entriesIn(model, cluster.ids)

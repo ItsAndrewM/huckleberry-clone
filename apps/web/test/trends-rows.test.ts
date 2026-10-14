@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest"
 import { barRows, tallestDay } from "../src/features/trends/bar-rows.ts"
 import { dayTicks, hourLabel } from "../src/features/trends/day-ticks.ts"
 import { TRENDS_METRICS } from "../src/features/trends/metrics.ts"
-import { tableRows } from "../src/features/trends/table-rows.ts"
+import { tableRows, valueParts } from "../src/features/trends/table-rows.ts"
 import { trendDays } from "../src/features/trends/trends-numbers.ts"
 import { usualDay, usualWeeks } from "../src/features/trends/usual-day.ts"
 import { ZONE } from "./today-fixtures.ts"
@@ -68,16 +68,28 @@ describe("tableRows", () => {
     const rows = tableRows(trendDays([dated("2026-10-11"), ...WEEK], TODAY, BIRTH), "ml", LOCALE)
     expect(rows).toEqual([
       { date: "2026-10-11", name: "Sun, Oct 11", cells: ["No entries"] },
-      { date: "2026-10-12", name: "Mon, Oct 12", cells: ["8", "1 h 40 min", "610 mL", "8"] },
-      { date: "2026-10-13", name: "Tue, Oct 13", cells: ["7", "1 h 20 min", "520 mL", "7"] },
-      { date: TODAY, name: "Wed, Oct 14, so far", cells: ["2", "15 min", "0 mL", "1"] },
+      { date: "2026-10-12", name: "Mon, Oct 12", cells: ["8", "1 h 40 min", "610 mL", "8", "0 min"] },
+      { date: "2026-10-13", name: "Tue, Oct 13", cells: ["7", "1 h 20 min", "520 mL", "7", "0 min"] },
+      { date: TODAY, name: "Wed, Oct 14, so far", cells: ["2", "15 min", "0 mL", "1", "0 min"] },
     ])
   })
 
   it("leaves out the days before her birth date", () => {
     expect(tableRows(trendDays([dated("2026-08-31"), dated(BIRTH, MONDAY)], TODAY, BIRTH), "ml", LOCALE)).toEqual([
-      { date: BIRTH, name: "Tue, Sep 1", cells: ["8", "1 h 40 min", "610 mL", "8"] },
+      { date: BIRTH, name: "Tue, Sep 1", cells: ["8", "1 h 40 min", "610 mL", "8", "0 min"] },
     ])
+  })
+})
+
+describe("a table cell's parts", () => {
+  it("breaks a length after its hours, where a unit's last letter meets the next number", () => {
+    expect(valueParts("12 h 50 min")).toEqual(["12 h", "50 min"])
+    expect(valueParts("1 h 25 min")).toEqual(["1 h", "25 min"])
+  })
+
+  it("never breaks inside an amount, a count or a length of one unit", () => {
+    const whole = ["610 mL", "20.5 fl oz", "8.3", "13 h", "45 min", "<1 min", "No entries"]
+    expect(whole.map(valueParts)).toEqual(whole.map((value) => [value]))
   })
 })
 

@@ -4,7 +4,7 @@ import { hiddenExcept, hiddenIn, hiddenNotice, hideInSearch, hideOf } from "../s
 describe("History's filters", () => {
   it("reads the kinds the address hides, and nothing else", () => {
     expect([...hiddenIn("diapers,growth")]).toEqual(["diapers", "growth"])
-    expect([...hiddenIn("growth,sleep,,feeds")]).toEqual(["growth", "feeds"])
+    expect([...hiddenIn("growth,unknown,,feeds,sleep")]).toEqual(["growth", "feeds", "sleep"])
     expect(hiddenIn(undefined).size).toBe(0)
   })
 
@@ -14,16 +14,16 @@ describe("History's filters", () => {
   })
 
   it("keeps a tidy address: known kinds in order, or none", () => {
-    expect(hideInSearch("growth,diapers,growth")).toBe("diapers,growth")
-    expect(hideInSearch("sleep")).toBeUndefined()
+    expect(hideInSearch("growth,sleep,diapers,growth")).toBe("diapers,sleep,growth")
+    expect(hideInSearch("unknown")).toBeUndefined()
     expect(hideInSearch("")).toBeUndefined()
     expect(hideInSearch(3)).toBeUndefined()
     expect(hideInSearch(undefined)).toBeUndefined()
   })
 
   it("hides every kind a filter's chips leave off", () => {
-    expect([...hiddenExcept(["feeds"])]).toEqual(["diapers", "growth"])
-    expect(hiddenExcept(["feeds", "diapers", "growth"]).size).toBe(0)
+    expect([...hiddenExcept(["feeds"])]).toEqual(["diapers", "sleep", "growth"])
+    expect(hiddenExcept(["feeds", "diapers", "sleep", "growth"]).size).toBe(0)
   })
 })
 
@@ -39,5 +39,6 @@ describe("what the switcher says is hidden", () => {
   it("names two or three in the chips' order, with and before the last", () => {
     expect(hiddenNotice(hiddenIn("diapers,feeds"))).toBe("Feeds and Diapers hidden")
     expect(hiddenNotice(hiddenIn("growth,diapers,feeds"))).toBe("Feeds, Diapers and Growth hidden")
+    expect(hiddenNotice(hiddenIn("growth,sleep"))).toBe("Sleep and Growth hidden")
   })
 })
