@@ -6,6 +6,7 @@ import { SheetsProvider } from "../sheets/sheets-provider.tsx"
 import { UndoToast } from "../sheets/undo-toast.tsx"
 import { ConnectionBanner } from "./connection-banner.tsx"
 import { LogSheets } from "./log-sheets.tsx"
+import { NewVersionOnReturn } from "./new-version-on-return.tsx"
 import { TabBar } from "./tab-bar.tsx"
 
 export const Shell = () => {
@@ -25,6 +26,7 @@ export const Shell = () => {
       </div>
       <UndoToast />
       <LogSheets />
+      <NewVersionOnReturn />
     </SheetsProvider>
   )
 }

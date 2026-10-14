@@ -11,6 +11,7 @@ import { createQueryClient } from "./api/query-client.ts"
 import { refreshPeriodsOnZoneChange } from "./api/zone-change.ts"
 import { AppContext } from "./app-context.ts"
 import { registerServiceWorker } from "./service-worker/register.ts"
+import { watchUpdates } from "./service-worker/updates.ts"
 import { takeDraft } from "./sheets/drafts.ts"
 import { keptStorage, readKept } from "./sheets/kept.ts"
 import { restored } from "./sheets/restored.ts"
@@ -26,6 +27,7 @@ const api = connectApi({ report: connectivity.report })
 const queryClient = createQueryClient()
 refreshPeriodsOnZoneChange(queryClient)
 const freshness = trackFreshness(queryClient.getQueryCache(), connectivity)
+const updates = watchUpdates(import.meta.env.PROD ? navigator.serviceWorker : undefined)
 const draft = takeDraft(() => sessionStorage, `${window.location.pathname}${window.location.search}`)
 const kept = restored(draft, readKept(keptStorage), Date.now(), () => crypto.randomUUID())
 const live = startLive({
@@ -33,7 +35,10 @@ const live = startLive({
   onChanged: (keys) => {
     for (const queryKey of keys) void queryClient.invalidateQueries({ queryKey })
   },
-  onStale: () => void queryClient.invalidateQueries(),
+  onStale: () => {
+    void queryClient.invalidateQueries()
+    void updates.check()
+  },
   report: connectivity.report,
 })
 window.addEventListener("online", live.wake)
@@ -41,7 +46,7 @@ if (import.meta.env.PROD) window.addEventListener("load", () => void registerSer
 
 createRoot(root).render(
   <StrictMode>
-    <AppContext value={{ api, connectivity, freshness, restored: kept }}>
+    <AppContext value={{ api, connectivity, freshness, restored: kept, updates }}>
       <QueryClientProvider client={queryClient}>
         <RouterProvider router={router} />
       </QueryClientProvider>

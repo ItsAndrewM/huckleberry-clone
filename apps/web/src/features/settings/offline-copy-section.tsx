@@ -1,4 +1,7 @@
-import { useQuery } from "@tanstack/react-query"
+import { keepPreviousData, useQuery } from "@tanstack/react-query"
+import { useSyncExternalStore } from "react"
+import { useApp } from "../../app-context.ts"
+import { Button } from "../../components/ui/button.tsx"
 import { checkOfflineCopy, type OfflineCopy, pageBuild } from "./offline-copy.ts"
 import { SettingsSection } from "./settings-section.tsx"
 
@@ -12,16 +15,30 @@ const STATUS = {
   none: "Not saved yet.",
 } satisfies Record<OfflineCopy, string>
 
+const SETTLED = new Set<OfflineCopy | undefined>(["saved", "newer"])
+
 const statusOf = (copy: OfflineCopy | undefined, failed: boolean) => {
   if (failed) return "Couldn't be checked on this phone."
   return copy === undefined ? "Checking…" : STATUS[copy]
 }
 
+const NewerCopy = () => (
+  <div className="flex items-center justify-between gap-3">
+    <p className="text-base">{STATUS.newer}</p>
+    <Button size="lg" onClick={() => window.location.reload()}>
+      Open it now
+    </Button>
+  </div>
+)
+
 const OfflineCopyStatus = ({ build }: { readonly build: string }) => {
+  const { updates } = useApp()
+  const changes = useSyncExternalStore(updates.subscribe, updates.changes)
   const { data, isError } = useQuery({
-    queryKey: ["offline-copy", build],
-    queryFn: () => checkOfflineCopy(caches, build, false),
-    refetchInterval: ({ state }) => (state.data === "saved" ? false : CHECK_AGAIN_MS),
+    queryKey: ["offline-copy", build, changes],
+    queryFn: () => checkOfflineCopy(caches, build, changes > 0),
+    placeholderData: keepPreviousData,
+    refetchInterval: ({ state }) => (SETTLED.has(state.data) ? false : CHECK_AGAIN_MS),
   })
   return (
     <SettingsSection
@@ -29,7 +46,7 @@ const OfflineCopyStatus = ({ build }: { readonly build: string }) => {
       title="Offline copy"
       hint="What the app opens with when there's no connection."
     >
-      <p className="text-base">{statusOf(data, isError)}</p>
+      {data === "newer" && !isError ? <NewerCopy /> : <p className="text-base">{statusOf(data, isError)}</p>}
     </SettingsSection>
   )
 }

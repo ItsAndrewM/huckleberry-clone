@@ -2,6 +2,7 @@ import { createContext, use } from "react"
 import type { HouseholdApi } from "./api/client.ts"
 import type { ConnectivityStore } from "./api/connectivity.ts"
 import type { Freshness } from "./api/freshness.ts"
+import type { Updates } from "./service-worker/updates.ts"
 import type { Restored } from "./sheets/restored.ts"
 
 export interface App {
@@ -9,6 +10,7 @@ export interface App {
   readonly connectivity: ConnectivityStore
   readonly freshness: Freshness
   readonly restored: Restored
+  readonly updates: Updates
 }
 
 export const AppContext = createContext<App | null>(null)
