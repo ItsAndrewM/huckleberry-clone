@@ -12,6 +12,11 @@ export interface TableRow {
 
 const SHOWN: ReadonlySet<DayStatus> = new Set(["counted", "no-entries", "today"])
 
+const UNIT_THEN_NUMBER = /(\p{L})\s+(\p{N})/gu
+const PART_BREAK = "\n"
+
+export const valueParts = (value: string) => value.replace(UNIT_THEN_NUMBER, `$1${PART_BREAK}$2`).split(PART_BREAK)
+
 export const tableRows = (days: ReadonlyArray<TrendDay>, volume: VolumeUnit, locale?: string): TableRow[] =>
   days
     .filter(({ status }) => SHOWN.has(status))

@@ -1,8 +1,9 @@
 import type { LocalDate, VolumeUnit } from "@bt/contracts"
 import { Link } from "@tanstack/react-router"
+import { Parts } from "../today/parts.tsx"
 import { historySearchOf } from "./history-link.ts"
 import { TRENDS_METRICS } from "./metrics.ts"
-import { tableRows } from "./table-rows.ts"
+import { tableRows, valueParts } from "./table-rows.ts"
 import type { TrendDay } from "./trends-numbers.ts"
 
 interface TrendsTableProps {
@@ -48,8 +49,8 @@ export const TrendsTable = ({ days, volume, today }: TrendsTableProps) => (
               </td>
             ) : (
               cells.map((cell, index) => (
-                <td key={TRENDS_METRICS[index]?.id} className="py-2 pr-2 whitespace-nowrap">
-                  {cell}
+                <td key={TRENDS_METRICS[index]?.id} className="py-2 pr-2">
+                  <Parts parts={valueParts(cell)} between=" " />
                 </td>
               ))
             )}

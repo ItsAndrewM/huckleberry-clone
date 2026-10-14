@@ -19,6 +19,14 @@ const SLEPT_DAYS = {
 const WEEK = periodOf(datesFrom("2026-10-05", 7), SLEPT_DAYS)
 const OCTOBER = periodOf(datesFrom("2026-10-01", 31), SLEPT_DAYS)
 
+const LONGEST_DAYS = {
+  ...SLEPT_DAYS,
+  "2026-10-07": { ...logged(9, 55, 61, 380, 90, 9), ...slept(190, 580, 330) },
+}
+
+const LONGEST_WEEK = periodOf(datesFrom("2026-10-05", 7), LONGEST_DAYS)
+const LONGEST_OCTOBER = periodOf(datesFrom("2026-10-01", 31), LONGEST_DAYS)
+
 test("charts sleep fifth: hours a day, naps and night, with the longest among its numbers", async ({ page }) => {
   await playTrends(page, { weeks: { "2026-W41": WEEK }, months: { "2026-10": OCTOBER } })
   await openTrends(page)
@@ -40,3 +48,22 @@ test("fits the table's five columns on a phone without scrolling the page sidewa
   ).toHaveText(["8", "1 h 40 min", "610 mL", "8", "13 h"])
   expect(await page.evaluate("document.documentElement.scrollWidth <= window.innerWidth")).toBe(true)
 })
+
+for (const [width, volume, unit] of [
+  [360, "ml", "mL"],
+  [360, "fl_oz", "fl oz"],
+  [393, "fl_oz", "fl oz"],
+] as const) {
+  test(`fits the table on a ${width}-pixel-wide phone in ${unit}, a day's 12 h 50 min of sleep wrapping between its parts`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width, height: 659 })
+    await playTrends(page, { weeks: { "2026-W41": LONGEST_WEEK }, months: { "2026-10": LONGEST_OCTOBER } }, volume)
+    await openTrends(page)
+    await page.getByText("Show as a table", { exact: true }).click()
+    const wednesday = page.getByRole("table").getByRole("row", { name: /Wed, Oct 7/u })
+    await expect(wednesday.getByRole("cell").last()).toHaveText("12 h 50 min")
+    await expect(wednesday).toContainText(unit)
+    expect(await page.evaluate("document.documentElement.scrollWidth <= window.innerWidth")).toBe(true)
+  })
+}
