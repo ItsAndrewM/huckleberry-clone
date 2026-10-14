@@ -108,6 +108,15 @@ describe("POST /api/doses", () => {
     })
   })
 
+  it("saves a dose of a stopped supplement, sent by a phone that hadn't heard it was stopped (P6)", async () => {
+    const household = await seededHousehold()
+    const vitaminD = await vitaminDOf(household)
+    const stop = { actionId: crypto.randomUUID(), version: 1, name: "Vitamin D", dose: "400 IU", stopped: true }
+    expect((await sendJson(household, "PATCH", `/api/supplements/${vitaminD}`, stop, EMILY.email)).status).toBe(200)
+    expect((await sendJson(household, "POST", "/api/doses", doseAt(vitaminD, NOW - HOUR_MS))).status).toBe(201)
+    expect(await doseRows(household)).toHaveLength(1)
+  })
+
   it("answers 404 for a supplement the household doesn't hold, and 400 naming each bad field", async () => {
     const household = await seededHousehold()
     expect(await sendJson(household, "POST", "/api/doses", doseAt("no-such-supplement", NOW))).toEqual({
