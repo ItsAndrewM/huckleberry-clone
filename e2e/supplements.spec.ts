@@ -103,6 +103,7 @@ test.describe("Today's supplements, with the household's answers played by the t
     await expect(sheet.getByRole("alert")).toHaveText(
       /Vitamin D was logged at 6:10\sAM by Emily \(local\)\. Record another dose anyway\?/u,
     )
+    await expect(sheet.getByText("One tap saves it.")).toHaveCount(0)
     await sheet.getByRole("button", { name: "Record another dose" }).click()
     await expect
       .poll(() => played.sent.map(({ body }) => [body.actionId, body.confirmedDuplicate]))

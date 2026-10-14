@@ -2,6 +2,7 @@ import { DoseConflict } from "@bt/contracts"
 import { describe, expect, it } from "vitest"
 import { Offline } from "../src/api/errors.ts"
 import {
+  doseDescription,
   doseSessionOf,
   duplicateMessage,
   duplicateOf,
@@ -118,6 +119,15 @@ describe("duplicateOf", () => {
     const replayed = new DoseConflict({ code: "ACTION_REPLAY_MISMATCH", current: dosedAt(NOW) })
     expect(duplicateOf(failedWith(replayed))).toBeNull()
     expect(duplicateOf(null)).toBeNull()
+  })
+})
+
+describe("doseDescription", () => {
+  it("says one tap saves the dose, but not while the sheet asks about a second dose that day", () => {
+    expect(doseDescription(null)).toBe("One tap saves it.")
+    expect(doseDescription(failedWith(new Offline()))).toBe("One tap saves it.")
+    const second = new DoseConflict({ code: "SUPPLEMENT_DUPLICATE_DAY", current: dosedAt(NOW - 200 * MINUTE) })
+    expect(doseDescription(failedWith(second))).toBeUndefined()
   })
 })
 

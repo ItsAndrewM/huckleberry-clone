@@ -54,5 +54,8 @@ export const duplicateOf = (failed: Failed | null): Duplicate | null => {
   return { failed, current: error.current, resend }
 }
 
+export const doseDescription = (failed: Failed | null) =>
+  duplicateOf(failed) === null ? "One tap saves it." : undefined
+
 export const duplicateMessage = (name: string, current: Dose, household: Household) =>
   `${name} was logged at ${timeOf(household, current.occurredAt)} by ${nameOf(household, current.createdBy)}. Record another dose anyway?`
