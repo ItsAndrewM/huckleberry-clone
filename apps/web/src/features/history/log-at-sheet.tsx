@@ -1,11 +1,13 @@
 import { type LucideIcon, RulerIcon } from "lucide-react"
 import { useId } from "react"
+import { useMe } from "../../api/hooks.ts"
 import { clockTime } from "../../clock-time.ts"
 import { Button } from "../../components/ui/button.tsx"
 import { Sheet } from "../../sheets/sheet.tsx"
 import { type TimedSheet, useSheets } from "../../sheets/sheets-context.ts"
 import { useTodayLoaded } from "../../sheets/use-today-loaded.ts"
 import { KIND_ICONS } from "../today/kind-icons.ts"
+import { supplementChoices } from "./log-at-supplements.ts"
 
 const BOTTLE_WAITS = "Bottle opens once Today loads."
 
@@ -16,14 +18,38 @@ const CHOICES = [
   { label: "Measurement", sheet: "measurement", Icon: RulerIcon, needsToday: false },
 ] as const satisfies ReadonlyArray<{ label: string; sheet: TimedSheet; Icon: LucideIcon; needsToday: boolean }>
 
+const DoseIcon = KIND_ICONS.dose
+
+interface SupplementButtonsProps {
+  readonly disabled: boolean
+  readonly onChoose: (id: string) => void
+}
+
+const SupplementButtons = ({ disabled, onChoose }: SupplementButtonsProps) => {
+  const { data: me } = useMe()
+  return supplementChoices(me?.household.supplements ?? []).map(({ id, label }) => (
+    <Button
+      key={id}
+      variant="secondary"
+      size="lg"
+      className="h-14 min-w-0 gap-2"
+      disabled={disabled}
+      onClick={() => onChoose(id)}
+    >
+      <DoseIcon aria-hidden="true" />
+      <span className="truncate">{label}</span>
+    </Button>
+  ))
+}
+
 const LogAtChoices = ({ at }: { readonly at: number | null }) => {
   const sheets = useSheets()
   const todayLoaded = useTodayLoaded()
   const waitsId = useId()
   const closing = sheets.open !== "logAt"
-  const choose = (sheet: TimedSheet) => {
-    if (at === null) sheets.show(sheet)
-    else sheets.showAt(sheet, at)
+  const choose = (sheet: TimedSheet, editing?: string) => {
+    if (at === null) sheets.show(sheet, editing)
+    else sheets.showAt(sheet, at, editing)
   }
   return (
     <div className="flex flex-col gap-2">
@@ -50,6 +76,7 @@ const LogAtChoices = ({ at }: { readonly at: number | null }) => {
             </Button>
           )
         })}
+        <SupplementButtons disabled={closing} onChoose={(id) => choose("dose", id)} />
       </div>
     </div>
   )

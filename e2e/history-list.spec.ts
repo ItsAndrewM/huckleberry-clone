@@ -184,6 +184,25 @@ test("logs on an earlier day at the same clock time", async ({ page }) => {
   await expect(page.getByRole("dialog", { name: "Bottle" }).getByLabel("When")).toHaveCount(0)
 })
 
+test("logs a supplement's dose at the same clock time on an earlier day, and at now on today", async ({ page }) => {
+  await playBusyDay(page)
+  await playToday(page)
+  await openHistory(page, "?view=list&date=2026-10-08")
+  await theList(page).getByRole("button", { name: "Log on this day…" }).click()
+  await page.getByRole("dialog", { name: "Log at 9:30 AM" }).getByRole("button", { name: "Vitamin D" }).click()
+  await expect(page.getByRole("dialog", { name: "Vitamin D" }).getByLabel("When")).toHaveValue("2026-10-08T09:30")
+  await page.keyboard.press("Escape")
+  await page.getByRole("link", { name: "Next day" }).click()
+  await theList(page).getByRole("button", { name: "Log on this day…" }).click()
+  await page
+    .getByRole("dialog", { name: /^Log\b/u })
+    .getByRole("button", { name: "Vitamin D" })
+    .click()
+  const sheet = page.getByRole("dialog", { name: "Vitamin D" })
+  await expect(sheet.getByText("Now", { exact: true })).toBeVisible()
+  await expect(sheet.getByLabel("When")).toHaveCount(0)
+})
+
 test("logs on today as Today's buttons do: a diaper now, and a past feed from half an hour back", async ({ page }) => {
   await playBusyDay(page)
   await playToday(page)

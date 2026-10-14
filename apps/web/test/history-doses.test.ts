@@ -4,10 +4,11 @@ import { describe, expect, it } from "vitest"
 import { dayModel, entriesIn } from "../src/features/history/day-model.ts"
 import { markersOf } from "../src/features/history/grid-markers.ts"
 import { hiddenExcept, hiddenIn, hiddenNotice, hideOf } from "../src/features/history/history-kinds.ts"
+import { supplementChoices } from "../src/features/history/log-at-supplements.ts"
 import { weekModel } from "../src/features/history/week-model.ts"
 import { columnName } from "../src/features/history/week-names.ts"
 import { DATE, DISPLAY, dayWith, LOCALE, local, NOW_ON_DAY } from "./history-fixtures.ts"
-import { dosedAt, NO_TOTALS, supplementOf, ZONE } from "./today-fixtures.ts"
+import { dosedAt, NO_TOTALS, supplementOf, VITAMIN_D, ZONE } from "./today-fixtures.ts"
 
 const MORNING = dosedAt(local("08:00"), { id: "dose-morning" })
 const EVENING = dosedAt(local("20:00"), { id: "dose-evening" })
@@ -62,6 +63,17 @@ describe("a dose on the Day view", () => {
     const model = dayModel(DOSED_DAY, ZONE, NOW_ON_DAY, hiddenIn("supplements"))
     expect(model.grid.clusters).toEqual([])
     expect(entriesIn(model, [MORNING.id])).toHaveLength(1)
+  })
+})
+
+describe("the Log-at menu's supplements", () => {
+  it("offers each supplement in use by name, in the household's order, leaving out a stopped one", () => {
+    const iron = supplementOf({ id: "supplement-iron", name: "Iron" })
+    const stopped = supplementOf({ id: "supplement-probiotic", name: "Probiotic", stoppedAt: NOW_ON_DAY })
+    expect(supplementChoices([supplementOf(), stopped, iron])).toEqual([
+      { id: VITAMIN_D, label: "Vitamin D" },
+      { id: "supplement-iron", label: "Iron" },
+    ])
   })
 })
 
