@@ -1,4 +1,4 @@
-import { type DayPeriod, type Me, queryKeys, type Today } from "@bt/contracts"
+import { type DayPeriod, type Me, queryKeys, type RecentEntry, type Today } from "@bt/contracts"
 import { zonedDayBounds } from "@bt/domain"
 import { QueryClient } from "@tanstack/react-query"
 import { describe, expect, it } from "vitest"
@@ -13,6 +13,7 @@ import {
   ANDREW,
   diaperAt,
   dosedAt,
+  feedAt,
   MINUTE,
   NO_TOTALS,
   supplementOf,
@@ -161,5 +162,68 @@ describe("an edit or delete of a dose", () => {
     const newer = { ...DOSE, version: 2, occurredAt: local("07:10") }
     queryClient.setQueryData(queryKeys.day("2026-10-09"), dayWith({ feeds: [], diapers: [], doses: [newer] }))
     expect(cachedEntry(queryClient, DOSE.id)).toEqual({ kind: "dose", dose: newer })
+  })
+})
+
+describe("an edit to a feed or a delete of a diaper", () => {
+  const DOSE = dosedAt(local("07:00"), { id: "dose-1" })
+  const BOTTLE = feedAt(local("06:00"), {
+    id: "feed-1",
+    portions: [{ id: "feed-1-p0", occurredAt: local("06:00"), breastMilkMl: 0, formulaMl: 90 }],
+  })
+  const WET = diaperAt(local("06:30"), { id: "diaper-1" })
+  const ME: Me = { ...meWith(), household: { ...meWith().household, supplements: [VITAMIN_D_SUPPLEMENT] } }
+
+  const EDIT_BOTTLE: Action = {
+    kind: "editFeed",
+    id: BOTTLE.id,
+    payload: {
+      actionId: ACTION_ID,
+      version: 1,
+      segments: [],
+      portions: [{ occurredAt: local("06:00"), breastMilkMl: 0, formulaMl: 120 }],
+    },
+  }
+  const DELETE_WET: Action = {
+    kind: "deleteDiaper",
+    id: WET.id,
+    payload: { actionId: "9d2e4f60-1a3b-4c5d-8e7f-0a1b2c3d4e5f", version: 1 },
+  }
+
+  const householdCache = () => {
+    const queryClient = new QueryClient()
+    const recent: ReadonlyArray<RecentEntry> = [
+      { kind: "dose", dose: DOSE },
+      { kind: "diaper", diaper: WET },
+      { kind: "feed", feed: BOTTLE },
+    ]
+    queryClient.setQueryData(queryKeys.me, ME)
+    queryClient.setQueryData(queryKeys.today, todayWith({ lastFeed: BOTTLE, recent, doses: [DOSE] }))
+    queryClient.setQueryData(queryKeys.day("2026-10-09"), dayWith({ feeds: [BOTTLE], diapers: [WET], doses: [DOSE] }))
+    return queryClient
+  }
+
+  const dosesShown = (queryClient: QueryClient) => ({
+    today: queryClient.getQueryData<Today>(queryKeys.today)?.doses,
+    recent: queryClient.getQueryData<Today>(queryKeys.today)?.recent.filter(({ kind }) => kind === "dose"),
+    day: queryClient.getQueryData<DayPeriod>(queryKeys.day("2026-10-09"))?.doses,
+  })
+
+  it("keeps the doses on Today and a cached day while each is pending and once the household answers (Q5)", async () => {
+    const queryClient = householdCache()
+    const kept = { today: [DOSE], recent: [{ kind: "dose", dose: DOSE }], day: [DOSE] }
+    await pendIn(queryClient, EDIT_BOTTLE, NOW_ON_DAY)
+    expect(dosesShown(queryClient)).toEqual(kept)
+    const refilled = {
+      ...BOTTLE,
+      version: 2,
+      portions: [{ id: "feed-1-p1", occurredAt: local("06:00"), breastMilkMl: 0, formulaMl: 120 }],
+    }
+    settle(queryClient, { feed: refilled, changed: [] }, EDIT_BOTTLE, NOW_ON_DAY)
+    expect(dosesShown(queryClient)).toEqual(kept)
+    await pendIn(queryClient, DELETE_WET, NOW_ON_DAY)
+    expect(dosesShown(queryClient)).toEqual(kept)
+    settle(queryClient, { diaper: { ...WET, version: 2, deletedAt: NOW_ON_DAY }, changed: [] }, DELETE_WET, NOW_ON_DAY)
+    expect(dosesShown(queryClient)).toEqual(kept)
   })
 })
