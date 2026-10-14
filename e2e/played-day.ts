@@ -165,7 +165,8 @@ export const playHistory = async (page: Page, days: ReadonlyArray<DayAnswer>, ti
   const [andrew, emily] = me.household.caregivers
   const household = { ...me.household, timeZone, units: { volume: "ml", weight: "kg", length: "cm" } }
   const child = { ...me.child, birthDate: BIRTH_DATE }
-  await page.route("**/api/me", (route) => route.fulfill({ json: { ...me, household, child } }))
+  const playedMe = { ...me, household, child }
+  await page.route("**/api/me", (route) => route.fulfill({ json: playedMe }))
   const played: Played = { days: [...days], asked: [] }
   await page.route(/\/api\/days\/[^/]+$/u, (route) => {
     const date = new URL(route.request().url()).pathname.split("/").at(-1) ?? ""
@@ -173,7 +174,18 @@ export const playHistory = async (page: Page, days: ReadonlyArray<DayAnswer>, ti
     const day = played.days.find((answer) => answer.date === date)
     return day === undefined ? route.fulfill({ status: 404, json: { _tag: "NotFound" } }) : route.fulfill({ json: day })
   })
-  return { played, andrew: andrew.id, emily: emily.id }
+  return { played, andrew: andrew.id, emily: emily.id, me: playedMe }
+}
+
+interface PlayedMe {
+  readonly household: { readonly supplements: ReadonlyArray<{ readonly name: string }> }
+}
+
+export const stopVitaminD = (page: Page, me: PlayedMe, stoppedAt: number) => {
+  const supplements = me.household.supplements.map((one) => (one.name === "Vitamin D" ? { ...one, stoppedAt } : one))
+  return page.route("**/api/me", (route) =>
+    route.fulfill({ json: { ...me, household: { ...me.household, supplements } } }),
+  )
 }
 
 export const openHistory = async (page: Page, search = "") => {

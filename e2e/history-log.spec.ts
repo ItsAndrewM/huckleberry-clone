@@ -1,5 +1,5 @@
 import { expect, type Page, test } from "@playwright/test"
-import { DAY, diaper, dose, emptyDay, local, NO_TOTALS, openHistory, playHistory } from "./played-day.ts"
+import { DAY, diaper, dose, emptyDay, local, NO_TOTALS, openHistory, playHistory, stopVitaminD } from "./played-day.ts"
 
 const HOUR_PX = 60
 const BOTTLE_WAITS = "Bottle opens once Today loads."
@@ -118,6 +118,21 @@ test("opens a supplement's dose sheet at the slot, and logs the dose there", asy
   await sheet.getByRole("button", { name: "Log Vitamin D" }).click()
   await expect.poll(() => sent).toEqual([{ supplementId: vitaminD.id, occurredAt: local("07:30") }])
   await expect(page.getByRole("button", { name: /^Vitamin D at 7:30\sAM: 400 IU$/u })).toBeVisible()
+})
+
+test("offers a supplement stopped at 8:00 at a slot before it, and leaves it out of one after", async ({ page }) => {
+  const { me } = await playHistory(page, [emptyDay(DAY)])
+  await stopVitaminD(page, me, local("08:00"))
+  await openHistory(page)
+  await tapHour(page, "7 AM", 40)
+  const before = page.getByRole("dialog", { name: "Log at 7:30 AM" })
+  await expect(before.getByRole("button", { name: "Vitamin D" })).toBeVisible()
+  await page.keyboard.press("Escape")
+  await expect(page.getByRole("dialog")).toHaveCount(0)
+  await tapHour(page, "8 AM", 50)
+  const after = page.getByRole("dialog", { name: "Log at 8:45 AM" })
+  await expect(after.getByRole("button", { name: "Diaper" })).toBeVisible()
+  await expect(after.getByRole("button", { name: "Vitamin D" })).toHaveCount(0)
 })
 
 test("opens Measurement at the slot", async ({ page }) => {

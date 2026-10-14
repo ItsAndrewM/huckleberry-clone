@@ -67,13 +67,28 @@ describe("a dose on the Day view", () => {
 })
 
 describe("the Log-at menu's supplements", () => {
-  it("offers each supplement in use by name, in the household's order, leaving out a stopped one", () => {
-    const iron = supplementOf({ id: "supplement-iron", name: "Iron" })
-    const stopped = supplementOf({ id: "supplement-probiotic", name: "Probiotic", stoppedAt: NOW_ON_DAY })
-    expect(supplementChoices([supplementOf(), stopped, iron])).toEqual([
-      { id: VITAMIN_D, label: "Vitamin D" },
-      { id: "supplement-iron", label: "Iron" },
-    ])
+  const iron = supplementOf({ id: "supplement-iron", name: "Iron" })
+  const probioticStoppedAt = (stoppedAt: number) =>
+    supplementOf({ id: "supplement-probiotic", name: "Probiotic", stoppedAt })
+  const inUse = [
+    { id: VITAMIN_D, label: "Vitamin D" },
+    { id: "supplement-iron", label: "Iron" },
+  ]
+
+  it("offers each supplement in use by name, in the household's order, leaving out a stopped one at now", () => {
+    expect(supplementChoices([supplementOf(), probioticStoppedAt(NOW_ON_DAY), iron], null)).toEqual(inUse)
+  })
+
+  it("also offers a supplement stopped after the time it opens at, since it was in use then", () => {
+    const choices = supplementChoices([supplementOf(), probioticStoppedAt(local("12:00")), iron], local("08:00"))
+    expect(choices.map(({ label }) => label)).toEqual(["Vitamin D", "Probiotic", "Iron"])
+  })
+
+  it.each([
+    ["before it", local("07:00")],
+    ["at that very moment", local("08:00")],
+  ])("leaves out a supplement stopped %s", (_when, stoppedAt) => {
+    expect(supplementChoices([supplementOf(), probioticStoppedAt(stoppedAt), iron], local("08:00"))).toEqual(inUse)
   })
 })
 

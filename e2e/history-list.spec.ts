@@ -11,6 +11,7 @@ import {
   openHistory,
   playHistory,
   sleep,
+  stopVitaminD,
 } from "./played-day.ts"
 
 test.use({ timezoneId: "Europe/London" })
@@ -219,6 +220,25 @@ test("logs a supplement's dose at the same clock time on an earlier day, and at 
   const sheet = page.getByRole("dialog", { name: "Vitamin D" })
   await expect(sheet.getByText("Now", { exact: true })).toBeVisible()
   await expect(sheet.getByLabel("When")).toHaveCount(0)
+})
+
+test("offers a supplement stopped since on an earlier day's menu, as it was in use then, but not at now on today", async ({
+  page,
+}) => {
+  const { played, andrew, emily, me } = await playHistory(page, [emptyDay("2026-10-08")])
+  played.days.push(busyDay(andrew, emily))
+  await stopVitaminD(page, me, local("07:00"))
+  await playToday(page)
+  await openHistory(page, "?view=list&date=2026-10-08")
+  await theList(page).getByRole("button", { name: "Log on this day…" }).click()
+  await page.getByRole("dialog", { name: "Log at 9:30 AM" }).getByRole("button", { name: "Vitamin D" }).click()
+  await expect(page.getByRole("dialog", { name: "Vitamin D" }).getByLabel("When")).toHaveValue("2026-10-08T09:30")
+  await page.keyboard.press("Escape")
+  await page.getByRole("link", { name: "Next day" }).click()
+  await theList(page).getByRole("button", { name: "Log on this day…" }).click()
+  const menu = page.getByRole("dialog", { name: /^Log\b/u })
+  await expect(menu.getByRole("button", { name: "Diaper" })).toBeVisible()
+  await expect(menu.getByRole("button", { name: "Vitamin D" })).toHaveCount(0)
 })
 
 test("logs on today as Today's buttons do: a diaper now, and a past feed from half an hour back", async ({ page }) => {

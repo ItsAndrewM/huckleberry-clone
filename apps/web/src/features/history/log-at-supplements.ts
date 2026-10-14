@@ -5,5 +5,12 @@ export interface SupplementChoice {
   readonly label: string
 }
 
-export const supplementChoices = (supplements: ReadonlyArray<Supplement>): ReadonlyArray<SupplementChoice> =>
-  supplements.filter(({ stoppedAt }) => stoppedAt === null).map(({ id, name }) => ({ id, label: name }))
+const wasInUseAt =
+  (at: number | null) =>
+  ({ stoppedAt }: Supplement) =>
+    stoppedAt === null || (at !== null && stoppedAt > at)
+
+export const supplementChoices = (
+  supplements: ReadonlyArray<Supplement>,
+  at: number | null,
+): ReadonlyArray<SupplementChoice> => supplements.filter(wasInUseAt(at)).map(({ id, name }) => ({ id, label: name }))

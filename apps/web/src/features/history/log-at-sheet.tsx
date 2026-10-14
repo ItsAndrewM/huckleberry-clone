@@ -22,13 +22,14 @@ const CHOICES = [
 const DoseIcon = KIND_ICONS.dose
 
 interface SupplementButtonsProps {
+  readonly at: number | null
   readonly disabled: boolean
   readonly onChoose: (id: string) => void
 }
 
-const SupplementButtons = ({ disabled, onChoose }: SupplementButtonsProps) => {
+const SupplementButtons = ({ at, disabled, onChoose }: SupplementButtonsProps) => {
   const { data: me } = useMe()
-  return supplementChoices(me?.household.supplements ?? []).map(({ id, label }) => (
+  return supplementChoices(me?.household.supplements ?? [], at).map(({ id, label }) => (
     <Button
       key={id}
       variant="secondary"
@@ -77,7 +78,7 @@ const LogAtChoices = ({ at }: { readonly at: number | null }) => {
             </Button>
           )
         })}
-        <SupplementButtons disabled={closing} onChoose={(id) => choose("dose", id)} />
+        <SupplementButtons at={at} disabled={closing} onChoose={(id) => choose("dose", id)} />
       </div>
     </div>
   )
