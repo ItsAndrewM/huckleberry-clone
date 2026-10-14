@@ -5,7 +5,7 @@ import { listNote, listRows } from "../src/features/history/list-rows.ts"
 import { logTimeOn } from "../src/features/history/log-time.ts"
 import type { RecentRow } from "../src/features/today/recent-rows.ts"
 import { BOTH, DISPLAY, dayWith, local, NOW_ON_DAY, NURSED, PEE, RUNNING, WEIGHED } from "./history-fixtures.ts"
-import { ANDREW, diaperAt, feedAt, nursedFor } from "./today-fixtures.ts"
+import { ANDREW, diaperAt, dosedAt, feedAt, nursedFor, supplementOf } from "./today-fixtures.ts"
 
 const LOS_ANGELES = "America/Los_Angeles"
 const NONE = hiddenIn(undefined)
@@ -14,6 +14,9 @@ const spaced = (text: string) => text.replace(/\s/gu, " ")
 
 const shown = (rows: ReadonlyArray<RecentRow>) =>
   rows.map(({ title, time, detail, by }) => `${spaced(time)} ${title}: ${detail.join(", ")} (${by})`)
+
+const DOSE = dosedAt(local("02:15"), { id: "dose-1" })
+const WITH_VITAMIN_D = { ...DISPLAY, supplements: [supplementOf()] }
 
 const FROM_YESTERDAY = nursedFor(feedAt(local("23:40", "2026-10-08")), "left", 35)
 const INTO_TOMORROW = nursedFor(feedAt(local("23:50")), "right", 20)
@@ -63,6 +66,24 @@ describe("listRows", () => {
     expect(row).toMatchObject({ saving: true, opens: null })
   })
 
+  it("lists a dose by its time among the feeds and diapers, read as Today's row reads it, and opens its edit sheet", () => {
+    const rows = listRows(dayWith({ doses: [DOSE] }), WITH_VITAMIN_D, NOW_ON_DAY, NONE)
+    expect(shown(rows).slice(1, 4)).toEqual([
+      "2:10 AM Diaper: Pee (Emily)",
+      "2:15 AM Vitamin D: 400 IU (Emily)",
+      "2:20 AM Diaper: Poo (Andrew)",
+    ])
+    expect(rows.find(({ id }) => id === DOSE.id)).toMatchObject({ kind: "dose", opens: "editDose" })
+  })
+
+  it("leaves out the doses when Supplements is hidden", () => {
+    const day = dayWith({ doses: [DOSE] })
+    expect(listRows(day, WITH_VITAMIN_D, NOW_ON_DAY, hiddenIn("supplements")).map(({ id }) => id)).not.toContain(
+      DOSE.id,
+    )
+    expect(listRows(day, WITH_VITAMIN_D, NOW_ON_DAY, hiddenIn("feeds,diapers")).map(({ id }) => id)).toEqual([DOSE.id])
+  })
+
   it("puts a feed before a diaper logged at the same moment", () => {
     const together = diaperAt(NURSED.startedAt)
     const rows = listRows(dayWith({ feeds: [NURSED], diapers: [together] }), DISPLAY, NOW_ON_DAY, NONE)
@@ -77,12 +98,17 @@ describe("listNote", () => {
     expect(listNote(dayWith({ feeds: [], diapers: [], measurements: [] }), [])).toBeNull()
   })
 
-  it("says nothing is shown when the chips hide every row", () => {
+  it("says nothing is shown when the chips hide every row, a day's only dose included", () => {
     expect(listNote(dayWith({ feeds: [], diapers: [BOTH] }), [])).toBe("Nothing shown.")
+    expect(listNote(dayWith({ feeds: [], diapers: [], measurements: [WEIGHED], doses: [DOSE] }), [])).toBe(
+      "Nothing shown.",
+    )
   })
 
-  it("says there were no feeds or diapers on a day with only a measurement", () => {
-    expect(listNote(dayWith({ feeds: [], diapers: [], measurements: [WEIGHED] }), [])).toBe("No feeds or diapers.")
+  it("says there were no feeds, diapers or supplements on a day with only a measurement", () => {
+    expect(listNote(dayWith({ feeds: [], diapers: [], measurements: [WEIGHED] }), [])).toBe(
+      "No feeds, diapers or supplements.",
+    )
   })
 })
 

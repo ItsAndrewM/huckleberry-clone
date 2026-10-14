@@ -1,4 +1,4 @@
-import type { DayPeriod, Diaper, Feed } from "@bt/contracts"
+import type { DayPeriod, Diaper, Dose, Feed } from "@bt/contracts"
 import type { Interval } from "@bt/domain"
 import { clockTime, dayClockTime, formatterFor } from "../../clock-time.ts"
 import type { Display } from "../today/display.ts"
@@ -9,6 +9,7 @@ import type { Hidden } from "./history-kinds.ts"
 interface Kept {
   readonly feeds: ReadonlyArray<Feed>
   readonly diapers: ReadonlyArray<Diaper>
+  readonly doses: ReadonlyArray<Dose>
 }
 
 const startOf = (entry: Entry) => {
@@ -22,10 +23,11 @@ const startOf = (entry: Entry) => {
   }
 }
 
-const entriesOf = ({ feeds, diapers }: Kept): ReadonlyArray<Entry> =>
+const entriesOf = ({ feeds, diapers, doses }: Kept): ReadonlyArray<Entry> =>
   [
     ...feeds.map((feed) => ({ kind: "feed", feed }) as const),
     ...diapers.map((diaper) => ({ kind: "diaper", diaper }) as const),
+    ...doses.map((dose) => ({ kind: "dose", dose }) as const),
   ].toSorted((a, b) => startOf(a) - startOf(b))
 
 const nursedSpan = (entry: Entry): Interval | null => {
@@ -56,6 +58,6 @@ export const listRows = (day: DayPeriod, display: Display, now: number, hidden: 
 
 export const listNote = (day: DayPeriod, rows: ReadonlyArray<RecentRow>) => {
   if (rows.length > 0) return null
-  if (day.feeds.length > 0 || day.diapers.length > 0) return "Nothing shown."
-  return day.measurements.length > 0 ? "No feeds or diapers." : null
+  if (day.feeds.length > 0 || day.diapers.length > 0 || day.doses.length > 0) return "Nothing shown."
+  return day.measurements.length > 0 ? "No feeds, diapers or supplements." : null
 }
