@@ -84,6 +84,36 @@ The five ways this is most likely to fail a parent, each with the test that pins
    - The new version is saved within seconds of the reconnect, and opens on the next return; the screen never reloads under a parent's finger.
    - Pinned by "saves a new version when a deploy drops the household's connection, and opens it when the app comes back" (Task 5), and `returnToApp`, which reloads only on a return (Task 3).
 
+## Post-review notes
+
+- **Execution:** native, as Andrew chose. He approved the plan on 14 Oct 2026 with "Approved: PR + CodeRabbit". Each task's files came from the replay commits, tests first and watched failing, byte-identical to `scratch/gh-61-replay2`: Task 1 `8dbfeae`, Task 2 `d4d5bd7`, Task 3 `542b0e2`, Task 4 `75bc656`, Task 5 `4521c7a`, Task 6 `ddceb3f`.
+- **The final review (Opus, the whole branch):** "With fixes": one Critical, one Important, three Minor. It agreed with P4: reverting it failed all four Chromium specs, and `caches.keys()` kept creation order in both engines, with a recreated name going last.
+  - **Critical, fixed in `76be44f`:** with a newer version saved, an idle return made offline reloaded into the saved copy. There Today couldn't load, since the query cache lives in memory (M5.4), and logging was disabled. Before #61 that phone kept Today and could log (AC 11). A return now switches only once its check has reached the household within 3 s (`CHECK_LIMIT_MS`), and while the phone says it's online; offline it keeps the page it has.
+    - Pinned by "keeps the page it has when the check can't reach the household…", "keeps the page it has when the phone says it's offline…" and "gives up on a check after 3 seconds…" (units).
+    - Also by the E2E "keeps Today and logging when the app comes back offline, and opens the new version on the next return online", which replaced "opens the saved new version when the app comes back without a connection".
+    - This amends P3 and Review Focus 3, for Andrew's veto.
+  - **Important, fixed in `76be44f`:** "nothing open" saw only the sheets, so a Settings save on its way (the child, units, time zone, a restore), or an edited child form whose field had lost focus, was lost on the switch. `isIdle` now takes `queryClient.isMutating()` instead of `sheets.busy`, and the child form marks itself `data-unsaved` while it holds a change.
+    - Pinned by "isn't idle while anything is on its way to the household…" and "isn't idle while a form holds a change that isn't saved" (units). Those two rows passed before the fix for the wrong reason, since the old rule read `busy`; breaking each guard on purpose proved them after.
+    - Also by the E2E "keeps a Settings change that isn't saved when the app comes back, even once its field has lost focus".
+    - This adds to P2.
+  - **Found during the fix pass:** importing `NETWORK_GRACE_MS` from `shell-cache.ts` into page code split it into a chunk that `sw.js` then imported. A classic service worker can't load one, so it never installed, and every spec failed. `updates.ts` keeps its own `CHECK_LIMIT_MS`; #80 asks for a build check.
+  - **Each offline gate alone:** `navigator.onLine` and an unavailable check each survive alone in E2E, because each engine trips the other one. The spec without either gate failed in both engines, and unit tests pin each gate.
+  - **Calls for Andrew, and deferred minors:**
+    - Open it now reloads even offline, into a Today that can't load until the phone is back online (P5's deliberate tap). It could hide while offline.
+    - After the switch begins, the old page still takes taps for up to about 3 s on a slow network, until the new page arrives. Setting `document.documentElement.inert` just before the reload would stop them.
+    - A phone still on the version before #61 needs a real close from the app switcher and an online reopen. The PR's checklist and #48 say so.
+- **After the fixes:**
+  - `pnpm test`: 3,547 tests in 212 files.
+  - The new spec: 10 tests, 5 in each engine.
+  - The whole E2E suite: 587 passed and 3 skipped, in both engines.
+  - The app grows by 0.84 kB gzip of JS (326.62 to 327.46 of 350 kB by `bundle:check`), against `main` at `ca755b1`. The CSS and the Worker are unchanged.
+- **The branch is authoritative.** Stale points in this plan's text:
+  - P2 (it also counts every mutation, and an unsaved form), P3 (a return switches only online, once its check has reached the household), P9's sizes, and Review Focus 3.
+  - Task 1's `updates.ts` (the 3 s limit and its `wait` parameter) and its test.
+  - Task 3's `new-version.ts` (`isIdle` takes the mutation count instead of `busy`; `Return` gains `online`; the check comes first) and its tests.
+  - Task 5's component (`useQueryClient`, `navigator.onLine`), `child-form.tsx`'s marker (not in Task 5's files), the spec's offline test, and its new Settings test.
+  - Task 6's quoted sentences.
+
 ## File map
 
 ```
