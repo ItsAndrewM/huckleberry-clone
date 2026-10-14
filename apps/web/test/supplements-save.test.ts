@@ -1,4 +1,4 @@
-import { InvalidInput, type Me } from "@bt/contracts"
+import { InvalidInput, type Me, type Supplement, SupplementConflict, SupplementEdit } from "@bt/contracts"
 import { Schema } from "effect"
 import { describe, expect, it } from "vitest"
 import { connectApi } from "../src/api/client.ts"
@@ -10,8 +10,12 @@ const ORIGIN = "https://bt.example.test"
 const VITAMIN_D = supplementOf()
 const IRON = supplementOf({ id: "supplement-iron", name: "Iron", dose: "1 mL", createdBy: "caregiver-andrew" })
 
+const decodeEdit = Schema.decodeUnknownSync(SupplementEdit)
+
 const json = (status: number, body: Schema.Json) =>
   new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json" } })
+
+const stale = (current: Supplement) => json(409, { _tag: "Conflict", code: "STALE_VERSION", current })
 
 const householdAnswering = (...answers: Response[]) => {
   const sent: Array<{ readonly method: string; readonly path: string; readonly body: Schema.Json }> = []
@@ -85,9 +89,47 @@ describe("saveSupplement", () => {
     })
   })
 
-  it("refuses a blank name and a dose over 40 characters before sending, naming each field", async () => {
+  it("resends on top of the other phone's copy under a new actionId", async () => {
+    const theirs = { ...VITAMIN_D, dose: "800 IU", version: 2 }
+    const { api, sent } = householdAnswering(
+      stale(theirs),
+      json(200, { supplement: { ...theirs, name: "Vitamin D3", version: 3 }, changed: [["me"]] }),
+    )
+    await saveSupplement(api, VITAMIN_D, { name: "Vitamin D3", dose: "400 IU", stopped: false })
+    expect(sent).toHaveLength(2)
+    expect(new Set(sent.map(({ body }) => decodeEdit(body).actionId)).size).toBe(2)
+  })
+
+  it("shows a second STALE_VERSION after exactly two sends, when the other phone saved again meanwhile", async () => {
+    const theirs = { ...VITAMIN_D, dose: "800 IU", version: 2 }
+    const again = { ...theirs, dose: "1000 IU", version: 3 }
+    const { api, sent } = householdAnswering(
+      stale(theirs),
+      stale(again),
+      json(200, { supplement: { ...again, name: "Vitamin D3", version: 4 }, changed: [["me"]] }),
+    )
+    const saving = saveSupplement(api, VITAMIN_D, { name: "Vitamin D3", dose: "400 IU", stopped: false })
+    await expect(saving).rejects.toBeInstanceOf(SupplementConflict)
+    await expect(saving).rejects.toMatchObject({ code: "STALE_VERSION", current: again })
+    expect(sent).toHaveLength(2)
+  })
+
+  it("shows any other conflict at once, without sending again", async () => {
+    const { api, sent } = householdAnswering(
+      json(409, { _tag: "Conflict", code: "ACTION_REPLAY_MISMATCH", current: VITAMIN_D }),
+      json(200, { supplement: { ...VITAMIN_D, name: "Vitamin D3", version: 2 }, changed: [["me"]] }),
+    )
+    const saving = saveSupplement(api, VITAMIN_D, { name: "Vitamin D3", dose: "400 IU", stopped: false })
+    await expect(saving).rejects.toMatchObject({ code: "ACTION_REPLAY_MISMATCH", current: VITAMIN_D })
+    expect(sent).toHaveLength(1)
+  })
+
+  it.each([
+    ["an add", null],
+    ["an edit", VITAMIN_D],
+  ])("refuses a blank name and a dose over 40 characters on %s before sending, naming each field", async (_, shown) => {
     const { api, sent } = householdAnswering()
-    await expect(saveSupplement(api, null, { name: "", dose: "x".repeat(41), stopped: false })).rejects.toEqual(
+    await expect(saveSupplement(api, shown, { name: "", dose: "x".repeat(41), stopped: false })).rejects.toEqual(
       new InvalidInput({
         fieldErrors: [
           { path: "name", issue: "invalid" },
