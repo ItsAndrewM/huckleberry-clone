@@ -1,4 +1,4 @@
-import type { Deleted, Diaper, Feed, Me, Measurement } from "@bt/contracts"
+import type { Deleted, Diaper, Dose, Feed, Me, Measurement } from "@bt/contracts"
 import { dateClockTime } from "../../clock-time.ts"
 import { formatMeasurement } from "../growth/format.ts"
 import { GROWTH_METRICS } from "../growth/metrics.ts"
@@ -9,8 +9,9 @@ export type DeletedRecord =
   | { readonly kind: "feed"; readonly feed: Feed }
   | { readonly kind: "diaper"; readonly diaper: Diaper }
   | { readonly kind: "measurement"; readonly measurement: Measurement }
+  | { readonly kind: "dose"; readonly dose: Dose }
 
-export type DeletedIcon = "nursing" | "bottle" | "diaper" | "measurement"
+export type DeletedIcon = "nursing" | "bottle" | "diaper" | "measurement" | "dose"
 
 export interface DeletedRow {
   readonly id: string
@@ -92,9 +93,18 @@ const measurementDescribed = (measurement: Measurement, me: Me): Described => ({
   at: measurement.measuredAt,
 })
 
+const doseDescribed = (dose: Dose, me: Me): Described => ({
+  record: { kind: "dose", dose },
+  icon: "dose",
+  title: me.household.supplements.find(({ id }) => id === dose.supplementId)?.name ?? "Supplement",
+  detail: dose.dose === "" ? [] : [dose.dose],
+  at: dose.occurredAt,
+})
+
 export const deletedRows = (deleted: Deleted, me: Me, locale?: string): ReadonlyArray<DeletedRow> =>
   [
     ...deleted.feeds.map((feed) => rowOf(me, feed, feedDescribed(feed, me), locale)),
     ...deleted.diapers.map((diaper) => rowOf(me, diaper, diaperDescribed(diaper), locale)),
     ...deleted.measurements.map((measurement) => rowOf(me, measurement, measurementDescribed(measurement, me), locale)),
+    ...deleted.doses.map((dose) => rowOf(me, dose, doseDescribed(dose, me), locale)),
   ].toSorted((a, b) => b.deletedAt - a.deletedAt)

@@ -1,6 +1,7 @@
 import {
   type Deleted,
   DiaperConflict,
+  DoseConflict,
   FeedConflict,
   InvalidInput,
   MeasurementConflict,
@@ -25,6 +26,8 @@ export const restoreOf = (record: DeletedRecord, actionId: string): Action => {
       const { id, version } = record.measurement
       return { kind: "restoreMeasurement", id, payload: { actionId, version } }
     }
+    case "dose":
+      return { kind: "restoreDose", id: record.dose.id, payload: { actionId, version: record.dose.version } }
   }
 }
 
@@ -76,7 +79,9 @@ const feedSentence = ({ code, current }: FeedConflict, household: Household, run
 
 const conflictSentence = (error: Error, household: Household, record: DeletedRecord): string | null => {
   if (error instanceof FeedConflict) return feedSentence(error, household, stillRunning(record))
-  if (!(error instanceof DiaperConflict) && !(error instanceof MeasurementConflict)) return null
+  if (!(error instanceof DiaperConflict || error instanceof MeasurementConflict || error instanceof DoseConflict)) {
+    return null
+  }
   return error.code === "STALE_VERSION" ? staleSentence(household, error.current) : NOT_RESTORED
 }
 

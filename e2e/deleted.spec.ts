@@ -3,7 +3,7 @@ import { type BrowserContext, expect, type Page, test } from "@playwright/test"
 const NOW = Date.UTC(2026, 9, 9, 16, 30)
 const MINUTE = 60_000
 const ACTION_ID = expect.stringMatching(/^[0-9a-f-]{36}$/u)
-const RECORD_ROUTE = /\/api\/(diapers|feeds|growth)\/[^/]+(\/restore)?$/u
+const RECORD_ROUTE = /\/api\/(diapers|feeds|growth|doses)\/[^/]+(\/restore)?$/u
 
 interface Audit {
   readonly version: number
@@ -38,12 +38,20 @@ interface Measurement extends Audit {
   readonly headCm: number | null
 }
 
+interface Dose extends Audit {
+  readonly id: string
+  readonly supplementId: string
+  readonly occurredAt: number
+  readonly localDate: string
+  readonly dose: string
+}
+
 interface Deleted {
   readonly feeds: ReadonlyArray<Feed>
   readonly diapers: ReadonlyArray<Diaper>
   readonly sleeps: ReadonlyArray<never>
   readonly measurements: ReadonlyArray<Measurement>
-  readonly doses: ReadonlyArray<never>
+  readonly doses: ReadonlyArray<Dose>
 }
 
 interface Sent {
@@ -57,6 +65,7 @@ type Changed = ReadonlyArray<ReadonlyArray<string>>
 type Answer =
   | { readonly diaper: Diaper; readonly changed: Changed }
   | { readonly measurement: Measurement; readonly changed: Changed }
+  | { readonly dose: Dose; readonly changed: Changed }
   | { readonly _tag: "Conflict"; readonly code: "FEED_ALREADY_ACTIVE"; readonly current: Feed }
   | {
       readonly _tag: "InvalidInput"
@@ -109,6 +118,20 @@ const weighed = (audit: Audit): Measurement => ({
   weightG: 4210.5,
   lengthCm: null,
   headCm: 37.5,
+  ...audit,
+})
+
+const vitaminDOf = async (page: Page): Promise<string> => {
+  const me = await (await page.request.get("/api/me")).json()
+  return me.household.supplements.find(({ name }: { name: string }) => name === "Vitamin D").id
+}
+
+const dosed = (supplementId: string, audit: Audit): Dose => ({
+  id: "dose-1",
+  supplementId,
+  occurredAt: NOW - 150 * MINUTE,
+  localDate: "2026-10-09",
+  dose: "400 IU",
   ...audit,
 })
 
@@ -276,6 +299,27 @@ test("restores a measurement with no Undo, since its card can delete it", async 
   const toast = page.locator("output").filter({ hasText: "Measurement restored" })
   await expect(toast).toBeVisible()
   await expect(toast.getByRole("button", { name: "Undo" })).toHaveCount(0)
+})
+
+test("restores a dose by its supplement's name, then Undo deletes it again", async ({ page }) => {
+  const vitaminD = await vitaminDOf(page)
+  const { answer, played, emily } = await playDeleted(page, (_andrew, emily) => ({
+    ...NOTHING,
+    doses: [dosed(vitaminD, deletedBy(emily, NOW - 5 * MINUTE))],
+  }))
+  await openDeleted(page)
+  await expect(entries(page).getByRole("listitem")).toContainText(["Vitamin D"])
+  const restored = { ...dosed(vitaminD, deletedBy(emily, NOW, 3)), deletedAt: null }
+  await answer(200, { dose: restored, changed: [["today"], ["deleted"]] }, NOTHING)
+  await page.getByRole("button", { name: /^Restore Vitamin D/u }).click()
+  const toast = page.locator("output").filter({ hasText: "Dose restored" })
+  await toast.getByRole("button", { name: "Undo" }).click()
+  await expect
+    .poll(() => played.sent.map(({ method, path, body }) => [method, path, body.version]))
+    .toEqual([
+      ["POST", "/api/doses/dose-1/restore", 2],
+      ["DELETE", "/api/doses/dose-1", 3],
+    ])
 })
 
 test("waits with a reason while there's no connection", async ({ page, context }) => {

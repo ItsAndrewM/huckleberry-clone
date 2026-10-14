@@ -1,5 +1,6 @@
 import {
   DiaperConflict,
+  DoseConflict,
   FeedConflict,
   InvalidInput,
   MeasurementConflict,
@@ -50,14 +51,17 @@ describe("restoreOf", () => {
     const diaper = diaperAt(NOW, { id: "diaper-1", version: 2, deletedAt: NOW })
     const feed = feedAt(NOW, { id: "feed-1", version: 4, deletedAt: NOW })
     const measured = { ...measurement("m1", NOW, { weightG: 4300 }), version: 3, deletedAt: NOW }
+    const dose = dosedAt(NOW, { id: "dose-1", version: 2, deletedAt: NOW })
     expect([
       restoreOf({ kind: "diaper", diaper }, ACTION_ID),
       restoreOf({ kind: "feed", feed }, ACTION_ID),
       restoreOf({ kind: "measurement", measurement: measured }, ACTION_ID),
+      restoreOf({ kind: "dose", dose }, ACTION_ID),
     ]).toEqual([
       { kind: "restoreDiaper", id: "diaper-1", payload: { actionId: ACTION_ID, version: 2 } },
       { kind: "restoreFeed", id: "feed-1", payload: { actionId: ACTION_ID, version: 4 } },
       { kind: "restoreMeasurement", id: "m1", payload: { actionId: ACTION_ID, version: 3 } },
+      { kind: "restoreDose", id: "dose-1", payload: { actionId: ACTION_ID, version: 2 } },
     ])
   })
 })
@@ -126,6 +130,10 @@ describe("restoreFailure", () => {
     )
     expect(failure(new MeasurementConflict({ code: "STALE_VERSION", current: redeleted }))).toBe(
       "Emily changed this a moment ago.",
+    )
+    const dose = dosedAt(NOW, { version: 3, updatedBy: EMILY })
+    expect(failure(new DoseConflict({ code: "STALE_VERSION", current: dose }))).toBe(
+      "Emily restored this a moment ago.",
     )
   })
 
