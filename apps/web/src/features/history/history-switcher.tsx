@@ -65,7 +65,9 @@ export const HistorySwitcher = ({ navigation, today, birthDate, hidden }: Histor
       <nav aria-label={NAMES[noun]} className="flex items-center justify-between gap-2">
         <Step search={navigation.previous} label={`Previous ${noun}`} Icon={ChevronLeftIcon} />
         <div className="flex min-h-11 flex-col items-center justify-center">
-          <h2 className="text-lg font-semibold tabular-nums">{periodTitle(period)}</h2>
+          <h2 aria-live="polite" className="text-lg font-semibold tabular-nums">
+            {periodTitle(period)}
+          </h2>
           <div className="flex items-center gap-2 text-xs">
             {isCurrent ? (
               <p className="text-muted-foreground">{currentLabel(period.view)}</p>

@@ -16,7 +16,13 @@ export const PickedDay = ({ date, today, onClear }: PickedDayProps) => {
   return (
     <div className="flex min-h-11 items-center gap-3 rounded-lg bg-secondary pl-3 text-sm text-secondary-foreground">
       <output className={cn("tabular-nums", isPicked ? "font-medium" : "text-muted-foreground")}>
-        {isPicked ? dayName(date) : "Tap a day to see its numbers"}
+        {isPicked ? (
+          dayName(date)
+        ) : (
+          <>
+            <span className="sr-only">Showing averages. </span>Tap a day to see its numbers
+          </>
+        )}
       </output>
       {isPicked ? (
         <>

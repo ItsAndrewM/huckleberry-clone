@@ -7,7 +7,7 @@ test.use({ timezoneId: "America/Vancouver" })
 const WEEK = periodOf(datesFrom("2026-10-05", 7), TRENDS_DAYS)
 const LAST_WEEK = periodOf(datesFrom("2026-09-28", 7), TRENDS_DAYS)
 const OCTOBER = periodOf(datesFrom("2026-10-01", 31), TRENDS_DAYS)
-const HINT = "Tap a day to see its numbers"
+const HINT = "Showing averages. Tap a day to see its numbers"
 
 const playWeeks = (page: Page) =>
   playTrends(page, { weeks: { "2026-W41": WEEK, "2026-W40": LAST_WEEK }, months: { "2026-10": OCTOBER } })
@@ -45,7 +45,7 @@ const tapColumn = async (page: Page, name: string, weekday: string) => {
   await page.touchscreen.tap(tick.x + tick.width / 2, frame.y + (tick.y - frame.y) / 2)
 }
 
-const pickedDay = (page: Page) => page.getByRole("main").getByRole("status")
+const pickedDay = (page: Page) => page.getByRole("main").getByRole("status").first()
 const pickedLine = (page: Page) => pickedDay(page).locator("..")
 const clearPick = (page: Page) => page.getByRole("button", { name: "Back to the averages" })
 

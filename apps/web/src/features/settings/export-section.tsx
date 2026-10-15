@@ -22,7 +22,7 @@ const ShareAgain = ({
   readonly onShare: (waiting: Exported) => void
 }) => (
   <div className="flex items-center justify-between gap-3">
-    <p className="text-base">The {NAMES[waiting.kind]} is ready.</p>
+    <output className="text-base">The {NAMES[waiting.kind]} is ready.</output>
     <Button size="lg" onClick={() => onShare(waiting)}>
       Share it
     </Button>
@@ -59,6 +59,9 @@ export const ExportSection = ({ timeZone }: { readonly timeZone: TimeZone }) => 
           </Button>
         ))}
       </div>
+      <output className="sr-only">
+        {exporting.preparing === null ? "" : `Preparing the ${NAMES[exporting.preparing]}…`}
+      </output>
       {exporting.waiting === null ? null : <ShareAgain waiting={exporting.waiting} onShare={exporting.shareAgain} />}
       {exporting.failure === null ? null : (
         <p role="alert" className="text-sm text-destructive">
