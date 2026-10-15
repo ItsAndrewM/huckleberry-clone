@@ -25,7 +25,7 @@ export const GridBlock = ({ block, text, name, onOpen }: GridBlockProps) => (
   >
     <span
       className={cn(
-        "relative block size-full overflow-hidden rounded-md border border-primary/65 bg-card",
+        "relative block size-full overflow-hidden rounded-md border border-primary/70 bg-card",
         "group-focus-visible:ring-3 group-focus-visible:ring-ring",
         block.startsBefore && "rounded-t-none border-t-0",
         block.endsAfter && "rounded-b-none border-b-0",
