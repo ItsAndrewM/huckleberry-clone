@@ -32,7 +32,7 @@ export const WeekColumnView = ({ column, name, search, locale }: WeekColumnProps
         resetScroll={opensAtTop(search)}
         activeOptions={{ exact: true }}
         aria-label={name}
-        className="absolute inset-0 rounded-md outline-none focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:ring-inset"
+        className="absolute inset-0 rounded-md outline-none focus-visible:ring-3 focus-visible:ring-ring focus-visible:ring-inset"
       />
     ) : null}
   </li>

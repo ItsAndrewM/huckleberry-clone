@@ -25,7 +25,7 @@ export const WeekLegend = ({ hidden }: { readonly hidden: Hidden }) => (
     )}
     {hidden.has("sleep") ? null : (
       <span className="inline-flex items-center gap-1">
-        <Swatch className="h-3 w-1 rounded-[1px] bg-muted-foreground/45" />
+        <Swatch className="h-3 w-1 rounded-[1px] bg-muted-foreground/70" />
         Sleep
       </span>
     )}

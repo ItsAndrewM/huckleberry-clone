@@ -23,7 +23,7 @@ export const PickedDay = ({ date, today, onClear }: PickedDayProps) => {
     <div
       ref={row}
       tabIndex={-1}
-      className="flex min-h-11 items-center gap-3 rounded-lg bg-secondary pl-3 text-sm text-secondary-foreground outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+      className="flex min-h-11 items-center gap-3 rounded-lg bg-secondary pl-3 text-sm text-secondary-foreground outline-none focus-visible:ring-3 focus-visible:ring-ring"
     >
       <output className={cn("tabular-nums", isPicked ? "font-medium" : "text-muted-foreground")}>
         {isPicked ? dayName(date) : "Tap a day to see its numbers"}

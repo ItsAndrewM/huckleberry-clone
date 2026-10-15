@@ -25,8 +25,8 @@ export const SleepBlock = ({ block, title, length, name, onOpen }: SleepBlockPro
   >
     <span
       className={cn(
-        "block size-full overflow-hidden rounded-md border border-muted-foreground/35 bg-muted-foreground/15",
-        "group-focus-visible:ring-3 group-focus-visible:ring-ring/50",
+        "block size-full overflow-hidden rounded-md border border-muted-foreground/70 bg-muted-foreground/15",
+        "group-focus-visible:ring-3 group-focus-visible:ring-ring",
         block.startsBefore && "rounded-t-none border-t-0",
         block.endsAfter && "rounded-b-none border-b-0",
       )}
