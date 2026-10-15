@@ -50,7 +50,7 @@ const MARKS: ReadonlyArray<Mark> = [
   {
     name: "an invalid field's border",
     file: "components/ui/input.tsx",
-    className: "dark:aria-invalid:border-destructive",
+    className: "aria-invalid:border-destructive",
     colour: "destructive",
     alpha: 1,
     on: ["background", "card"],
@@ -110,7 +110,7 @@ const MARKS: ReadonlyArray<Mark> = [
     className: "bg-muted-foreground/70",
     colour: "muted-foreground",
     alpha: 0.7,
-    on: ["card"],
+    on: ["background", "card"],
   },
   {
     name: "a diaper's dot on the Week view",
@@ -118,7 +118,7 @@ const MARKS: ReadonlyArray<Mark> = [
     className: "bg-foreground/55",
     colour: "foreground",
     alpha: 0.55,
-    on: ["card"],
+    on: ["background", "card"],
   },
 ]
 
