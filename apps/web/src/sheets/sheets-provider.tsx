@@ -39,7 +39,7 @@ export const SheetsProvider = ({ restored, children }: SheetsProviderProps) => {
   const pressed = useLastPressed()
   const home = useRef<FocusHome>(NO_HOME)
   const rememberOpener = () => {
-    home.current = homeOf(pressed.current ?? document.activeElement)
+    if (state.open === null) home.current = homeOf(pressed.current ?? document.activeElement)
   }
   useHeldDrafts(state.held)
   useReopenWhenReady(state, () => setState(reopenedState))
@@ -89,7 +89,7 @@ export const SheetsProvider = ({ restored, children }: SheetsProviderProps) => {
       setState((current) => announcedState(current, toast))
       sweepAfter(toast.until - TOAST_MS)
     },
-    focusOnClose: () => focusTarget(home.current),
+    focusOnClose: () => state.open === null && focusTarget(home.current),
   }
   return <SheetsContext value={sheets}>{children}</SheetsContext>
 }
