@@ -5,9 +5,8 @@ import type { Household } from "../../sheets/failure.ts"
 import { failedFor, useSheets } from "../../sheets/sheets-context.ts"
 import { tapTime } from "../../sheets/tap-time.ts"
 import { WhenField } from "../../sheets/when-field.tsx"
-import { resolveWhen } from "../../sheets/when.ts"
 import { useNow } from "../../timer/use-now.ts"
-import { sessionOf } from "./diaper-session.ts"
+import { occurredAtOf, sessionOf } from "./diaper-session.ts"
 
 const CHOICES = [
   { label: "Pee", wet: true, dirty: false },
@@ -23,10 +22,10 @@ export const DiaperForm = ({ household }: { readonly household: Household }) => 
   const [session] = useState(() => sessionOf(failedFor(sheets, "diaper"), zone, sheets.at))
   const [when, setWhen] = useState(session.when)
   const now = useNow()
-  const ready = resolveWhen(when, zone, now).ok
+  const ready = occurredAtOf(session, when, zone, now).ok
   const log = ({ wet, dirty }: Choice) => {
     if (sheets.open !== "diaper") return
-    const resolved = resolveWhen(when, zone, tapTime())
+    const resolved = occurredAtOf(session, when, zone, tapTime())
     if (!resolved.ok) return
     const payload = { actionId: session.actionId, occurredAt: resolved.instant, wet, dirty }
     sheets.send({ sheet: "diaper", action: { kind: "logDiaper", payload } })

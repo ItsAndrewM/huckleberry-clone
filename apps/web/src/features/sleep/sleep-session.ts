@@ -1,7 +1,7 @@
 import type { SleepKind } from "@bt/contracts"
 import { sleepKindAt } from "@bt/domain"
 import type { Failed } from "../../sheets/sending.ts"
-import { NOW, type Resolved, resolveWhen, type When, whenAt } from "../../sheets/when.ts"
+import { NOW, type Resolved, resolveSent, type When, whenAt } from "../../sheets/when.ts"
 
 export const AFTER_SLEEP = "Pick a time after she fell asleep."
 
@@ -11,24 +11,39 @@ export interface SleepStartSession {
   readonly actionId: string
   readonly when: When
   readonly picked: SleepKind | null
+  readonly startedAt: number | null
 }
 
 export const sleepStartSession = (failed: Failed | null, zone: string): SleepStartSession => {
   const action = failed?.sending.action
-  if (action?.kind !== "startSleep") return { actionId: crypto.randomUUID(), when: NOW, picked: null }
+  if (action?.kind !== "startSleep") return { actionId: crypto.randomUUID(), when: NOW, picked: null, startedAt: null }
   const { actionId, startedAt, kind } = action.payload
-  return { actionId, when: whenAt(startedAt, zone), picked: kind }
+  return { actionId, when: whenAt(startedAt, zone), picked: kind, startedAt }
 }
+
+export const startedAtOf = (session: SleepStartSession, when: When, zone: string, now: number): Resolved =>
+  resolveSent(session.startedAt, session.when, when, zone, now)
 
 export const kindShown = (picked: SleepKind | null, start: Resolved, zone: string, now: number): SleepKind =>
   picked ?? sleepKindAt(start.ok ? start.instant : now, zone)
 
-export const sentWake = (failed: Failed | null, zone: string): When => {
-  const action = failed?.sending.action
-  return action?.kind === "wakeSleep" ? whenAt(action.payload.occurredAt, zone) : NOW
+export interface WakeSession {
+  readonly actionId: string
+  readonly when: When
+  readonly occurredAt: number | null
 }
 
-export const wakeAt = (woke: When, zone: string, now: number, startedAt: number): Resolved => {
-  const resolved = woke.kind === "now" ? { ok: true as const, instant: now } : resolveWhen(woke, zone, now, startedAt)
+export const wakeSession = (failed: Failed | null, zone: string): WakeSession => {
+  const action = failed?.sending.action
+  if (action?.kind !== "wakeSleep") return { actionId: crypto.randomUUID(), when: NOW, occurredAt: null }
+  const { actionId, occurredAt } = action.payload
+  return { actionId, when: whenAt(occurredAt, zone), occurredAt }
+}
+
+export const wakeAt = (session: WakeSession, woke: When, zone: string, now: number, startedAt: number): Resolved => {
+  const resolved =
+    woke.kind === "now"
+      ? { ok: true as const, instant: now }
+      : resolveSent(session.occurredAt, session.when, woke, zone, now, startedAt)
   return resolved.ok ? { ok: true, instant: Math.max(resolved.instant, startedAt + WAKE_AFTER_START_MS) } : resolved
 }

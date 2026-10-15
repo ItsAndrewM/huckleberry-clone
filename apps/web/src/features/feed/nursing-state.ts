@@ -44,10 +44,15 @@ export const resumeAction = (feed: Feed, side: Side, occurredAt: number): FeedAc
   payload: { actionId: crypto.randomUUID(), version: feed.version, side, occurredAt },
 })
 
-export const finishAction = (feed: Feed, occurredAt: number, deleteIfEmpty: boolean): FeedAction => ({
+export const finishAction = (
+  feed: Feed,
+  occurredAt: number,
+  deleteIfEmpty: boolean,
+  actionId: string = crypto.randomUUID(),
+): FeedAction => ({
   kind: "finishFeed",
   id: feed.id,
-  payload: { actionId: crypto.randomUUID(), version: feed.version, occurredAt, deleteIfEmpty },
+  payload: { actionId, version: feed.version, occurredAt, deleteIfEmpty },
 })
 
 export const firstSideOf = (feed: Feed): NursingSegment | undefined =>
