@@ -10,8 +10,10 @@ import {
   ciProblems,
   deployProblems,
   envFor,
-  refuseUnknownFlags,
+  gateEnv,
+  LOCAL_GATES,
   releasedReport,
+  releaseFlags,
   restorePointOf,
   restorePointReport,
   uploadedVersionId,
@@ -49,8 +51,29 @@ const stopUnless = (problems: string[]): void => {
   process.exit(1)
 }
 
-refuseUnknownFlags(process.argv.slice(2))
+const runGatesHere = (): void => {
+  for (const gate of LOCAL_GATES) {
+    const run = spawnSync("pnpm", [...gate], { cwd: rootDir, env: gateEnv(process.env), stdio: "inherit" })
+    if (run.error !== undefined) throw run.error
+    stopUnless(run.status === 0 ? [] : [`\`pnpm ${gate.join(" ")}\` passes on this checkout`])
+  }
+}
 
+const ciRunsOn = (commit: string) =>
+  JSON.parse(
+    output("gh", [
+      "run",
+      "list",
+      "--commit",
+      commit,
+      "--workflow",
+      CI_WORKFLOW,
+      "--json",
+      "status,conclusion,createdAt",
+    ]),
+  )
+
+const flags = releaseFlags(process.argv.slice(2))
 const head = output("git", ["rev-parse", "HEAD"])
 stopUnless(
   checkoutProblems({
@@ -59,22 +82,8 @@ stopUnless(
     originMain: output("gh", ["api", "repos/{owner}/{repo}/commits/main", "--jq", ".sha"]),
   }),
 )
-stopUnless(
-  ciProblems(
-    JSON.parse(
-      output("gh", [
-        "run",
-        "list",
-        "--commit",
-        head,
-        "--workflow",
-        CI_WORKFLOW,
-        "--json",
-        "status,conclusion,createdAt",
-      ]),
-    ),
-  ),
-)
+if (flags.gatesLocal) runGatesHere()
+else stopUnless(ciProblems(ciRunsOn(head)))
 
 pnpm("build", ["build"], rootDir)
 const config = builtWorkerConfig(webDir)
@@ -83,7 +92,8 @@ stopUnless(deployProblems(JSON.parse(readFileSync(config, "utf8"))))
 const runId = process.env.GITHUB_RUN_ID
 const outputDir = mkdtempSync(join(tmpdir(), "bt-release-"))
 const outputFile = join(outputDir, "wrangler-output.ndjson")
-pnpm("wrangler", ["exec", "wrangler", ...versionUploadArgs({ config, commit: head, runId })], webDir, {
+const gatesLocal = flags.gatesLocal
+pnpm("wrangler", ["exec", "wrangler", ...versionUploadArgs({ config, commit: head, runId, gatesLocal })], webDir, {
   WRANGLER_OUTPUT_FILE_PATH: outputFile,
 })
 const versionId = uploadedVersionId(readFileSync(outputFile, "utf8"))
@@ -93,7 +103,7 @@ const restorePoint = restorePointOf(new Date())
 report(restorePointReport(restorePoint))
 pnpm(
   "wrangler",
-  ["exec", "wrangler", ...versionDeployArgs({ config, versionId, commit: head, restorePoint, runId })],
+  ["exec", "wrangler", ...versionDeployArgs({ config, versionId, commit: head, restorePoint, runId, gatesLocal })],
   webDir,
 )
 report(releasedReport(head))

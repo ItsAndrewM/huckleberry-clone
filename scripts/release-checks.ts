@@ -35,6 +35,11 @@ export interface Upload {
   readonly config: string
   readonly commit: string
   readonly runId: string | undefined
+  readonly gatesLocal?: boolean
+}
+
+export interface ReleaseFlags {
+  readonly gatesLocal: boolean
 }
 
 export interface Rollout extends Upload {
@@ -80,9 +85,22 @@ const CHECKOUT_CHECKS: ReadonlyArray<Check<Checkout>> = [
   ["HEAD is the same commit as origin/main", (checkout) => checkout.head === checkout.originMain],
 ]
 
-export const refuseUnknownFlags = (args: ReadonlyArray<string>): void => {
-  parseArgs({ args: [...args], strict: true })
+export const releaseFlags = (args: ReadonlyArray<string>): ReleaseFlags => {
+  const { values } = parseArgs({ args: [...args], strict: true, options: { "gates-local": { type: "boolean" } } })
+  return { gatesLocal: values["gates-local"] === true }
 }
+
+export const LOCAL_GATES: ReadonlyArray<ReadonlyArray<string>> = [
+  ["install", "--frozen-lockfile"],
+  ["pins:check"],
+  ["lint"],
+  ["typecheck"],
+  ["test"],
+  ["coverage"],
+  ["build"],
+  ["bundle:check"],
+  ["e2e"],
+]
 
 export const deployProblems = (config: DeployConfig): string[] => problemsOf(DEPLOY_CHECKS, config)
 
@@ -111,11 +129,16 @@ export const envFor = (tool: Tool, env: NodeJS.ProcessEnv): NodeJS.ProcessEnv =>
   return Object.fromEntries(Object.entries(env).filter(([name]) => !dropped.has(name)))
 }
 
+export const gateEnv = (env: NodeJS.ProcessEnv): NodeJS.ProcessEnv => ({ ...envFor("build", env), CI: "1" })
+
 export const restorePointOf = (at: Date): string => `${at.toISOString().slice(0, 19)}Z`
 
-const sourceOf = (runId: string | undefined): string => (runId === undefined ? "local" : `ci:${runId}`)
+const sourceOf = (runId: string | undefined, gatesLocal = false): string => {
+  if (runId !== undefined) return `ci:${runId}`
+  return gatesLocal ? "local gates" : "local"
+}
 
-export const versionUploadArgs = ({ config, commit, runId }: Upload): string[] => [
+export const versionUploadArgs = ({ config, commit, runId, gatesLocal }: Upload): string[] => [
   "versions",
   "upload",
   "--config",
@@ -123,7 +146,7 @@ export const versionUploadArgs = ({ config, commit, runId }: Upload): string[] =
   "--tag",
   commit,
   "--message",
-  `${commit.slice(0, 7)} ${sourceOf(runId)}`,
+  `${commit.slice(0, 7)} ${sourceOf(runId, gatesLocal)}`,
 ]
 
 export const uploadedVersionId = (output: string): string => {
@@ -136,14 +159,21 @@ export const uploadedVersionId = (output: string): string => {
   return versionId
 }
 
-export const versionDeployArgs = ({ config, versionId, commit, restorePoint, runId }: Rollout): string[] => [
+export const versionDeployArgs = ({
+  config,
+  versionId,
+  commit,
+  restorePoint,
+  runId,
+  gatesLocal,
+}: Rollout): string[] => [
   "versions",
   "deploy",
   `${versionId}@100%`,
   "--config",
   config,
   "--message",
-  `${commit.slice(0, 7)} restore point ${restorePoint} ${sourceOf(runId)}`,
+  `${commit.slice(0, 7)} restore point ${restorePoint} ${sourceOf(runId, gatesLocal)}`,
   "--yes",
 ]
 
