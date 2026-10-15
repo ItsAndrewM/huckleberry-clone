@@ -1,5 +1,5 @@
-import { expect, test } from "@playwright/test"
 import { datesFrom, logged, openTrends, periodOf, playTrends } from "./played-period.ts"
+import { expect, test } from "./test.ts"
 
 test.use({ timezoneId: "America/Vancouver" })
 

@@ -1,5 +1,6 @@
-import { expect, type Locator, test } from "@playwright/test"
+import type { Locator } from "@playwright/test"
 import { busyDay, DAY, diaper, emptyDay, feed, local, NOW, openHistory, playHistory } from "./played-day.ts"
+import { expect, test } from "./test.ts"
 
 const HOUR_LABEL = /^\d{1,2}\s[AP]M$/u
 const YESTERDAY = "2026-10-08"

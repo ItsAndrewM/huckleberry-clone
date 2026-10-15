@@ -1,16 +1,16 @@
-import { expect, type Locator, type Page, type Route, test } from "@playwright/test"
+import type { Locator, Page, Route } from "@playwright/test"
 import {
   caregiversOf,
   type DoseAnswer,
   gate,
   MINUTE,
-  muteLiveUpdates,
   NOW,
   openToday,
   playHousehold,
   type Sent,
   todayWith,
 } from "./played-household.ts"
+import { expect, test } from "./test.ts"
 
 const supplements = (page: Page) => page.getByRole("list", { name: "Supplements" })
 
@@ -181,7 +181,6 @@ for (const { title, fails, says } of LATE_FAILURES) {
       const dose = doseAt(body.supplementId ?? "", body.occurredAt ?? NOW, andrew.id, "dose-1")
       return route.fulfill({ status: 201, json: { dose, changed: [] } })
     })
-    await muteLiveUpdates(page)
     await openToday(page)
     await rowOf(page, "Vitamin D").click()
     await doseSheet(page, "Vitamin D").getByRole("button", { name: "Log Vitamin D" }).click()
@@ -216,7 +215,6 @@ test("sends a second dose as it was asked for when the form is tapped after the 
     const dose = doseAt(vitaminD.id, body.occurredAt ?? NOW, andrew.id, "dose-1")
     return route.fulfill({ status: 201, json: { dose, changed: [] } })
   })
-  await muteLiveUpdates(page)
   await openToday(page)
   await rowOf(page, "Vitamin D").click()
   const sheet = doseSheet(page, "Vitamin D")

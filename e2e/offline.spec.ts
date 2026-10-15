@@ -1,4 +1,5 @@
-import { type BrowserContext, expect, type Page, test } from "@playwright/test"
+import type { Page } from "@playwright/test"
+import { expect, test } from "./test.ts"
 
 test.use({ serviceWorkers: "allow" })
 
@@ -13,14 +14,9 @@ const openWithSavedCopy = async (page: Page) => {
   await expect.poll(() => page.evaluate<boolean>("navigator.serviceWorker.controller !== null")).toBe(true)
 }
 
-const goOfflineLikeAPhone = async (page: Page, context: BrowserContext) => {
-  await page.routeWebSocket(/\/api\/ws$/, (socket) => socket.close({ code: 1011, reason: "offline" }))
-  await context.setOffline(true)
-}
-
 test("opens from its saved copy while offline, and says there's no connection", async ({ page, context }) => {
   await openWithSavedCopy(page)
-  await goOfflineLikeAPhone(page, context)
+  await context.setOffline(true)
   await page.reload()
   await expect(page.getByRole("heading", { name: "Today", level: 1 })).toBeVisible()
   await expect(page.getByRole("alert").filter({ hasText: "No connection" })).toBeVisible()
@@ -59,7 +55,7 @@ test("says in Settings that this phone's offline copy is saved for this version"
 
 test("opens any tab's address from its saved copy while offline", async ({ page, context }) => {
   await openWithSavedCopy(page)
-  await goOfflineLikeAPhone(page, context)
+  await context.setOffline(true)
   await page.goto("/history")
   await expect(page.getByRole("heading", { name: "History", level: 1 })).toBeVisible()
 })
@@ -71,7 +67,7 @@ test("never answers the household's API from the saved copy", async ({ page, con
   )
   expect(saved).toContain("/")
   expect(saved.filter((path) => path.startsWith("/api/"))).toEqual([])
-  await goOfflineLikeAPhone(page, context)
+  await context.setOffline(true)
   expect(await page.evaluate<string>("fetch('/api/me').then(() => 'answered', () => 'failed')")).toBe("failed")
 })
 
@@ -80,7 +76,7 @@ test("leaves Sign in to the network, so offline it fails rather than opening the
   context,
 }) => {
   await openWithSavedCopy(page)
-  await goOfflineLikeAPhone(page, context)
+  await context.setOffline(true)
   await expect(page.goto("/api/login?return=%2F")).rejects.toThrow()
 })
 

@@ -1,4 +1,5 @@
-import { type BrowserContext, expect, type Locator, type Page, test } from "@playwright/test"
+import type { Locator, Page } from "@playwright/test"
+import { expect, test } from "./test.ts"
 
 const NOW = Date.UTC(2026, 9, 9, 16, 30)
 const MINUTE = 60_000
@@ -202,11 +203,6 @@ const openDeleted = async (page: Page) => {
 
 const entries = (page: Page) => page.getByRole("list", { name: "Deleted entries" })
 
-const goOfflineLikeAPhone = async (page: Page, context: BrowserContext) => {
-  await page.routeWebSocket(/\/api\/ws$/u, (socket) => socket.close({ code: 1011, reason: "offline" }))
-  await context.setOffline(true)
-}
-
 test("opens from Settings with the Settings tab still lit, and goes back", async ({ page }) => {
   await playDeleted(page, () => NOTHING)
   await page.clock.setFixedTime(NOW)
@@ -392,7 +388,7 @@ for (const { written, name, given } of LONGEST) {
 test("waits with a reason while there's no connection", async ({ page, context }) => {
   await playDeleted(page, (andrew) => ({ ...NOTHING, diapers: [diaper(deletedBy(andrew, NOW - 5 * MINUTE))] }))
   await openDeleted(page)
-  await goOfflineLikeAPhone(page, context)
+  await context.setOffline(true)
   await expect(page.getByText("Restoring needs a connection.")).toBeVisible()
   await expect(page.getByRole("button", { name: /^Restore Diaper/u })).toBeDisabled()
 })

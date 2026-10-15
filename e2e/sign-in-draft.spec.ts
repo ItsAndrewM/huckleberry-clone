@@ -1,5 +1,6 @@
-import { expect, type Page, test } from "@playwright/test"
+import type { Page } from "@playwright/test"
 import { gate, holdRequests, NOW, openToday, playHousehold, type TodayAnswer, todayWith } from "./played-household.ts"
+import { expect, test } from "./test.ts"
 
 const SIGNED_OUT_COOKIE = "bt-preview-signed-out"
 const HOUR = 3_600_000

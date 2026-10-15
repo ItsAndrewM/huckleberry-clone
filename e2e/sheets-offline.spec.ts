@@ -1,5 +1,6 @@
-import { type BrowserContext, expect, type Page, test } from "@playwright/test"
+import type { Page } from "@playwright/test"
 import { NOW, playHousehold, todayWith } from "./played-household.ts"
+import { expect, test } from "./test.ts"
 
 test.use({ serviceWorkers: "allow" })
 
@@ -10,11 +11,6 @@ const openWithSavedCopy = async (page: Page) => {
   await page.goto("/")
   await expect(page.getByText("Robin")).toBeVisible()
   await expect.poll(() => page.evaluate<boolean>("navigator.serviceWorker.controller !== null")).toBe(true)
-}
-
-const goOfflineLikeAPhone = async (page: Page, context: BrowserContext) => {
-  await page.routeWebSocket(/\/api\/ws$/, (socket) => socket.close({ code: 1011, reason: "offline" }))
-  await context.setOffline(true)
 }
 
 const localMinute = (instant: number) => {
@@ -50,7 +46,7 @@ test("keeps a diaper logged offline in its sheet, and Try again saves it to the 
   const occurredAt = minute - (minute % MINUTE)
   await openWithSavedCopy(page)
   const before = (await diapersAt(page, occurredAt)).length
-  await goOfflineLikeAPhone(page, context)
+  await context.setOffline(true)
   await expect(page.getByRole("alert").filter({ hasText: "No connection" })).toBeVisible()
   await expect(page.getByText("Totals")).toBeVisible()
   await page.getByRole("region", { name: "Log", exact: true }).getByRole("button", { name: "Diaper" }).click()
@@ -85,7 +81,7 @@ test("tries again with the actionId of the attempt that failed, so the household
   await page.clock.setFixedTime(NOW)
   await openWithSavedCopy(page)
   offline = true
-  await goOfflineLikeAPhone(page, context)
+  await context.setOffline(true)
   await page.getByRole("region", { name: "Log", exact: true }).getByRole("button", { name: "Diaper" }).click()
   const sheet = page.getByRole("dialog", { name: "Diaper" })
   await sheet.getByRole("button", { name: "Pee" }).click()

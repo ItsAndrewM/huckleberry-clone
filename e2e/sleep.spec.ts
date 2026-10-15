@@ -1,8 +1,7 @@
-import { expect, type Page, test } from "@playwright/test"
+import type { Page } from "@playwright/test"
 import {
   caregiversOf,
   MINUTE,
-  muteLiveUpdates,
   NOW,
   openToday,
   playHousehold,
@@ -10,6 +9,7 @@ import {
   sleepingToday,
   todayWith,
 } from "./played-household.ts"
+import { expect, test } from "./test.ts"
 
 const ACTION_ID = expect.stringMatching(/^[0-9a-f-]{36}$/u)
 const FELL_ASLEEP = NOW - 42 * MINUTE
@@ -29,7 +29,6 @@ test("starts a sleep in two taps, a nap by the household's clock at 9:30 AM", as
     played.today = sleepingToday(sleep)
     return { status: 201, json: { sleep, changed: [["today"]] } }
   })
-  await muteLiveUpdates(page)
   await openToday(page)
   await expect(page.getByText("No sleeps yet")).toBeVisible()
   const sheet = await openSleep(page)
@@ -55,7 +54,6 @@ test("wakes her in two taps, at the tap's time and the sleep's version, then cou
     played.today = sleepingToday(woken)
     return { status: 200, json: { sleep: woken, changed: [["today"]] } }
   })
-  await muteLiveUpdates(page)
   await openToday(page)
   await expect(page.getByRole("timer")).toHaveText("42:00")
   const sheet = await openSleep(page)
@@ -82,7 +80,6 @@ test("wakes her at the time she woke when the tap comes later, but not before sh
     played.today = sleepingToday(woken)
     return { status: 200, json: { sleep: woken, changed: [["today"]] } }
   })
-  await muteLiveUpdates(page)
   await openToday(page)
   const sheet = await openSleep(page)
   await sheet.getByRole("button", { name: "Change" }).last().click()
@@ -107,7 +104,6 @@ test("wakes her a second after the start, with Wake up ready, when the other pho
     played.today = sleepingToday(woken)
     return { status: 200, json: { sleep: woken, changed: [["today"]] } }
   })
-  await muteLiveUpdates(page)
   await openToday(page)
   const sheet = await openSleep(page)
   await expect(sheet.getByRole("button", { name: "Wake up" })).toBeEnabled()
@@ -132,7 +128,6 @@ test("says who woke her, and when, when the other phone's wake reached the house
     played.today = sleepingToday(theirs)
     return { status: 409, json: { _tag: "Conflict", code: "STALE_VERSION", current: theirs } }
   })
-  await muteLiveUpdates(page)
   await openToday(page)
   const sheet = await openSleep(page)
   await sheet.getByRole("button", { name: "Wake up" }).click()
@@ -149,7 +144,6 @@ test("calls a sleep that fell at 6:30 AM a night, until a parent picks nap", asy
     played.today = sleepingToday(sleep)
     return { status: 201, json: { sleep, changed: [["today"]] } }
   })
-  await muteLiveUpdates(page)
   await openToday(page)
   const sheet = await openSleep(page)
   await sheet.getByRole("button", { name: "Change" }).click()
@@ -170,7 +164,6 @@ test("keeps Nap once a parent taps it, even when the start then moves into the n
     played.today = sleepingToday(sleep)
     return { status: 201, json: { sleep, changed: [["today"]] } }
   })
-  await muteLiveUpdates(page)
   await openToday(page)
   const sheet = await openSleep(page)
   const nap = sheet.getByRole("button", { name: "Nap", exact: true })
@@ -199,7 +192,6 @@ test("moves a running sleep's start, and changes it to a night, each with its ve
     played.today = sleepingToday(sleep)
     return { status: 200, json: { sleep, changed: [["today"]] } }
   })
-  await muteLiveUpdates(page)
   await openToday(page)
   const sheet = await openSleep(page)
   await sheet.getByRole("button", { name: "Night", exact: true }).click()
@@ -229,7 +221,6 @@ test("sends nothing when a parent taps the label a running sleep already has", a
     played.today = sleepingToday(sleep)
     return { status: 200, json: { sleep, changed: [["today"]] } }
   })
-  await muteLiveUpdates(page)
   await openToday(page)
   const sheet = await openSleep(page)
   await sheet.getByRole("button", { name: "Nap", exact: true }).click()
@@ -247,7 +238,6 @@ test("deletes a running sleep after asking, and offers Undo", async ({ page }) =
     played.today = todayWith()
     return { status: 200, json: { sleep: { ...sleep, deletedAt: NOW, version: 2 }, changed: [["today"]] } }
   })
-  await muteLiveUpdates(page)
   await openToday(page)
   const sheet = await openSleep(page)
   await sheet.getByRole("button", { name: "Delete sleep" }).click()

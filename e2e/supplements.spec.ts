@@ -1,10 +1,9 @@
-import { devices, expect, type Locator, type Page, test } from "@playwright/test"
+import { devices, type Locator, type Page } from "@playwright/test"
 import {
   caregiversOf,
   type DoseAnswer,
   loseSaves,
   MINUTE,
-  muteLiveUpdates,
   NOW,
   openToday,
   playHousehold,
@@ -12,6 +11,7 @@ import {
   todayWith,
 } from "./played-household.ts"
 import { sheetTitlesSeen, watchSheetTitles } from "./sheet-titles.ts"
+import { expect, test } from "./test.ts"
 
 const ACTION_ID = expect.stringMatching(/^[0-9a-f-]{36}$/u)
 
@@ -142,7 +142,6 @@ test.describe("Today's supplements, with the household's answers played by the t
       until: Promise.resolve(),
       answer: ({ occurredAt }) => ({ dose: doseAt(vitaminD.id, occurredAt ?? NOW, andrew.id, "dose-1"), changed: [] }),
     })
-    await muteLiveUpdates(page)
     await openToday(page)
     await rowOf(page, "Vitamin D").click()
     const sheet = doseSheet(page, "Vitamin D")

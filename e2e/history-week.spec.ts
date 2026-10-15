@@ -1,4 +1,4 @@
-import { expect, type Locator, type Page, test } from "@playwright/test"
+import type { Locator, Page } from "@playwright/test"
 import {
   busyDay,
   DAY,
@@ -12,6 +12,7 @@ import {
   sleep,
 } from "./played-day.ts"
 import { LAST_WEEK, playWeeks, THIS_WEEK, weekGrid, weekHeading, weekOf } from "./played-week.ts"
+import { expect, test } from "./test.ts"
 
 test.use({ timezoneId: "Europe/London" })
 

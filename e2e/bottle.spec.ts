@@ -1,4 +1,4 @@
-import { expect, type Page, test } from "@playwright/test"
+import type { Page } from "@playwright/test"
 import {
   caregiversOf,
   type FeedAnswer,
@@ -9,6 +9,7 @@ import {
   runningFeed,
   todayWith,
 } from "./played-household.ts"
+import { expect, test } from "./test.ts"
 
 const ACTION_ID = expect.stringMatching(/^[0-9a-f-]{36}$/u)
 const LAST_BOTTLE = { lastBottle: { breastMilkMl: 40, formulaMl: 20 }, lastSide: null }
@@ -53,8 +54,6 @@ const holdRequests = async (page: Page, pattern: string, until: () => Promise<vo
   })
   return held
 }
-
-const muteLiveUpdates = (page: Page) => page.routeWebSocket(/\/api\/ws$/, () => {})
 
 test("saves the last bottle again in two taps", async ({ page }) => {
   const { andrew } = await caregiversOf(page)
@@ -183,7 +182,6 @@ test("says Saving… on the feed while a bottle added to it is on its way, and h
   })
   const answered = gate()
   const held = await holdRequests(page, "**/api/feeds/feed-1/bottle", () => answered.opened)
-  await muteLiveUpdates(page)
   await openToday(page)
   const first = await openBottle(page)
   await first.getByRole("button", { name: "Save" }).click()
@@ -219,7 +217,6 @@ test("opens a draft's Bottle sheet once Today loads, then logs a bottle from bef
   await answer("**/api/feeds", feedSaved(bottleFeed(andrew.id), 201))
   const loaded = gate()
   const held = await holdRequests(page, "**/api/today", () => loaded.opened)
-  await muteLiveUpdates(page)
   await page.clock.setFixedTime(NOW)
   await page.goto("/")
   await expect(page.getByText("Robin")).toBeVisible()

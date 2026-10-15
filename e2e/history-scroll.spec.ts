@@ -1,14 +1,13 @@
-import { expect, type Page, test } from "@playwright/test"
+import type { Page } from "@playwright/test"
 import { busyDay, dayHeading, diaper, emptyDay, local, openHistory, playHistory } from "./played-day.ts"
-import { muteLiveUpdates, playHousehold, todayWith } from "./played-household.ts"
+import { playHousehold, todayWith } from "./played-household.ts"
 import { datesFrom, openTrends, periodOf, playTrends, TRENDS_DAYS } from "./played-period.ts"
 import { playWeeks, THIS_WEEK, weekGrid, weekOf } from "./played-week.ts"
+import { expect, test } from "./test.ts"
 
 test.use({ timezoneId: "America/Vancouver" })
 
 const YESTERDAY = "2026-10-08"
-
-test.beforeEach(({ page }) => muteLiveUpdates(page))
 
 const playTodayAndYesterday = async (page: Page) => {
   const { played, andrew, emily } = await playHistory(page, [])

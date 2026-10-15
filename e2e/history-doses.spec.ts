@@ -1,6 +1,7 @@
-import { expect, type Page, test } from "@playwright/test"
+import type { Page } from "@playwright/test"
 import { DAY, dose, emptyDay, local, openHistory, playHistory } from "./played-day.ts"
 import { playWeeks, THIS_WEEK, weekGrid, weekOf } from "./played-week.ts"
+import { expect, test } from "./test.ts"
 
 test.use({ timezoneId: "Europe/London" })
 

@@ -1,4 +1,4 @@
-import { expect, type Page, test } from "@playwright/test"
+import type { Page } from "@playwright/test"
 import {
   caregiversOf,
   MINUTE,
@@ -9,6 +9,7 @@ import {
   runningFeed,
   todayWith,
 } from "./played-household.ts"
+import { expect, test } from "./test.ts"
 
 test.use({ timezoneId: "Europe/London" })
 

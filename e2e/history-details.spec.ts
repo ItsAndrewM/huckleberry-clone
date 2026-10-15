@@ -1,5 +1,5 @@
-import { expect, test } from "@playwright/test"
 import { busyDay, dayHeading, diaper, emptyDay, local, openHistory, playHistory } from "./played-day.ts"
+import { expect, test } from "./test.ts"
 
 test("opens a feed's details: its times, sides, pause and bottle, and who logged it", async ({ page }) => {
   const { played, andrew, emily } = await playHistory(page, [])

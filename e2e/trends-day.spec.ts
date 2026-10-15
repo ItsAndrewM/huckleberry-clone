@@ -1,6 +1,7 @@
-import { expect, type Locator, type Page, test } from "@playwright/test"
+import type { Locator, Page } from "@playwright/test"
 import { busyDay, emptyDay, playHistory } from "./played-day.ts"
 import { datesFrom, NOW, openTrends, periodOf, playTrends, TRENDS_DAYS } from "./played-period.ts"
+import { expect, test } from "./test.ts"
 
 test.use({ timezoneId: "America/Vancouver" })
 

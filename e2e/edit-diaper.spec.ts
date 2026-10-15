@@ -1,4 +1,4 @@
-import { expect, type Page, test, type WebSocketRoute } from "@playwright/test"
+import type { Page } from "@playwright/test"
 import {
   caregiversOf,
   gate,
@@ -10,6 +10,7 @@ import {
   savedBy,
   todayWith,
 } from "./played-household.ts"
+import { expect, test } from "./test.ts"
 
 test.use({ timezoneId: "Europe/London" })
 
@@ -33,17 +34,6 @@ const openTheDiaper = async (page: Page) => {
     .getByRole("button", { name: /Diaper/u })
     .click()
   return editSheet(page)
-}
-
-const playSocket = async (page: Page) => {
-  const sockets: WebSocketRoute[] = []
-  await page.routeWebSocket(/\/api\/ws$/u, (socket) => {
-    sockets.push(socket)
-  })
-  return async () => {
-    await expect.poll(() => sockets.length).toBeGreaterThan(0)
-    sockets.at(-1)?.send(JSON.stringify({ changed: [["today"]] }))
-  }
 }
 
 test("edits a diaper from Today, showing the change before the household answers", async ({ page }) => {
@@ -159,8 +149,10 @@ test("puts Emily's version in the form when asked, and sends nothing more", asyn
   expect(played.sent).toHaveLength(1)
 })
 
-test("loads Emily's version into the form even when it reached this phone before the save", async ({ page }) => {
-  const todayChanged = await playSocket(page)
+test("loads Emily's version into the form even when it reached this phone before the save", async ({
+  page,
+  socket,
+}) => {
   const { answer, showing, diaper, emily } = await playDiaper(page)
   const theirs = { ...diaper, version: 2, wet: false, dirty: true, updatedBy: emily.id }
   await answer("**/api/diapers/diaper-1", () => ({
@@ -170,7 +162,7 @@ test("loads Emily's version into the form even when it reached this phone before
   const sheet = await openTheDiaper(page)
   await expect(sheet.getByRole("button", { name: "Pee" })).toHaveAttribute("aria-pressed", "true")
   showing(theirs)
-  await todayChanged()
+  await socket.changed(["today"])
   await expect(page.getByRole("list", { name: "Last 24 hours", includeHidden: true })).toContainText("Poo")
   await sheet.getByRole("button", { name: "Both" }).click()
   await sheet.getByRole("button", { name: "Save" }).click()

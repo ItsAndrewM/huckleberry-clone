@@ -1,6 +1,7 @@
-import { expect, type Locator, type Page, test, type WebSocketRoute } from "@playwright/test"
+import type { Locator, Page } from "@playwright/test"
 import { gate, holdRequests } from "./played-household.ts"
 import { sheetTitlesSeen, watchSheetTitles } from "./sheet-titles.ts"
+import { expect, type PlayedSocket, test } from "./test.ts"
 
 const ACTION_ID = expect.stringMatching(/^[0-9a-f-]{36}$/u)
 const AT = Date.UTC(2026, 9, 9, 16, 30)
@@ -57,18 +58,11 @@ const playSupplements = async (page: Page) => {
 
 type Played = Awaited<ReturnType<typeof playSupplements>>["played"]
 
-const playSocket = async (page: Page, played: Played) => {
-  const sockets: WebSocketRoute[] = []
-  await page.routeWebSocket(/\/api\/ws$/u, (socket) => {
-    sockets.push(socket)
-  })
-  return async (id: string, change: Partial<Supplement>) => {
-    await expect.poll(() => sockets.length).toBeGreaterThan(0)
-    played.supplements = played.supplements.map((supplement) =>
-      supplement.id === id ? { ...supplement, ...change, version: supplement.version + 1 } : supplement,
-    )
-    sockets.at(-1)?.send(JSON.stringify({ changed: [["me"]] }))
-  }
+const otherPhone = (socket: PlayedSocket, played: Played) => async (id: string, change: Partial<Supplement>) => {
+  played.supplements = played.supplements.map((supplement) =>
+    supplement.id === id ? { ...supplement, ...change, version: supplement.version + 1 } : supplement,
+  )
+  await socket.changed(["me"])
 }
 
 const section = (page: Page) => page.getByRole("list", { name: "Supplements" })
@@ -299,9 +293,10 @@ for (const { written, name, given } of LONGEST) {
 
 test("shows the other phone's rename in the sheet that was open, and saves a dose change on top of it", async ({
   page,
+  socket,
 }) => {
   const { played, vitaminD } = await playSupplements(page)
-  const otherPhoneSaves = await playSocket(page, played)
+  const otherPhoneSaves = otherPhone(socket, played)
   await page.goto("/settings")
   await section(page).getByRole("button", { name: "Vitamin D · 400 IU" }).click()
   const sheet = sheetOf(page, "Vitamin D")

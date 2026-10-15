@@ -1,4 +1,5 @@
-import { expect, type Page, test, type WebSocketRoute } from "@playwright/test"
+import type { Page } from "@playwright/test"
+import { expect, type PlayedSocket, test } from "./test.ts"
 
 interface Units {
   readonly volume: string
@@ -91,16 +92,9 @@ const playHousehold = async (page: Page): Promise<Played> => {
 
 const sentBodies = (played: Played) => played.sent.map((body) => JSON.parse(body))
 
-const playSocket = async (page: Page) => {
-  const sockets: WebSocketRoute[] = []
-  await page.routeWebSocket(/\/api\/ws$/, (socket) => {
-    sockets.push(socket)
-  })
-  return async (change: Partial<Child>, played: Played) => {
-    await expect.poll(() => sockets.length).toBeGreaterThan(0)
-    played.child = { ...played.child, ...change, version: played.child.version + 1 }
-    sockets.at(-1)?.send(JSON.stringify({ changed: [["me"]] }))
-  }
+const otherPhone = (socket: PlayedSocket) => async (change: Partial<Child>, played: Played) => {
+  played.child = { ...played.child, ...change, version: played.child.version + 1 }
+  await socket.changed(["me"])
 }
 
 test.describe("Settings, with the household's answers played by the test", () => {
@@ -174,9 +168,9 @@ test.describe("Settings, with the household's answers played by the test", () =>
     await expect(page.getByLabel("Birth date")).toHaveValue("2026-09-04")
   })
 
-  test("doesn't say Saved for an edit the other phone's save replaced", async ({ page }) => {
+  test("doesn't say Saved for an edit the other phone's save replaced", async ({ page, socket }) => {
     const played = await playHousehold(page)
-    const otherPhoneSaves = await playSocket(page)
+    const otherPhoneSaves = otherPhone(socket)
     await page.goto("/settings")
     await page.getByLabel("Name").fill("Robin Rae")
     await page.getByRole("button", { name: "Save" }).click()
@@ -187,9 +181,9 @@ test.describe("Settings, with the household's answers played by the test", () =>
     await expect(page.getByText("Saved", { exact: true })).toBeHidden()
   })
 
-  test("drops a refusal once the other phone's save has replaced what it was about", async ({ page }) => {
+  test("drops a refusal once the other phone's save has replaced what it was about", async ({ page, socket }) => {
     const played = await playHousehold(page)
-    const otherPhoneSaves = await playSocket(page)
+    const otherPhoneSaves = otherPhone(socket)
     await page.route("**/api/child", (route) =>
       route.fulfill({
         status: 400,

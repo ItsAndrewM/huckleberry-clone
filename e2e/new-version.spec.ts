@@ -1,5 +1,6 @@
-import { type BrowserContext, expect, type Page, test, type WebSocketRoute } from "@playwright/test"
+import type { BrowserContext, Page, WebSocketRoute } from "@playwright/test"
 import { quickAction } from "./played-household.ts"
+import { expect, test } from "./test.ts"
 
 test.use({ serviceWorkers: "allow" })
 

@@ -1,6 +1,6 @@
-import { expect, test } from "@playwright/test"
 import { busyDay, DAY, diaper, emptyDay, feed, local, openHistory, playHistory } from "./played-day.ts"
 import { gate, holdRequests } from "./played-household.ts"
+import { expect, test } from "./test.ts"
 
 const ACTION_ID = expect.stringMatching(/^[0-9a-f-]{36}$/u)
 

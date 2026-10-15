@@ -266,8 +266,6 @@ export const holdRequests = async (page: Page, pattern: string, until: () => Pro
   return held
 }
 
-export const muteLiveUpdates = (page: Page) => page.routeWebSocket(/\/api\/ws$/u, () => {})
-
 export const savedBy = (by: string) => ({
   version: 1,
   createdBy: by,

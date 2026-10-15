@@ -1,14 +1,13 @@
-import { expect, test } from "@playwright/test"
 import {
   caregiversOf,
   loseSaves,
-  muteLiveUpdates,
   openToday,
   playHousehold,
   quickAction,
   savedDiaper,
   todayWith,
 } from "./played-household.ts"
+import { expect, test } from "./test.ts"
 
 test("closes a sheet kept open offline once its save lands, and offers the Undo", async ({ page }) => {
   const { andrew } = await caregiversOf(page)
@@ -22,7 +21,6 @@ test("closes a sheet kept open offline once its save lands, and offers the Undo"
   await page.route("**/api/**", (route) =>
     linkDown && route.request().method() === "GET" ? route.abort("internetdisconnected") : route.fallback(),
   )
-  await muteLiveUpdates(page)
   await openToday(page)
   linkDown = true
   const sheet = page.getByRole("dialog", { name: "Diaper" })

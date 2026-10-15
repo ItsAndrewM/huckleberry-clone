@@ -1,4 +1,5 @@
-import { expect, type Page, test } from "@playwright/test"
+import type { Page } from "@playwright/test"
+import { expect, test } from "./test.ts"
 
 const NOW = Date.UTC(2026, 9, 9, 16, 30)
 const BIRTH_DATE = "2026-09-01"

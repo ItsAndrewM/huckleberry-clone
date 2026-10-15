@@ -144,5 +144,24 @@ export default defineConfig({
         ],
       },
     },
+    {
+      files: ["e2e/**/*.spec.ts"],
+      rules: {
+        "no-restricted-imports": [
+          "error",
+          {
+            patterns: [datesThroughDomain],
+            paths: [
+              {
+                name: "@playwright/test",
+                importNames: ["test"],
+                message:
+                  "Specs take test from ./test.ts, whose pages hear a played household socket rather than the local household every spec shares (#72).",
+              },
+            ],
+          },
+        ],
+      },
+    },
   ],
 })
