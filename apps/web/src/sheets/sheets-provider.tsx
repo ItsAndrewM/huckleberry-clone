@@ -1,5 +1,6 @@
-import { type ReactNode, useState } from "react"
+import { type ReactNode, useRef, useState } from "react"
 import { useConnectivity } from "../api/hooks.ts"
+import { type FocusHome, focusTarget, homeOf, NO_HOME } from "./focus-home.ts"
 import type { Restored } from "./restored.ts"
 import type { Sending, SheetKind } from "./sending.ts"
 import { type Sheets, SheetsContext } from "./sheets-context.ts"
@@ -20,6 +21,7 @@ import {
 import { TOAST_MS } from "./undo.ts"
 import { useHeldDrafts } from "./use-held-drafts.ts"
 import { useKeptEntries } from "./use-kept-entries.ts"
+import { useLastPressed } from "./use-last-pressed.ts"
 import { useReopenWhenReady } from "./use-reopen.ts"
 import { useResumedDraft } from "./use-resumed-draft.ts"
 import { useSend } from "./use-send.ts"
@@ -34,6 +36,11 @@ export const SheetsProvider = ({ restored, children }: SheetsProviderProps) => {
   const [dismiss] = useState(() => (sheet: SheetKind) => setState((current) => dismissedKindState(current, sheet)))
   const kept = useKeptEntries(restored)
   const online = useConnectivity() === "online"
+  const pressed = useLastPressed()
+  const home = useRef<FocusHome>(NO_HOME)
+  const rememberOpener = () => {
+    home.current = homeOf(pressed.current ?? document.activeElement)
+  }
   useHeldDrafts(state.held)
   useReopenWhenReady(state, () => setState(reopenedState))
   const sweepAfter = (shownAt: number) =>
@@ -62,8 +69,14 @@ export const SheetsProvider = ({ restored, children }: SheetsProviderProps) => {
     ...state,
     keeping: kept.keeping,
     busy: mutation.isPending ? (mutation.variables ?? null) : null,
-    show: (sheet, record) => setState((current) => shownState(current, sheet, record ?? null)),
-    showAt: (sheet, time, record) => setState((current) => shownState(current, sheet, record ?? null, time)),
+    show: (sheet, record) => {
+      rememberOpener()
+      setState((current) => shownState(current, sheet, record ?? null))
+    },
+    showAt: (sheet, time, record) => {
+      rememberOpener()
+      setState((current) => shownState(current, sheet, record ?? null, time))
+    },
     close: () => setState(dismissedState),
     dismiss,
     keep: () => setState(keptState),
@@ -76,6 +89,7 @@ export const SheetsProvider = ({ restored, children }: SheetsProviderProps) => {
       setState((current) => announcedState(current, toast))
       sweepAfter(toast.until - TOAST_MS)
     },
+    focusOnClose: () => focusTarget(home.current),
   }
   return <SheetsContext value={sheets}>{children}</SheetsContext>
 }

@@ -36,8 +36,10 @@ export const GoToDate = ({ shown, earliest, latest, onPick }: GoToDateProps) => 
           if (!typing.current) pick(event.target.value)
         }}
         onKeyDown={(event) => {
-          if (event.key === "Enter") pick(event.currentTarget.value)
-          else if (editsDateText(event.key)) typing.current = true
+          if (event.key === "Enter") {
+            event.preventDefault()
+            pick(event.currentTarget.value)
+          } else if (editsDateText(event.key)) typing.current = true
         }}
         onBlur={(event) => {
           if (typing.current) pick(event.currentTarget.value)

@@ -1,7 +1,7 @@
 import type { LocalDate } from "@bt/contracts"
 import { Link, useNavigate } from "@tanstack/react-router"
 import { ChevronLeftIcon, ChevronRightIcon, type LucideIcon } from "lucide-react"
-import { useState } from "react"
+import { useRef, useState } from "react"
 import { buttonVariants } from "../../components/ui/button.tsx"
 import { GoToDate } from "./go-to-date.tsx"
 import type { HistorySearch } from "./history-date.ts"
@@ -49,11 +49,13 @@ export const HistorySwitcher = ({ navigation, today, birthDate, hidden }: Histor
   const { period, isCurrent } = navigation
   const key = periodKey(period)
   const [changingFor, setChangingFor] = useState<string | null>(null)
+  const change = useRef<HTMLButtonElement>(null)
   if (changingFor !== null && changingFor !== key) setChangingFor(null)
   const changing = changingFor === key
   const notice = hiddenNotice(hidden)
   const noun = unitOf(period.view)
   const goTo = (date: LocalDate) => {
+    change.current?.focus()
     setChangingFor(null)
     const search = searchFor(periodOf(period.view, date), today, hidden)
     void navigate({ to: "/history", search, resetScroll: opensAtTop(search) })
@@ -82,6 +84,7 @@ export const HistorySwitcher = ({ navigation, today, birthDate, hidden }: Histor
               ·
             </span>
             <button
+              ref={change}
               type="button"
               aria-expanded={changing}
               onClick={() => setChangingFor(changing ? null : key)}

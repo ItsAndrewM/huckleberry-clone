@@ -1,5 +1,6 @@
 import { useState } from "react"
 import { Button } from "../components/ui/button.tsx"
+import { focusPageHeading } from "../shell/page-heading.ts"
 import { dismissInstallCard, installCardDismissed, showsInstallCard } from "./home-screen.ts"
 import { ShareSteps } from "./share-steps.tsx"
 import { phoneStorage, thisPhone } from "./this-phone.ts"
@@ -10,6 +11,7 @@ export const InstallCard = () => {
   const notNow = () => {
     dismissInstallCard(phoneStorage)
     setShown(false)
+    focusPageHeading()
   }
   return (
     <section

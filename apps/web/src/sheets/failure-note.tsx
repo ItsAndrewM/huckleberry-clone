@@ -10,6 +10,8 @@ import { failedFor, useSheets } from "./sheets-context.ts"
 import { isEntry } from "./sheets-state.ts"
 import { useHousehold } from "./use-household.ts"
 
+const focusOnArrival = (note: HTMLDivElement | null) => note?.focus()
+
 const CANT_KEEP = "This phone can't keep the entry while you sign in. Sign in, then log it again."
 
 interface SignInNoteProps {
@@ -61,7 +63,12 @@ export const FailureNote = ({ sheet }: { readonly sheet: SheetKind }) => {
     action: failed.sending.action.kind,
   })
   return (
-    <div role="alert" className="flex flex-col gap-3 rounded-lg bg-destructive/10 p-3 text-sm text-destructive">
+    <div
+      ref={focusOnArrival}
+      role="alert"
+      tabIndex={-1}
+      className="flex flex-col gap-3 rounded-lg bg-destructive/10 p-3 text-sm text-destructive outline-none"
+    >
       {signIn ? <SignInNote message={message} sending={failed.sending} /> : <p>{message}</p>}
       {retry === null ? null : (
         <Button variant="outline" size="lg" onClick={() => sheets.send(failed.sending)}>

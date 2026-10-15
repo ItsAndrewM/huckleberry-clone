@@ -24,6 +24,7 @@ export interface Sheets {
   readonly discard: (failed: Failed) => void
   readonly send: (sending: Sending) => void
   readonly announce: (toast: Toast) => void
+  readonly focusOnClose: () => HTMLElement | boolean
 }
 
 export const SheetsContext = createContext<Sheets | null>(null)

@@ -1,6 +1,6 @@
 import type { DayTotals, LocalDate, Me } from "@bt/contracts"
 import { averageDay } from "@bt/domain"
-import { useMemo } from "react"
+import { useMemo, useRef } from "react"
 import { BarChart } from "./bar-chart.tsx"
 import { MetricSection } from "./metric-section.tsx"
 import { TRENDS_METRICS } from "./metrics.ts"
@@ -23,28 +23,35 @@ export const PeriodView = ({ days, me, today, picked, onPick }: PeriodViewProps)
   const average = averageDay(days, today, birthDate)
   const isCurrent = trend.some(({ status }) => status === "today")
   const pickedDay = trend.find(({ date }) => date === picked)
+  const charts = useRef<HTMLDivElement>(null)
+  const backToAverages = () => {
+    charts.current?.querySelector<SVGElement>("svg[tabindex]")?.focus()
+    onPick(null)
+  }
   return (
     <>
-      <PickedDay date={pickedDay?.date ?? null} today={today} onClear={() => onPick(null)} />
-      {TRENDS_METRICS.map((metric) => (
-        <MetricSection
-          key={metric.id}
-          metric={metric}
-          numbers={
-            pickedDay === undefined
-              ? averageNumbers(metric, average, volume, isCurrent)
-              : dayNumbers(metric, pickedDay, volume)
-          }
-        >
-          <BarChart
+      <PickedDay date={pickedDay?.date ?? null} today={today} onClear={backToAverages} />
+      <div ref={charts} className="contents">
+        {TRENDS_METRICS.map((metric) => (
+          <MetricSection
+            key={metric.id}
             metric={metric}
-            days={trend}
-            volume={volume}
-            picked={picked}
-            onPick={(date) => onPick(date === picked ? null : date)}
-          />
-        </MetricSection>
-      ))}
+            numbers={
+              pickedDay === undefined
+                ? averageNumbers(metric, average, volume, isCurrent)
+                : dayNumbers(metric, pickedDay, volume)
+            }
+          >
+            <BarChart
+              metric={metric}
+              days={trend}
+              volume={volume}
+              picked={picked}
+              onPick={(date) => onPick(date === picked ? null : date)}
+            />
+          </MetricSection>
+        ))}
+      </div>
       <TrendsTable days={trend} volume={volume} today={today} />
     </>
   )
