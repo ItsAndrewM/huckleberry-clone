@@ -5,7 +5,6 @@ import {
   holdRequests,
   loseSaves,
   MINUTE,
-  muteLiveUpdates,
   NOW,
   openToday,
   playHousehold,
@@ -44,7 +43,6 @@ const failDiaperOffline = async (page: Page, choice: string) => {
     until: Promise.resolve(),
     answer: savedDiaper(andrew.id),
   })
-  await muteLiveUpdates(page)
   await openToday(page)
   await quickAction(page, "Diaper").click()
   await page.getByRole("dialog", { name: "Diaper" }).getByRole("button", { name: choice }).click()
@@ -80,7 +78,6 @@ test("asks about a diaper still on its way when iOS closed the app, allowing tha
   await page.route("**/api/diapers", (route) => {
     sent.push(route.request().postDataJSON())
   })
-  await muteLiveUpdates(page)
   await openToday(page)
   await quickAction(page, "Diaper").click()
   await page.getByRole("dialog", { name: "Diaper" }).getByRole("button", { name: "Pee" }).click()
@@ -144,7 +141,6 @@ test("lets a start go for good once it meets the other phone's running feed", as
     played.today = todayWith(theirs)
     return { status: 409, json: { _tag: "Conflict", code: "FEED_ALREADY_ACTIVE", current: theirs } }
   })
-  await muteLiveUpdates(page)
   await openToday(page)
   await quickAction(page, "Nursing").click()
   const sheet = page.getByRole("dialog", { name: "Nursing" })
@@ -216,7 +212,6 @@ test("keeps a sleep started with no connection through a reload, and starts it u
       return { sleep, changed: [["today"]] }
     },
   })
-  await muteLiveUpdates(page)
   await openToday(page)
   await quickAction(page, "Sleep").click()
   const sheet = page.getByRole("dialog", { name: "Sleep" })
@@ -238,7 +233,6 @@ test("lets a sleep's start go for good once it meets the other phone's running s
     played.today = sleepingToday(theirs)
     return { status: 409, json: { _tag: "Conflict", code: "SLEEP_ALREADY_ACTIVE", current: theirs } }
   })
-  await muteLiveUpdates(page)
   await openToday(page)
   await quickAction(page, "Sleep").click()
   const sheet = page.getByRole("dialog", { name: "Sleep" })

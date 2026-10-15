@@ -4,7 +4,6 @@ import {
   type DoseAnswer,
   loseSaves,
   MINUTE,
-  muteLiveUpdates,
   NOW,
   openToday,
   playHousehold,
@@ -143,7 +142,6 @@ test.describe("Today's supplements, with the household's answers played by the t
       until: Promise.resolve(),
       answer: ({ occurredAt }) => ({ dose: doseAt(vitaminD.id, occurredAt ?? NOW, andrew.id, "dose-1"), changed: [] }),
     })
-    await muteLiveUpdates(page)
     await openToday(page)
     await rowOf(page, "Vitamin D").click()
     const sheet = doseSheet(page, "Vitamin D")

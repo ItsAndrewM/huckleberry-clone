@@ -3,7 +3,6 @@ import {
   gate,
   holdRequests,
   loseSaves,
-  muteLiveUpdates,
   NOW,
   openToday,
   playHousehold,
@@ -41,7 +40,6 @@ test("offers back a diaper and a bottle that failed together, one after the othe
     until: bottleLost.opened,
     answer: savedBottle(andrew.id),
   })
-  await muteLiveUpdates(page)
   await openToday(page)
   const diaper = page.getByRole("dialog", { name: "Diaper" })
   const bottle = page.getByRole("dialog", { name: "Bottle" })
@@ -77,7 +75,6 @@ test("offers the second of two failed diapers in its own form once the first is 
   await playHousehold(page, todayWith())
   const lost = gate()
   const sent = await loseSaves(page, "**/api/diapers", { lost: 2, until: lost.opened, answer: savedDiaper(andrew.id) })
-  await muteLiveUpdates(page)
   await openToday(page)
   const sheet = page.getByRole("dialog", { name: "Diaper" })
   await quickAction(page, "Diaper").click()
@@ -113,7 +110,6 @@ test("saves only the first of two failed diapers on a double tap, and leaves the
     await failing.opened
     return route.fulfill({ status: 500, json: {} })
   })
-  await muteLiveUpdates(page)
   await openToday(page)
   const sheet = page.getByRole("dialog", { name: "Diaper" })
   await quickAction(page, "Diaper").click()

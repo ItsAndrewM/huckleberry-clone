@@ -1,4 +1,4 @@
-import type { Page, WebSocketRoute } from "@playwright/test"
+import type { Page } from "@playwright/test"
 import {
   caregiversOf,
   type FeedAnswer,
@@ -37,19 +37,7 @@ const bottled = (by: string): FeedAnswer => ({
   portions: [{ id: "p1", occurredAt: AT_8, breastMilkMl: 0, formulaMl: 90 }],
 })
 
-const playSocket = async (page: Page) => {
-  const sockets: WebSocketRoute[] = []
-  await page.routeWebSocket(/\/api\/ws$/u, (socket) => {
-    sockets.push(socket)
-  })
-  return async () => {
-    await expect.poll(() => sockets.length).toBeGreaterThan(0)
-    sockets.at(-1)?.send(JSON.stringify({ changed: [["today"]] }))
-  }
-}
-
 const playFeed = async (page: Page, kind: "nursed" | "bottled") => {
-  const todayChanged = await playSocket(page)
   const { andrew, emily } = await caregiversOf(page)
   const feed = kind === "nursed" ? nursed(andrew.id) : bottled(andrew.id)
   const household = await playHousehold(page, { ...todayWith(), recent: [{ kind: "feed", feed }] })
@@ -64,7 +52,7 @@ const playFeed = async (page: Page, kind: "nursed" | "bottled") => {
     return { status: 200, json: { feed: { ...feed, segments, portions, version: 2 }, changed: [] } }
   })
   await openToday(page)
-  return { ...household, feed, emily, showing, todayChanged }
+  return { ...household, feed, emily, showing }
 }
 
 const openFeed = async (page: Page, name: RegExp, title: string) => {
@@ -166,8 +154,9 @@ test("offers only to delete the feed once every side is removed", async ({ page 
 
 test("loads Emily's sides and bottles into the form even when they reached this phone before the save", async ({
   page,
+  socket,
 }) => {
-  const { answer, showing, feed, emily, todayChanged } = await playFeed(page, "nursed")
+  const { answer, showing, feed, emily } = await playFeed(page, "nursed")
   const theirs = {
     ...feed,
     version: 2,
@@ -182,7 +171,7 @@ test("loads Emily's sides and bottles into the form even when they reached this 
   const left = sheet.getByRole("group", { name: "Side 1" })
   await expect(left.getByLabel("Minutes")).toHaveValue("14")
   showing(theirs)
-  await todayChanged()
+  await socket.changed(["today"])
   await expect(page.getByRole("list", { name: "Last 24 hours", includeHidden: true })).toContainText(
     "Nursing and bottle",
   )

@@ -1,7 +1,6 @@
 import {
   caregiversOf,
   loseSaves,
-  muteLiveUpdates,
   openToday,
   playHousehold,
   quickAction,
@@ -22,7 +21,6 @@ test("closes a sheet kept open offline once its save lands, and offers the Undo"
   await page.route("**/api/**", (route) =>
     linkDown && route.request().method() === "GET" ? route.abort("internetdisconnected") : route.fallback(),
   )
-  await muteLiveUpdates(page)
   await openToday(page)
   linkDown = true
   const sheet = page.getByRole("dialog", { name: "Diaper" })

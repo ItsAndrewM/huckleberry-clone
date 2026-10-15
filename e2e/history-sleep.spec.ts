@@ -1,6 +1,5 @@
 import type { Page } from "@playwright/test"
 import { busyDay, type DayAnswer, local, openHistory, playHistory, sleep } from "./played-day.ts"
-import { muteLiveUpdates } from "./played-household.ts"
 import { expect, test } from "./test.ts"
 
 test.use({ timezoneId: "Europe/London" })
@@ -27,7 +26,6 @@ const chipTops = async (page: Page) => {
 const playSleeps = async (page: Page, sleepsOf: (andrew: string, emily: string) => DayAnswer["sleeps"]) => {
   const { played, andrew, emily } = await playHistory(page, [])
   played.days.push({ ...busyDay(andrew, emily), sleeps: sleepsOf(andrew, emily) })
-  await muteLiveUpdates(page)
   return played
 }
 
