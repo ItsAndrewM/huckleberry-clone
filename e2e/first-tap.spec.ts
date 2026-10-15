@@ -68,7 +68,10 @@ const comeBackOnline = async (page: Page, context: BrowserContext, phone: Phone)
   phone.offline = false
 }
 
-const sentOnce = (phone: Phone) => new Set(phone.bodies.map(({ actionId }) => actionId)).size === 1
+const sentOnce = (phone: Phone) =>
+  phone.bodies.length === 2 &&
+  phone.bodies.every(({ actionId }) => actionId !== undefined && actionId !== "") &&
+  phone.bodies[0]?.actionId === phone.bodies[1]?.actionId
 
 const openSheet = async (page: Page, action: string) => {
   await quickAction(page, action).click()
