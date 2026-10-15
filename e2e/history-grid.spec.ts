@@ -1,5 +1,17 @@
 import type { Locator } from "@playwright/test"
-import { busyDay, DAY, diaper, emptyDay, feed, local, NOW, openHistory, playHistory } from "./played-day.ts"
+import {
+  busyDay,
+  DAY,
+  diaper,
+  dose,
+  emptyDay,
+  feed,
+  local,
+  NOW,
+  openHistory,
+  playHistory,
+  sleep,
+} from "./played-day.ts"
 import { expect, test } from "./test.ts"
 
 const HOUR_LABEL = /^\d{1,2}\s[AP]M$/u
@@ -113,4 +125,35 @@ test("keeps the grid under the tab bar, so a tab with a block scrolled behind it
   expect(covers(await block.boundingBox(), tab)).toBe(true)
   await trends.click()
   await expect(page).toHaveURL(/\/trends$/u)
+})
+
+test("reads and tabs through the day's entries by the time each began, then its hours", async ({ page }) => {
+  const { played, andrew, emily, me } = await playHistory(page, [])
+  played.days.push({
+    ...busyDay(andrew, emily),
+    sleeps: [
+      sleep("night", local("20:10", YESTERDAY), local("06:05"), "night", emily),
+      sleep("nap", local("07:00"), local("07:20"), "nap", andrew),
+    ],
+    doses: [dose("dose", me.household.supplements[0].id, local("08:00"), andrew)],
+  })
+  await openHistory(page)
+  const buttons = page.getByRole("region", { name: "The day by hour" }).getByRole("button")
+  await expect(buttons.first()).toBeVisible()
+  const names = await buttons.evaluateAll((all) => all.map((button) => button.getAttribute("aria-label") ?? ""))
+  const upToTheTime = names.map((name) => /^.*?[AP]M/u.exec(name)?.[0])
+  expect(upToTheTime.slice(0, 11)).toEqual([
+    "Night at 8:10 PM",
+    "Nursing at 11:40 PM",
+    "Nursing at 1:05 AM",
+    "2 entries from 2:10 AM",
+    "Nursing and bottle at 3:00 AM",
+    "Bottle at 4:00 AM",
+    "Diaper at 5:30 AM",
+    "Nap at 7:00 AM",
+    "Vitamin D at 8:00 AM",
+    "Nursing at 9:10 AM",
+    "Log at 12 AM",
+  ])
+  expect(upToTheTime.slice(10).every((name) => name?.startsWith("Log at"))).toBe(true)
 })
