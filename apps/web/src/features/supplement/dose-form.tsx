@@ -6,9 +6,8 @@ import type { Household } from "../../sheets/failure.ts"
 import { failedFor, useSheets } from "../../sheets/sheets-context.ts"
 import { tapTime } from "../../sheets/tap-time.ts"
 import { WhenField } from "../../sheets/when-field.tsx"
-import { resolveWhen } from "../../sheets/when.ts"
 import { useNow } from "../../timer/use-now.ts"
-import { doseSessionOf, duplicateOf } from "./dose-session.ts"
+import { doseSessionOf, duplicateOf, occurredAtOf } from "./dose-session.ts"
 import { DuplicatePrompt } from "./duplicate-prompt.tsx"
 
 interface DoseFormProps {
@@ -27,7 +26,7 @@ export const DoseForm = ({ household, supplement }: DoseFormProps) => {
   if (duplicate !== null) return <DuplicatePrompt duplicate={duplicate} name={supplement.name} household={household} />
   const log = () => {
     if (sheets.open !== "dose") return
-    const resolved = resolveWhen(when, zone, tapTime())
+    const resolved = occurredAtOf(session, when, zone, tapTime())
     if (!resolved.ok) return
     const { actionId, confirmedDuplicate } = session
     const payload = { actionId, supplementId: supplement.id, occurredAt: resolved.instant, confirmedDuplicate }
@@ -39,7 +38,7 @@ export const DoseForm = ({ household, supplement }: DoseFormProps) => {
       <Button
         size="lg"
         className="h-auto min-h-16 py-3 text-lg whitespace-normal wrap-anywhere"
-        disabled={!resolveWhen(when, zone, now).ok}
+        disabled={!occurredAtOf(session, when, zone, now).ok}
         onClick={log}
       >
         Log {supplement.name}

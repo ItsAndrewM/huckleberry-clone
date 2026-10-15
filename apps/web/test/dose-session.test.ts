@@ -7,6 +7,7 @@ import {
   duplicateMessage,
   duplicateOf,
   formKeyOf,
+  occurredAtOf,
   supplementIdOf,
 } from "../src/features/supplement/dose-session.ts"
 import type { Household } from "../src/sheets/failure.ts"
@@ -46,6 +47,7 @@ describe("doseSessionOf", () => {
       actionId: expect.stringMatching(UUID),
       supplementId: "supplement-iron",
       when: NOW_WHEN,
+      occurredAt: null,
       confirmedDuplicate: false,
     })
   })
@@ -59,8 +61,18 @@ describe("doseSessionOf", () => {
       actionId: ACTION_ID,
       supplementId: VITAMIN_D,
       when: whenAt(NOW - 5 * MINUTE, ZONE),
+      occurredAt: NOW - 5 * MINUTE,
       confirmedDuplicate: true,
     })
+  })
+
+  it("logs at the held dose's own instant, to the second, until its time is changed", () => {
+    const sentAt = NOW - 5 * MINUTE + 37_000
+    const payload = { actionId: ACTION_ID, supplementId: VITAMIN_D, occurredAt: sentAt, confirmedDuplicate: false }
+    const failed: Failed = { sending: { sheet: "dose", action: { kind: "logDose", payload } }, error: new Offline() }
+    const session = doseSessionOf(failed, null, ZONE, null)
+    expect(occurredAtOf(session, session.when, ZONE, NOW)).toEqual({ ok: true, instant: sentAt })
+    expect(occurredAtOf(session, NOW_WHEN, ZONE, NOW)).toEqual({ ok: true, instant: NOW })
   })
 })
 

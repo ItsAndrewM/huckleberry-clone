@@ -20,10 +20,10 @@ export const startAction = (actionId: string, kind: SleepKind, startedAt: number
   payload: { actionId, kind, startedAt },
 })
 
-export const wakeAction = (sleep: Sleep, occurredAt: number): SleepAction => ({
+export const wakeAction = (sleep: Sleep, occurredAt: number, actionId: string = crypto.randomUUID()): SleepAction => ({
   kind: "wakeSleep",
   id: sleep.id,
-  payload: { actionId: crypto.randomUUID(), version: sleep.version, occurredAt },
+  payload: { actionId, version: sleep.version, occurredAt },
 })
 
 export const runningEdit = (sleep: Sleep, kind: SleepKind, startedAt: number): SleepAction => ({

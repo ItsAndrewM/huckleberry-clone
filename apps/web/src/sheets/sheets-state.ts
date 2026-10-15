@@ -109,8 +109,9 @@ export const failedState = (state: SheetsState, failed: Failed, now: number): Sh
   const own = state.keptOpen === actionIdOf(failed.sending)
   if (closesOnSave(failed.sending) && !own) return { ...state, toast: editLost(failed.error, now) }
   const held = [...state.held, failed]
-  const keptOpen = own ? null : state.keptOpen
-  return state.open === null ? opening({ ...state, held }, openingFor(failed), true) : { ...state, held, keptOpen }
+  if (state.open === null) return opening({ ...state, held }, openingFor(failed), true)
+  if (own && closesOnSend(failed.sending)) return opening({ ...state, held }, openingFor(failed), false)
+  return { ...state, held, keptOpen: own ? null : state.keptOpen }
 }
 
 export const restoredState = (held: ReadonlyArray<Failed>): SheetsState => ({ ...CLOSED, held })

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest"
 import { Offline } from "../src/api/errors.ts"
 import { pendingId } from "../src/api/pending.ts"
-import { kindShown, sentWake, sleepStartSession, wakeAt } from "../src/features/sleep/sleep-session.ts"
+import { kindShown, sleepStartSession, startedAtOf, wakeAt, wakeSession } from "../src/features/sleep/sleep-session.ts"
 import {
   deleteAction,
   runningEdit,
@@ -20,6 +20,8 @@ const SECOND = 1000
 const SEVEN_THIRTY_PM = Date.UTC(2026, 9, 10, 2, 30)
 const TWO_PM = Date.UTC(2026, 9, 9, 21)
 const RUNNING = sleptAt(NOW - 40 * MINUTE, { id: "sleep-1", endedAt: null, version: 3 })
+const FIRST_TAP = NOW - MINUTE + 37 * SECOND
+const NO_WAKE_HELD = wakeSession(null, RUNNING.id, ZONE)
 
 describe("the sleep sheet's state", () => {
   it("starts a sleep when none runs, waits on one being started, and controls a running one", () => {
@@ -62,7 +64,7 @@ describe("the sleep sheet's state", () => {
 
 describe("a sleep being started", () => {
   it("starts now, with a fresh actionId and the label left to the clock", () => {
-    expect(sleepStartSession(null, ZONE)).toEqual({ actionId: UUID, when: NOW_WHEN, picked: null })
+    expect(sleepStartSession(null, ZONE)).toEqual({ actionId: UUID, when: NOW_WHEN, picked: null, startedAt: null })
   })
 
   it("comes back as it was sent after a failure, so its retry sends the same start", () => {
@@ -70,7 +72,26 @@ describe("a sleep being started", () => {
       sending: { sheet: "sleep" as const, action: startAction(ACTION_ID, "nap", TWO_PM) },
       error: new Offline(),
     }
-    expect(sleepStartSession(failed, ZONE)).toEqual({ actionId: ACTION_ID, when: whenAt(TWO_PM, ZONE), picked: "nap" })
+    expect(sleepStartSession(failed, ZONE)).toEqual({
+      actionId: ACTION_ID,
+      when: whenAt(TWO_PM, ZONE),
+      picked: "nap",
+      startedAt: TWO_PM,
+    })
+  })
+
+  it("starts at the failed start's own instant, to the second, until its time is changed", () => {
+    const failed = {
+      sending: { sheet: "sleep" as const, action: startAction(ACTION_ID, "nap", FIRST_TAP) },
+      error: new Offline(),
+    }
+    const session = sleepStartSession(failed, ZONE)
+    expect(startedAtOf(session, session.when, ZONE, NOW)).toEqual({ ok: true, instant: FIRST_TAP })
+    expect(startedAtOf(session, NOW_WHEN, ZONE, NOW)).toEqual({ ok: true, instant: NOW })
+    expect(startedAtOf(session, whenAt(NOW - 5 * MINUTE, ZONE), ZONE, NOW)).toEqual({
+      ok: true,
+      instant: NOW - 5 * MINUTE,
+    })
   })
 
   it("is a night from 7 PM to 7 AM on the household's clock and a nap otherwise, until a parent picks one", () => {
@@ -86,13 +107,46 @@ describe("a sleep being started", () => {
 })
 
 describe("a wake", () => {
-  it("is now, unless a failed wake is held, which keeps the time it sent", () => {
+  it("is now with a fresh actionId, unless a failed wake is held, which keeps the time and actionId it sent", () => {
     const failed = {
-      sending: { sheet: "sleep" as const, action: wakeAction(RUNNING, NOW - MINUTE) },
+      sending: { sheet: "sleep" as const, action: wakeAction(RUNNING, FIRST_TAP, ACTION_ID) },
       error: new Offline(),
     }
-    expect(sentWake(null, ZONE)).toEqual(NOW_WHEN)
-    expect(sentWake(failed, ZONE)).toEqual(whenAt(NOW - MINUTE, ZONE))
+    expect(NO_WAKE_HELD).toEqual({ actionId: UUID, when: NOW_WHEN, occurredAt: null })
+    expect(wakeSession(failed, RUNNING.id, ZONE)).toEqual({
+      actionId: ACTION_ID,
+      when: whenAt(FIRST_TAP, ZONE),
+      occurredAt: FIRST_TAP,
+    })
+  })
+
+  it("sends a held wake's own instant, to the second, until Woke is changed", () => {
+    const failed = {
+      sending: { sheet: "sleep" as const, action: wakeAction(RUNNING, FIRST_TAP, ACTION_ID) },
+      error: new Offline(),
+    }
+    const session = wakeSession(failed, RUNNING.id, ZONE)
+    expect(wakeAt(session, session.when, ZONE, NOW, RUNNING.startedAt)).toEqual({ ok: true, instant: FIRST_TAP })
+    expect(wakeAt(session, NOW_WHEN, ZONE, NOW, RUNNING.startedAt)).toEqual({ ok: true, instant: NOW })
+  })
+
+  it("starts fresh at Now on another sleep, so a wake held for the one the other phone ended can't end this one", () => {
+    const failed = {
+      sending: { sheet: "sleep" as const, action: wakeAction(RUNNING, FIRST_TAP, ACTION_ID) },
+      error: new Offline(),
+    }
+    const session = wakeSession(failed, "sleep-2", ZONE)
+    expect(session).toEqual({ actionId: UUID, when: NOW_WHEN, occurredAt: null })
+    expect(session.actionId).not.toBe(ACTION_ID)
+  })
+
+  it("asks for a time after she fell asleep when the start moved past the held wake", () => {
+    const failed = {
+      sending: { sheet: "sleep" as const, action: wakeAction(RUNNING, FIRST_TAP, ACTION_ID) },
+      error: new Offline(),
+    }
+    const session = wakeSession(failed, RUNNING.id, ZONE)
+    expect(wakeAt(session, session.when, ZONE, NOW, FIRST_TAP + 10 * MINUTE)).toEqual({ ok: false, issue: "too_early" })
   })
 })
 
@@ -102,34 +156,43 @@ describe("the time of a wake", () => {
   const picked = (instant: number) => whenAt(instant, ZONE)
 
   it("is the tap while Woke is Now", () => {
-    expect(wakeAt(NOW_WHEN, ZONE, NOW, STARTED)).toEqual({ ok: true, instant: NOW })
+    expect(wakeAt(NO_WAKE_HELD, NOW_WHEN, ZONE, NOW, STARTED)).toEqual({ ok: true, instant: NOW })
   })
 
   it("is a second after the start while Woke is Now and this phone's clock is behind the start", () => {
     const ahead = NOW + 2 * MINUTE
-    expect(wakeAt(NOW_WHEN, ZONE, NOW, ahead)).toEqual({ ok: true, instant: ahead + SECOND })
+    expect(wakeAt(NO_WAKE_HELD, NOW_WHEN, ZONE, NOW, ahead)).toEqual({ ok: true, instant: ahead + SECOND })
   })
 
   it("is a second after the start, not a millisecond, when Woke is Now within a second of it", () => {
-    expect(wakeAt(NOW_WHEN, ZONE, STARTED + 400, STARTED)).toEqual({ ok: true, instant: STARTED + SECOND })
+    expect(wakeAt(NO_WAKE_HELD, NOW_WHEN, ZONE, STARTED + 400, STARTED)).toEqual({
+      ok: true,
+      instant: STARTED + SECOND,
+    })
   })
 
   it("asks for a time after she fell asleep when the one picked is before it", () => {
-    expect(wakeAt(picked(STARTED - 5 * MINUTE), ZONE, NOW, STARTED)).toEqual({ ok: false, issue: "too_early" })
+    expect(wakeAt(NO_WAKE_HELD, picked(STARTED - 5 * MINUTE), ZONE, NOW, STARTED)).toEqual({
+      ok: false,
+      issue: "too_early",
+    })
   })
 
   it("lands a picked time in the start's minute a second after the start", () => {
-    expect(wakeAt(picked(STARTED), ZONE, NOW, STARTED)).toEqual({ ok: true, instant: STARTED + SECOND })
+    expect(wakeAt(NO_WAKE_HELD, picked(STARTED), ZONE, NOW, STARTED)).toEqual({ ok: true, instant: STARTED + SECOND })
   })
 
   it("keeps that to the start's own minute, whether the start is in the minute's last second or not", () => {
     const wokeAt = { ok: true, instant: IN_LAST_SECOND + SECOND }
-    expect(wakeAt(picked(IN_LAST_SECOND), ZONE, NOW, IN_LAST_SECOND)).toEqual(wokeAt)
-    expect(wakeAt(picked(IN_LAST_SECOND + 500), ZONE, NOW, IN_LAST_SECOND)).toEqual(wokeAt)
+    expect(wakeAt(NO_WAKE_HELD, picked(IN_LAST_SECOND), ZONE, NOW, IN_LAST_SECOND)).toEqual(wokeAt)
+    expect(wakeAt(NO_WAKE_HELD, picked(IN_LAST_SECOND + 500), ZONE, NOW, IN_LAST_SECOND)).toEqual(wokeAt)
   })
 
   it("keeps a picked time after the start as it is, and refuses one in the future", () => {
-    expect(wakeAt(picked(NOW - MINUTE), ZONE, NOW, STARTED)).toEqual({ ok: true, instant: NOW - MINUTE })
-    expect(wakeAt(picked(NOW + 10 * MINUTE), ZONE, NOW, STARTED)).toEqual({ ok: false, issue: "in_future" })
+    expect(wakeAt(NO_WAKE_HELD, picked(NOW - MINUTE), ZONE, NOW, STARTED)).toEqual({ ok: true, instant: NOW - MINUTE })
+    expect(wakeAt(NO_WAKE_HELD, picked(NOW + 10 * MINUTE), ZONE, NOW, STARTED)).toEqual({
+      ok: false,
+      issue: "in_future",
+    })
   })
 })

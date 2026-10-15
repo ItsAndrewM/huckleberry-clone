@@ -4,10 +4,9 @@ import { FailureNote } from "../../sheets/failure-note.tsx"
 import { failedFor, useSheets } from "../../sheets/sheets-context.ts"
 import { tapTime } from "../../sheets/tap-time.ts"
 import { WhenField } from "../../sheets/when-field.tsx"
-import { resolveWhen } from "../../sheets/when.ts"
 import { useNow } from "../../timer/use-now.ts"
 import { SleepKindToggle } from "./sleep-kind-toggle.tsx"
-import { kindShown, sleepStartSession } from "./sleep-session.ts"
+import { kindShown, sleepStartSession, startedAtOf } from "./sleep-session.ts"
 import { startAction } from "./sleep-state.ts"
 
 export const StartSleepView = ({ zone }: { readonly zone: string }) => {
@@ -16,11 +15,11 @@ export const StartSleepView = ({ zone }: { readonly zone: string }) => {
   const [when, setWhen] = useState(session.when)
   const [picked, setPicked] = useState(session.picked)
   const now = useNow()
-  const start = resolveWhen(when, zone, now)
+  const start = startedAtOf(session, when, zone, now)
   const begin = () => {
     if (sheets.open !== "sleep") return
     const at = tapTime()
-    const resolved = resolveWhen(when, zone, at)
+    const resolved = startedAtOf(session, when, zone, at)
     if (!resolved.ok) return
     const kind = kindShown(picked, resolved, zone, at)
     sheets.send({ sheet: "sleep", action: startAction(session.actionId, kind, resolved.instant) })

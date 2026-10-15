@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { ambiguity, NOW, resolveWhen, whenAt } from "../src/sheets/when.ts"
+import { ambiguity, NOW, resolveSent, resolveWhen, whenAt } from "../src/sheets/when.ts"
 
 const ZONE = "America/Vancouver"
 const at = (iso: string) => Date.parse(iso)
@@ -54,6 +54,34 @@ describe("resolveWhen", () => {
     const sameMinute = { kind: "at" as const, local: "2026-10-09T11:31", pick: null }
     expect(resolveWhen(before, ZONE, NOON, sideStarted)).toEqual({ ok: false, issue: "too_early" })
     expect(resolveWhen(sameMinute, ZONE, NOON, sideStarted)).toEqual({ ok: true, instant: sideStarted })
+  })
+})
+
+describe("resolveSent", () => {
+  const sent = at("2026-10-09T18:30:45Z")
+  const shown = whenAt(sent, ZONE)
+
+  it("sends a held instant itself, to the second, while its field still shows it", () => {
+    expect(resolveSent(sent, shown, shown, ZONE, NOON)).toEqual({ ok: true, instant: sent })
+  })
+
+  it("reads the field once it shows another time, or Now", () => {
+    const picked = { kind: "at" as const, local: "2026-10-09T11:00", pick: null }
+    expect(resolveSent(sent, shown, picked, ZONE, NOON)).toEqual({ ok: true, instant: at("2026-10-09T18:00:00Z") })
+    expect(resolveSent(sent, shown, NOW, ZONE, NOON)).toEqual({ ok: true, instant: NOON })
+  })
+
+  it("refuses a held instant before the earliest allowed, as it refuses a picked one", () => {
+    expect(resolveSent(sent, shown, shown, ZONE, NOON, sent + 15 * 60_000)).toEqual({ ok: false, issue: "too_early" })
+    expect(resolveSent(sent, shown, shown, ZONE, NOON, sent + 5_000)).toEqual({ ok: true, instant: sent + 5_000 })
+  })
+
+  it("reads the field, with its checks, when nothing was sent", () => {
+    expect(resolveSent(null, NOW, shown, ZONE, NOON)).toEqual({ ok: true, instant: at("2026-10-09T18:30:00Z") })
+    expect(resolveSent(null, NOW, shown, ZONE, NOON, at("2026-10-09T18:45:00Z"))).toEqual({
+      ok: false,
+      issue: "too_early",
+    })
   })
 })
 

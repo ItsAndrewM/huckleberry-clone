@@ -5,9 +5,8 @@ import { FailureNote } from "../../sheets/failure-note.tsx"
 import { failedFor, useSheets } from "../../sheets/sheets-context.ts"
 import { tapTime } from "../../sheets/tap-time.ts"
 import { WhenField } from "../../sheets/when-field.tsx"
-import { resolveWhen } from "../../sheets/when.ts"
 import { useNow } from "../../timer/use-now.ts"
-import { emptiedBy, sentStop } from "./nursing-session.ts"
+import { emptiedBy, stoppedAtOf, stopSession } from "./nursing-session.ts"
 import { controlsWait, finishAction } from "./nursing-state.ts"
 
 interface FinishViewProps {
@@ -20,7 +19,8 @@ interface FinishViewProps {
 export const FinishView = ({ feed, segment, zone, onBack }: FinishViewProps) => {
   const sheets = useSheets()
   const failed = failedFor(sheets, "nursing")
-  const [when, setWhen] = useState(() => sentStop(failed, zone))
+  const [session] = useState(() => stopSession(failed, feed.id, zone))
+  const [when, setWhen] = useState(session.when)
   const now = useNow()
   const emptied = emptiedBy(failed)
   if (emptied !== null) {
@@ -45,8 +45,9 @@ export const FinishView = ({ feed, segment, zone, onBack }: FinishViewProps) => 
     )
   }
   const finish = () => {
-    const resolved = resolveWhen(when, zone, tapTime(), segment.startedAt)
-    if (resolved.ok) sheets.send({ sheet: "nursing", action: finishAction(feed, resolved.instant, false) })
+    const resolved = stoppedAtOf(session, when, zone, tapTime(), segment.startedAt)
+    if (resolved.ok)
+      sheets.send({ sheet: "nursing", action: finishAction(feed, resolved.instant, false, session.actionId) })
   }
   return (
     <>
@@ -54,7 +55,7 @@ export const FinishView = ({ feed, segment, zone, onBack }: FinishViewProps) => 
       <Button
         size="lg"
         className="h-14 text-lg"
-        disabled={!resolveWhen(when, zone, now, segment.startedAt).ok || controlsWait(sheets.busy, feed)}
+        disabled={!stoppedAtOf(session, when, zone, now, segment.startedAt).ok || controlsWait(sheets.busy, feed)}
         onClick={finish}
       >
         Finish feed

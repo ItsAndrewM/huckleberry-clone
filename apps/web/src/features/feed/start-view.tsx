@@ -5,9 +5,8 @@ import { FailureNote } from "../../sheets/failure-note.tsx"
 import { failedFor, useSheets } from "../../sheets/sheets-context.ts"
 import { tapTime } from "../../sheets/tap-time.ts"
 import { WhenField } from "../../sheets/when-field.tsx"
-import { resolveWhen } from "../../sheets/when.ts"
 import { useNow } from "../../timer/use-now.ts"
-import { startSession } from "./nursing-session.ts"
+import { startedAtOf, startSession } from "./nursing-session.ts"
 import { SidePicker } from "./side-picker.tsx"
 
 interface StartViewProps {
@@ -22,7 +21,7 @@ export const StartView = ({ lastSide, zone }: StartViewProps) => {
   const now = useNow()
   const start = (side: Side) => {
     if (sheets.open !== "nursing") return
-    const resolved = resolveWhen(when, zone, tapTime())
+    const resolved = startedAtOf(session, when, zone, tapTime())
     if (!resolved.ok) return
     const payload = { actionId: session.actionId, side, startedAt: resolved.instant }
     sheets.send({ sheet: "nursing", action: { kind: "startFeed", payload } })
@@ -30,7 +29,12 @@ export const StartView = ({ lastSide, zone }: StartViewProps) => {
   return (
     <>
       <WhenField label="Started" when={when} onChange={setWhen} zone={zone} now={now} />
-      <SidePicker label="Start on" lastSide={lastSide} disabled={!resolveWhen(when, zone, now).ok} onPick={start} />
+      <SidePicker
+        label="Start on"
+        lastSide={lastSide}
+        disabled={!startedAtOf(session, when, zone, now).ok}
+        onPick={start}
+      />
       <FailureNote sheet="nursing" />
       <Button variant="ghost" size="lg" onClick={() => sheets.show("pastFeed")}>
         Log a past feed

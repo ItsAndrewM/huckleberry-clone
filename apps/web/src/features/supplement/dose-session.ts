@@ -2,12 +2,13 @@ import { type Dose, DoseConflict } from "@bt/contracts"
 import { type Household, nameOf, timeOf } from "../../sheets/failure.ts"
 import { actionIdOf } from "../../sheets/held.ts"
 import type { Failed, Sending } from "../../sheets/sending.ts"
-import { NOW, type When, whenAt } from "../../sheets/when.ts"
+import { NOW, type Resolved, resolveSent, type When, whenAt } from "../../sheets/when.ts"
 
 export interface DoseSession {
   readonly actionId: string
   readonly supplementId: string | null
   readonly when: When
+  readonly occurredAt: number | null
   readonly confirmedDuplicate: boolean
 }
 
@@ -30,11 +31,14 @@ export const doseSessionOf = (
   const action = loggedIn(failed)
   if (action === null) {
     const when = at === null ? NOW : whenAt(at, zone)
-    return { actionId: crypto.randomUUID(), supplementId: editing, when, confirmedDuplicate: false }
+    return { actionId: crypto.randomUUID(), supplementId: editing, when, occurredAt: null, confirmedDuplicate: false }
   }
   const { actionId, supplementId, occurredAt, confirmedDuplicate } = action.payload
-  return { actionId, supplementId, when: whenAt(occurredAt, zone), confirmedDuplicate }
+  return { actionId, supplementId, when: whenAt(occurredAt, zone), occurredAt, confirmedDuplicate }
 }
+
+export const occurredAtOf = (session: DoseSession, when: When, zone: string, now: number): Resolved =>
+  resolveSent(session.occurredAt, session.when, when, zone, now)
 
 export interface Duplicate {
   readonly failed: Failed

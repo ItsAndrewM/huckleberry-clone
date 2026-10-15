@@ -1,7 +1,7 @@
 import type { Measurement, Units } from "@bt/contracts"
 import { isMeasurementAction, type MeasurementAction } from "../../api/actions.ts"
 import type { Failed } from "../../sheets/sending.ts"
-import { NOW, type Resolved, resolveWhen, sameWhen, type When, whenAt } from "../../sheets/when.ts"
+import { NOW, type Resolved, resolveSent, type When, whenAt } from "../../sheets/when.ts"
 import {
   type Entry,
   entryOf,
@@ -102,9 +102,7 @@ export const isCleared = (session: MeasurementSession, readings: Readings) =>
   session.target !== null && listed(readings).every(({ kind }) => kind === "empty")
 
 export const measuredAtOf = (session: MeasurementSession, when: When, zone: string, now: number): Resolved =>
-  session.measuredAt !== null && sameWhen(when, session.form.when)
-    ? { ok: true, instant: session.measuredAt }
-    : resolveWhen(when, zone, now)
+  resolveSent(session.measuredAt, session.form.when, when, zone, now)
 
 export const saveAction = (session: MeasurementSession, values: Values, measuredAt: number): MeasurementAction => {
   const { actionId, target } = session
