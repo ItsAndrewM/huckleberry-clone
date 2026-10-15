@@ -9,8 +9,10 @@ import {
   type DeployConfig,
   deployProblems,
   envFor,
-  refuseUnknownFlags,
+  gateEnv,
+  LOCAL_GATES,
   releasedReport,
+  releaseFlags,
   restorePointOf,
   restorePointReport,
   uploadedVersionId,
@@ -103,12 +105,40 @@ describe("the Worker config a release deploys", () => {
 })
 
 describe("the flags pnpm release takes", () => {
-  it("takes none", () => {
-    expect(() => refuseUnknownFlags([])).not.toThrow()
+  it("asks GitHub whether CI passed unless told to run CI's checks itself", () => {
+    expect(releaseFlags([])).toEqual({ gatesLocal: false })
+    expect(releaseFlags(["--gates-local"])).toEqual({ gatesLocal: true })
   })
 
-  it.each(["--first", "--skip-export"])("refuses %s, which M5.7 removed, rather than ignoring it", (flag) => {
-    expect(() => refuseUnknownFlags([flag])).toThrow(`Unknown option '${flag}'`)
+  it.each(["--first", "--skip-export", "--local"])("refuses %s rather than ignoring it", (flag) => {
+    expect(() => releaseFlags([flag])).toThrow(`Unknown option '${flag}'`)
+  })
+})
+
+const ciRunSteps = (workflow: string): string[][] =>
+  [...workflow.matchAll(/^\s*- run: pnpm (.+)$/gmu)]
+    .map(([, command]) => (command ?? "").split(" "))
+    .filter((step) => step[0] !== "exec")
+
+const withoutRepeats = (steps: ReadonlyArray<ReadonlyArray<string>>) =>
+  steps.filter((step, at) => steps.findIndex((other) => other.join(" ") === step.join(" ")) === at)
+
+describe("CI's checks, run on the Mac by --gates-local", () => {
+  it("are the pnpm commands ci.yml runs, in its order, without its second install or its browser install", () => {
+    const workflow = readFileSync(new URL("../.github/workflows/ci.yml", import.meta.url), "utf8")
+    expect(LOCAL_GATES).toEqual(withoutRepeats(ciRunSteps(workflow)))
+    expect(LOCAL_GATES.at(-1)).toEqual(["e2e"])
+  })
+
+  it("run as CI runs them, with CI set and no Cloudflare or GitHub token", () => {
+    const env = gateEnv({
+      PATH: "/usr/bin",
+      CLOUDFLARE_ENV: "local",
+      CLOUDFLARE_API_TOKEN: "cf-token",
+      GH_TOKEN: "gh-token",
+      GITHUB_TOKEN: "github-token",
+    })
+    expect(env).toEqual({ PATH: "/usr/bin", CI: "1" })
   })
 })
 
@@ -220,6 +250,16 @@ describe("the version a release uploads", () => {
   it("says local when it runs from the Mac", () => {
     expect(valueAfter(versionUploadArgs({ ...UPLOAD, runId: undefined }), "--message")).toBe("20390a3 local")
   })
+
+  it("says local gates when the Mac ran CI's checks itself", () => {
+    const args = versionUploadArgs({ ...UPLOAD, runId: undefined, gatesLocal: true })
+    expect(valueAfter(args, "--message")).toBe("20390a3 local gates")
+  })
+
+  it("says local gates even inside a CI run, since the release skipped CI's check", () => {
+    const args = versionUploadArgs({ ...UPLOAD, runId: "18233456789", gatesLocal: true })
+    expect(valueAfter(args, "--message")).toBe("20390a3 local gates")
+  })
 })
 
 describe("the version Wrangler reports it uploaded", () => {
@@ -259,6 +299,18 @@ describe("the deploy that puts the uploaded version live", () => {
   it("says local when it runs from the Mac", () => {
     expect(valueAfter(versionDeployArgs({ ...ROLLOUT, runId: undefined }), "--message")).toBe(
       "20390a3 restore point 2026-10-12T15:49:59Z local",
+    )
+  })
+
+  it("says local gates when the Mac ran CI's checks itself", () => {
+    expect(valueAfter(versionDeployArgs({ ...ROLLOUT, runId: undefined, gatesLocal: true }), "--message")).toBe(
+      "20390a3 restore point 2026-10-12T15:49:59Z local gates",
+    )
+  })
+
+  it("says local gates even inside a CI run, since the release skipped CI's check", () => {
+    expect(valueAfter(versionDeployArgs({ ...ROLLOUT, runId: "18233456789", gatesLocal: true }), "--message")).toBe(
+      "20390a3 restore point 2026-10-12T15:49:59Z local gates",
     )
   })
 

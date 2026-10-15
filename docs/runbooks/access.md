@@ -100,14 +100,14 @@ Every push to `main` deploys itself once CI passes (M5.7):
 2. When CI finishes green, `.github/workflows/deploy.yml` checks out the commit CI tested. If `main` has moved on since, it notes "main moved on to …" and ends green, and the newer commit deploys after its own CI.
 3. Otherwise it runs `pnpm release`, which refuses at the first of these that fails:
    1. the checkout is clean and at `origin/main`
-   2. CI passed on that commit
+   2. CI passed on that commit, or, with `--gates-local`, CI's own commands pass on this checkout (see "Deploying by hand")
    3. a fresh build, without `CLOUDFLARE_ENV`, whose config passes the checks
 
    It then uploads the build as a new version, tagged with the commit (`wrangler versions upload`). Nothing is live yet. Next it notes the restore point, the current UTC second, and puts that version live (`wrangler versions deploy <version>@100%`). The deployment's message reads like `20390a3 restore point 2026-10-12T15:49:59Z ci:18233456789`.
 4. The run's summary gives the restore point and the command that rewinds the household to it, before the version goes live. It then says "Released …" once the version is live.
 5. Nothing to do on the phones (#61). Every deploy drops the household's live connection, and the app checks for a new version whenever it reconnects or comes back from the background, so each phone saves the new build the next time it's online. It opens it the next time the app comes back online with nothing open: no sheet, nothing on its way to the household or kept on the phone, no Undo, no unsaved change in Settings and no field being typed in. Offline, the app keeps the page it has, so Today and logging stay. Settings › Offline copy says when a newer version is waiting, and **Open it now** switches at once. After a deploy whose PR says "device checklist after deploy", run the device checklist in `docs/implementation-plan.md` §6.
 
-- **The record:** `pnpm --filter @bt/web exec wrangler deployments list --config ../worker/wrangler.jsonc` shows the 10 most recent deploys with their messages, whether CI or your Mac ran them. CI's deploys show no author, because the token belongs to the account rather than a person. Their message's `ci:<run id>` names the run instead, and a deploy from your Mac ends in `local`. For an older deploy, open its Deploy run (`gh run list --workflow deploy.yml`). Its summary and its log (`gh run view <run id> --log`) hold the restore point, and GitHub keeps them 90 days. `deploys.log` in the main checkout stopped growing with M5.7. Its bookmarks still restore until PITR ages them out, from about 10 November 2026.
+- **The record:** `pnpm --filter @bt/web exec wrangler deployments list --config ../worker/wrangler.jsonc` shows the 10 most recent deploys with their messages, whether CI or your Mac ran them. CI's deploys show no author, because the token belongs to the account rather than a person. Their message's `ci:<run id>` names the run instead, and a deploy from your Mac ends in `local`, or `local gates` when it ran CI's commands itself. For an older deploy, open its Deploy run (`gh run list --workflow deploy.yml`). Its summary and its log (`gh run view <run id> --log`) hold the restore point, and GitHub keeps them 90 days. `deploys.log` in the main checkout stopped growing with M5.7. Its bookmarks still restore until PITR ages them out, from about 10 November 2026.
 - **A failed deploy:** GitHub emails a failed run to the person it's attributed to, normally whoever merged.
   - A failed upload leaves production on the previous version.
   - A failed `versions deploy` usually does too, but one that timed out may have gone through. So before you re-run the job, deploy by hand or roll back, check what's live with `pnpm --filter @bt/web exec wrangler deployments status --config ../worker/wrangler.jsonc`.
@@ -124,7 +124,14 @@ Every push to `main` deploys itself once CI passes (M5.7):
 
 ## Deploying by hand
 
-From the main checkout, run `git switch main`, `git pull --ff-only`, `pnpm install --frozen-lockfile`, then `pnpm release`. Use it when CI's deploy failed or deploys are paused. It runs the same checks and steps as CI, on your Wrangler login, and its messages end in `local` instead of the run. It still needs CI to have passed on the commit. So during a GitHub Actions outage, roll back if you must (below), and wait for Actions.
+From the main checkout, run `git switch main`, `git pull --ff-only`, `pnpm install --frozen-lockfile`, then `pnpm release`. Use it when CI's deploy failed or deploys are paused. It runs the same checks and steps as CI, on your Wrangler login, and its messages end in `local` instead of the run. It still needs CI to have passed on the commit.
+
+When GitHub Actions can't run CI (an outage, or the month's minutes are spent, as on 15 October 2026), run `pnpm release --gates-local` instead, on Andrew's word (#96):
+- **What it changes:** it skips the question to GitHub and runs CI's own commands on the checkout, in ci.yml's order: `pnpm install --frozen-lockfile`, `pins:check`, `lint`, `typecheck`, `test`, `coverage`, `build`, `bundle:check`, then `e2e` in both engines.
+- **How they run:** with `CI=1`, as on GitHub, so E2E keeps its one retry and refuses a busy port 4173. A test ties the list to ci.yml's `run:` steps.
+- **When one fails:** the release stops at the first command that fails and names it. Otherwise it goes on as usual: the clean checkout at `origin/main`, the build and its checks, the restore point, the upload, the deploy.
+- **Its record:** the deployment's message ends in `local gates`.
+- **How long:** expect several minutes, most of them E2E. Stop any `vite preview` on port 4173 first.
 
 ## Pausing deploys
 
