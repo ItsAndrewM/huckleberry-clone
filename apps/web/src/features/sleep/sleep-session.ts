@@ -33,9 +33,11 @@ export interface WakeSession {
   readonly occurredAt: number | null
 }
 
-export const wakeSession = (failed: Failed | null, zone: string): WakeSession => {
+export const wakeSession = (failed: Failed | null, sleepId: string, zone: string): WakeSession => {
   const action = failed?.sending.action
-  if (action?.kind !== "wakeSleep") return { actionId: crypto.randomUUID(), when: NOW, occurredAt: null }
+  if (action?.kind !== "wakeSleep" || action.id !== sleepId) {
+    return { actionId: crypto.randomUUID(), when: NOW, occurredAt: null }
+  }
   const { actionId, occurredAt } = action.payload
   return { actionId, when: whenAt(occurredAt, zone), occurredAt }
 }

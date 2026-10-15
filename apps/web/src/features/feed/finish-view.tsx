@@ -19,7 +19,7 @@ interface FinishViewProps {
 export const FinishView = ({ feed, segment, zone, onBack }: FinishViewProps) => {
   const sheets = useSheets()
   const failed = failedFor(sheets, "nursing")
-  const [session] = useState(() => stopSession(failed, zone))
+  const [session] = useState(() => stopSession(failed, feed.id, zone))
   const [when, setWhen] = useState(session.when)
   const now = useNow()
   const emptied = emptiedBy(failed)

@@ -21,7 +21,7 @@ const SEVEN_THIRTY_PM = Date.UTC(2026, 9, 10, 2, 30)
 const TWO_PM = Date.UTC(2026, 9, 9, 21)
 const RUNNING = sleptAt(NOW - 40 * MINUTE, { id: "sleep-1", endedAt: null, version: 3 })
 const FIRST_TAP = NOW - MINUTE + 37 * SECOND
-const NO_WAKE_HELD = wakeSession(null, ZONE)
+const NO_WAKE_HELD = wakeSession(null, RUNNING.id, ZONE)
 
 describe("the sleep sheet's state", () => {
   it("starts a sleep when none runs, waits on one being started, and controls a running one", () => {
@@ -113,7 +113,7 @@ describe("a wake", () => {
       error: new Offline(),
     }
     expect(NO_WAKE_HELD).toEqual({ actionId: UUID, when: NOW_WHEN, occurredAt: null })
-    expect(wakeSession(failed, ZONE)).toEqual({
+    expect(wakeSession(failed, RUNNING.id, ZONE)).toEqual({
       actionId: ACTION_ID,
       when: whenAt(FIRST_TAP, ZONE),
       occurredAt: FIRST_TAP,
@@ -125,9 +125,28 @@ describe("a wake", () => {
       sending: { sheet: "sleep" as const, action: wakeAction(RUNNING, FIRST_TAP, ACTION_ID) },
       error: new Offline(),
     }
-    const session = wakeSession(failed, ZONE)
+    const session = wakeSession(failed, RUNNING.id, ZONE)
     expect(wakeAt(session, session.when, ZONE, NOW, RUNNING.startedAt)).toEqual({ ok: true, instant: FIRST_TAP })
     expect(wakeAt(session, NOW_WHEN, ZONE, NOW, RUNNING.startedAt)).toEqual({ ok: true, instant: NOW })
+  })
+
+  it("starts fresh at Now on another sleep, so a wake held for the one the other phone ended can't end this one", () => {
+    const failed = {
+      sending: { sheet: "sleep" as const, action: wakeAction(RUNNING, FIRST_TAP, ACTION_ID) },
+      error: new Offline(),
+    }
+    const session = wakeSession(failed, "sleep-2", ZONE)
+    expect(session).toEqual({ actionId: UUID, when: NOW_WHEN, occurredAt: null })
+    expect(session.actionId).not.toBe(ACTION_ID)
+  })
+
+  it("asks for a time after she fell asleep when the start moved past the held wake", () => {
+    const failed = {
+      sending: { sheet: "sleep" as const, action: wakeAction(RUNNING, FIRST_TAP, ACTION_ID) },
+      error: new Offline(),
+    }
+    const session = wakeSession(failed, RUNNING.id, ZONE)
+    expect(wakeAt(session, session.when, ZONE, NOW, FIRST_TAP + 10 * MINUTE)).toEqual({ ok: false, issue: "too_early" })
   })
 })
 

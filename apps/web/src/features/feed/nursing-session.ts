@@ -24,9 +24,11 @@ export interface StopSession {
   readonly stoppedAt: number | null
 }
 
-export const stopSession = (failed: Failed | null, zone: string): StopSession => {
+export const stopSession = (failed: Failed | null, feedId: string, zone: string): StopSession => {
   const action = failed?.sending.action
-  if (action?.kind !== "finishFeed") return { actionId: crypto.randomUUID(), when: NOW, stoppedAt: null }
+  if (action?.kind !== "finishFeed" || action.id !== feedId) {
+    return { actionId: crypto.randomUUID(), when: NOW, stoppedAt: null }
+  }
   const { actionId, occurredAt } = action.payload
   return { actionId, when: whenAt(occurredAt, zone), stoppedAt: occurredAt }
 }

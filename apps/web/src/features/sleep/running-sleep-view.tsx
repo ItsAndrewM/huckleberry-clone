@@ -22,7 +22,7 @@ interface RunningSleepViewProps {
 export const RunningSleepView = ({ sleep, zone }: RunningSleepViewProps) => {
   const sheets = useSheets()
   const now = useNow()
-  const [session] = useState(() => wakeSession(failedFor(sheets, "sleep"), zone))
+  const [session] = useState(() => wakeSession(failedFor(sheets, "sleep"), sleep.id, zone))
   const [woke, setWoke] = useState(session.when)
   const busy = sleepWaits(sheets.busy)
   const act = (action: SleepAction) => sheets.send({ sheet: "sleep", action })

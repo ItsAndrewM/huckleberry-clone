@@ -84,7 +84,7 @@ describe("startSession", () => {
 
 describe("stopSession", () => {
   it("reopens a stop that wasn't saved with its actionId and its time on the household's clock", () => {
-    expect(stopSession(failedWith(FINISH), ZONE)).toEqual({
+    expect(stopSession(failedWith(FINISH), "feed-1", ZONE)).toEqual({
       actionId: ACTION_ID,
       when: whenAt(STOPPED_AT, ZONE),
       stoppedAt: STOPPED_AT,
@@ -93,16 +93,30 @@ describe("stopSession", () => {
 
   it("stops at Now under a new actionId when nothing failed or the failure wasn't a finish", () => {
     for (const failed of [null, failedWith(SWITCH)]) {
-      const session = stopSession(failed, ZONE)
+      const session = stopSession(failed, "feed-1", ZONE)
       expect(session).toEqual({ actionId: expect.stringMatching(UUID), when: WHEN_NOW, stoppedAt: null })
       expect(session.actionId).not.toBe(ACTION_ID)
     }
   })
 
   it("stops at the failed stop's own instant until its time is changed", () => {
-    const session = stopSession(failedWith(FINISH), ZONE)
+    const session = stopSession(failedWith(FINISH), "feed-1", ZONE)
     expect(stoppedAtOf(session, session.when, ZONE, NOW, STARTED_AT)).toEqual({ ok: true, instant: STOPPED_AT })
     expect(stoppedAtOf(session, WHEN_NOW, ZONE, NOW, STARTED_AT)).toEqual({ ok: true, instant: NOW })
+  })
+
+  it("stops fresh at Now on another feed, so a finish held for one feed can't stop another", () => {
+    const session = stopSession(failedWith(FINISH), "feed-2", ZONE)
+    expect(session).toEqual({ actionId: expect.stringMatching(UUID), when: WHEN_NOW, stoppedAt: null })
+    expect(session.actionId).not.toBe(ACTION_ID)
+  })
+
+  it("asks for a time after the side started when the side now starts after the held stop", () => {
+    const session = stopSession(failedWith(FINISH), "feed-1", ZONE)
+    expect(stoppedAtOf(session, session.when, ZONE, NOW, STOPPED_AT + 10 * MINUTE)).toEqual({
+      ok: false,
+      issue: "too_early",
+    })
   })
 })
 

@@ -71,6 +71,11 @@ describe("resolveSent", () => {
     expect(resolveSent(sent, shown, NOW, ZONE, NOON)).toEqual({ ok: true, instant: NOON })
   })
 
+  it("refuses a held instant before the earliest allowed, as it refuses a picked one", () => {
+    expect(resolveSent(sent, shown, shown, ZONE, NOON, sent + 15 * 60_000)).toEqual({ ok: false, issue: "too_early" })
+    expect(resolveSent(sent, shown, shown, ZONE, NOON, sent + 5_000)).toEqual({ ok: true, instant: sent + 5_000 })
+  })
+
   it("reads the field, with its checks, when nothing was sent", () => {
     expect(resolveSent(null, NOW, shown, ZONE, NOON)).toEqual({ ok: true, instant: at("2026-10-09T18:30:00Z") })
     expect(resolveSent(null, NOW, shown, ZONE, NOON, at("2026-10-09T18:45:00Z"))).toEqual({

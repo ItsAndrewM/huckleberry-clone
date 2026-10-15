@@ -75,7 +75,7 @@ export const resolveSent = (
   now: Instant,
   earliest = 0,
 ): Resolved =>
-  sent !== null && sameWhen(when, seeded) ? { ok: true, instant: sent } : resolveWhen(when, zone, now, earliest)
+  sent !== null && sameWhen(when, seeded) ? notBefore(sent, earliest) : resolveWhen(when, zone, now, earliest)
 
 export const ambiguity = (when: When, zone: string): LocalResolution | null => {
   if (when.kind === "now") return null
