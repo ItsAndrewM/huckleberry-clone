@@ -29,8 +29,17 @@ const middleOf = (box: Box): Point => ({
   y: (box?.y ?? Number.NaN) + (box?.height ?? Number.NaN) / 2,
 })
 
+const bottomOf = (box: Box) => (box?.y ?? Number.NaN) + (box?.height ?? Number.NaN)
+
 const covers = (box: Box, { x, y }: Point) =>
   box !== null && box.x < x && x < box.x + box.width && box.y < y && y < box.y + box.height
+
+const layerZIndexOf = (entry: Locator) =>
+  entry.evaluate((button) => {
+    const layer = button.closest("div.absolute")
+    if (layer === null) throw new Error("The entry isn't in a layer of its own")
+    return Number(layer.ownerDocument.defaultView?.getComputedStyle(layer).zIndex)
+  })
 
 test("draws each nursing feed as a block, and bottles and diapers as markers by the hour", async ({ page }) => {
   const { played, andrew, emily } = await playHistory(page, [])
@@ -156,4 +165,24 @@ test("reads and tabs through the day's entries by the time each began, then its 
     "Log at 12 AM",
   ])
   expect(upToTheTime.slice(10).every((name) => name?.startsWith("Log at"))).toBe(true)
+})
+
+test("lifts a focused entry's layer above the entry that starts where it ends", async ({ page }) => {
+  const { played, andrew, emily } = await playHistory(page, [])
+  played.days.push({
+    ...emptyDay(DAY),
+    feeds: [
+      feed("earlier", andrew, [{ side: "left", from: local("08:00"), to: local("08:30") }]),
+      feed("later", emily, [{ side: "right", from: local("08:30"), to: local("09:00") }]),
+    ],
+  })
+  await openHistory(page)
+  const grid = page.getByRole("region", { name: "The day by hour" })
+  const earlier = grid.getByRole("button", { name: /^Nursing at 8:00 AM/u })
+  const later = grid.getByRole("button", { name: /^Nursing at 8:30 AM/u })
+  await expect(earlier).toBeVisible()
+  expect((await later.boundingBox())?.y).toBeCloseTo(bottomOf(await earlier.boundingBox()), 1)
+  await earlier.focus()
+  await expect(earlier).toBeFocused()
+  expect(await layerZIndexOf(earlier)).toBeGreaterThan(await layerZIndexOf(later))
 })

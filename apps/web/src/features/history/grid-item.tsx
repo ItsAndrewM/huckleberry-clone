@@ -68,7 +68,7 @@ const ItemBody = ({ item, model, display, now, onOpen }: GridItemViewProps) => {
 }
 
 export const GridItemView = (props: GridItemViewProps) => (
-  <div className={cn("pointer-events-none absolute inset-y-0 z-10", COLUMNS[props.item.kind])}>
+  <div className={cn("pointer-events-none absolute inset-y-0 z-10 focus-within:z-20", COLUMNS[props.item.kind])}>
     <ItemBody {...props} />
   </div>
 )
