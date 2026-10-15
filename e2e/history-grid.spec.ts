@@ -68,15 +68,15 @@ test("grows a running feed's block as time passes", async ({ page }) => {
   const { played, emily } = await playHistory(page, [])
   played.days.push({
     ...emptyDay(DAY),
-    feeds: [feed("running", emily, [{ side: "left", from: local("09:10"), to: null }])],
+    feeds: [feed("running", emily, [{ side: "left", from: local("09:04"), to: null }])],
   })
   await page.clock.install({ time: NOW })
   await page.goto("/history")
-  const block = page.getByRole("button", { name: /^Nursing at 9:10 AM: in progress/u })
-  await expect(block).toHaveText("Nursing 20m L · now")
+  const block = page.getByRole("button", { name: /^Nursing at 9:04 AM: in progress/u })
+  await expect(block).toHaveText("Nursing 26m L · now")
   const before = await block.boundingBox()
   await page.clock.fastForward("30:00")
-  await expect(block).toHaveText("Nursing 50m L · now")
+  await expect(block).toHaveText("Nursing 56m L · now")
   const after = await block.boundingBox()
   expect((after?.height ?? 0) - (before?.height ?? 0)).toBeCloseTo(30, 0)
 })

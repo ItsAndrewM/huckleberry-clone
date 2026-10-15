@@ -12,7 +12,7 @@ import {
 } from "@bt/domain"
 import type { Hidden } from "./history-kinds.ts"
 
-export const SCALE: GridScale = { stepMs: 5 * 60_000, minBlockSteps: 4, pointSteps: 5 }
+export const SCALE: GridScale = { stepMs: 5 * 60_000, minBlockSteps: 5, pointSteps: 5 }
 
 export interface DaySlice {
   readonly date: LocalDate
