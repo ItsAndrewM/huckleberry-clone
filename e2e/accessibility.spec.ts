@@ -43,7 +43,7 @@ const SCREENS: ReadonlyArray<Screen> = [
   {
     name: "Trends by day",
     path: "/trends?view=day",
-    ready: (page) => page.getByRole("region", { name: "Feeds started" }),
+    ready: (page) => page.getByRole("region", { name: "Feeds started" }).getByText(/^Usual /u),
   },
   {
     name: "Trends by month",

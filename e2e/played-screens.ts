@@ -1,7 +1,7 @@
 import type { Page } from "@playwright/test"
 import { BIRTH_DATE, busyDay, DAY, diaper, dose, emptyDay, feed, local, measurement, NOW, sleep } from "./played-day.ts"
 import { datesFrom, periodOf, TRENDS_DAYS } from "./played-period.ts"
-import { THIS_WEEK, weekOf } from "./played-week.ts"
+import { LAST_WEEK, THIS_WEEK, weekOf } from "./played-week.ts"
 
 const MINUTE = 60_000
 
@@ -92,7 +92,14 @@ export const playEveryScreen = async (page: Page) => {
       ["2026-10-08", emptyDay("2026-10-08")],
     ]),
   )
-  await answering(page, /\/api\/weeks\/[^/]+$/u, new Map([[THIS_WEEK, { ...week, week: THIS_WEEK }]]))
+  await answering(
+    page,
+    /\/api\/weeks\/[^/]+$/u,
+    new Map([
+      [THIS_WEEK, { ...week, week: THIS_WEEK }],
+      [LAST_WEEK, { ...periodOf(datesFrom("2026-09-28", 7), TRENDS_DAYS), week: LAST_WEEK }],
+    ]),
+  )
   await answering(
     page,
     /\/api\/months\/[^/]+$/u,
