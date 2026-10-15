@@ -303,6 +303,23 @@ describe("a failed send", () => {
     })
   })
 
+  it("opens its sheet again on the reason when the phone was offline and kept it open, without holding taps", () => {
+    const failed = { sending: DIAPER, error: new Offline() }
+    const kept = sendingState(shownState(CLOSED, "diaper"), DIAPER, false)
+    expect(failedState(kept, failed, NOW)).toEqual({ ...CLOSED, open: "diaper", opened: 2, held: [failed] })
+  })
+
+  it("leaves a running feed's control in place, since its sheet never closes on a send", () => {
+    const failed = { sending: SWITCH, error: new Offline() }
+    const sent = sendingState(shownState(CLOSED, "nursing"), SWITCH, true)
+    expect(failedState(sent, failed, NOW)).toMatchObject({ open: "nursing", opened: 1, queued: false, held: [failed] })
+  })
+
+  it("leaves another open sheet as it is when this one's failure lands", () => {
+    const failed = { sending: DIAPER, error: new Offline() }
+    expect(failedState(shownState(CLOSED, "bottle"), failed, NOW)).toMatchObject({ open: "bottle", opened: 1 })
+  })
+
   it("says so in a toast when it was an undo", () => {
     const undo: Sending = {
       sheet: "undo",
