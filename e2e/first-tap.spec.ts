@@ -249,3 +249,71 @@ test("Add measurement, tapped again after its send failed offline, saves the fir
   expect(phone.bodies[1]?.measuredAt).toBe(FIRST_TAP)
   expect(sentOnce(phone)).toBe(true)
 })
+
+const pausedFeed = (by: string): FeedAnswer => {
+  const feed = runningFeed(by, STARTED, "left")
+  return { ...feed, segments: feed.segments.map((segment) => ({ ...segment, endedAt: NOW - 5 * MINUTE })) }
+}
+
+interface Control {
+  readonly name: string
+  readonly feed: (by: string) => FeedAnswer
+  readonly route: string
+  readonly first: RegExp
+  readonly again: RegExp
+  readonly side?: string
+}
+
+const CONTROLS: ReadonlyArray<Control> = [
+  {
+    name: "Pause",
+    feed: (by) => runningFeed(by, STARTED, "left"),
+    route: "**/api/feeds/feed-1/pause",
+    first: /^Pause$/u,
+    again: /^Pause$/u,
+  },
+  {
+    name: "Switch",
+    feed: (by) => runningFeed(by, STARTED, "left"),
+    route: "**/api/feeds/feed-1/switch",
+    first: /^Switch to Right$/u,
+    again: /^Switch to Right$/u,
+  },
+  {
+    name: "Resume, on the other side the second time,",
+    feed: pausedFeed,
+    route: "**/api/feeds/feed-1/resume",
+    first: /^Right/u,
+    again: /^Left/u,
+    side: "left",
+  },
+  {
+    name: "A paused feed's Finish",
+    feed: pausedFeed,
+    route: "**/api/feeds/feed-1/finish",
+    first: /^Finish$/u,
+    again: /^Finish$/u,
+  },
+]
+
+for (const control of CONTROLS) {
+  test(`${control.name} tapped again after its send failed saves the first tap's time`, async ({ page }) => {
+    const { andrew } = await caregiversOf(page)
+    const feed = control.feed(andrew.id)
+    await playHousehold(page, todayWith(feed))
+    const phone = await playSends(page, control.route, () => savedFeed({ ...feed, version: 2 }))
+    await muteLiveUpdates(page)
+    await openToday(page)
+    await page.clock.setFixedTime(FIRST_TAP)
+    const sheet = await openSheet(page, "Nursing")
+    await sheet.getByRole("button", { name: control.first }).click()
+    await expect(sheet.getByRole("alert")).toContainText("No connection")
+    await page.clock.setFixedTime(SIGNAL_BACK)
+    phone.offline = false
+    await sheet.getByRole("button", { name: control.again }).click()
+    await expect.poll(() => phone.bodies.length).toBe(2)
+    expect(phone.bodies[1]?.occurredAt).toBe(FIRST_TAP)
+    expect(phone.bodies[1]?.side).toBe(control.side ?? phone.bodies[0]?.side)
+    expect(sentOnce(phone)).toBe(true)
+  })
+}

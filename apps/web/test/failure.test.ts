@@ -12,9 +12,10 @@ import {
 } from "@bt/contracts"
 import { describe, expect, it } from "vitest"
 import type { Action } from "../src/api/actions.ts"
-import { AuthRequired, Offline } from "../src/api/errors.ts"
+import { AuthRequired, Offline, Unexpected } from "../src/api/errors.ts"
 import { StaleDraft } from "../src/sheets/drafts.ts"
 import { failureNote, type Household } from "../src/sheets/failure.ts"
+import { offersRetry } from "../src/sheets/held.ts"
 import { Unsaved } from "../src/sheets/kept.ts"
 import { measurement } from "./growth-fixtures.ts"
 import { ANDREW, diaperAt, dosedAt, EMILY, feedAt, MINUTE, NOW, sleptAt, ZONE } from "./today-fixtures.ts"
@@ -260,5 +261,27 @@ describe("failureNote", () => {
     expect(failureNote(new NotFound(), HOUSEHOLD, { keptOn: "phone", sheet: "bottle" }).message).toBe(
       "This has changed since it opened. Today is up to date now.",
     )
+  })
+})
+
+describe("offersRetry", () => {
+  const feed = feedAt(NOW, { id: "feed-1" })
+  it.each([
+    ["no connection", new Offline()],
+    ["a household that's unavailable", new ServiceUnavailable()],
+    ["an answer it can't read", new Unexpected({ status: 500 })],
+    ["a draft from before sign-in", new StaleDraft({ createdAt: NOW })],
+    ["an entry kept on the phone", new Unsaved({ keptAt: NOW, failed: true })],
+    ["an expired sign-in", new AuthRequired()],
+    ["a refused sign-in", new Unauthorized()],
+    ["a time it refused", new InvalidInput({ fieldErrors: [{ path: "occurredAt", issue: "in_future" }] })],
+    ["a record that's gone", new NotFound()],
+    ["the other phone's change", new FeedConflict({ code: "STALE_VERSION", current: feed })],
+    ["a diaper conflict", new DiaperConflict({ code: "STALE_VERSION", current: diaperAt(NOW) })],
+    ["a measurement conflict", new MeasurementConflict({ code: "STALE_VERSION", current: measurement("m1", NOW, {}) })],
+    ["a sleep conflict", new SleepConflict({ code: "STALE_VERSION", current: sleptAt(NOW) })],
+    ["a dose that day already", new DoseConflict({ code: "SUPPLEMENT_DUPLICATE_DAY", current: dosedAt(NOW) })],
+  ])("is true exactly when the note offers a retry button: %s", (_case, error) => {
+    expect(offersRetry(error)).toBe(failureNote(error, HOUSEHOLD, { keptOn: null }).retry !== null)
   })
 })
