@@ -1,10 +1,9 @@
-import { type BrowserContext, expect, type Locator, type Page, test } from "@playwright/test"
+import type { BrowserContext, Locator, Page } from "@playwright/test"
 import {
   caregiversOf,
   type DoseAnswer,
   type FeedAnswer,
   MINUTE,
-  muteLiveUpdates,
   NOW,
   openToday,
   playHousehold,
@@ -17,6 +16,7 @@ import {
   type TodayAnswer,
   todayWith,
 } from "./played-household.ts"
+import { expect, test } from "./test.ts"
 
 test.use({ timezoneId: "Europe/London" })
 
@@ -56,8 +56,7 @@ const playSends = async (page: Page, pattern: string | RegExp, answer: (body: Bo
   return phone
 }
 
-const goOfflineLikeAPhone = async (page: Page, context: BrowserContext) => {
-  await page.routeWebSocket(/\/api\/ws$/u, (socket) => socket.close({ code: 1011, reason: "offline" }))
+const goOffline = async (page: Page, context: BrowserContext) => {
   await context.setOffline(true)
   await expect(page.getByRole("alert").filter({ hasText: "No connection" }).first()).toBeVisible()
 }
@@ -194,9 +193,8 @@ for (const form of FORMS) {
     const { andrew } = await caregiversOf(page)
     await playHousehold(page, form.today(andrew.id))
     const phone = await playSends(page, form.route, form.answer(andrew.id))
-    await muteLiveUpdates(page)
     await openToday(page)
-    await goOfflineLikeAPhone(page, context)
+    await goOffline(page, context)
     await page.clock.setFixedTime(FIRST_TAP)
     const sheet = await form.open(page)
     await sheet.getByRole("button", { name: form.save, exact: true }).click()
@@ -235,11 +233,10 @@ test("Add measurement, tapped again after its send failed offline, saves the fir
       changed: [["growth"]],
     },
   }))
-  await muteLiveUpdates(page)
   await page.clock.setFixedTime(NOW)
   await page.goto("/growth")
   await page.getByRole("button", { name: "Add measurement" }).waitFor()
-  await goOfflineLikeAPhone(page, context)
+  await goOffline(page, context)
   await page.clock.setFixedTime(FIRST_TAP)
   await page.getByRole("button", { name: "Add measurement" }).click()
   const sheet = page.getByRole("dialog", { name: "Add measurement" })
@@ -305,7 +302,6 @@ for (const control of CONTROLS) {
     const feed = control.feed(andrew.id)
     await playHousehold(page, todayWith(feed))
     const phone = await playSends(page, control.route, () => savedFeed({ ...feed, version: 2 }))
-    await muteLiveUpdates(page)
     await openToday(page)
     await page.clock.setFixedTime(FIRST_TAP)
     const sheet = await openSheet(page, "Nursing")
