@@ -14,6 +14,13 @@ const labelFor = (kind: ExportKind) => `${sharesKind(kind) ? "Share" : "Download
 
 const LABELS = { csv: labelFor("csv"), json: labelFor("json") } satisfies Record<ExportKind, string>
 
+const readyFor = (kind: ExportKind) => `The ${NAMES[kind]} is ready.`
+
+const announcement = (preparing: ExportKind | null, waiting: Exported | null) => {
+  if (preparing !== null) return `Preparing the ${NAMES[preparing]}…`
+  return waiting === null ? "" : readyFor(waiting.kind)
+}
+
 const ShareAgain = ({
   waiting,
   onShare,
@@ -22,7 +29,9 @@ const ShareAgain = ({
   readonly onShare: (waiting: Exported) => void
 }) => (
   <div className="flex items-center justify-between gap-3">
-    <output className="text-base">The {NAMES[waiting.kind]} is ready.</output>
+    <p aria-hidden="true" className="text-base">
+      {readyFor(waiting.kind)}
+    </p>
     <Button size="lg" onClick={() => onShare(waiting)}>
       Share it
     </Button>
@@ -59,9 +68,7 @@ export const ExportSection = ({ timeZone }: { readonly timeZone: TimeZone }) => 
           </Button>
         ))}
       </div>
-      <output className="sr-only">
-        {exporting.preparing === null ? "" : `Preparing the ${NAMES[exporting.preparing]}…`}
-      </output>
+      <output className="sr-only">{announcement(exporting.preparing, exporting.waiting)}</output>
       {exporting.waiting === null ? null : <ShareAgain waiting={exporting.waiting} onShare={exporting.shareAgain} />}
       {exporting.failure === null ? null : (
         <p role="alert" className="text-sm text-destructive">

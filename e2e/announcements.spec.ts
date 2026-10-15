@@ -1,30 +1,47 @@
-import { emptyDay, openHistory, playHistory } from "./played-day.ts"
+import type { Locator } from "@playwright/test"
+import { dayHeading, emptyDay, openHistory, playHistory } from "./played-day.ts"
 import { gate, NOW } from "./played-household.ts"
 import { datesFrom, openTrends, periodOf, playTrends, TRENDS_DAYS } from "./played-period.ts"
+import { LAST_WEEK, playWeeks, THIS_WEEK, weekHeading, weekOf } from "./played-week.ts"
 import { expect, test } from "./test.ts"
 
 test.use({ timezoneId: "America/Vancouver" })
 
-test("History's Day and Week headings are read out when a step changes them", async ({ page }) => {
+const expectChangeInPlace = async (heading: Locator, step: Locator, after: string | RegExp) => {
+  await expect(heading).toHaveAttribute("aria-live", "polite")
+  await heading.evaluate((element) => element.setAttribute("data-probe", "1"))
+  await step.click()
+  await expect(heading).toHaveText(after)
+  await expect(heading).toHaveAttribute("data-probe", "1")
+}
+
+test("History's Day heading is a polite live region that a step changes in place", async ({ page }) => {
   await playHistory(page, [emptyDay("2026-10-09"), emptyDay("2026-10-08")])
   await openHistory(page)
-  const days = page.getByRole("navigation", { name: "Days" })
-  await expect(days.getByRole("heading")).toHaveAttribute("aria-live", "polite")
-  await days.getByRole("link", { name: "Previous day" }).click()
-  await expect(days.getByRole("heading")).toHaveText("Thu, Oct 8")
+  await expectChangeInPlace(dayHeading(page), page.getByRole("link", { name: "Previous day" }), "Thu, Oct 8")
+})
+
+test("History's Week heading is a polite live region that a step changes in place", async ({ page }) => {
+  await playHistory(page, [])
+  await playWeeks(page, { [THIS_WEEK]: weekOf(THIS_WEEK, []), [LAST_WEEK]: weekOf(LAST_WEEK, []) })
+  await openHistory(page, "?view=week")
+  await expectChangeInPlace(weekHeading(page), page.getByRole("link", { name: "Previous week" }), /^Sep 28\s–\sOct 4$/u)
 })
 
 test.describe("Trends", () => {
   test.beforeEach(async ({ page }) => {
     const week = periodOf(datesFrom("2026-10-05", 7), TRENDS_DAYS)
-    await playTrends(page, { weeks: { "2026-W41": week }, months: {} })
+    const lastWeek = periodOf(datesFrom("2026-09-28", 7), TRENDS_DAYS)
+    await playTrends(page, { weeks: { "2026-W41": week, "2026-W40": lastWeek }, months: {} })
     await openTrends(page)
   })
 
-  test("reads out the period's heading when a step changes it", async ({ page }) => {
-    await expect(page.getByRole("navigation", { name: "weeks" }).getByRole("heading")).toHaveAttribute(
-      "aria-live",
-      "polite",
+  test("the period's heading is a polite live region that a step changes in place", async ({ page }) => {
+    const weeks = page.getByRole("navigation", { name: "weeks" })
+    await expectChangeInPlace(
+      weeks.getByRole("heading"),
+      weeks.getByRole("link", { name: "Previous week" }),
+      /^Sep 28\s–\sOct 4$/u,
     )
   })
 
