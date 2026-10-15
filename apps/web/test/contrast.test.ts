@@ -54,6 +54,14 @@ const MARKS: ReadonlyArray<Mark> = [
     on: ["background", "card"],
   },
   {
+    name: "a checked choice's border",
+    file: "features/settings/sex-choice.tsx",
+    className: "has-checked:border-primary",
+    colour: "primary",
+    alpha: 1,
+    on: ["background", "card"],
+  },
+  {
     name: "a feed's block on the Day grid",
     file: "features/history/grid-block.tsx",
     className: "border-primary/65",
