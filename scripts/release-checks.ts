@@ -134,8 +134,8 @@ export const gateEnv = (env: NodeJS.ProcessEnv): NodeJS.ProcessEnv => ({ ...envF
 export const restorePointOf = (at: Date): string => `${at.toISOString().slice(0, 19)}Z`
 
 const sourceOf = (runId: string | undefined, gatesLocal = false): string => {
-  if (runId !== undefined) return `ci:${runId}`
-  return gatesLocal ? "local gates" : "local"
+  if (gatesLocal) return "local gates"
+  return runId === undefined ? "local" : `ci:${runId}`
 }
 
 export const versionUploadArgs = ({ config, commit, runId, gatesLocal }: Upload): string[] => [

@@ -255,6 +255,11 @@ describe("the version a release uploads", () => {
     const args = versionUploadArgs({ ...UPLOAD, runId: undefined, gatesLocal: true })
     expect(valueAfter(args, "--message")).toBe("20390a3 local gates")
   })
+
+  it("says local gates even inside a CI run, since the release skipped CI's check", () => {
+    const args = versionUploadArgs({ ...UPLOAD, runId: "18233456789", gatesLocal: true })
+    expect(valueAfter(args, "--message")).toBe("20390a3 local gates")
+  })
 })
 
 describe("the version Wrangler reports it uploaded", () => {
@@ -299,6 +304,12 @@ describe("the deploy that puts the uploaded version live", () => {
 
   it("says local gates when the Mac ran CI's checks itself", () => {
     expect(valueAfter(versionDeployArgs({ ...ROLLOUT, runId: undefined, gatesLocal: true }), "--message")).toBe(
+      "20390a3 restore point 2026-10-12T15:49:59Z local gates",
+    )
+  })
+
+  it("says local gates even inside a CI run, since the release skipped CI's check", () => {
+    expect(valueAfter(versionDeployArgs({ ...ROLLOUT, runId: "18233456789", gatesLocal: true }), "--message")).toBe(
       "20390a3 restore point 2026-10-12T15:49:59Z local gates",
     )
   })
