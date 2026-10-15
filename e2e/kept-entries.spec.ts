@@ -1,4 +1,4 @@
-import { expect, type Page, test } from "@playwright/test"
+import type { Page } from "@playwright/test"
 import {
   caregiversOf,
   gate,
@@ -16,6 +16,7 @@ import {
   sleepingToday,
   todayWith,
 } from "./played-household.ts"
+import { expect, test } from "./test.ts"
 
 const HOUR = 3_600_000
 const KEPT_ACTION_ID = "6f1d2c3b-4a5e-4b6c-8d7e-9f0a1b2c3d4e"

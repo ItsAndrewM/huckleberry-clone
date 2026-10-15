@@ -1,5 +1,6 @@
-import { type BrowserContext, expect, type Page, test } from "@playwright/test"
+import type { BrowserContext, Page } from "@playwright/test"
 import { NOW, playHousehold, todayWith } from "./played-household.ts"
+import { expect, test } from "./test.ts"
 
 test.use({ serviceWorkers: "allow" })
 

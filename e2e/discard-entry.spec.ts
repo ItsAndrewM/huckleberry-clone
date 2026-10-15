@@ -1,4 +1,4 @@
-import { expect, type Page, test } from "@playwright/test"
+import type { Page } from "@playwright/test"
 import {
   caregiversOf,
   MINUTE,
@@ -10,6 +10,7 @@ import {
   savedDiaper,
   todayWith,
 } from "./played-household.ts"
+import { expect, test } from "./test.ts"
 
 const SIGNED_OUT_COOKIE = "bt-preview-signed-out"
 const ABOVE_THE_SHEET = { x: 196, y: 40 }

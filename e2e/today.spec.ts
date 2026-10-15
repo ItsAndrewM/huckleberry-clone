@@ -1,4 +1,5 @@
-import { expect, type Locator, type Page, test } from "@playwright/test"
+import type { Locator, Page } from "@playwright/test"
+import { expect, test } from "./test.ts"
 
 const MINUTE = 60_000
 const DAY = 24 * 60 * MINUTE
@@ -403,16 +404,20 @@ test.describe("Today, with the household's answers played by the test", () => {
   })
 })
 
-test("shows a diaper the other phone just logged, without a reload", async ({ page }) => {
-  await page.goto("/")
-  await expect(page.getByText("Feeds started")).toBeVisible()
-  const occurredAt = Date.now() - 3 * MINUTE - Math.floor(Math.random() * MINUTE)
-  const logged = await page.request.post("/api/diapers", {
-    data: { actionId: crypto.randomUUID(), occurredAt, wet: false, dirty: true },
+test.describe("with the household's real socket", () => {
+  test.use({ household: "real" })
+
+  test("shows a diaper the other phone just logged, without a reload", async ({ page }) => {
+    await page.goto("/")
+    await expect(page.getByText("Feeds started")).toBeVisible()
+    const occurredAt = Date.now() - 3 * MINUTE - Math.floor(Math.random() * MINUTE)
+    const logged = await page.request.post("/api/diapers", {
+      data: { actionId: crypto.randomUUID(), occurredAt, wet: false, dirty: true },
+    })
+    expect(logged.status()).toBe(201)
+    const entry = page
+      .getByRole("listitem")
+      .filter({ has: page.locator(`time[datetime="${new Date(occurredAt).toISOString()}"]`) })
+    await expect(entry).toContainText("Poo")
   })
-  expect(logged.status()).toBe(201)
-  const entry = page
-    .getByRole("listitem")
-    .filter({ has: page.locator(`time[datetime="${new Date(occurredAt).toISOString()}"]`) })
-  await expect(entry).toContainText("Poo")
 })

@@ -1,5 +1,6 @@
-import { expect, type Locator, type Page, test } from "@playwright/test"
+import type { Locator, Page } from "@playwright/test"
 import { DAY, dayHeading, emptyDay, local, measurement, NO_TOTALS, openHistory, playHistory } from "./played-day.ts"
+import { expect, test } from "./test.ts"
 
 const YESTERDAY = "2026-10-08"
 

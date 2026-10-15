@@ -1,4 +1,4 @@
-import { expect, type Locator, type Page, type Route, test } from "@playwright/test"
+import type { Locator, Page, Route } from "@playwright/test"
 import {
   caregiversOf,
   type DoseAnswer,
@@ -11,6 +11,7 @@ import {
   type Sent,
   todayWith,
 } from "./played-household.ts"
+import { expect, test } from "./test.ts"
 
 const supplements = (page: Page) => page.getByRole("list", { name: "Supplements" })
 

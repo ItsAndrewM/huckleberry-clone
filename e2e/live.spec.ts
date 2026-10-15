@@ -1,4 +1,5 @@
-import { expect, type Page, test, type WebSocketRoute } from "@playwright/test"
+import type { Page, WebSocketRoute } from "@playwright/test"
+import { expect, test } from "./test.ts"
 
 const HEARTBEAT_MS = 30_000
 const FIRST_RETRY_AT_MOST = 1_000
@@ -26,22 +27,26 @@ const openWithSocketPlayed = async (page: Page) => {
   await expect.poll(() => sockets.length).toBe(1)
 }
 
-test("opens a socket to the household as the signed-in caregiver, and the household answers its heartbeat", async ({
-  page,
-}) => {
-  await page.clock.install()
-  const opened = page.waitForEvent("websocket", (socket) => new URL(socket.url()).pathname === "/api/ws")
-  await page.goto("/")
-  const socket = await opened
-  const frames: string[] = []
-  socket.on("framesent", ({ payload }) => frames.push(`sent ${String(payload)}`))
-  socket.on("framereceived", ({ payload }) => frames.push(`received ${String(payload)}`))
-  await expect
-    .poll(async () => {
-      await page.clock.runFor(HEARTBEAT_MS)
-      return frames
-    })
-    .toEqual(expect.arrayContaining(["sent ping", "received pong"]))
+test.describe("with the household's real socket", () => {
+  test.use({ household: "real" })
+
+  test("opens a socket to the household as the signed-in caregiver, and the household answers its heartbeat", async ({
+    page,
+  }) => {
+    await page.clock.install()
+    const opened = page.waitForEvent("websocket", (socket) => new URL(socket.url()).pathname === "/api/ws")
+    await page.goto("/")
+    const socket = await opened
+    const frames: string[] = []
+    socket.on("framesent", ({ payload }) => frames.push(`sent ${String(payload)}`))
+    socket.on("framereceived", ({ payload }) => frames.push(`received ${String(payload)}`))
+    await expect
+      .poll(async () => {
+        await page.clock.runFor(HEARTBEAT_MS)
+        return frames
+      })
+      .toEqual(expect.arrayContaining(["sent ping", "received pong"]))
+  })
 })
 
 test.describe("with the household's socket played by the test", () => {

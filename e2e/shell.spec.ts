@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test"
+import { expect, test } from "./test.ts"
 
 const TABS = ["History", "Trends", "Growth", "Settings", "Today"]
 

@@ -1,6 +1,7 @@
-import { expect, type Page, test } from "@playwright/test"
+import type { Page } from "@playwright/test"
 import { busyDay, type DayAnswer, local, openHistory, playHistory, sleep } from "./played-day.ts"
 import { muteLiveUpdates } from "./played-household.ts"
+import { expect, test } from "./test.ts"
 
 test.use({ timezoneId: "Europe/London" })
 

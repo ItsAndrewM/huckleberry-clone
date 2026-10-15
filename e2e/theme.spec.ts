@@ -1,4 +1,5 @@
-import { expect, type Page, test } from "@playwright/test"
+import type { Page } from "@playwright/test"
+import { expect, test } from "./test.ts"
 
 const background = (page: Page) => page.evaluate<string>("getComputedStyle(document.body).backgroundColor")
 

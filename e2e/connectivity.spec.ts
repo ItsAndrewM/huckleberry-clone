@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test"
+import { expect, test } from "./test.ts"
 
 const SIGNED_OUT_COOKIE = "bt-preview-signed-out"
 const HALF_PAST_NINE_IN_VANCOUVER = Date.UTC(2026, 9, 9, 16, 30)

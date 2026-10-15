@@ -1,4 +1,5 @@
-import { type BrowserContext, expect, type Locator, type Page, test } from "@playwright/test"
+import type { BrowserContext, Locator, Page } from "@playwright/test"
+import { expect, test } from "./test.ts"
 
 const NOW = Date.UTC(2026, 9, 9, 16, 30)
 const MINUTE = 60_000

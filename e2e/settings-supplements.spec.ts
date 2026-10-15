@@ -1,6 +1,7 @@
-import { expect, type Locator, type Page, test, type WebSocketRoute } from "@playwright/test"
+import type { Locator, Page, WebSocketRoute } from "@playwright/test"
 import { gate, holdRequests } from "./played-household.ts"
 import { sheetTitlesSeen, watchSheetTitles } from "./sheet-titles.ts"
+import { expect, test } from "./test.ts"
 
 const ACTION_ID = expect.stringMatching(/^[0-9a-f-]{36}$/u)
 const AT = Date.UTC(2026, 9, 9, 16, 30)

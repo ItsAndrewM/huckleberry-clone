@@ -1,4 +1,3 @@
-import { expect, test } from "@playwright/test"
 import {
   caregiversOf,
   loseSaves,
@@ -9,6 +8,7 @@ import {
   savedDiaper,
   todayWith,
 } from "./played-household.ts"
+import { expect, test } from "./test.ts"
 
 test("closes a sheet kept open offline once its save lands, and offers the Undo", async ({ page }) => {
   const { andrew } = await caregiversOf(page)

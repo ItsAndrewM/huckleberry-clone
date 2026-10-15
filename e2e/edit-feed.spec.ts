@@ -1,4 +1,4 @@
-import { expect, type Page, test, type WebSocketRoute } from "@playwright/test"
+import type { Page, WebSocketRoute } from "@playwright/test"
 import {
   caregiversOf,
   type FeedAnswer,
@@ -9,6 +9,7 @@ import {
   savedBy,
   todayWith,
 } from "./played-household.ts"
+import { expect, test } from "./test.ts"
 
 test.use({ timezoneId: "Europe/London" })
 

@@ -1,5 +1,6 @@
-import { expect, type Page, test } from "@playwright/test"
+import type { Page } from "@playwright/test"
 import { DAY, diaper, dose, emptyDay, local, NO_TOTALS, openHistory, playHistory, stopVitaminD } from "./played-day.ts"
+import { expect, test } from "./test.ts"
 
 const HOUR_PX = 60
 const BOTTLE_WAITS = "Bottle opens once Today loads."

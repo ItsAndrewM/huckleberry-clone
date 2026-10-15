@@ -1,4 +1,3 @@
-import { expect, test } from "@playwright/test"
 import {
   caregiversOf,
   gate,
@@ -14,6 +13,7 @@ import {
   type Sent,
   todayWith,
 } from "./played-household.ts"
+import { expect, test } from "./test.ts"
 
 const LAST_BOTTLE = { lastBottle: { breastMilkMl: 40, formulaMl: 20 }, lastSide: null }
 

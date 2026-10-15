@@ -1,5 +1,6 @@
-import { expect, type Page, test } from "@playwright/test"
+import type { Page } from "@playwright/test"
 import { NOW } from "./played-household.ts"
+import { expect, test } from "./test.ts"
 
 declare global {
   var sharedFiles: File[] | undefined

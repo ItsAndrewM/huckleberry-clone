@@ -1,4 +1,3 @@
-import { expect, test } from "@playwright/test"
 import {
   caregiversOf,
   MINUTE,
@@ -9,6 +8,7 @@ import {
   runningFeed,
   todayWith,
 } from "./played-household.ts"
+import { expect, test } from "./test.ts"
 
 test("promises nothing kept when a pause fails with no connection, since it goes with its sheet", async ({ page }) => {
   const { andrew } = await caregiversOf(page)

@@ -1,8 +1,9 @@
-import { expect, type Page, test } from "@playwright/test"
+import type { Page } from "@playwright/test"
 import { busyDay, dayHeading, diaper, emptyDay, local, openHistory, playHistory } from "./played-day.ts"
 import { muteLiveUpdates, playHousehold, todayWith } from "./played-household.ts"
 import { datesFrom, openTrends, periodOf, playTrends, TRENDS_DAYS } from "./played-period.ts"
 import { playWeeks, THIS_WEEK, weekGrid, weekOf } from "./played-week.ts"
+import { expect, test } from "./test.ts"
 
 test.use({ timezoneId: "America/Vancouver" })
 

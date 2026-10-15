@@ -1,5 +1,5 @@
-import { expect, test } from "@playwright/test"
 import { caregiversOf, loseSaves, playHousehold, quickAction, savedDiaper, todayWith } from "./played-household.ts"
+import { expect, test } from "./test.ts"
 
 test.use({ timezoneId: "Europe/London" })
 
