@@ -56,9 +56,12 @@ export const HistorySwitcher = ({ navigation, today, birthDate, hidden }: Histor
   const changing = changingFor === key
   const notice = hiddenNotice(hidden)
   const noun = unitOf(period.view)
-  const goTo = (date: LocalDate) => {
+  const close = () => {
     change.current?.focus()
     setChangingFor(null)
+  }
+  const goTo = (date: LocalDate) => {
+    close()
     const search = searchFor(periodOf(period.view, date), today, hidden)
     void navigate({ to: "/history", search, resetScroll: opensAtTop(search) })
   }
@@ -109,7 +112,13 @@ export const HistorySwitcher = ({ navigation, today, birthDate, hidden }: Histor
         <p className="pointer-events-none text-center text-xs text-muted-foreground">{notice}</p>
       )}
       {changing ? (
-        <GoToDate shown={goToOpensOn(period, birthDate)} earliest={birthDate} latest={today} onPick={goTo} />
+        <GoToDate
+          shown={goToOpensOn(period, birthDate)}
+          earliest={birthDate}
+          latest={today}
+          onPick={goTo}
+          onClose={close}
+        />
       ) : null}
     </div>
   )

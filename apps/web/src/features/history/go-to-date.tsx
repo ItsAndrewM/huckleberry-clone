@@ -8,11 +8,12 @@ interface GoToDateProps {
   readonly earliest: LocalDate
   readonly latest: LocalDate
   readonly onPick: (date: LocalDate) => void
+  readonly onClose: () => void
 }
 
 const focusOnOpen = (node: HTMLInputElement | null) => node?.focus()
 
-export const GoToDate = ({ shown, earliest, latest, onPick }: GoToDateProps) => {
+export const GoToDate = ({ shown, earliest, latest, onPick, onClose }: GoToDateProps) => {
   const id = useId()
   const typing = useRef(false)
   const pick = (value: string) => {
@@ -39,6 +40,10 @@ export const GoToDate = ({ shown, earliest, latest, onPick }: GoToDateProps) => 
           if (event.key === "Enter") {
             event.preventDefault()
             pick(event.currentTarget.value)
+          } else if (event.key === "Escape") {
+            event.preventDefault()
+            typing.current = false
+            onClose()
           } else if (editsDateText(event.key)) typing.current = true
         }}
         onBlur={(event) => {
