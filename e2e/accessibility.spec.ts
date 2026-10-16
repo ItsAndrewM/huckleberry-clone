@@ -21,6 +21,11 @@ const VITAMIN_D_SHEET: Opening = {
       .click(),
 }
 
+const NEW_SUPPLEMENT_SHEET: Opening = {
+  dialog: "Add a supplement",
+  open: (page) => page.getByRole("button", { name: "Add a supplement" }).click(),
+}
+
 const GROWTH_POINT: Opening = {
   dialog: "Oct 6, 2026, 1 month 5 days, 4.30 kg, 47th",
   open: async (page) => {
@@ -106,6 +111,7 @@ for (const colorScheme of ["light", "dark"] as const) {
       await expectNoViolationsIn(page, GROWTH_POINT)
       await page.goto("/settings")
       await expectNoViolationsIn(page, VITAMIN_D_SHEET)
+      await expectNoViolationsIn(page, NEW_SUPPLEMENT_SHEET)
     })
 
     test.describe("on an iPhone's browser tab", () => {
