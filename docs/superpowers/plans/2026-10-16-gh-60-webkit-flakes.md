@@ -535,3 +535,30 @@ index 309d0a0..49dfd54 100644
 1. **Report upstream?** Both would be public issues, so it's Andrew's call.
    - **Playwright:** the fake clock's `Date.now()` returns a fraction inside a timer set with a fractional delay, which a real one never does.
    - **Effect:** `wallTimeNanos` does `BigInt(Date.now())` and throws on a fraction, where `monotonicNowNanos` rounds `performance.now()`.
+   - **Andrew, 16 Oct 2026:** not now. The PR describes both.
+
+## Build record (16 Oct 2026)
+
+- **The tasks:** built natively (executing-plans) from the replay, test first. Each test failed on its task's parent for the reason given:
+  - Task 1: `df1a5e8`. 4 failed, "Expected: true, Received: false".
+  - Task 2: `27bc713`. 2 failed, 'Received: "answered"'.
+  - Task 3: `2701a63`.
+  - Task 4: `160ab84`.
+  - Task 5: `05c9c6c`.
+  - Apart from this plan, the branch's tree was byte for byte the prototype's (`baf8566`), on which every proof in Figures ran. So they weren't run again.
+- **The gates on `05c9c6c`:** all pass.
+  - `pins:check`, `lint` and `typecheck`
+  - `test`: 3,893 tests in 233 files
+  - `coverage`: 576 in 29
+  - `build` and `bundle:check`: the app's script 337.23 kB gzip, `main`'s `index-BFa5hW26.js`; CSS 12.04 kB; the Worker 262.84 KiB
+  - E2E twice in both engines: 818 passed and 2 skipped each time
+- **The final review (Opus): nothing Critical, and one Important, fixed. It amends P6.**
+  - first-tap.spec's Growth case went offline once Add was visible. Add renders disabled until Growth loads, so a late `/api/growth` answer is now refused and Add stays disabled: a certain 30 s timeout.
+  - RED: with the played answer held 1.5 s, the test timed out in both engines.
+  - GREEN: waiting for Add to be enabled before going offline, 6 of 6 with the same delay. Then the delay came out.
+  - CLAUDE.md's rule now says to wait for a control to be enabled, not just visible, and that the refusal covers `page.route` in the test's own context.
+- **Deferred minors, from the same review:**
+  - sheets-offline.spec's second test goes offline before Today has certainly loaded (Chromium only, a narrow window).
+  - `page.unroute(url, handler)` no longer matches a handler, and `routeFromHAR` would hit a redirect the stand-in route lacks. No spec uses either.
+  - The floor's `page.evaluate` would fail on a page mid-navigation and memoize the failure. Every first clock call comes before `goto` or on an idle page.
+  - Nothing pins that `continue` is refused, a `context.newPage()` page, or the real household being covered.
