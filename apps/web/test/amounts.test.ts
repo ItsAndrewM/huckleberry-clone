@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { amountText, parsedAmount, stepped } from "../src/features/feed/amounts.ts"
+import { amountIssue, amountText, parsedAmount, stepped } from "../src/features/feed/amounts.ts"
 
 describe("bottle amounts", () => {
   it("shows mL as stored, and fl oz to one decimal", () => {
@@ -24,5 +24,15 @@ describe("bottle amounts", () => {
     expect(parsedAmount("abc", "ml")).toBeNull()
     expect(parsedAmount("-5", "ml")).toBeNull()
     expect(parsedAmount("501", "ml")).toBeNull()
+  })
+
+  it("calls an amount past 500 mL out of range, and text that isn't a plain number not a number", () => {
+    expect(amountIssue("75", "ml")).toBeNull()
+    expect(amountIssue(" ", "ml")).toBeNull()
+    expect(amountIssue("501", "ml")).toBe("out_of_range")
+    expect(amountIssue("17", "fl_oz")).toBe("out_of_range")
+    expect(amountIssue("abc", "ml")).toBe("not_a_number")
+    expect(amountIssue("1.2.3", "ml")).toBe("not_a_number")
+    expect(amountIssue("-5", "ml")).toBe("not_a_number")
   })
 })

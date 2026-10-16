@@ -7,6 +7,7 @@ import {
   isComplete,
   latestInstant,
   minutesFromText,
+  minutesIssue,
   pastFeedEntry,
   pastFeedSession,
 } from "../src/features/feed/past-feed.ts"
@@ -116,6 +117,22 @@ describe("minutesFromText", () => {
     expect(minutesFromText("-1")).toBeNull()
     expect(minutesFromText("1 2")).toBeNull()
     expect(minutesFromText("abc")).toBeNull()
+  })
+})
+
+describe("minutesIssue", () => {
+  it("finds nothing wrong with minutes the field reads, a blank field included", () => {
+    expect(minutesIssue("12")).toBeNull()
+    expect(minutesIssue("240")).toBeNull()
+    expect(minutesIssue("")).toBeNull()
+  })
+
+  it("calls whole minutes past four hours out of range, and anything but digits not a number", () => {
+    expect(minutesIssue("241")).toBe("out_of_range")
+    expect(minutesIssue(" 300 ")).toBe("out_of_range")
+    expect(minutesIssue("abc")).toBe("not_a_number")
+    expect(minutesIssue("15.5")).toBe("not_a_number")
+    expect(minutesIssue("-1")).toBe("not_a_number")
   })
 })
 

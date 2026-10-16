@@ -1003,4 +1003,41 @@ test.describe("a field's message describes each field it's about and is said pol
     })
     await expect(sheet.getByRole("button", { name: "Save" })).toBeDisabled()
   })
+
+  test("Past feed's minutes that won't read, on that side's minutes alone, and nothing for a blank one", async ({
+    page,
+  }) => {
+    await inVancouver(page)
+    await playHousehold(page, todayWith())
+    await (await openNursing(page)).getByRole("button", { name: "Log a past feed" }).click()
+    const sheet = page.getByRole("dialog", { name: "Past feed" })
+    const left = sheet.getByRole("textbox", { name: "Left" })
+    const right = sheet.getByRole("textbox", { name: "Right" })
+    await beforeAnyMessage(sheet, [left, right])
+    await left.fill("12a")
+    await expectToldPolitely(sheet, /Enter a number\./u, { about: [left], notAbout: [right], stopsSave: true })
+    await expect(sheet.getByRole("button", { name: "Save" })).toBeDisabled()
+    await left.fill("241")
+    await expectToldPolitely(sheet, /Out of range\. Check the number and its unit\./u, {
+      about: [left],
+      notAbout: [right],
+      stopsSave: true,
+    })
+    await left.fill("")
+    await expect(left).not.toHaveAccessibleDescription(/Enter a number|Out of range/u)
+    await expect(left).not.toHaveAttribute("aria-invalid", "true")
+  })
+
+  test("Bottle's amount that won't read, on that amount alone, which stops Save", async ({ page }) => {
+    await playHousehold(page, todayWith())
+    await openToday(page)
+    await quickAction(page, "Bottle").click()
+    const sheet = page.getByRole("dialog", { name: "Bottle" })
+    const formula = sheet.getByRole("textbox", { name: "Formula" })
+    const breastMilk = sheet.getByRole("textbox", { name: "Breast milk" })
+    await beforeAnyMessage(sheet, [formula, breastMilk])
+    await formula.fill("1.2.3")
+    await expectToldPolitely(sheet, /Enter a number\./u, { about: [formula], notAbout: [breastMilk], stopsSave: true })
+    await expect(sheet.getByRole("button", { name: "Save" })).toBeDisabled()
+  })
 })
