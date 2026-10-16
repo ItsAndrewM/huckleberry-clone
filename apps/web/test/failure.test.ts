@@ -11,7 +11,7 @@ import {
   Unauthorized,
 } from "@bt/contracts"
 import { describe, expect, it } from "vitest"
-import type { Action } from "../src/api/actions.ts"
+import type { SleepAction } from "../src/api/actions.ts"
 import { AuthRequired, Offline, Unexpected } from "../src/api/errors.ts"
 import { StaleDraft } from "../src/sheets/drafts.ts"
 import { failureNote, type Household } from "../src/sheets/failure.ts"
@@ -49,11 +49,50 @@ const DIAPER: Sending = {
   },
 }
 
+const onSleep = (action: SleepAction): Sending => ({ sheet: "sleep", action })
+
+const TAPPED = NOW - 10 * MINUTE
+
+const WOKE_EARLIER = onSleep({
+  kind: "wakeSleep",
+  id: "sleep-1",
+  payload: { actionId: "4b1c2a5e-8f3d-4c6b-9a7e-2d1f0e3c5b6a", version: 1, occurredAt: TAPPED },
+})
+
+const NAPPED = onSleep({
+  kind: "editSleep",
+  id: "sleep-1",
+  payload: {
+    actionId: "4b1c2a5e-8f3d-4c6b-9a7e-2d1f0e3c5b6a",
+    version: 1,
+    kind: "nap",
+    startedAt: NOW - 60 * MINUTE,
+    endedAt: null,
+  },
+})
+
+const SLEEP_DELETED = onSleep({
+  kind: "deleteSleep",
+  id: "sleep-1",
+  payload: { actionId: "4b1c2a5e-8f3d-4c6b-9a7e-2d1f0e3c5b6a", version: 1 },
+})
+
+const RESUMED_LEFT: Sending = {
+  sheet: "nursing",
+  action: {
+    kind: "resumeFeed",
+    id: "feed-1",
+    payload: { actionId: "4b1c2a5e-8f3d-4c6b-9a7e-2d1f0e3c5b6a", version: 2, side: "left", occurredAt: TAPPED },
+  },
+}
+
+const EDITED_SLEEP: Sending = { ...NAPPED, sheet: "editSleep" }
+
 const message = (error: Error) => failureNote(error, HOUSEHOLD, { keptOn: "phone" }).message.replace(/\s/gu, " ")
 
-const staleSleep = (current: Sleep, action: Action["kind"]) => {
+const staleSleep = (current: Sleep, sending: Sending) => {
   const error = new SleepConflict({ code: "STALE_VERSION", current })
-  return failureNote(error, HOUSEHOLD, { keptOn: "app", sheet: "sleep", action }).message.replace(/\s/gu, " ")
+  return failureNote(error, HOUSEHOLD, { keptOn: "app", sheet: "sleep", sending }).message.replace(/\s/gu, " ")
 }
 
 describe("failureNote", () => {
@@ -72,12 +111,12 @@ describe("failureNote", () => {
     )
   })
 
-  it("asks to keep the app open for a control with no connection, since its sheet asks before letting it go", () => {
-    expect(failureNote(new Offline(), HOUSEHOLD, { keptOn: keptOnFor(WOKE, true) })).toEqual({
-      message: "No connection. Keep the app open, and try again once you're back online.",
-      retry: "Try again",
-      signIn: false,
-    })
+  it("keeps a control on Nursing or Sleep on this phone, and asks to keep the app open for one from an Edit sheet", () => {
+    expect([keptOnFor(WOKE, true), keptOnFor(WOKE, false), keptOnFor(EDITED_SLEEP, true)]).toEqual([
+      "phone",
+      "app",
+      "app",
+    ])
   })
 
   it("keeps an entry on this phone while the phone can keep it, and asks to keep the app open when it can't", () => {
@@ -173,15 +212,15 @@ describe("failureNote", () => {
 
   it("says who woke her, and when, when the other phone's wake reached the household first", () => {
     const woken = sleptAt(NOW - 60 * MINUTE, { updatedBy: EMILY, endedAt: NOW - 20 * MINUTE, version: 3 })
-    expect(staleSleep(woken, "wakeSleep")).toBe("Emily woke her at 9:10 AM.")
+    expect(staleSleep(woken, WOKE)).toBe("Emily woke her at 9:10 AM.")
   })
 
   it("keeps changed and deleted for a stale edit or delete, for a wake that finds her asleep, and for a deleted sleep", () => {
     const woken = sleptAt(NOW - 60 * MINUTE, { updatedBy: EMILY, endedAt: NOW - 20 * MINUTE, version: 3 })
-    expect(staleSleep(woken, "editSleep")).toBe("Emily changed this sleep a moment ago.")
-    expect(staleSleep(woken, "deleteSleep")).toBe("Emily changed this sleep a moment ago.")
-    expect(staleSleep({ ...woken, endedAt: null }, "wakeSleep")).toBe("Emily changed this sleep a moment ago.")
-    expect(staleSleep({ ...woken, deletedAt: NOW }, "wakeSleep")).toBe("Emily deleted this sleep a moment ago.")
+    expect(staleSleep(woken, NAPPED)).toBe("Emily changed this sleep a moment ago.")
+    expect(staleSleep(woken, SLEEP_DELETED)).toBe("Emily changed this sleep a moment ago.")
+    expect(staleSleep({ ...woken, endedAt: null }, WOKE)).toBe("Emily changed this sleep a moment ago.")
+    expect(staleSleep({ ...woken, deletedAt: NOW }, WOKE)).toBe("Emily deleted this sleep a moment ago.")
   })
 
   it("explains a refused sleep time in a sleep's words", () => {
@@ -223,6 +262,20 @@ describe("failureNote", () => {
       message: expect.stringMatching(/^This might not have been saved, Fri 9:30\sAM\. Save it now\?$/u),
       retry: "Save now",
     })
+  })
+
+  it("names a control kept through a reload, with when it was tapped, or when it was kept if it has no tap time", () => {
+    const unsaved = (sending: Sending, failed = true) =>
+      failureNote(new Unsaved({ keptAt: NOW, failed }), HOUSEHOLD, { keptOn: "phone", sheet: sending.sheet, sending })
+        .message
+    expect(unsaved(WOKE_EARLIER)).toMatch(/^The wake-up wasn't saved, Fri 9:20\sAM\. Save it now\?$/u)
+    expect(unsaved(RESUMED_LEFT)).toMatch(/^Resuming on Left wasn't saved, Fri 9:20\sAM\. Save it now\?$/u)
+    expect(unsaved(NAPPED)).toMatch(/^Your changes weren't saved, Fri 9:30\sAM\. Save them now\?$/u)
+    expect(unsaved(SLEEP_DELETED)).toMatch(/^The delete wasn't saved, Fri 9:30\sAM\. Save it now\?$/u)
+    expect(unsaved(WOKE_EARLIER, false)).toMatch(
+      /^The wake-up might not have been saved, Fri 9:20\sAM\. Save it now\?$/u,
+    )
+    expect(unsaved(DIAPER)).toMatch(/^This wasn't saved, Fri 9:30\sAM\. Save it now\?$/u)
   })
 
   it("asks before saving a draft that waited too long, with when it was kept", () => {

@@ -21,6 +21,7 @@ import {
 } from "./sheets-state.ts"
 import { TOAST_MS } from "./undo.ts"
 import { useHeldDrafts } from "./use-held-drafts.ts"
+import { useKeptControls } from "./use-kept-controls.ts"
 import { useKeptEntries } from "./use-kept-entries.ts"
 import { useReopenWhenReady } from "./use-reopen.ts"
 import { useResumedDraft } from "./use-resumed-draft.ts"
@@ -54,6 +55,8 @@ export const SheetsProvider = ({ restored, children }: SheetsProviderProps) => {
       sweepAfter(now)
     },
   })
+  const busy = mutation.isPending ? (mutation.variables ?? null) : null
+  useKeptControls(kept.held, state.held, busy)
   const deliver = (sending: Sending) => {
     kept.sending(sending)
     setState((current) => sendingState(current, sending, online))
@@ -68,7 +71,7 @@ export const SheetsProvider = ({ restored, children }: SheetsProviderProps) => {
   const sheets: Sheets = {
     ...state,
     keeping: kept.keeping,
-    busy: mutation.isPending ? (mutation.variables ?? null) : null,
+    busy,
     show: (sheet, record) => setState((current) => shownState(current, sheet, record ?? null)),
     showAt: (sheet, time, record) => setState((current) => shownState(current, sheet, record ?? null, time)),
     close: () => setState(dismissedState),

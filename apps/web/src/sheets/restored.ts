@@ -1,7 +1,7 @@
 import { DRAFT_RETRY_MS, type Draft, isFresh, renewed, StaleDraft } from "./drafts.ts"
 import { actionIdOf } from "./held.ts"
-import { type KeptEntry, type Stored, Unsaved } from "./kept.ts"
-import { type Failed, isEntry, type Sending } from "./sending.ts"
+import { isKept, type KeptEntry, type Stored, Unsaved } from "./kept.ts"
+import type { Failed, Sending } from "./sending.ts"
 
 export interface Restored {
   readonly held: ReadonlyArray<Failed>
@@ -29,7 +29,7 @@ const staleDraftBack = (draft: Draft, copy: KeptEntry | undefined, actionId: str
   const kept = { sending, keptAt: copy?.keptAt ?? draft.createdAt, idSince: now, failed: true }
   return {
     held: { sending, error: new StaleDraft({ createdAt: draft.createdAt }) },
-    kept: isEntry(sending) ? kept : null,
+    kept: isKept(sending) ? kept : null,
   }
 }
 
