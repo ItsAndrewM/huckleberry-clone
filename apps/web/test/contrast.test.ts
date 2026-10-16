@@ -56,6 +56,38 @@ const MARKS: ReadonlyArray<Mark> = [
     on: ["background", "card"],
   },
   {
+    name: "a focused invalid field's ring",
+    file: "components/ui/input.tsx",
+    className: "aria-invalid:focus-visible:ring-destructive",
+    colour: "destructive",
+    alpha: 1,
+    on: ["background", "card"],
+  },
+  {
+    name: "a focused invalid select's ring",
+    file: "components/ui/native-select.tsx",
+    className: "aria-invalid:focus-visible:ring-destructive",
+    colour: "destructive",
+    alpha: 1,
+    on: ["background", "card"],
+  },
+  {
+    name: "a focused invalid button's ring",
+    file: "components/ui/button.tsx",
+    className: "aria-invalid:focus-visible:ring-destructive",
+    colour: "destructive",
+    alpha: 1,
+    on: ["background", "card"],
+  },
+  {
+    name: "a focused invalid chip's ring",
+    file: "components/ui/toggle.tsx",
+    className: "aria-invalid:focus-visible:ring-destructive",
+    colour: "destructive",
+    alpha: 1,
+    on: ["background", "card"],
+  },
+  {
     name: "a pressed chip's border",
     file: "components/ui/toggle.tsx",
     className: "aria-pressed:border-primary",
@@ -165,4 +197,14 @@ const FADED_INVALID_BORDER = /\baria-invalid:border-[a-z-]+\/\d+/u
 test("no invalid border is faded", () => {
   const faded = sourceFiles.filter((path) => FADED_INVALID_BORDER.test(read(path)))
   expect(faded).toEqual([])
+})
+
+const FADED_INVALID_RING = /\baria-invalid:ring-[a-z-]+\/\d+/u
+const FOCUSED_INVALID_RING = "aria-invalid:focus-visible:ring-destructive"
+
+test("every control that fades its invalid ring draws it at full strength once focused", () => {
+  const fadedWhenFocused = sourceFiles.filter(
+    (path) => FADED_INVALID_RING.test(read(path)) && !usesClass(read(path), FOCUSED_INVALID_RING),
+  )
+  expect(fadedWhenFocused).toEqual([])
 })
