@@ -1,9 +1,25 @@
 import type { Locator, Page } from "@playwright/test"
-import { BIRTH_DATE, busyDay, DAY, diaper, dose, emptyDay, feed, local, measurement, NOW, sleep } from "./played-day.ts"
+import {
+  BIRTH_DATE,
+  busyDay,
+  DAY,
+  diaper,
+  dose,
+  emptyDay,
+  feed,
+  local,
+  measurement,
+  NOW,
+  sleep,
+  supplement,
+} from "./played-day.ts"
 import { datesFrom, periodOf, TRENDS_DAYS } from "./played-period.ts"
 import { LAST_WEEK, THIS_WEEK, weekOf } from "./played-week.ts"
 
 const MINUTE = 60_000
+
+const VITAMIN_D = supplement("supplement-vitamin-d", "Vitamin D", "400 IU")
+const STOPPED_IRON = supplement("supplement-iron", "Iron", "1 mL", NOW - 24 * 60 * MINUTE)
 
 const deletedAt = <Entry extends object>(entry: Entry) => ({ ...entry, deletedAt: NOW - 30 * MINUTE })
 
@@ -68,17 +84,17 @@ const answering = (page: Page, pattern: RegExp, answers: ReadonlyMap<string, obj
 export const playEveryScreen = async (page: Page) => {
   const me = await (await page.request.get("/api/me")).json()
   const [andrew, emily] = me.household.caregivers
-  const vitaminD = me.household.supplements[0].id
   const household = {
     ...me.household,
     timeZone: "America/Vancouver",
     units: { volume: "ml", weight: "kg", length: "cm" },
+    supplements: [VITAMIN_D, STOPPED_IRON],
   }
-  const day = dayOf(andrew.id, emily.id, vitaminD)
+  const day = dayOf(andrew.id, emily.id, VITAMIN_D.id)
   const trendsWeek = periodOf(datesFrom("2026-10-05", 7), TRENDS_DAYS)
   const week = { ...weekOf(THIS_WEEK, [day]), days: trendsWeek.days, totals: trendsWeek.totals }
   await page.route("**/api/me", (route) =>
-    route.fulfill({ json: { ...me, household, child: { ...me.child, birthDate: BIRTH_DATE } } }),
+    route.fulfill({ json: { ...me, household, child: { ...me.child, birthDate: BIRTH_DATE, sex: "female" } } }),
   )
   await page.route("**/api/today", (route) => route.fulfill({ json: todayOf(day) }))
   await page.route("**/api/last24h", (route) =>
@@ -106,7 +122,7 @@ export const playEveryScreen = async (page: Page) => {
     new Map([["2026-10", { ...periodOf(datesFrom("2026-10-01", 31), TRENDS_DAYS), month: "2026-10" }]]),
   )
   await page.route("**/api/growth", (route) => route.fulfill({ json: { measurements: growthOf(andrew.id) } }))
-  await page.route("**/api/deleted", (route) => route.fulfill({ json: deletedOf(andrew.id, vitaminD) }))
+  await page.route("**/api/deleted", (route) => route.fulfill({ json: deletedOf(andrew.id, VITAMIN_D.id) }))
   await page.clock.setFixedTime(NOW)
 }
 

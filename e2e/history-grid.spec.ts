@@ -138,13 +138,14 @@ test("keeps the grid under the tab bar, so a tab with a block scrolled behind it
 
 test("reads and tabs through the day's entries by the time each began, then its hours", async ({ page }) => {
   const { played, andrew, emily, me } = await playHistory(page, [])
+  const vitaminD = me.household.supplements.find(({ name }: { name: string }) => name === "Vitamin D")
   played.days.push({
     ...busyDay(andrew, emily),
     sleeps: [
       sleep("night", local("20:10", YESTERDAY), local("06:05"), "night", emily),
       sleep("nap", local("07:00"), local("07:20"), "nap", andrew),
     ],
-    doses: [dose("dose", me.household.supplements[0].id, local("08:00"), andrew)],
+    doses: [dose("dose", vitaminD.id, local("08:00"), andrew)],
   })
   await openHistory(page)
   const buttons = page.getByRole("region", { name: "The day by hour" }).getByRole("button")
