@@ -11,9 +11,9 @@ describe("each opening of a sheet", () => {
     expect(afterFailures(DIAPER_HELD).opened).toBe(CLOSED.opened + 1)
   })
 
-  it("isn't counted when a failure lands in its own open sheet, which keeps the form", () => {
+  it("is counted when a failure lands in its own open sheet, so the form starts again from the failure", () => {
     const shown = shownState(CLOSED, "diaper")
-    expect(failedState(shown, DIAPER_HELD, NOW).opened).toBe(shown.opened)
+    expect(failedState(shown, DIAPER_HELD, NOW).opened).toBe(shown.opened + 1)
   })
 
   it("is counted when the sheet opens again for the next held entry of the same kind", () => {

@@ -14,6 +14,7 @@ import {
 import type { Action } from "../api/actions.ts"
 import { AuthRequired, Offline } from "../api/errors.ts"
 import { clockTime } from "../clock-time.ts"
+import { offersRetry } from "./held.ts"
 import { restoredNote } from "./restored-note.ts"
 import { editsARecord, type SheetKind } from "./sending.ts"
 
@@ -32,7 +33,7 @@ export interface Household {
 
 const TRY_AGAIN = "Try again"
 
-const note = (message: string, retry: string | null = null): Note => ({ message, retry, signIn: false })
+const note = (message: string): Note => ({ message, retry: null, signIn: false })
 
 export const nameOf = ({ caregivers }: Household, id: string) =>
   caregivers.find((caregiver) => caregiver.id === id)?.displayName ?? "The other phone"
@@ -149,7 +150,7 @@ const GONE = "This has changed since it opened. Today is up to date now."
 
 const MEASUREMENT_GONE = "This measurement has changed since it opened. Growth is up to date now."
 
-export type KeptOn = "phone" | "app" | null
+export type KeptOn = "phone" | "app"
 
 export interface NoteOptions {
   readonly keptOn: KeptOn
@@ -162,8 +163,7 @@ const OFFLINE = {
   app: "No connection. Keep the app open, and try again once you're back online.",
 }
 
-const offlineNote = (keptOn: KeptOn): Note =>
-  note(keptOn === null ? "No connection. Try again once you're back online." : OFFLINE[keptOn], TRY_AGAIN)
+const offlineNote = (keptOn: KeptOn): Note => note(OFFLINE[keptOn])
 
 const EDITED_GONE = "This was deleted since it opened."
 
@@ -174,7 +174,7 @@ const goneMessage = (sheet: SheetKind | undefined) => {
 
 const goneNote = (sheet: SheetKind | undefined): Note => note(goneMessage(sheet))
 
-export const failureNote = (error: Error, household: Household, { keptOn, sheet, action }: NoteOptions): Note => {
+const noteFor = (error: Error, household: Household, { keptOn, sheet, action }: NoteOptions): Note => {
   if (error instanceof Offline) return offlineNote(keptOn)
   if (error instanceof AuthRequired || error instanceof Unauthorized) {
     return { message: "Your sign-in has expired. Sign in, and this will be saved.", retry: null, signIn: true }
@@ -183,5 +183,10 @@ export const failureNote = (error: Error, household: Household, { keptOn, sheet,
   if (restored !== null) return restored
   if (error instanceof InvalidInput) return fieldNote(error, household, sheet)
   if (error instanceof NotFound) return goneNote(sheet)
-  return conflictNote(error, household, action) ?? note("Not saved.", TRY_AGAIN)
+  return conflictNote(error, household, action) ?? note("Not saved.")
+}
+
+export const failureNote = (error: Error, household: Household, options: NoteOptions): Note => {
+  const said = noteFor(error, household, options)
+  return said.retry === null && offersRetry(error) ? { ...said, retry: TRY_AGAIN } : said
 }

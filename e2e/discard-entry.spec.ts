@@ -110,7 +110,7 @@ test("drops the sign-in draft of an entry sent again after Sign in, so the next 
   expect(sent).toEqual([sent[0], sent[0]])
 })
 
-test("drops the sign-in draft of a control its sheet let go, so the next load doesn't send it", async ({
+test("drops the sign-in draft of a control discarded as its sheet closes, so the next load doesn't send it", async ({
   page,
   context,
   baseURL,
@@ -132,6 +132,8 @@ test("drops the sign-in draft of a control its sheet let go, so the next load do
   await sheet.getByRole("link", { name: "Sign in" }).click()
   await expect.poll(() => draftKept(page)).not.toBeNull()
   await page.keyboard.press("Escape")
+  await expect(sheet.getByRole("alert")).toHaveText(/^Discard the pause at 9:30\sAM\?DiscardKeep$/u)
+  await sheet.getByRole("button", { name: "Discard" }).click()
   await expect(sheet).toBeHidden()
   await expect.poll(() => draftKept(page)).toBeNull()
   await context.clearCookies()

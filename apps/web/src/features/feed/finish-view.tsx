@@ -1,12 +1,13 @@
 import type { Feed, NursingSegment } from "@bt/contracts"
 import { useState } from "react"
 import { Button } from "../../components/ui/button.tsx"
+import { DiscardPrompt } from "../../sheets/discard-prompt.tsx"
 import { FailureNote } from "../../sheets/failure-note.tsx"
 import { failedFor, useSheets } from "../../sheets/sheets-context.ts"
 import { tapTime } from "../../sheets/tap-time.ts"
 import { WhenField } from "../../sheets/when-field.tsx"
 import { useNow } from "../../timer/use-now.ts"
-import { emptiedBy, stoppedAtOf, stopSession } from "./nursing-session.ts"
+import { backAsksFirst, emptiedBy, stoppedAtOf, stopSession } from "./nursing-session.ts"
 import { controlsWait, finishAction } from "./nursing-state.ts"
 
 interface FinishViewProps {
@@ -21,6 +22,7 @@ export const FinishView = ({ feed, segment, zone, onBack }: FinishViewProps) => 
   const failed = failedFor(sheets, "nursing")
   const [session] = useState(() => stopSession(failed, feed.id, zone))
   const [when, setWhen] = useState(session.when)
+  const [askingBack, setAskingBack] = useState(false)
   const now = useNow()
   const emptied = emptiedBy(failed)
   if (emptied !== null) {
@@ -44,10 +46,17 @@ export const FinishView = ({ feed, segment, zone, onBack }: FinishViewProps) => 
       </div>
     )
   }
+  if (askingBack && failed !== null) {
+    return <DiscardPrompt failed={failed} onDiscard={onBack} onKeep={() => setAskingBack(false)} />
+  }
   const finish = () => {
     const resolved = stoppedAtOf(session, when, zone, tapTime(), segment.startedAt)
     if (resolved.ok)
       sheets.send({ sheet: "nursing", action: finishAction(feed, resolved.instant, false, session.actionId) })
+  }
+  const back = () => {
+    if (backAsksFirst(failed)) setAskingBack(true)
+    else onBack()
   }
   return (
     <>
@@ -60,7 +69,7 @@ export const FinishView = ({ feed, segment, zone, onBack }: FinishViewProps) => 
       >
         Finish feed
       </Button>
-      <Button variant="ghost" size="lg" onClick={onBack}>
+      <Button variant="ghost" size="lg" onClick={back}>
         Back
       </Button>
       <FailureNote sheet="nursing" />

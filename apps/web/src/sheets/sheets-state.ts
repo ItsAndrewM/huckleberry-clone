@@ -1,7 +1,23 @@
 import type { Action } from "../api/actions.ts"
 import type { Saved } from "../api/send.ts"
-import { actionIdOf, editingOf, heldFor, isOnOpening, settlesWithoutAsking, withoutAction } from "./held.ts"
-import { closesOnSave, closesOnSend, type Failed, isUndo, type Sending, type SheetKind } from "./sending.ts"
+import {
+  actionIdOf,
+  editingOf,
+  heldFor,
+  isOnOpening,
+  savesAsItIs,
+  settlesWithoutAsking,
+  withoutAction,
+} from "./held.ts"
+import {
+  addsOrEdits,
+  closesOnSave,
+  closesOnSend,
+  type Failed,
+  isUndo,
+  type Sending,
+  type SheetKind,
+} from "./sending.ts"
 import { editLost, type Toast, toastFor, undoLost } from "./undo.ts"
 
 export interface SheetsState {
@@ -41,10 +57,15 @@ const NEW_ENTRIES = new Set<Action["kind"]>([
 
 export const isEntry = ({ action }: Sending) => NEW_ENTRIES.has(action.kind)
 
-const goesWithItsSheet = ({ sending, error }: Failed) => !isEntry(sending) || settlesWithoutAsking(error)
+const asksFirst = ({ sending, error }: Failed) => (isEntry(sending) ? !settlesWithoutAsking(error) : savesAsItIs(error))
+
+const goesOnAnotherSend = ({ sending, error }: Failed) => !isEntry(sending) || settlesWithoutAsking(error)
 
 const withoutGoing = (held: ReadonlyArray<Failed>, sheet: SheetKind | null, editing: string | null) =>
-  held.filter((failed) => !isOnOpening(failed, sheet, editing) || !goesWithItsSheet(failed))
+  held.filter((failed) => !isOnOpening(failed, sheet, editing) || asksFirst(failed))
+
+const withoutReplaced = (held: ReadonlyArray<Failed>, sheet: SheetKind | null, editing: string | null) =>
+  held.filter((failed) => !isOnOpening(failed, sheet, editing) || !goesOnAnotherSend(failed))
 
 interface Opening {
   readonly sheet: SheetKind | null
@@ -91,7 +112,7 @@ export const shownState = (
 export const dismissedState = (state: SheetsState): SheetsState => {
   if (state.open === null) return state
   const shown = heldFor(state.held, state.open, state.editing)
-  return shown !== null && !goesWithItsSheet(shown) ? { ...state, asking: true } : closing(state)
+  return shown !== null && asksFirst(shown) ? { ...state, asking: true } : closing(state)
 }
 
 export const dismissedKindState = (state: SheetsState, sheet: SheetKind): SheetsState =>
@@ -104,13 +125,20 @@ export const discardedState = (state: SheetsState, failed: Failed): SheetsState 
   return state.asking ? closing({ ...state, held }) : { ...state, held }
 }
 
+const onTheRecordItOpenedWith = (state: SheetsState, failed: Failed) =>
+  !addsOrEdits(state.open) || editingOf(failed.sending) === state.editing
+
+const landsInItsOwnSheet = (state: SheetsState, failed: Failed, own: boolean) =>
+  closesOnSend(failed.sending) &&
+  (own || (isOnOpening(failed, state.open, state.editing) && onTheRecordItOpenedWith(state, failed)))
+
 export const failedState = (state: SheetsState, failed: Failed, now: number): SheetsState => {
   if (isUndo(failed.sending)) return { ...state, toast: undoLost(failed.error, now) }
   const own = state.keptOpen === actionIdOf(failed.sending)
   if (closesOnSave(failed.sending) && !own) return { ...state, toast: editLost(failed.error, now) }
   const held = [...state.held, failed]
   if (state.open === null) return opening({ ...state, held }, openingFor(failed), true)
-  if (own && closesOnSend(failed.sending)) return opening({ ...state, held }, openingFor(failed), false)
+  if (landsInItsOwnSheet(state, failed, own)) return opening({ ...state, held }, openingFor(failed), false)
   return { ...state, held, keptOpen: own ? null : state.keptOpen }
 }
 
@@ -123,7 +151,7 @@ export const reopenedState = (state: SheetsState): SheetsState => {
 
 export const sendingState = (state: SheetsState, sending: Sending, online: boolean): SheetsState => {
   const toast = isUndo(sending) ? null : state.toast
-  const held = withoutGoing(withoutAction(state.held, actionIdOf(sending)), sending.sheet, editingOf(sending))
+  const held = withoutReplaced(withoutAction(state.held, actionIdOf(sending)), sending.sheet, editingOf(sending))
   const sent = { ...state, held, toast }
   if (closesOnSend(sending) && online) return state.open === null ? sent : closing(sent)
   if (!closesOnSend(sending) && !closesOnSave(sending)) return sent

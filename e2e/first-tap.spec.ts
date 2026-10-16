@@ -296,6 +296,29 @@ const CONTROLS: ReadonlyArray<Control> = [
   },
 ]
 
+test("A paused feed's Finish, tapped again after its send failed offline, saves the first tap's time", async ({
+  page,
+  context,
+}) => {
+  const { andrew } = await caregiversOf(page)
+  const feed = pausedFeed(andrew.id)
+  await playHousehold(page, todayWith(feed))
+  const phone = await playSends(page, "**/api/feeds/feed-1/finish", (body) =>
+    savedFeed({ ...feed, status: "completed", endedAt: body.occurredAt ?? NOW, version: 2 }),
+  )
+  await openToday(page)
+  await goOffline(page, context)
+  await page.clock.setFixedTime(FIRST_TAP)
+  const sheet = await openSheet(page, "Nursing")
+  await sheet.getByRole("button", { name: /^Finish$/u }).click()
+  await expect(sheet.getByRole("alert")).toContainText("No connection")
+  await comeBackOnline(page, context, phone)
+  await sheet.getByRole("button", { name: /^Finish$/u }).click()
+  await expect.poll(() => phone.bodies.length).toBe(2)
+  expect(phone.bodies[1]?.occurredAt).toBe(FIRST_TAP)
+  expect(sentOnce(phone)).toBe(true)
+})
+
 for (const control of CONTROLS) {
   test(`${control.name} tapped again after its send failed saves the first tap's time`, async ({ page }) => {
     const { andrew } = await caregiversOf(page)
