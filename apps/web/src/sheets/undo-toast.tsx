@@ -1,4 +1,5 @@
 import { Button } from "../components/ui/button.tsx"
+import { focusHomeOnLeave } from "../shell/focus-hand-off.ts"
 import { useSheets } from "./sheets-context.ts"
 
 export const UndoToast = () => {
@@ -11,6 +12,7 @@ export const UndoToast = () => {
           <span className="text-sm font-medium">{toast.message}</span>
           {toast.undo === null ? null : (
             <Button
+              ref={focusHomeOnLeave}
               variant="ghost"
               size="lg"
               className="text-background hover:bg-background/10 hover:text-background"

@@ -16,6 +16,7 @@ import {
 } from "./feed-draft.ts"
 import { feedDelete, feedEdit, feedEditSession } from "./feed-edit.ts"
 import { checkedParts } from "./feed-entry.ts"
+import { faultsOf } from "./feed-faults.ts"
 import { movedBy, movedDraft } from "./feed-move.ts"
 
 export const useFeedEditor = (feed: Feed, zone: string, unit: VolumeUnit) => {
@@ -34,6 +35,7 @@ export const useFeedEditor = (feed: Feed, zone: string, unit: VolumeUnit) => {
     zone,
     now,
     checked: checkedParts(draft, zone, now),
+    faults: faultsOf(draft, zone, now),
     setSide: (key: string, fields: SideFields) => setDraft(withSide(draft, key, fields)),
     setBottle: (key: string, fields: BottleFields) => setDraft(withBottle(draft, key, fields)),
     remove: (key: string) => setDraft(withoutPart(draft, key)),

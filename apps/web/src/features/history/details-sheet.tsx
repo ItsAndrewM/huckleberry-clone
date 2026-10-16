@@ -1,3 +1,4 @@
+import type { LocalDate } from "@bt/contracts"
 import { cn } from "cn"
 import { Button } from "../../components/ui/button.tsx"
 import { Sheet } from "../../sheets/sheet.tsx"
@@ -11,6 +12,7 @@ interface DetailsSheetProps {
   readonly entries: ReadonlyArray<Entry>
   readonly display: Display
   readonly now: number
+  readonly day: LocalDate
 }
 
 interface DetailsItemProps {
@@ -22,10 +24,10 @@ interface DetailsItemProps {
 
 const DetailsItem = ({ details: { title, when, lines, by }, name, named, onEdit }: DetailsItemProps) => (
   <li className="flex flex-col gap-1 py-3 first:pt-0 last:pb-0">
-    {named ? <p className="font-medium">{title}</p> : null}
+    {named ? <p className="font-medium break-words">{title}</p> : null}
     <p className="text-sm text-muted-foreground tabular-nums">{when}</p>
     {lines.map((line) => (
-      <p key={line} className="tabular-nums">
+      <p key={line} className="tabular-nums break-words">
         {line}
       </p>
     ))}
@@ -38,12 +40,12 @@ const DetailsItem = ({ details: { title, when, lines, by }, name, named, onEdit 
   </li>
 )
 
-export const DetailsSheet = ({ entries, display, now }: DetailsSheetProps) => {
+export const DetailsSheet = ({ entries, display, now, day }: DetailsSheetProps) => {
   const sheets = useSheets()
   const details = entries.map((entry) => ({
     entry,
     details: entryDetails(entry, display, now),
-    name: entryName(entry, display, now),
+    name: entryName(entry, display, now, day),
   }))
   const [only] = details
   const single = details.length === 1 && only !== undefined

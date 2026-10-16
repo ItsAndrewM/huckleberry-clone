@@ -1,11 +1,13 @@
-import type { Feed } from "@bt/contracts"
-import { useState } from "react"
+import type { Feed, NursingSegment } from "@bt/contracts"
+import { useId, useState } from "react"
+import { FieldMessage } from "../../components/field-message.tsx"
 import { Button } from "../../components/ui/button.tsx"
 import { clockOf } from "../../sheets/clock.ts"
 import { useSheets } from "../../sheets/sheets-context.ts"
 import { tapTime } from "../../sheets/tap-time.ts"
 import { WhenField } from "../../sheets/when-field.tsx"
 import { type When, whenAt } from "../../sheets/when.ts"
+import { focusFollowsSwap } from "../../shell/focus-hand-off.ts"
 import { useNow } from "../../timer/use-now.ts"
 import { firstSideOf, startAction, startChanged, startedAtOf } from "./nursing-state.ts"
 
@@ -15,19 +17,31 @@ interface FeedStartProps {
   readonly busy: boolean
 }
 
+const tooLateText = ({ endedAt }: NursingSegment) =>
+  endedAt === null ? "That's in the future." : "That's after this side ended."
+
 export const FeedStart = ({ feed, zone, busy }: FeedStartProps) => {
   const sheets = useSheets()
   const now = useNow()
   const [when, setWhen] = useState<When | null>(null)
+  const [followsSwap] = useState(focusFollowsSwap)
+  const tooLateId = useId()
   const first = firstSideOf(feed)
   if (first === undefined) return null
   if (when === null) {
     return (
-      <div className="flex items-center justify-between gap-3">
+      <div key="shown" ref={followsSwap} className="flex items-center justify-between gap-3">
         <span className="text-sm font-medium">Started</span>
         <span className="flex items-center gap-1">
           <span className="text-base tabular-nums">{clockOf(first.startedAt, zone)}</span>
-          <Button variant="ghost" size="lg" disabled={busy} onClick={() => setWhen(whenAt(first.startedAt, zone))}>
+          <Button
+            variant="ghost"
+            size="lg"
+            aria-label="Change, Started"
+            disabled={busy}
+            focusableWhenDisabled
+            onClick={() => setWhen(whenAt(first.startedAt, zone))}
+          >
             Change
           </Button>
         </span>
@@ -46,13 +60,16 @@ export const FeedStart = ({ feed, zone, busy }: FeedStartProps) => {
     setWhen(null)
   }
   return (
-    <div className="flex flex-col gap-2">
-      <WhenField label="Started" when={when} onChange={setWhen} zone={zone} now={now} />
-      {tooLate ? (
-        <p className="text-sm text-destructive">
-          {first.endedAt === null ? "That's in the future." : "That's after this side ended."}
-        </p>
-      ) : null}
+    <div key="changing" ref={followsSwap} className="flex flex-col gap-2">
+      <WhenField
+        label="Started"
+        when={when}
+        onChange={setWhen}
+        zone={zone}
+        now={now}
+        describedBy={{ id: tooLateId, invalid: tooLate }}
+      />
+      <FieldMessage id={tooLateId}>{tooLate ? tooLateText(first) : null}</FieldMessage>
       <div className="grid grid-cols-2 gap-2">
         <Button size="lg" disabled={busy || !changed || !picked.ok || tooLate} onClick={save}>
           Save start

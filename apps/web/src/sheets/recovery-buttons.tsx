@@ -4,7 +4,12 @@ import type { Failed } from "./sending.ts"
 import { useSheets } from "./sheets-context.ts"
 import { tapTime } from "./tap-time.ts"
 
-export const RecoveryButtons = ({ failed }: { readonly failed: Failed }) => {
+interface RecoveryButtonsProps {
+  readonly failed: Failed
+  readonly about?: string | undefined
+}
+
+export const RecoveryButtons = ({ failed, about }: RecoveryButtonsProps) => {
   const sheets = useSheets()
   const recovery = recoveryOf(failed)
   const ok = offersOk(failed)
@@ -16,6 +21,7 @@ export const RecoveryButtons = ({ failed }: { readonly failed: Failed }) => {
           variant="outline"
           size="lg"
           className="flex-1"
+          aria-label={about === undefined ? undefined : `${recovery.label}, ${about}`}
           onClick={() => {
             sheets.discard(failed)
             sheets.send(recovery.sendingAt({ at: tapTime(), actionId: crypto.randomUUID() }))

@@ -49,7 +49,9 @@ test("shows the week as seven days, each one up to today opening its Day view", 
   const days = weekGrid(page).getByRole("link")
   await expect(days).toHaveCount(5)
   await expect(days.first()).toHaveAccessibleName("Mon, Oct 5: nothing logged")
-  const friday = weekGrid(page).getByRole("link", { name: "Fri, Oct 9: 5 feeds started; 3 diapers, 2 pee, 2 poo" })
+  const friday = weekGrid(page).getByRole("link", {
+    name: "Fri, Oct 9, today: 5 feeds started; 3 diapers, 2 pee, 2 poo",
+  })
   await friday.click()
   await expect(page).toHaveURL(/\/history$/u)
   await expect(dayHeading(page)).toHaveText("Fri, Oct 9")
@@ -138,7 +140,9 @@ test("hides a kind on both views, and keeps it while stepping and switching", as
   await chips.getByRole("button", { name: "Diapers" }).click()
   await expect(chips.getByRole("button", { name: "Diapers" })).toHaveAttribute("aria-pressed", "false")
   await expect(page).toHaveURL(/\/history\?view=week&hide=diapers$/u)
-  await expect(weekGrid(page).getByRole("link", { name: "Fri, Oct 9: 5 feeds started", exact: true })).toBeVisible()
+  await expect(
+    weekGrid(page).getByRole("link", { name: "Fri, Oct 9, today: 5 feeds started", exact: true }),
+  ).toBeVisible()
   const legend = weekGrid(page)
   await expect(legend.getByText("Nursing", { exact: true })).toBeVisible()
   await expect(legend.getByText("Diaper", { exact: true })).toHaveCount(0)
@@ -434,13 +438,13 @@ test("draws a night as a stripe down the left of both days' columns, says it in 
   await playWeeks(page, { [THIS_WEEK]: weekOf(THIS_WEEK, [thursday, friday]) })
   await openHistory(page, "?view=week")
   const thu = weekGrid(page).getByRole("link", { name: "Thu, Oct 8: 4 h 20 min asleep, 4 h 20 min night" })
-  const fri = weekGrid(page).getByRole("link", { name: "Fri, Oct 9: 6 h 10 min asleep, 6 h 10 min night" })
+  const fri = weekGrid(page).getByRole("link", { name: "Fri, Oct 9, today: 6 h 10 min asleep, 6 h 10 min night" })
   await expect(thu).toBeVisible()
   await expect(fri).toBeVisible()
   await expect(stripesIn(page, /^Thu, Oct 8/u)).toHaveCount(1)
   await expect(stripesIn(page, /^Fri, Oct 9/u)).toHaveCount(1)
   await expect(weekGrid(page).getByText("Sleep", { exact: true })).toBeVisible()
   await page.getByRole("group", { name: "Show" }).getByRole("button", { name: "Sleep" }).click()
-  await expect(weekGrid(page).getByRole("link", { name: "Fri, Oct 9: nothing shown" })).toBeVisible()
+  await expect(weekGrid(page).getByRole("link", { name: "Fri, Oct 9, today: nothing shown" })).toBeVisible()
   await expect(stripesIn(page, /^Fri, Oct 9/u)).toHaveCount(0)
 })

@@ -1,5 +1,6 @@
 import { MAX_SEGMENT_MS, type NewFeed, type Side } from "@bt/contracts"
 import { FUTURE_TOLERANCE_MS } from "@bt/domain"
+import type { NumberIssue } from "../../number-messages.ts"
 import type { Failed } from "../../sheets/sending.ts"
 import { resolveWhen, type When, whenAt } from "../../sheets/when.ts"
 import { OTHER_SIDE } from "../../sides.ts"
@@ -28,6 +29,11 @@ export const minutesFromText = (text: string): number | null => {
   if (typed === "") return 0
   const minutes = WHOLE_NUMBER.test(typed) ? Number(typed) : null
   return isMinutes(minutes) ? minutes : null
+}
+
+export const minutesIssue = (text: string): NumberIssue | null => {
+  if (minutesFromText(text) !== null) return null
+  return WHOLE_NUMBER.test(text.trim()) ? "out_of_range" : "not_a_number"
 }
 
 export const isComplete = ({ minutes, breastMilkMl, formulaMl }: PastFeed) =>

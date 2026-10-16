@@ -1,8 +1,10 @@
 import { MAX_BOTTLE_ML, type VolumeUnit } from "@bt/contracts"
 import { flOzFromMl, mlFromFlOz, roundTo } from "@bt/domain"
+import type { NumberIssue } from "../../number-messages.ts"
 
 export const STEP_ML = 10
 export const STEP_FL_OZ = 0.5
+const PLAIN_NUMBER = /^(?:\d+(?:\.\d*)?|\.\d+)$/u
 
 export const UNIT_LABELS = { ml: "mL", fl_oz: "fl oz" } as const satisfies Record<VolumeUnit, string>
 
@@ -21,4 +23,9 @@ export const parsedAmount = (text: string, unit: VolumeUnit): number | null => {
   if (!Number.isFinite(value) || value < 0) return null
   const ml = unit === "ml" ? roundTo(value, 1) : mlFromFlOz(value)
   return ml <= MAX_BOTTLE_ML ? ml : null
+}
+
+export const amountIssue = (text: string, unit: VolumeUnit): NumberIssue | null => {
+  if (parsedAmount(text, unit) !== null) return null
+  return PLAIN_NUMBER.test(text.trim()) ? "out_of_range" : "not_a_number"
 }

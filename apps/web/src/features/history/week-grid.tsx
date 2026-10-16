@@ -24,7 +24,7 @@ export const WeekGrid = ({ columns, display, today, hidden }: WeekGridProps) => 
           <WeekColumnView
             key={column.date}
             column={column}
-            name={columnName(column, display.volume, hidden, display.locale)}
+            name={columnName(column, display.volume, hidden, today, display.locale)}
             search={daySearch(column.date, today, hidden)}
             locale={display.locale}
           />

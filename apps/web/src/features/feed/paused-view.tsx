@@ -32,13 +32,26 @@ export const PausedView = ({ feed, lastSide, zone }: PausedViewProps) => {
         label="Resume on"
         lastSide={lastSide}
         disabled={busy}
+        focusableWhenDisabled
         onPick={(side) => act(resumeAction(feed, side, tapTime()))}
       />
       <div className="grid grid-cols-2 gap-2">
-        <Button variant="secondary" size="lg" disabled={busy} onClick={() => sheets.show("bottle")}>
+        <Button
+          variant="secondary"
+          size="lg"
+          disabled={busy}
+          focusableWhenDisabled
+          onClick={() => sheets.show("bottle")}
+        >
           Add bottle
         </Button>
-        <Button variant="secondary" size="lg" disabled={busy} onClick={() => act(finishAction(feed, tapTime(), false))}>
+        <Button
+          variant="secondary"
+          size="lg"
+          disabled={busy}
+          focusableWhenDisabled
+          onClick={() => act(finishAction(feed, tapTime(), false))}
+        >
           Finish
         </Button>
       </div>

@@ -62,6 +62,7 @@ describe("measurementCards", () => {
       id: "m3",
       measuredOn: "Oct 6, 2026",
       age: "1\u00a0mo 5\u00a0d",
+      ageWords: "1 month 5 days",
       saving: false,
       cells: [
         expect.objectContaining({ value: "4.30\u00a0kg", percentile: "47th" }),

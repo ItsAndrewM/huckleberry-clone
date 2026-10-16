@@ -26,7 +26,7 @@ const markerOf = (cluster: PlacedCluster, model: DayModel, display: Display, now
       ...placed,
       kind: kindOf(first),
       text: markerText(first, display, now),
-      name: entryName(first, display, now),
+      name: entryName(first, display, now, model.date),
     }
   }
   const from = first === undefined ? 0 : timeOf(first)
@@ -34,7 +34,7 @@ const markerOf = (cluster: PlacedCluster, model: DayModel, display: Display, now
     ...placed,
     kind: "several",
     text: `${entries.length} entries`,
-    name: clusterName(entries.length, from, display),
+    name: clusterName(entries.length, from, display, model.date),
   }
 }
 

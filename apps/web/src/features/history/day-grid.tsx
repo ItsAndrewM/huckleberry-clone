@@ -1,20 +1,15 @@
 import { type HourRow, slotIn } from "@bt/domain"
 import { type RouterEvents, useRouter } from "@tanstack/react-router"
 import { cn } from "cn"
-import { LayersIcon } from "lucide-react"
 import { useState } from "react"
 import { useSheets } from "../../sheets/sheets-context.ts"
 import { tapTime } from "../../sheets/tap-time.ts"
 import type { Display } from "../today/display.ts"
-import { KIND_ICONS } from "../today/kind-icons.ts"
 import { anchorOf, type DayModel } from "./day-model.ts"
-import { blockText, entryName, sleepBlockText } from "./entry-labels.ts"
-import { GridBlock } from "./grid-block.tsx"
 import { atStep, stepsTall } from "./grid-classes.ts"
-import { GridMarker } from "./grid-marker.tsx"
-import { markersOf } from "./grid-markers.ts"
+import { GridItemView } from "./grid-item.tsx"
+import { gridItems } from "./grid-order.ts"
 import { HourRows } from "./hour-rows.tsx"
-import { SleepBlock } from "./sleep-block.tsx"
 
 interface DayGridProps {
   readonly model: DayModel
@@ -22,13 +17,6 @@ interface DayGridProps {
   readonly now: number
   readonly onOpen: (ids: ReadonlyArray<string>) => void
 }
-
-const MARKER_ICONS = {
-  bottle: KIND_ICONS.bottle,
-  diaper: KIND_ICONS.diaper,
-  dose: KIND_ICONS.dose,
-  several: LayersIcon,
-} as const
 
 const scrollIntoMiddle = (node: HTMLDivElement) => node.scrollIntoView({ block: "center" })
 
@@ -56,48 +44,9 @@ export const DayGrid = ({ model, display, now, onOpen }: DayGridProps) => {
       className={cn("relative isolate mt-2 mb-4 [--cal-step:5px]", stepsTall(grid.steps))}
     >
       <div ref={placeAtAnchor} aria-hidden="true" className={cn("absolute", atStep(anchorOf(model)))} />
-      <div className="pointer-events-none absolute inset-y-0 left-14 z-10 w-11">
-        {model.sleeps.map((block) => {
-          const entry = model.entries.get(block.id)
-          if (entry?.kind !== "sleep") return null
-          return (
-            <SleepBlock
-              key={block.id}
-              block={block}
-              {...sleepBlockText(entry.sleep, now)}
-              name={entryName(entry, display, now)}
-              onOpen={() => onOpen([block.id])}
-            />
-          )
-        })}
-      </div>
-      <div className="pointer-events-none absolute inset-y-0 right-26 left-26 z-10">
-        {grid.blocks.map((block) => {
-          const entry = model.entries.get(block.id)
-          if (entry?.kind !== "feed") return null
-          return (
-            <GridBlock
-              key={block.id}
-              block={block}
-              text={blockText(entry.feed, display.volume, now)}
-              name={entryName(entry, display, now)}
-              onOpen={() => onOpen([block.id])}
-            />
-          )
-        })}
-      </div>
-      <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-24">
-        {markersOf(model, display, now).map((marker) => (
-          <GridMarker
-            key={marker.key}
-            top={marker.top}
-            Icon={MARKER_ICONS[marker.kind]}
-            text={marker.text}
-            name={marker.name}
-            onOpen={() => onOpen(marker.ids)}
-          />
-        ))}
-      </div>
+      {gridItems(model, display, now).map((item) => (
+        <GridItemView key={item.key} item={item} model={model} display={display} now={now} onOpen={onOpen} />
+      ))}
       <HourRows rows={grid.hours} display={display} now={now} onTap={logAt} />
       {grid.now === null ? null : (
         <>

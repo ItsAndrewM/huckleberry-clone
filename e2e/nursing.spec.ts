@@ -328,6 +328,7 @@ test("offers your side on the feed the other phone started, without starting a s
   const sheet = page.getByRole("dialog", { name: "Nursing" })
   const join = sheet.getByRole("alert").getByRole("button", { name: "Switch to Left" })
   await expect(join).toBeVisible()
+  await expect(join).toHaveAccessibleName(`Switch to Left, ${emily.displayName}'s feed`)
   await page.clock.setFixedTime(NOW + MINUTE)
   await join.click()
   await expect(sheet.getByText("Left side")).toBeVisible()

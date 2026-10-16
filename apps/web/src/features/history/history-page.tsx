@@ -27,7 +27,7 @@ interface HistoryDayProps {
 const HistoryDay = ({ date, me, now, hidden, asList }: HistoryDayProps) => {
   const dayQuery = useDay(date)
   return dayQuery.data === undefined ? (
-    <NotLoaded failed={dayQuery.isError} message="This day couldn't be loaded." retry={retryOf(dayQuery)} />
+    <NotLoaded key={date} failed={dayQuery.isError} message="This day couldn't be loaded." retry={retryOf(dayQuery)} />
   ) : (
     <DayView key={date} day={dayQuery.data} me={me} now={now} hidden={hidden} asList={asList} />
   )

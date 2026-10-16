@@ -22,6 +22,7 @@ export interface Note {
   readonly message: string
   readonly retry: string | null
   readonly signIn: boolean
+  readonly about?: string
 }
 
 export interface Household {
@@ -82,8 +83,10 @@ const fieldNote = (error: InvalidInput, household: Household, sheet: SheetKind |
 const feedNote = (error: FeedConflict, household: Household): Note => {
   const { current } = error
   switch (error.code) {
-    case "FEED_ALREADY_ACTIVE":
-      return note(`${nameOf(household, current.createdBy)} started a feed at ${timeOf(household, current.startedAt)}.`)
+    case "FEED_ALREADY_ACTIVE": {
+      const name = nameOf(household, current.createdBy)
+      return { ...note(`${name} started a feed at ${timeOf(household, current.startedAt)}.`), about: `${name}'s feed` }
+    }
     case "SEGMENT_OVERLAP":
       return note(`This overlaps the feed at ${spanOf(household, current)}.`)
     case "STALE_VERSION":

@@ -1,5 +1,5 @@
 import type { Page } from "@playwright/test"
-import { NOW } from "./played-household.ts"
+import { gate, holdRequests, NOW } from "./played-household.ts"
 import { expect, test } from "./test.ts"
 
 declare global {
@@ -87,10 +87,25 @@ test("asks for a second tap when the phone says the share came too long after th
   await sharesFiles(page, ["NotAllowedError"])
   await openSettings(page)
   await exportSection(page).getByRole("button", { name: "Share CSV" }).click()
-  await expect(exportSection(page).getByText("The CSV is ready.")).toBeVisible()
+  await expect(exportSection(page).getByRole("status")).toHaveText("The CSV is ready.")
+  await expect(exportSection(page).locator("p[aria-hidden='true']", { hasText: "The CSV is ready." })).toBeVisible()
   await exportSection(page).getByRole("button", { name: "Share it" }).click()
   await expect.poll(async () => (await shared(page)).map(({ name }) => name)).toEqual(["baby-tracker-2026-10-09.csv"])
-  await expect(exportSection(page).getByText("is ready.")).toBeHidden()
+  await expect(exportSection(page).getByText("is ready.")).toHaveCount(0)
+})
+
+test("says the CSV is ready from the same polite region that said Preparing", async ({ page }) => {
+  const answered = gate()
+  await holdRequests(page, "**/api/export.csv", () => answered.opened)
+  await sharesFiles(page, ["NotAllowedError"])
+  await openSettings(page)
+  const announcer = exportSection(page).getByRole("status")
+  await expect(announcer).toBeEmpty()
+  await exportSection(page).getByRole("button", { name: "Share CSV" }).click()
+  await expect(announcer).toHaveText("Preparing the CSV…")
+  answered.open()
+  await expect(announcer).toHaveText("The CSV is ready.")
+  await expect(announcer).toHaveCount(1)
 })
 
 test("says nothing when the parent closes the share sheet", async ({ page }) => {

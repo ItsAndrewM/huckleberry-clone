@@ -29,8 +29,8 @@ export const plottedRows = (rows: ReadonlyArray<GrowthRow>): ReadonlyArray<Plott
     .flatMap((row) => (row.point === null ? [] : [{ id: row.id, ...row.point, row }]))
     .toSorted((a, b) => a.months - b.months)
 
-export const pointSummary = ({ measuredOn, age, value, percentile }: GrowthRow) =>
-  [measuredOn, age, value, percentile].join(" · ")
+export const pointSummary = ({ measuredOn, ageWords, value, percentile }: GrowthRow) =>
+  [measuredOn, ageWords, value, percentile].join(", ")
 
 const CURVES_NAMED = "WHO's 3rd, 15th, 50th, 85th and 97th percentile curves"
 

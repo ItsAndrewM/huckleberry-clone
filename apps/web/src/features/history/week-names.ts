@@ -1,4 +1,4 @@
-import type { Totals, VolumeUnit } from "@bt/contracts"
+import type { LocalDate, Totals, VolumeUnit } from "@bt/contracts"
 import { totalsLines } from "./day-summary.ts"
 import { dayTitle } from "./history-date.ts"
 import type { Hidden } from "./history-kinds.ts"
@@ -29,9 +29,16 @@ const dosesSaid = (count: number) => {
   return [count === 1 ? "a dose" : `${count} doses`]
 }
 
-export const columnName = (column: WeekColumn, volume: VolumeUnit, hidden: Hidden, locale?: string) => {
+export const columnName = (
+  column: WeekColumn,
+  volume: VolumeUnit,
+  hidden: Hidden,
+  today: LocalDate,
+  locale?: string,
+) => {
   const lines = totalsLines(shownTotals(column.totals, hidden), volume).map((parts) => parts.join(", "))
   const said = [...lines, ...(column.measured ? ["a measurement"] : []), ...dosesSaid(column.dosesShown)]
   const nothing = column.logged ? "nothing shown" : "nothing logged"
-  return `${dayTitle(column.date, locale)}: ${said.length === 0 ? nothing : said.join("; ")}`
+  const day = column.date === today ? `${dayTitle(column.date, locale)}, today` : dayTitle(column.date, locale)
+  return `${day}: ${said.length === 0 ? nothing : said.join("; ")}`
 }

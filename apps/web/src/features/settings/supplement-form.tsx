@@ -40,7 +40,7 @@ export const SupplementForm = ({ shown }: { readonly shown: Supplement | null })
         error={supplementFieldMessage(save.error, "dose")}
       />
       <p className="text-sm text-muted-foreground">Doses already logged keep the dose they were given at.</p>
-      <Button type="submit" size="lg" disabled={save.isPending}>
+      <Button type="submit" size="lg" disabled={save.isPending} focusableWhenDisabled>
         {shown === null ? "Add supplement" : "Save"}
       </Button>
       {shown === null ? null : (

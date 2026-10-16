@@ -1,5 +1,6 @@
 import type { Locator, Page } from "@playwright/test"
 import { DAY, dayHeading, emptyDay, local, measurement, NO_TOTALS, openHistory, playHistory } from "./played-day.ts"
+import { gate, holdRequests } from "./played-household.ts"
 import { expect, test } from "./test.ts"
 
 const YESTERDAY = "2026-10-08"
@@ -104,6 +105,23 @@ test("offers Try again when a day couldn't be loaded", async ({ page }) => {
   await openHistory(page, `?date=${YESTERDAY}`)
   await expect(page.getByText("This day couldn't be loaded.")).toBeVisible()
   await expect(page.getByRole("button", { name: "Try again" })).toBeVisible()
+})
+
+test("says Loading… for the next day it steps to after a Try again that failed", async ({ page }) => {
+  const { played } = await playHistory(page, [])
+  await openHistory(page)
+  const retried = page.waitForResponse(`**/api/days/${DAY}`)
+  await page.getByRole("button", { name: "Try again" }).click()
+  await retried
+  await expect(page.getByRole("button", { name: "Try again" })).toBeEnabled()
+  played.days.push(emptyDay(YESTERDAY))
+  const answered = gate()
+  await holdRequests(page, `**/api/days/${YESTERDAY}`, () => answered.opened)
+  await page.getByRole("link", { name: "Previous day" }).click()
+  await expect(page.getByText("Loading…")).toBeVisible()
+  await expect(page.getByText("This day couldn't be loaded.")).toHaveCount(0)
+  answered.open()
+  await expect(page.getByRole("region", { name: "This day" })).toHaveText("Nothing logged.")
 })
 
 test("opens a measurement from the growth strip in its edit sheet", async ({ page }) => {

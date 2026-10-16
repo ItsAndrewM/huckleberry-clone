@@ -10,7 +10,7 @@ const SIZES_TO_CONTENT_ON_REOPEN = "*:data-[slot=drawer-content]:basis-auto"
 
 interface SheetProps {
   readonly sheet: SheetKind
-  readonly title: string
+  readonly title: ReactNode
   readonly description?: string | undefined
   readonly children: ReactNode
 }
@@ -25,7 +25,10 @@ export const Sheet = ({ sheet, title, description, children }: SheetProps) => {
       onOpenChange={(open) => (open ? sheets.show(sheet) : sheets.close())}
       showSwipeHandle
     >
-      <DrawerContent className={cn("pb-[env(safe-area-inset-bottom)]", SIZES_TO_CONTENT_ON_REOPEN)}>
+      <DrawerContent
+        className={cn("pb-[env(safe-area-inset-bottom)]", SIZES_TO_CONTENT_ON_REOPEN)}
+        finalFocus={() => sheets.focusOnClose(sheet)}
+      >
         <div className="mx-auto flex w-full max-w-lg flex-col gap-5 overflow-y-auto p-4 pt-2">
           <DrawerHeader className="p-0 text-left">
             <DrawerTitle className="text-xl font-semibold tracking-tight break-words">{title}</DrawerTitle>

@@ -1,4 +1,6 @@
 import type { Feed, RecentEntry } from "@bt/contracts"
+import { useId } from "react"
+import { FieldMessage } from "../../components/field-message.tsx"
 import { Button } from "../../components/ui/button.tsx"
 import { DeleteEntry } from "../../sheets/delete-entry.tsx"
 import type { Display } from "../today/display.ts"
@@ -18,6 +20,7 @@ interface EditFeedFormProps {
 
 export const EditFeedForm = ({ feed, display, onUseTheirs }: EditFeedFormProps) => {
   const editor = useFeedEditor(feed, display.timeZone, display.volume)
+  const issueId = useId()
   const { checked, zone, now } = editor
   const start = startOf(editor.draft, zone)
   const issue = checked.ok ? null : checked.issue
@@ -28,8 +31,8 @@ export const EditFeedForm = ({ feed, display, onUseTheirs }: EditFeedFormProps) 
       {start === null ? null : (
         <FeedStartField start={start} moved={editor.moved} zone={zone} now={now} onMove={editor.moveTo} />
       )}
-      <FeedPartsEditor editor={editor} />
-      {issue === null || emptied ? null : <p className="text-sm text-destructive">{ISSUES[issue]}</p>}
+      <FeedPartsEditor editor={editor} issueId={issueId} />
+      <FieldMessage id={issueId}>{issue === null || emptied ? null : ISSUES[issue]}</FieldMessage>
       {emptied ? null : (
         <Button size="lg" className="h-14 text-lg" disabled={!checked.ok} onClick={editor.save}>
           Save

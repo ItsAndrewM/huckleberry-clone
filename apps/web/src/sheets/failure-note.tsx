@@ -1,6 +1,7 @@
 import { useLocation } from "@tanstack/react-router"
 import { useState } from "react"
 import { Button, buttonVariants } from "../components/ui/button.tsx"
+import { noteTakesFocus } from "../shell/focus-hand-off.ts"
 import { signInUrl } from "../shell/sign-in.ts"
 import { draftStorage, stashDraft } from "./drafts.ts"
 import { failureNote } from "./failure.ts"
@@ -55,20 +56,25 @@ export const FailureNote = ({ sheet }: { readonly sheet: SheetKind }) => {
   const failed = failedFor(sheets, sheet)
   if (failed === null || household === null) return null
   const keptOn = keptOnFor(failed.sending, sheets.keeping)
-  const { message, retry, signIn } = failureNote(failed.error, household, {
+  const { message, retry, signIn, about } = failureNote(failed.error, household, {
     keptOn,
     sheet,
     action: failed.sending.action.kind,
   })
   return (
-    <div role="alert" className="flex flex-col gap-3 rounded-lg bg-destructive/10 p-3 text-sm text-destructive">
+    <div
+      ref={noteTakesFocus}
+      role="alert"
+      tabIndex={-1}
+      className="flex flex-col gap-3 rounded-lg bg-destructive/10 p-3 text-sm text-destructive outline-none"
+    >
       {signIn ? <SignInNote message={message} sending={failed.sending} /> : <p>{message}</p>}
       {retry === null ? null : (
         <Button variant="outline" size="lg" onClick={() => sheets.send(failed.sending)}>
           {retry}
         </Button>
       )}
-      <RecoveryButtons failed={failed} />
+      <RecoveryButtons failed={failed} about={about} />
     </div>
   )
 }

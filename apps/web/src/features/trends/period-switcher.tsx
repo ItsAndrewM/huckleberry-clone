@@ -34,7 +34,9 @@ export const PeriodSwitcher = ({ navigation }: { readonly navigation: TrendsNavi
     <nav aria-label={`${PERIOD_NAMES[view]}s`} className="flex items-center justify-between gap-2">
       <Step search={navigation.previous} label={`Previous ${PERIOD_NAMES[view]}`} Icon={ChevronLeftIcon} />
       <div className="flex min-h-11 flex-col items-center justify-center">
-        <h2 className="text-lg font-semibold tabular-nums">{periodTitle(navigation.period)}</h2>
+        <h2 aria-live="polite" className="text-lg font-semibold tabular-nums">
+          {periodTitle(navigation.period)}
+        </h2>
         {navigation.isCurrent ? (
           <p className="text-xs text-muted-foreground">{currentLabel(view)}</p>
         ) : (

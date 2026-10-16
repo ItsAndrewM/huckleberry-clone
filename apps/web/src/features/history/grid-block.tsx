@@ -17,7 +17,7 @@ export const GridBlock = ({ block, text, name, onOpen }: GridBlockProps) => (
     aria-label={name}
     onClick={onOpen}
     className={cn(
-      "group pointer-events-auto absolute px-0.5 text-left outline-none focus-visible:z-20",
+      "group pointer-events-auto absolute px-0.5 text-left outline-none",
       atStep(block.top),
       stepsTall(block.height),
       inLane(block.lane, block.lanes),
@@ -25,8 +25,8 @@ export const GridBlock = ({ block, text, name, onOpen }: GridBlockProps) => (
   >
     <span
       className={cn(
-        "relative block size-full overflow-hidden rounded-md border border-primary/45 bg-card",
-        "group-focus-visible:ring-3 group-focus-visible:ring-ring/50",
+        "relative block size-full overflow-hidden rounded-md border border-primary/70 bg-card",
+        "group-focus-visible:ring-3 group-focus-visible:ring-ring",
         block.startsBefore && "rounded-t-none border-t-0",
         block.endsAfter && "rounded-b-none border-b-0",
       )}

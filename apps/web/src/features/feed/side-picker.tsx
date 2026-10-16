@@ -6,10 +6,11 @@ interface SidePickerProps {
   readonly label: string
   readonly lastSide: Side | null
   readonly disabled: boolean
+  readonly focusableWhenDisabled?: boolean
   readonly onPick: (side: Side) => void
 }
 
-export const SidePicker = ({ label, lastSide, disabled, onPick }: SidePickerProps) => (
+export const SidePicker = ({ label, lastSide, disabled, focusableWhenDisabled = false, onPick }: SidePickerProps) => (
   <fieldset className="flex flex-col gap-2">
     <legend className="mb-2 text-sm font-medium">{label}</legend>
     <div className="grid grid-cols-2 gap-2">
@@ -20,6 +21,7 @@ export const SidePicker = ({ label, lastSide, disabled, onPick }: SidePickerProp
           size="lg"
           className="h-16 flex-col gap-0.5 text-lg"
           disabled={disabled}
+          focusableWhenDisabled={focusableWhenDisabled}
           onClick={() => onPick(side)}
         >
           {SIDE_NAMES[side]}
