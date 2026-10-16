@@ -5,6 +5,8 @@ import type { Sending, SheetKind } from "./sending.ts"
 import { type Sheets, SheetsContext } from "./sheets-context.ts"
 import {
   announcedState,
+  askedBeforeSending,
+  blockerFor,
   discardedState,
   dismissedKindState,
   dismissedState,
@@ -52,10 +54,15 @@ export const SheetsProvider = ({ restored, children }: SheetsProviderProps) => {
       sweepAfter(now)
     },
   })
-  const send = (sending: Sending) => {
+  const deliver = (sending: Sending) => {
     kept.sending(sending)
     setState((current) => sendingState(current, sending, online))
     mutation.mutate(sending)
+  }
+  const send = (sending: Sending) => {
+    const blocker = blockerFor(state, sending)
+    if (blocker === null) deliver(sending)
+    else setState((current) => askedBeforeSending(current, sending, blocker))
   }
   useResumedDraft(restored.resend, send)
   const sheets: Sheets = {
@@ -69,7 +76,10 @@ export const SheetsProvider = ({ restored, children }: SheetsProviderProps) => {
     keep: () => setState(keptState),
     discard: (failed) => {
       kept.done(failed.sending)
+      const waiting = state.pending
+      const asksNext = discardedState(state, failed).pending !== null
       setState((current) => discardedState(current, failed))
+      if (waiting !== null && !asksNext) deliver(waiting.sending)
     },
     send,
     announce: (toast) => {

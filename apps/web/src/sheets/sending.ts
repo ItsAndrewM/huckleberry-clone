@@ -77,3 +77,16 @@ export const closesOnSend = (sending: Sending) =>
 
 export const closesOnSave = (sending: Sending) =>
   (!editsARecord(sending.sheet) && CLOSES_ON_SAVE.has(sending.action.kind)) || savesAPastSleep(sending)
+
+const NEW_ENTRIES = new Set<Action["kind"]>([
+  "logDiaper",
+  "logFeed",
+  "startFeed",
+  "addBottle",
+  "logMeasurement",
+  "logSleep",
+  "startSleep",
+  "logDose",
+])
+
+export const isEntry = ({ action }: Sending) => NEW_ENTRIES.has(action.kind)

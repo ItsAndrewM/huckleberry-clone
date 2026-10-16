@@ -1,8 +1,7 @@
 import { Data, Option, Schema } from "effect"
 import { attempt, type BrowserStorage } from "../storage.ts"
 import { actionIdOf, settlesWithoutAsking } from "./held.ts"
-import { type Failed, Sending } from "./sending.ts"
-import { isEntry } from "./sheets-state.ts"
+import { type Failed, isEntry, Sending } from "./sending.ts"
 
 export const KEPT_KEY = "bt.kept"
 
