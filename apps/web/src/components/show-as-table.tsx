@@ -7,6 +7,6 @@ export const ShowAsTable = ({ children }: { readonly children: ReactNode }) => (
       <ChevronRightIcon aria-hidden="true" className="size-4 transition-transform group-open/table:rotate-90" />
       Show as a table
     </summary>
-    {children}
+    <div className="-mx-1 overflow-x-auto px-1 pb-1">{children}</div>
   </details>
 )

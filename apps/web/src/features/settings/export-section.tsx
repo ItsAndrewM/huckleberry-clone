@@ -53,7 +53,7 @@ export const ExportSection = ({ timeZone }: { readonly timeZone: TimeZone }) => 
           {exporting.reason}
         </p>
       ) : null}
-      <div className="flex gap-2">
+      <div className="flex flex-wrap gap-2">
         {KINDS.map((kind) => (
           <Button
             key={kind}
