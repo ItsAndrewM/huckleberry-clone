@@ -29,6 +29,7 @@ import {
   todayWith,
 } from "./played-household.ts"
 import { expect, test } from "./test.ts"
+import { beforeAnyMessage, expectToldPolitely } from "./told-politely.ts"
 
 test.use({ timezoneId: "America/Vancouver" })
 
@@ -634,8 +635,8 @@ test("a When field's message describes its time and is said politely, from a reg
   const sheet = page.getByRole("dialog", { name: "Diaper" })
   await sheet.getByRole("button", { name: "Change, When" }).click()
   const when = sheet.getByLabel("When", { exact: true })
-  const messageId = await when.getAttribute("aria-describedby")
-  expect(messageId).not.toBeNull()
+  const [messageId] = (await when.getAttribute("aria-describedby"))?.split(" ") ?? []
+  expect(messageId).toBeDefined()
   const message = sheet.locator(`[id="${messageId}"]`)
   await expect(message).toHaveAttribute("aria-live", "polite")
   await expect(message).toBeEmpty()
@@ -820,35 +821,6 @@ test.describe("a Settings save keeps focus while it saves", () => {
   })
 })
 
-const beforeAnyMessage = async (scope: Locator, fields: ReadonlyArray<Locator>) => {
-  for (const field of fields) {
-    await expect(field).toBeVisible()
-    await expect(field).not.toHaveAttribute("aria-invalid", "true")
-  }
-  await scope.locator('[aria-live="polite"], output, [role="status"]').evaluateAll((regions) => {
-    for (const region of regions) region.setAttribute("data-polite-before", "")
-  })
-}
-
-interface Told {
-  readonly about: ReadonlyArray<Locator>
-  readonly notAbout?: ReadonlyArray<Locator>
-  readonly stopsSave: boolean
-}
-
-const expectToldPolitely = async (scope: Locator, said: RegExp, { about, notAbout = [], stopsSave }: Told) => {
-  for (const field of about) {
-    await expect(field).toHaveAccessibleDescription(said)
-    if (stopsSave) await expect(field).toHaveAttribute("aria-invalid", "true")
-    else await expect(field).not.toHaveAttribute("aria-invalid", "true")
-  }
-  for (const field of notAbout) {
-    await expect(field).not.toHaveAccessibleDescription(said)
-    await expect(field).not.toHaveAttribute("aria-invalid", "true")
-  }
-  await expect(scope.locator("[data-polite-before]").filter({ hasText: said })).toHaveCount(1)
-}
-
 const nursedAnHourAgo = (by: string): FeedAnswer => ({
   id: "feed-1",
   status: "completed",
@@ -892,7 +864,7 @@ test.describe("a field's message describes each field it's about and is said pol
     const started = sheet.getByLabel("Started", { exact: true })
     await beforeAnyMessage(sheet, [started])
     await started.fill("2026-10-09T09:28")
-    await expectToldPolitely(sheet, /That's after this side ended\./u, { about: [started], stopsSave: true })
+    await expectToldPolitely(sheet, /That's after this side ended\./u, { about: [started], invalid: true })
     await expect(sheet.getByRole("button", { name: "Save start" })).toBeDisabled()
   })
 
@@ -905,7 +877,7 @@ test.describe("a field's message describes each field it's about and is said pol
     const fields = [sheet.getByLabel("Started", { exact: true }), left, sheet.getByRole("textbox", { name: "Right" })]
     await beforeAnyMessage(sheet, fields)
     await left.fill("45")
-    await expectToldPolitely(sheet, /That would end at 9:45\sAM, in the future\./u, { about: fields, stopsSave: true })
+    await expectToldPolitely(sheet, /That would end at 9:45\sAM, in the future\./u, { about: fields, invalid: true })
     await expect(sheet.getByRole("button", { name: "Save" })).toBeDisabled()
   })
 
@@ -920,7 +892,7 @@ test.describe("a field's message describes each field it's about and is said pol
     const times = [fellAsleep, sheet.getByLabel("Woke", { exact: true })]
     await beforeAnyMessage(sheet, times)
     await fellAsleep.fill("2026-10-08T08:00")
-    await expectToldPolitely(sheet, /A sleep can last a day at most\./u, { about: times, stopsSave: true })
+    await expectToldPolitely(sheet, /A sleep can last a day at most\./u, { about: times, invalid: true })
     await expect(sheet.getByRole("button", { name: "Save" })).toBeDisabled()
   })
 
@@ -938,11 +910,11 @@ test.describe("a field's message describes each field it's about and is said pol
     await expectToldPolitely(sheet, /Give each side 1 to 240 minutes\./u, {
       about: [firstMinutes],
       notAbout: [firstStart, secondStart, secondMinutes],
-      stopsSave: true,
+      invalid: true,
     })
     await firstMinutes.fill("14")
     await secondStart.fill("2026-10-09T08:05")
-    await expectToldPolitely(sheet, /Two sides overlap\. Move one so they don't\./u, { about: sides, stopsSave: true })
+    await expectToldPolitely(sheet, /Two sides overlap\. Move one so they don't\./u, { about: sides, invalid: true })
     await expect(sheet.getByRole("button", { name: "Save" })).toBeDisabled()
   })
 
@@ -953,7 +925,7 @@ test.describe("a field's message describes each field it's about and is said pol
     await feedStarted.fill("2026-10-09T07:00")
     await expectToldPolitely(sheet, /Moves every side and bottle 1 h earlier\./u, {
       about: [feedStarted],
-      stopsSave: false,
+      invalid: false,
     })
     await expect(sheet.getByRole("button", { name: "Save" })).toBeEnabled()
   })
@@ -967,7 +939,7 @@ test.describe("a field's message describes each field it's about and is said pol
     await expectToldPolitely(child, /Some entries are from before this date\. Move or delete them first\./u, {
       about: [birthDate],
       notAbout: [child.getByLabel("Name", { exact: true })],
-      stopsSave: true,
+      invalid: true,
     })
   })
 
@@ -980,7 +952,7 @@ test.describe("a field's message describes each field it's about and is said pol
     await child.getByRole("button", { name: "Save", exact: true }).click()
     await expectToldPolitely(child, /Enter 22 to 44 weeks and 0 to 6 days\./u, {
       about: [weeks, days],
-      stopsSave: true,
+      invalid: true,
     })
   })
 
@@ -999,7 +971,7 @@ test.describe("a field's message describes each field it's about and is said pol
     await expectToldPolitely(sheet, /Out of range\. Check the number and its unit\./u, {
       about: [weight],
       notAbout: [sheet.getByRole("textbox", { name: "Length" })],
-      stopsSave: true,
+      invalid: true,
     })
     await expect(sheet.getByRole("button", { name: "Save" })).toBeDisabled()
   })
@@ -1015,13 +987,13 @@ test.describe("a field's message describes each field it's about and is said pol
     const right = sheet.getByRole("textbox", { name: "Right" })
     await beforeAnyMessage(sheet, [left, right])
     await left.fill("12a")
-    await expectToldPolitely(sheet, /Enter a number\./u, { about: [left], notAbout: [right], stopsSave: true })
+    await expectToldPolitely(sheet, /Enter a number\./u, { about: [left], notAbout: [right], invalid: true })
     await expect(sheet.getByRole("button", { name: "Save" })).toBeDisabled()
     await left.fill("241")
     await expectToldPolitely(sheet, /Out of range\. Check the number and its unit\./u, {
       about: [left],
       notAbout: [right],
-      stopsSave: true,
+      invalid: true,
     })
     await left.fill("")
     await expect(left).not.toHaveAccessibleDescription(/Enter a number|Out of range/u)
@@ -1037,7 +1009,7 @@ test.describe("a field's message describes each field it's about and is said pol
     const breastMilk = sheet.getByRole("textbox", { name: "Breast milk" })
     await beforeAnyMessage(sheet, [formula, breastMilk])
     await formula.fill("1.2.3")
-    await expectToldPolitely(sheet, /Enter a number\./u, { about: [formula], notAbout: [breastMilk], stopsSave: true })
+    await expectToldPolitely(sheet, /Enter a number\./u, { about: [formula], notAbout: [breastMilk], invalid: true })
     await expect(sheet.getByRole("button", { name: "Save" })).toBeDisabled()
   })
 })

@@ -46,6 +46,7 @@ const NowRow = ({ label, onChange, ref }: NowRowProps) => (
 export const WhenField = ({ label, when, onChange, zone, now, earliest, tooEarly, describedBy }: WhenFieldProps) => {
   const [followsSwap] = useState(focusFollowsSwap)
   const messageId = useId()
+  const questionId = useId()
   if (when.kind === "now") {
     return <NowRow ref={followsSwap} label={label} onChange={() => onChange(whenAt(now, zone))} />
   }
@@ -62,7 +63,7 @@ export const WhenField = ({ label, when, onChange, zone, now, earliest, tooEarly
             step={60}
             value={when.local}
             aria-invalid={message !== "" || describedBy?.invalid === true}
-            aria-describedby={describedBy === undefined ? messageId : `${messageId} ${describedBy.id}`}
+            aria-describedby={[messageId, questionId, describedBy?.id].filter((id) => id !== undefined).join(" ")}
             onChange={(event) => onChange({ kind: "at", local: event.target.value, pick: null })}
           />
         </label>
@@ -70,7 +71,7 @@ export const WhenField = ({ label, when, onChange, zone, now, earliest, tooEarly
           Now
         </Button>
       </div>
-      <AmbiguityChoice when={when} zone={zone} onChange={onChange} />
+      <AmbiguityChoice id={questionId} when={when} zone={zone} onChange={onChange} />
       <FieldMessage id={messageId}>{message}</FieldMessage>
     </div>
   )
