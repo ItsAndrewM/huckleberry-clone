@@ -149,7 +149,7 @@ const GONE = "This has changed since it opened. Today is up to date now."
 
 const MEASUREMENT_GONE = "This measurement has changed since it opened. Growth is up to date now."
 
-export type KeptOn = "phone" | "app" | null
+export type KeptOn = "phone" | "app"
 
 export interface NoteOptions {
   readonly keptOn: KeptOn
@@ -162,8 +162,7 @@ const OFFLINE = {
   app: "No connection. Keep the app open, and try again once you're back online.",
 }
 
-const offlineNote = (keptOn: KeptOn): Note =>
-  note(keptOn === null ? "No connection. Try again once you're back online." : OFFLINE[keptOn], TRY_AGAIN)
+const offlineNote = (keptOn: KeptOn): Note => note(OFFLINE[keptOn], TRY_AGAIN)
 
 const EDITED_GONE = "This was deleted since it opened."
 

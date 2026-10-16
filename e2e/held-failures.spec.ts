@@ -8,6 +8,7 @@ import {
   openToday,
   playHousehold,
   quickAction,
+  runningFeed,
   runningSleep,
   savedDiaper,
   sleepingToday,
@@ -77,4 +78,61 @@ test("a wake whose send fails after the Sleep sheet was opened again saves the f
   await expect.poll(() => bodies.length).toBe(2)
   expect(bodies[1]?.actionId).toBe(bodies[0]?.actionId)
   expect(bodies[1]?.occurredAt).toBe(FIRST_TAP)
+})
+
+test("a wake that failed offline asks before its sheet lets it go, and Keep leaves it to save at the first tap's time", async ({
+  page,
+  context,
+}) => {
+  const { andrew } = await caregiversOf(page)
+  const sleep = runningSleep(andrew.id, STARTED)
+  await playHousehold(page, sleepingToday(sleep))
+  const bodies = await loseSaves(page, "**/api/sleeps/sleep-1/wake", {
+    lost: 1,
+    until: Promise.resolve(),
+    answer: (body) => ({ sleep: { ...sleep, endedAt: body.occurredAt ?? NOW, version: 2 }, changed: [["today"]] }),
+  })
+  await openToday(page)
+  await context.setOffline(true)
+  await expect(page.getByRole("alert").filter({ hasText: "No connection" }).first()).toBeVisible()
+  await page.clock.setFixedTime(FIRST_TAP)
+  const sheet = await openSheet(page, "Sleep")
+  await sheet.getByRole("button", { name: "Wake up", exact: true }).click()
+  await expect(sheet.getByRole("alert")).toContainText(
+    "No connection. Keep the app open, and try again once you're back online.",
+  )
+  await page.keyboard.press("Escape")
+  await expect(sheet.getByRole("alert")).toHaveText(/^Discard the wake-up at 9:30\sAM\?DiscardKeep$/u)
+  await sheet.getByRole("button", { name: "Keep" }).click()
+  await expect(sheet.getByRole("alert")).toContainText("No connection")
+  await page.clock.setFixedTime(FIRST_TAP + 15 * MINUTE)
+  await context.setOffline(false)
+  await sheet.getByRole("button", { name: "Try again" }).click()
+  await expect.poll(() => bodies.length).toBe(2)
+  expect(bodies[1]?.actionId).toBe(bodies[0]?.actionId)
+  expect(bodies[1]?.occurredAt).toBe(FIRST_TAP)
+})
+
+test("a pause that failed asks before its sheet lets it go, and Discard lets it go unsent", async ({ page }) => {
+  const { andrew } = await caregiversOf(page)
+  const feed = runningFeed(andrew.id, STARTED, "left")
+  await playHousehold(page, todayWith(feed))
+  const bodies = await loseSaves(page, "**/api/feeds/feed-1/pause", {
+    lost: 1,
+    until: Promise.resolve(),
+    answer: () => ({ feed: { ...feed, version: 2 }, changed: [["today"]] }),
+  })
+  await openToday(page)
+  await page.clock.setFixedTime(FIRST_TAP)
+  const sheet = await openSheet(page, "Nursing")
+  await sheet.getByRole("button", { name: "Pause", exact: true }).click()
+  await expect(sheet.getByRole("alert")).toContainText("No connection")
+  await page.keyboard.press("Escape")
+  await expect(sheet.getByRole("alert")).toHaveText(/^Discard the pause at 9:30\sAM\?DiscardKeep$/u)
+  await sheet.getByRole("button", { name: "Discard" }).click()
+  await expect(sheet).toBeHidden()
+  await openSheet(page, "Nursing")
+  await expect(sheet.getByRole("button", { name: "Pause", exact: true })).toBeVisible()
+  await expect(sheet.getByRole("alert")).toHaveCount(0)
+  expect(bodies).toHaveLength(1)
 })

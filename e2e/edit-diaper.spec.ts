@@ -179,9 +179,13 @@ test("puts the diaper back and reopens its sheet with the reason when the edit c
   const sheet = await openTheDiaper(page)
   await sheet.getByRole("button", { name: "Poo" }).click()
   await sheet.getByRole("button", { name: "Save" }).click()
-  await expect(sheet.getByRole("alert")).toContainText("No connection. Try again once you're back online.")
+  await expect(sheet.getByRole("alert")).toContainText(
+    "No connection. Keep the app open, and try again once you're back online.",
+  )
   await expect(sheet.getByRole("button", { name: "Poo" })).toHaveAttribute("aria-pressed", "true")
   await page.keyboard.press("Escape")
+  await expect(sheet.getByRole("alert")).toHaveText("Discard your changes?DiscardKeep")
+  await sheet.getByRole("button", { name: "Discard" }).click()
   await expect(sheet).toBeHidden()
   await expect(recent(page).getByRole("button", { name: /Diaper/u })).toContainText("Pee")
 })

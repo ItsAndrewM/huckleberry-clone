@@ -1,11 +1,12 @@
 import { DoseConflict, FeedConflict } from "@bt/contracts"
 import { describe, expect, it } from "vitest"
 import type { Action } from "../src/api/actions.ts"
-import { Offline } from "../src/api/errors.ts"
+import { AuthRequired, Offline } from "../src/api/errors.ts"
 import { heldFor } from "../src/sheets/held.ts"
 import { closesOnSend, type Failed, type Sending } from "../src/sheets/sending.ts"
 import {
   CLOSED,
+  discardedState,
   dismissedState,
   expiredState,
   failedState,
@@ -672,5 +673,56 @@ describe("a dose sheet opened from History's Log at menu", () => {
     expect(heldFor(shown.held, "dose", shown.editing)).toBe(OWN)
     const onlyOther = doseSheetFrom([OTHER])
     expect(heldFor(onlyOther.held, "dose", onlyOther.editing)).toBeNull()
+  })
+})
+
+describe("closing a sheet that holds a failed control", () => {
+  const shownWith = (failed: Failed) => failedState(CLOSED, failed, NOW)
+
+  it.each([
+    { label: "a wake", sending: WOKE },
+    { label: "a pause", sending: PAUSE },
+    { label: "a switch", sending: SWITCH },
+    { label: "a resume", sending: RESUME },
+    { label: "a finish", sending: FINISH },
+    { label: "an edit", sending: DOSE_MOVED },
+    { label: "a delete", sending: SLEEP_DELETED },
+  ])("asks before letting it go while it could still be saved as it is: $label", ({ sending }) => {
+    const failed = { sending, error: new Offline() }
+    expect(dismissedState(shownWith(failed))).toMatchObject({ open: sending.sheet, asking: true, held: [failed] })
+  })
+
+  it("asks for one that waits on a sign-in or wasn't saved for another reason", () => {
+    for (const error of [new AuthRequired(), new Error("Not saved")]) {
+      expect(dismissedState(shownWith({ sending: WOKE, error }))).toMatchObject({ open: "sleep", asking: true })
+    }
+  })
+
+  it("lets one go without asking when it can't be saved as it is", () => {
+    const current = feedAt(NOW, { id: "feed-1", version: 4 })
+    const failed = { sending: PAUSE, error: new FeedConflict({ code: "STALE_VERSION", current }) }
+    expect(dismissedState(shownWith(failed))).toMatchObject({ open: null, asking: false, held: [] })
+  })
+
+  it("lets it go once the parent discards it", () => {
+    const failed = { sending: WOKE, error: new Offline() }
+    const asking = dismissedState(shownWith(failed))
+    expect(discardedState(asking, failed)).toMatchObject({ open: null, asking: false, held: [] })
+  })
+
+  it("keeps it while a sheet opened from its own is open, and opens its sheet again once that one closes", () => {
+    const failed = { sending: PAUSE, error: new Offline() }
+    const bottle = shownState(shownWith(failed), "bottle")
+    expect(bottle).toMatchObject({ open: "bottle", held: [failed] })
+    expect(dismissedState(bottle)).toMatchObject({ open: "nursing", queued: true, held: [failed] })
+  })
+
+  it("lets it go when another control on its sheet is sent, which acts at its own tap", () => {
+    const failed = { sending: PAUSE, error: new Offline() }
+    const switched: Sending = {
+      sheet: "nursing",
+      action: { kind: "switchSide", id: "feed-1", payload: { actionId: RENEWED, version: 3, occurredAt: NOW } },
+    }
+    expect(sendingState(shownWith(failed), switched, true).held).toEqual([])
   })
 })
