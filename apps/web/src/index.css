@@ -122,7 +122,7 @@
     scroll-padding-bottom: calc(8.5rem + env(safe-area-inset-bottom));
   }
   html:has([data-sticky-switcher]) {
-    scroll-padding-top: calc(4.5rem + env(safe-area-inset-top));
+    scroll-padding-top: calc(var(--switcher-height, 3rem) + 1.5rem + env(safe-area-inset-top));
   }
   body {
     @apply bg-background text-foreground antialiased;
@@ -141,5 +141,8 @@
   }
   [data-slot="drawer-popup"]:is([data-starting-style], [data-ending-style]) {
     opacity: 0 !important;
+  }
+  [data-slot="drawer-popup"] {
+    transition-property: opacity !important;
   }
 }

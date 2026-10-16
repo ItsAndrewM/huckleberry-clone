@@ -3,6 +3,7 @@ import { Link, useNavigate } from "@tanstack/react-router"
 import { ChevronLeftIcon, ChevronRightIcon, type LucideIcon } from "lucide-react"
 import { useRef, useState } from "react"
 import { buttonVariants } from "../../components/ui/button.tsx"
+import { usePublishedHeight } from "../../shell/use-published-height.ts"
 import { GoToDate } from "./go-to-date.tsx"
 import type { HistorySearch } from "./history-date.ts"
 import { type Hidden, hiddenNotice } from "./history-kinds.ts"
@@ -50,6 +51,7 @@ export const HistorySwitcher = ({ navigation, today, birthDate, hidden }: Histor
   const key = periodKey(period)
   const [changingFor, setChangingFor] = useState<string | null>(null)
   const change = useRef<HTMLButtonElement>(null)
+  const publishHeight = usePublishedHeight("switcher-height")
   if (changingFor !== null && changingFor !== key) setChangingFor(null)
   const changing = changingFor === key
   const notice = hiddenNotice(hidden)
@@ -62,6 +64,7 @@ export const HistorySwitcher = ({ navigation, today, birthDate, hidden }: Histor
   }
   return (
     <div
+      ref={publishHeight}
       data-sticky-switcher
       className="sticky top-[env(safe-area-inset-top)] z-[5] -mx-4 -mt-3 flex flex-col bg-background px-4 pb-1"
     >
