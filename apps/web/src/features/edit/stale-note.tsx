@@ -39,10 +39,15 @@ export const StaleNote = ({ failed, stale, display, onUseTheirs }: StaleNoteProp
         </Button>
       ) : (
         <div className="flex flex-wrap gap-2">
-          <Button variant="outline" size="lg" className="flex-1" onClick={resend}>
+          <Button variant="outline" size="lg" className="flex-auto" onClick={resend}>
             {stale.deleting ? "Delete anyway" : "Save mine anyway"}
           </Button>
-          <Button variant="ghost" size="lg" className="flex-1" onClick={useTheirs}>
+          <Button
+            variant="ghost"
+            size="lg"
+            className="h-auto min-h-11 flex-auto py-2 whitespace-normal [overflow-wrap:anywhere]"
+            onClick={useTheirs}
+          >
             {stale.deleting ? "Keep it" : `Use ${whoChanged(display, stale.current)}'s`}
           </Button>
         </div>

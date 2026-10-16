@@ -76,9 +76,17 @@ const endsBefore = async (text: Locator, next: Locator) => {
   expect(await textEndOf(text)).toBeLessThanOrEqual((await boxOf(next)).x)
 }
 
-const playWith = async (page: Page, added: ReadonlyArray<ReturnType<typeof supplementOf>>) => {
+interface CaregiverName {
+  readonly id: string
+  readonly displayName: string
+}
+
+const playWith = async (page: Page, added: ReadonlyArray<ReturnType<typeof supplementOf>>, emilyAs?: string) => {
   const { andrew, emily, me } = await caregiversOf(page)
-  const household = { ...me.household, supplements: [...me.household.supplements, ...added] }
+  const caregivers = me.household.caregivers.map((caregiver: CaregiverName) =>
+    emilyAs !== undefined && caregiver.id === emily.id ? { ...caregiver, displayName: emilyAs } : caregiver,
+  )
+  const household = { ...me.household, caregivers, supplements: [...me.household.supplements, ...added] }
   await page.route("**/api/me", (route) => route.fulfill({ json: { ...me, household } }))
   const vitaminD: Supplement = me.household.supplements.find(({ name }: Supplement) => name === "Vitamin D")
   return { andrew, emily, vitaminD }
@@ -88,6 +96,7 @@ const LONG_DOSE = supplementOf("supplement-long", "Long dose", "2 drops (0.1 mL)
 const WIDE_DOSE = supplementOf("supplement-wide", "Wide dose", "W".repeat(40))
 const UNBROKEN_NAME = supplementOf("supplement-unbroken", "Multivitamin".repeat(5), "5 mL")
 const LONGEST = [LONG_DOSE, WIDE_DOSE, UNBROKEN_NAME]
+const UNBROKEN_CAREGIVER = "Emilia".repeat(8)
 
 const playLongest = async (page: Page, logged: boolean) => {
   await page.setViewportSize({ width: 360, height: 900 })
@@ -215,10 +224,10 @@ test.describe("Long unbroken text, in the sheets that show it, on a 360-pixel-wi
     expect(await scrollsSideways(sheet)).toBe(false)
   })
 
-  test("keeps the stale note's two buttons inside the sheet, wrapping them rather than scrolling it sideways", async ({
+  test("keeps the stale note's two buttons and their words inside the sheet, even for a name with no spaces, rather than scrolling it sideways", async ({
     page,
   }) => {
-    const { emily } = await playWith(page, LONGEST)
+    const { emily } = await playWith(page, LONGEST, UNBROKEN_CAREGIVER)
     await page.setViewportSize({ width: 360, height: 900 })
     const logged = doseAt(LONG_DOSE.id, NOW - 20 * MINUTE, emily.id, "dose-0", LONG_DOSE.dose)
     await playHousehold(page, { ...todayWith(), doses: [logged], recent: [{ kind: "dose", dose: logged }] })
@@ -239,6 +248,7 @@ test.describe("Long unbroken text, in the sheets that show it, on a 360-pixel-wi
     const edge = await rightEdgeOf(note)
     for (const button of await note.getByRole("button").all()) {
       expect(await rightEdgeOf(button)).toBeLessThanOrEqual(edge)
+      expect(await button.evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(true)
     }
     expect(await scrollsSideways(sheet)).toBe(false)
   })
