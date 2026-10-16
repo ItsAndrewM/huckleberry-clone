@@ -86,6 +86,8 @@ for (const colorScheme of ["light", "dark"] as const) {
       for (const name of ["Edit diaper", "Edit feed", "Edit sleep", "Edit dose"]) {
         await expectNoViolationsIn(page, openedSheet(name))
       }
+      await openSheet(page, openedSheet("Edit diaper's stale note"))
+      await expectNoViolations(page)
     })
 
     test("No connection passes axe", async ({ page, context }) => {
