@@ -600,3 +600,39 @@ test("a When field's message describes its time and is said politely, from a reg
   await expect(when).toHaveAccessibleDescription("That's in the future.")
   await expect(message).toHaveAttribute("data-probe", "1")
 })
+
+declare global {
+  var closeShareSheet: (() => void) | undefined
+}
+
+const sharesOnTheSecondTap = (page: Page) =>
+  page.addInitScript(() => {
+    let shares = 0
+    Object.defineProperty(Navigator.prototype, "canShare", { configurable: true, value: () => true })
+    Object.defineProperty(Navigator.prototype, "share", {
+      configurable: true,
+      value: () => {
+        shares += 1
+        if (shares === 1) return Promise.reject(new DOMException("The share sheet refused", "NotAllowedError"))
+        return new Promise<void>((close) => {
+          globalThis.closeShareSheet = close
+        })
+      },
+    })
+  })
+
+test("Share it keeps focus while the share sheet is open, says nothing new, then gives focus back to the button that made the file", async ({
+  page,
+}) => {
+  await sharesOnTheSecondTap(page)
+  const section = await openExport(page)
+  await section.getByRole("button", { name: "Share CSV" }).press("Enter")
+  const shareIt = section.getByRole("button", { name: "Share it" })
+  await shareIt.press("Enter")
+  await expect.poll(() => page.evaluate("typeof globalThis.closeShareSheet")).toBe("function")
+  await expect(shareIt).toBeFocused()
+  await expect(section.getByRole("status")).toHaveText("The CSV is ready.")
+  await page.evaluate("globalThis.closeShareSheet()")
+  await expect(shareIt).toHaveCount(0)
+  await expect(section.getByRole("button", { name: "Share CSV" })).toBeFocused()
+})

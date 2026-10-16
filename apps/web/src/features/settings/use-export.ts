@@ -4,18 +4,8 @@ import { type ExportKind, fetchExport } from "../../api/export.ts"
 import { useConnectivity } from "../../api/hooks.ts"
 import { useApp } from "../../app-context.ts"
 import { deliverFile } from "./deliver-file.ts"
-import { type Delivery, exportFailure, exportFileOf, waitReason } from "./export-file.ts"
-
-interface ExportRequest {
-  readonly kind: ExportKind
-  readonly file: File | null
-}
-
-export interface Exported {
-  readonly kind: ExportKind
-  readonly file: File
-  readonly delivery: Delivery
-}
+import { exportFileOf, waitReason } from "./export-file.ts"
+import { type Exported, type ExportRequest, exportState } from "./export-state.ts"
 
 export const useExport = (timeZone: TimeZone) => {
   const { api } = useApp()
@@ -27,13 +17,9 @@ export const useExport = (timeZone: TimeZone) => {
       return { kind, file: fetched, delivery: await deliverFile(fetched, "first") }
     },
   })
-  const { isPending, data, error, variables } = exporting
   return {
     reason,
-    busy: isPending,
-    preparing: isPending ? (variables?.kind ?? null) : null,
-    waiting: !isPending && data?.delivery === "needs-a-tap" ? data : null,
-    failure: isPending ? null : exportFailure(error),
+    ...exportState(exporting),
     start: (kind: ExportKind) => exporting.mutate({ kind, file: null }),
     shareAgain: ({ kind, file }: Exported) => exporting.mutate({ kind, file }),
   }

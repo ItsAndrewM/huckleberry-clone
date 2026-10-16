@@ -1,4 +1,4 @@
-import { handFocusHome, homeOf } from "../sheets/focus-home.ts"
+import { type FocusHome, handFocusHome, homeOf, NO_HOME } from "../sheets/focus-home.ts"
 import { CONTROL } from "./page-heading.ts"
 
 const firstControlOf = (view: HTMLElement) => (view.matches(CONTROL) ? view : view.querySelector<HTMLElement>(CONTROL))
@@ -15,9 +15,14 @@ export const focusFollowsSwap = () => {
   }
 }
 
-export const focusHomeOnLeave = (control: HTMLElement | null) => {
+const leavingWithFocus = (homeFor: (control: HTMLElement) => FocusHome) => (control: HTMLElement | null) => {
   if (control === null) return undefined
   return () => {
-    if (control.contains(document.activeElement)) handFocusHome(homeOf(control))
+    if (control.contains(document.activeElement)) handFocusHome(homeFor(control))
   }
 }
+
+export const focusHomeOnLeave = leavingWithFocus(homeOf)
+
+export const focusOpenerOnLeave = (openerId: string) =>
+  leavingWithFocus(() => ({ ...NO_HOME, opener: document.getElementById(openerId) }))

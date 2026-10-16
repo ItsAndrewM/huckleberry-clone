@@ -1,10 +1,12 @@
 import type { TimeZone } from "@bt/domain"
-import { useId } from "react"
+import { useId, useState } from "react"
 import type { ExportKind } from "../../api/export.ts"
 import { Button } from "../../components/ui/button.tsx"
+import { focusOpenerOnLeave } from "../../shell/focus-hand-off.ts"
 import { sharesKind } from "./deliver-file.ts"
+import type { Exported } from "./export-state.ts"
 import { SettingsSection } from "./settings-section.tsx"
-import { type Exported, useExport } from "./use-export.ts"
+import { useExport } from "./use-export.ts"
 
 const KINDS = ["csv", "json"] as const satisfies ReadonlyArray<ExportKind>
 
@@ -21,25 +23,30 @@ const announcement = (preparing: ExportKind | null, waiting: Exported | null) =>
   return waiting === null ? "" : readyFor(waiting.kind)
 }
 
-const ShareAgain = ({
-  waiting,
-  onShare,
-}: {
+interface ShareAgainProps {
   readonly waiting: Exported
+  readonly sharing: boolean
+  readonly openerId: string
   readonly onShare: (waiting: Exported) => void
-}) => (
-  <div className="flex items-center justify-between gap-3">
-    <p aria-hidden="true" className="text-base">
-      {readyFor(waiting.kind)}
-    </p>
-    <Button size="lg" onClick={() => onShare(waiting)}>
-      Share it
-    </Button>
-  </div>
-)
+}
+
+const ShareAgain = ({ waiting, sharing, openerId, onShare }: ShareAgainProps) => {
+  const [handsBack] = useState(() => focusOpenerOnLeave(openerId))
+  return (
+    <div className="flex items-center justify-between gap-3">
+      <p aria-hidden="true" className="text-base">
+        {readyFor(waiting.kind)}
+      </p>
+      <Button ref={handsBack} size="lg" disabled={sharing} focusableWhenDisabled onClick={() => onShare(waiting)}>
+        Share it
+      </Button>
+    </div>
+  )
+}
 
 export const ExportSection = ({ timeZone }: { readonly timeZone: TimeZone }) => {
   const reasonId = useId()
+  const buttonsId = useId()
   const exporting = useExport(timeZone)
   const waits = exporting.reason !== null
   return (
@@ -57,6 +64,7 @@ export const ExportSection = ({ timeZone }: { readonly timeZone: TimeZone }) => 
         {KINDS.map((kind) => (
           <Button
             key={kind}
+            id={`${buttonsId}${kind}`}
             variant="secondary"
             size="lg"
             className="flex-1"
@@ -70,7 +78,15 @@ export const ExportSection = ({ timeZone }: { readonly timeZone: TimeZone }) => 
         ))}
       </div>
       <output className="sr-only">{announcement(exporting.preparing, exporting.waiting)}</output>
-      {exporting.waiting === null ? null : <ShareAgain waiting={exporting.waiting} onShare={exporting.shareAgain} />}
+      {exporting.waiting === null ? null : (
+        <ShareAgain
+          key={exporting.waiting.kind}
+          waiting={exporting.waiting}
+          sharing={exporting.sharing}
+          openerId={`${buttonsId}${exporting.waiting.kind}`}
+          onShare={exporting.shareAgain}
+        />
+      )}
       {exporting.failure === null ? null : (
         <p role="alert" className="text-sm text-destructive">
           {exporting.failure}
