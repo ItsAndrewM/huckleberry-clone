@@ -1,13 +1,14 @@
 import type { Locator, Page } from "@playwright/test"
-import { OPENED_SHEETS } from "./opened-sheets.ts"
+import { OPENED_SHEETS, type OpenedSheet } from "./opened-sheets.ts"
 import { playEveryScreen, SCREENS } from "./played-screens.ts"
 import { STILL } from "./still.ts"
 import { expect, test } from "./test.ts"
 
 const LARGEST = `${(23 * 16) / 17}px`
 
-const atLargestText = (page: Page) =>
-  page.addStyleTag({ content: `${STILL} body { --text-unit: ${LARGEST} !important; }` })
+const atLargestText = async (page: Page) => {
+  await page.addStyleTag({ content: `${STILL} body { --text-unit: ${LARGEST} !important; }` })
+}
 
 const fontSizeOf = (page: Page, selector: string) =>
   page
@@ -26,7 +27,67 @@ const sheetScrollsSideways = async (page: Page) => {
   return scroller.evaluate((element) => element.scrollWidth > element.clientWidth)
 }
 
-const atTheUsualSize = (page: Page) => page.addStyleTag({ content: STILL })
+const atTheUsualSize = async (page: Page) => {
+  await page.addStyleTag({ content: STILL })
+}
+
+interface TimeWidth {
+  readonly label: string
+  readonly actual: number
+  readonly natural: number
+  readonly room: number
+  readonly nowBelow: boolean
+  readonly nowFitsBeside: boolean
+}
+
+const TIME_WIDTHS = `(() => {
+  const dialog = document.querySelector('[data-slot="drawer-popup"]')
+  const times = dialog.querySelectorAll('input[type="datetime-local"], input[type="date"], input[type="time"]')
+  return [...times].map((time) => {
+    const holder = time.closest("label") ?? time
+    const row = holder.parentElement
+    const unconstrained = time.cloneNode(false)
+    unconstrained.value = time.value
+    unconstrained.style.cssText =
+      "position: fixed; top: 0; left: 0; visibility: hidden; width: max-content; min-width: 0; max-width: none; flex: none"
+    holder.append(unconstrained)
+    const natural = unconstrained.getBoundingClientRect().width
+    unconstrained.remove()
+    const room = row.getBoundingClientRect().width
+    const now = row.querySelector("button")
+    const gap = Number.parseFloat(getComputedStyle(row).columnGap) || 0
+    return {
+      label: holder.textContent.slice(0, 24),
+      actual: time.getBoundingClientRect().width,
+      natural,
+      room,
+      nowBelow: now !== null && now.getBoundingClientRect().top >= time.getBoundingClientRect().bottom - 0.5,
+      nowFitsBeside: now !== null && natural + gap + now.getBoundingClientRect().width <= room - 1,
+    }
+  })
+})()`
+
+const cutShort = ({ actual, natural, room }: TimeWidth) => actual < Math.min(natural, room) - 0.5
+
+const wrappedNeedlessly = ({ nowBelow, nowFitsBeside }: TimeWidth) => nowBelow && nowFitsBeside
+
+const showEveryTime = async (page: Page) => {
+  const changes = page.getByRole("dialog").getByRole("button", { name: /^Change, / })
+  for (let remaining = await changes.count(); remaining > 0; remaining -= 1) await changes.first().click()
+}
+
+const openedAt = async (
+  page: Page,
+  { path, ready, open, dialog }: OpenedSheet,
+  settle: (page: Page) => Promise<void>,
+) => {
+  await page.goto(path)
+  await expect(ready(page)).toBeVisible()
+  await settle(page)
+  await open(page)
+  await expect(page.getByRole("dialog")).toHaveCount(1)
+  await expect(page.getByRole("dialog", { name: dialog })).toBeVisible()
+}
 
 const overhangOf = (section: Locator) =>
   section.evaluate((element) => {
@@ -122,16 +183,29 @@ for (const [size, settle] of [
   ["the usual size", atTheUsualSize],
   ["the largest standard size", atLargestText],
 ] as const) {
-  for (const { name, dialog, path, ready, open } of OPENED_SHEETS) {
-    test(`${name} doesn't scroll sideways at ${size}`, async ({ page }) => {
-      await page.goto(path)
-      await expect(ready(page)).toBeVisible()
-      await settle(page)
-      await open(page)
-      await expect(page.getByRole("dialog")).toHaveCount(1)
-      await expect(page.getByRole("dialog", { name: dialog })).toBeVisible()
+  for (const sheet of OPENED_SHEETS) {
+    test(`${sheet.name} doesn't scroll sideways at ${size}`, async ({ page }) => {
+      await openedAt(page, sheet, settle)
       expect(await sheetScrollsSideways(page)).toBe(false)
       expect(await scrollsSideways(page)).toBe(false)
+    })
+
+    test(`${sheet.name}'s dates and times are as wide as their values, or as wide as their rows, at ${size}`, async ({
+      page,
+    }) => {
+      await openedAt(page, sheet, settle)
+      await showEveryTime(page)
+      const widths = await page.evaluate<ReadonlyArray<TimeWidth>>(TIME_WIDTHS)
+      expect(widths).toHaveLength(sheet.times)
+      expect(widths.filter(cutShort)).toEqual([])
+    })
+
+    test(`${sheet.name} keeps Now beside a date or time that fits beside it, at ${size}`, async ({ page }) => {
+      await openedAt(page, sheet, settle)
+      await showEveryTime(page)
+      const widths = await page.evaluate<ReadonlyArray<TimeWidth>>(TIME_WIDTHS)
+      expect(widths).toHaveLength(sheet.times)
+      expect(widths.filter(wrappedNeedlessly)).toEqual([])
     })
   }
 }

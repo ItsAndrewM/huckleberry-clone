@@ -6,6 +6,7 @@ import { expect } from "./test.ts"
 export interface OpenedSheet {
   readonly name: string
   readonly dialog: string | RegExp
+  readonly times: number
   readonly path: string
   readonly ready: (page: Page) => Locator
   readonly open: (page: Page) => Promise<void>
@@ -62,28 +63,42 @@ const staleDiaper = async (page: Page) => {
 }
 
 export const OPENED_SHEETS: ReadonlyArray<OpenedSheet> = [
-  { name: "Bottle", dialog: "Bottle", ...TODAY, open: (page) => quickAction(page, "Bottle").click() },
-  { name: "Nursing", dialog: "Nursing", ...TODAY, open: (page) => quickAction(page, "Nursing").click() },
-  { name: "Diaper", dialog: "Diaper", ...TODAY, open: (page) => quickAction(page, "Diaper").click() },
-  { name: "Sleep", dialog: "Sleep", ...TODAY, open: (page) => quickAction(page, "Sleep").click() },
-  { name: "Past feed", dialog: "Past feed", ...HISTORY, open: pastFeed },
-  { name: "Past sleep", dialog: "Past sleep", ...TODAY, open: pastSleep },
-  { name: "Edit diaper", dialog: "Edit diaper", ...TODAY, open: (page) => recentRow(page, "Pee and poo").click() },
-  { name: "Edit feed", dialog: "Edit feed", ...TODAY, open: (page) => recentRow(page, "Nursing and bottle").click() },
-  { name: "Edit sleep", dialog: "Edit sleep", ...TODAY, open: (page) => recentRow(page, "Nap").click() },
-  { name: "Edit dose", dialog: "Edit dose", ...TODAY, open: (page) => recentRow(page, "Vitamin D").click() },
-  { name: "Edit diaper's stale note", dialog: "Edit diaper", ...TODAY, open: staleDiaper },
-  { name: "History's details", dialog: "Diaper", ...HISTORY, open: (page) => entryButton(page).click() },
-  { name: "History's Log at", dialog: /^Log at /u, ...HISTORY, open: (page) => hourRow(page).click() },
+  { name: "Bottle", dialog: "Bottle", times: 1, ...TODAY, open: (page) => quickAction(page, "Bottle").click() },
+  { name: "Nursing", dialog: "Nursing", times: 1, ...TODAY, open: (page) => quickAction(page, "Nursing").click() },
+  { name: "Diaper", dialog: "Diaper", times: 1, ...TODAY, open: (page) => quickAction(page, "Diaper").click() },
+  { name: "Sleep", dialog: "Sleep", times: 1, ...TODAY, open: (page) => quickAction(page, "Sleep").click() },
+  { name: "Past feed", dialog: "Past feed", times: 1, ...HISTORY, open: pastFeed },
+  { name: "Past sleep", dialog: "Past sleep", times: 2, ...TODAY, open: pastSleep },
+  {
+    name: "Edit diaper",
+    dialog: "Edit diaper",
+    times: 1,
+    ...TODAY,
+    open: (page) => recentRow(page, "Pee and poo").click(),
+  },
+  {
+    name: "Edit feed",
+    dialog: "Edit feed",
+    times: 4,
+    ...TODAY,
+    open: (page) => recentRow(page, "Nursing and bottle").click(),
+  },
+  { name: "Edit sleep", dialog: "Edit sleep", times: 2, ...TODAY, open: (page) => recentRow(page, "Nap").click() },
+  { name: "Edit dose", dialog: "Edit dose", times: 1, ...TODAY, open: (page) => recentRow(page, "Vitamin D").click() },
+  { name: "Edit diaper's stale note", dialog: "Edit diaper", times: 1, ...TODAY, open: staleDiaper },
+  { name: "History's details", dialog: "Diaper", times: 0, ...HISTORY, open: (page) => entryButton(page).click() },
+  { name: "History's Log at", dialog: /^Log at /u, times: 0, ...HISTORY, open: (page) => hourRow(page).click() },
   {
     name: "Add measurement",
     dialog: "Add measurement",
+    times: 1,
     ...GROWTH,
     open: (page) => page.getByRole("button", { name: "Add measurement" }).first().click(),
   },
   {
     name: "Edit measurement",
     dialog: "Edit measurement",
+    times: 1,
     ...GROWTH,
     open: (page) =>
       page

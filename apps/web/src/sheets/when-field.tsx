@@ -55,8 +55,8 @@ export const WhenField = ({ label, when, onChange, zone, now, earliest, tooEarly
   const message = resolved.ok ? "" : messages[resolved.issue]
   return (
     <div ref={followsSwap} className="flex flex-col gap-2">
-      <div className="flex items-end gap-2">
-        <label className="flex min-w-0 flex-1 flex-col gap-2 text-sm font-medium">
+      <div className="flex flex-wrap items-end gap-2">
+        <label className="flex min-w-0 flex-auto flex-col gap-2 text-sm font-medium">
           {label}
           <Input
             type="datetime-local"
@@ -67,7 +67,7 @@ export const WhenField = ({ label, when, onChange, zone, now, earliest, tooEarly
             onChange={(event) => onChange({ kind: "at", local: event.target.value, pick: null })}
           />
         </label>
-        <Button variant="outline" size="lg" onClick={() => onChange(NOW)}>
+        <Button variant="outline" size="lg" className="ml-auto" onClick={() => onChange(NOW)}>
           Now
         </Button>
       </div>
