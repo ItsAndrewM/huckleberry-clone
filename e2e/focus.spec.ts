@@ -1,5 +1,15 @@
 import type { Locator, Page } from "@playwright/test"
-import { busyDay, DAY, emptyDay, measurement, openHistory, playHistory } from "./played-day.ts"
+import {
+  busyDay,
+  DAY,
+  dayHeading,
+  diaper as diaperOn,
+  emptyDay,
+  local,
+  measurement,
+  openHistory,
+  playHistory,
+} from "./played-day.ts"
 import {
   caregiversOf,
   type FeedAnswer,
@@ -635,4 +645,20 @@ test("Share it keeps focus while the share sheet is open, says nothing new, then
   await page.evaluate("globalThis.closeShareSheet()")
   await expect(shareIt).toHaveCount(0)
   await expect(section.getByRole("button", { name: "Share CSV" })).toBeFocused()
+})
+
+test("going back with an entry's details open hands focus to the page's heading", async ({ page }) => {
+  const { played, emily } = await playHistory(page, [emptyDay("2026-10-08")])
+  played.days.push({
+    ...emptyDay("2026-10-07"),
+    diapers: [diaperOn("early", local("08:00", "2026-10-07"), true, false, emily)],
+  })
+  await openHistory(page, "?date=2026-10-08")
+  await page.getByRole("link", { name: "Previous day" }).click()
+  await expect(dayHeading(page)).toHaveText("Wed, Oct 7")
+  await page.getByRole("button", { name: "Diaper at 8:00 AM: Pee" }).press("Enter")
+  await expect(page.getByRole("dialog", { name: "Diaper" })).toBeVisible()
+  await page.goBack()
+  await expect(dayHeading(page)).toHaveText("Thu, Oct 8")
+  await expect(page.getByRole("heading", { name: "History", level: 1 })).toBeFocused()
 })

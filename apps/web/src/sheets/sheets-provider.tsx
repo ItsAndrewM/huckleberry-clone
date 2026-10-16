@@ -1,6 +1,6 @@
 import { type ReactNode, useRef, useState } from "react"
 import { useConnectivity } from "../api/hooks.ts"
-import { type FocusHome, focusTarget, homeOf, NO_HOME } from "./focus-home.ts"
+import { type FocusHome, focusOnClosing, homeOf, NO_HOME } from "./focus-home.ts"
 import type { Restored } from "./restored.ts"
 import type { Sending, SheetKind } from "./sending.ts"
 import { type Sheets, SheetsContext } from "./sheets-context.ts"
@@ -89,7 +89,7 @@ export const SheetsProvider = ({ restored, children }: SheetsProviderProps) => {
       setState((current) => announcedState(current, toast))
       sweepAfter(toast.until - TOAST_MS)
     },
-    focusOnClose: () => state.open === null && focusTarget(home.current),
+    focusOnClose: (sheet) => focusOnClosing(state.open, sheet, home.current),
   }
   return <SheetsContext value={sheets}>{children}</SheetsContext>
 }

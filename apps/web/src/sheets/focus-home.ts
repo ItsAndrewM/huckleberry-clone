@@ -1,4 +1,5 @@
 import { CONTROL, pageHeading, readyForFocus } from "../shell/page-heading.ts"
+import type { SheetKind } from "./sending.ts"
 
 export interface FocusHome {
   readonly opener: HTMLElement | null
@@ -42,3 +43,9 @@ export const handFocusHome = (home: FocusHome) =>
     const target = focusTarget(home)
     if (target !== true) target.focus()
   })
+
+export const focusOnClosing = (open: SheetKind | null, closing: SheetKind, home: FocusHome) => {
+  if (open === null) return focusTarget(home)
+  if (open === closing) handFocusHome(home)
+  return false
+}
