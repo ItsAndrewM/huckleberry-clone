@@ -1,4 +1,5 @@
 import { useId } from "react"
+import { FieldMessage, type MessageLink } from "../../components/field-message.tsx"
 import { Input } from "../../components/ui/input.tsx"
 import { NativeSelect, NativeSelectOption } from "../../components/ui/native-select.tsx"
 import type { UnitChoice } from "./entry-text.ts"
@@ -15,7 +16,7 @@ interface EntryFieldProps<Unit extends EntryUnit> {
 interface NumberProps {
   readonly label: string
   readonly value: string
-  readonly describedBy: string | undefined
+  readonly describedBy: MessageLink
   readonly onChange: (value: string) => void
 }
 
@@ -25,8 +26,8 @@ const NumberInput = ({ label, value, describedBy, onChange }: NumberProps) => (
     inputMode="decimal"
     className="tabular-nums"
     value={value}
-    aria-invalid={describedBy !== undefined}
-    aria-describedby={describedBy}
+    aria-invalid={describedBy.invalid}
+    aria-describedby={describedBy.id}
     onChange={(event) => onChange(event.target.value)}
   />
 )
@@ -39,7 +40,7 @@ export const EntryField = <Unit extends EntryUnit>({
   onChange,
 }: EntryFieldProps<Unit>) => {
   const messageId = useId()
-  const describedBy = message === null ? undefined : messageId
+  const describedBy = { id: messageId, invalid: message !== null }
   const pick = (value: string) => {
     const choice = units.find(({ unit }) => unit === value)
     if (choice !== undefined) onChange(withUnit(entry, choice.unit))
@@ -86,11 +87,7 @@ export const EntryField = <Unit extends EntryUnit>({
           ))}
         </NativeSelect>
       </div>
-      {message === null ? null : (
-        <p id={messageId} className="text-sm text-destructive">
-          {message}
-        </p>
-      )}
+      <FieldMessage id={messageId}>{message}</FieldMessage>
     </fieldset>
   )
 }

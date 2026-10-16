@@ -1,6 +1,7 @@
 import type { VolumeUnit } from "@bt/contracts"
 import { MinusIcon, PlusIcon } from "lucide-react"
 import { useId, useState } from "react"
+import type { MessageLink } from "../../components/field-message.tsx"
 import { Button } from "../../components/ui/button.tsx"
 import { Input } from "../../components/ui/input.tsx"
 import { amountText, parsedAmount, stepped, UNIT_LABELS } from "./amounts.ts"
@@ -10,9 +11,10 @@ interface AmountFieldProps {
   readonly ml: number | null
   readonly unit: VolumeUnit
   readonly onChange: (ml: number | null) => void
+  readonly describedBy?: MessageLink | undefined
 }
 
-export const AmountField = ({ label, ml, unit, onChange }: AmountFieldProps) => {
+export const AmountField = ({ label, ml, unit, onChange, describedBy }: AmountFieldProps) => {
   const id = useId()
   const [text, setText] = useState(() => amountText(ml ?? 0, unit))
   const step = (steps: number) => {
@@ -34,7 +36,8 @@ export const AmountField = ({ label, ml, unit, onChange }: AmountFieldProps) => 
           inputMode="decimal"
           className="w-20 text-center text-lg tabular-nums"
           value={text}
-          aria-invalid={ml === null}
+          aria-invalid={ml === null || describedBy?.invalid === true}
+          aria-describedby={describedBy?.id}
           onChange={(event) => {
             setText(event.target.value)
             onChange(parsedAmount(event.target.value, unit))

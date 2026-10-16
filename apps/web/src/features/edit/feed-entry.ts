@@ -28,7 +28,7 @@ const endOf = ({ base, fields }: SidePart, start: number): number | null => {
   return isMinutes(fields.minutes) ? start + fields.minutes * MINUTE_MS : null
 }
 
-const sideOf = (part: SidePart, zone: string, now: number): Checked<Placed> => {
+export const sideOf = (part: SidePart, zone: string, now: number): Checked<Placed> => {
   const start = keptOrPicked(part.fields.start, part.base?.startedAt ?? null, zone, now)
   if (!start.ok) return start
   const end = endOf(part, start.value)
@@ -37,7 +37,7 @@ const sideOf = (part: SidePart, zone: string, now: number): Checked<Placed> => {
   return { ok: true, value: { segment, kept: start.value === part.base?.startedAt } }
 }
 
-const bottleOf = ({ base, fields }: BottlePart, zone: string, now: number): Checked<PortionEntry> => {
+export const bottleOf = ({ base, fields }: BottlePart, zone: string, now: number): Checked<PortionEntry> => {
   const { breastMilkMl, formulaMl } = fields
   if (breastMilkMl === null || formulaMl === null || breastMilkMl + formulaMl <= 0) return { ok: false, issue: "milk" }
   const at = keptOrPicked(fields.at, base?.occurredAt ?? null, zone, now)

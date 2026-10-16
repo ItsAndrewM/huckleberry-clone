@@ -1,4 +1,5 @@
 import { useId, useState } from "react"
+import type { MessageLink } from "../../components/field-message.tsx"
 import { Input } from "../../components/ui/input.tsx"
 import { minutesFromText } from "./past-feed.ts"
 
@@ -6,9 +7,10 @@ interface MinutesFieldProps {
   readonly label: string
   readonly minutes: number | null
   readonly onChange: (minutes: number | null) => void
+  readonly describedBy?: MessageLink | undefined
 }
 
-export const MinutesField = ({ label, minutes, onChange }: MinutesFieldProps) => {
+export const MinutesField = ({ label, minutes, onChange, describedBy }: MinutesFieldProps) => {
   const id = useId()
   const [text, setText] = useState(() => String(minutes ?? 0))
   return (
@@ -22,7 +24,8 @@ export const MinutesField = ({ label, minutes, onChange }: MinutesFieldProps) =>
           inputMode="numeric"
           className="w-20 text-center text-lg tabular-nums"
           value={text}
-          aria-invalid={minutes === null}
+          aria-invalid={minutes === null || describedBy?.invalid === true}
+          aria-describedby={describedBy?.id}
           onChange={(event) => {
             setText(event.target.value)
             onChange(minutesFromText(event.target.value))

@@ -1,5 +1,6 @@
-import type { Feed } from "@bt/contracts"
-import { useState } from "react"
+import type { Feed, NursingSegment } from "@bt/contracts"
+import { useId, useState } from "react"
+import { FieldMessage } from "../../components/field-message.tsx"
 import { Button } from "../../components/ui/button.tsx"
 import { clockOf } from "../../sheets/clock.ts"
 import { useSheets } from "../../sheets/sheets-context.ts"
@@ -16,11 +17,15 @@ interface FeedStartProps {
   readonly busy: boolean
 }
 
+const tooLateText = ({ endedAt }: NursingSegment) =>
+  endedAt === null ? "That's in the future." : "That's after this side ended."
+
 export const FeedStart = ({ feed, zone, busy }: FeedStartProps) => {
   const sheets = useSheets()
   const now = useNow()
   const [when, setWhen] = useState<When | null>(null)
   const [followsSwap] = useState(focusFollowsSwap)
+  const tooLateId = useId()
   const first = firstSideOf(feed)
   if (first === undefined) return null
   if (when === null) {
@@ -56,12 +61,15 @@ export const FeedStart = ({ feed, zone, busy }: FeedStartProps) => {
   }
   return (
     <div key="changing" ref={followsSwap} className="flex flex-col gap-2">
-      <WhenField label="Started" when={when} onChange={setWhen} zone={zone} now={now} />
-      {tooLate ? (
-        <p className="text-sm text-destructive">
-          {first.endedAt === null ? "That's in the future." : "That's after this side ended."}
-        </p>
-      ) : null}
+      <WhenField
+        label="Started"
+        when={when}
+        onChange={setWhen}
+        zone={zone}
+        now={now}
+        describedBy={{ id: tooLateId, invalid: tooLate }}
+      />
+      <FieldMessage id={tooLateId}>{tooLate ? tooLateText(first) : null}</FieldMessage>
       <div className="grid grid-cols-2 gap-2">
         <Button size="lg" disabled={busy || !changed || !picked.ok || tooLate} onClick={save}>
           Save start

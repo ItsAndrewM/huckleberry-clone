@@ -1,4 +1,5 @@
 import { type Ref, useId, useState } from "react"
+import { FieldMessage, type MessageLink } from "../components/field-message.tsx"
 import { Button } from "../components/ui/button.tsx"
 import { Input } from "../components/ui/input.tsx"
 import { focusFollowsSwap } from "../shell/focus-hand-off.ts"
@@ -13,6 +14,7 @@ interface WhenFieldProps {
   readonly now: number
   readonly earliest?: number | undefined
   readonly tooEarly?: string
+  readonly describedBy?: MessageLink | undefined
 }
 
 const MESSAGES = {
@@ -41,7 +43,7 @@ const NowRow = ({ label, onChange, ref }: NowRowProps) => (
   </div>
 )
 
-export const WhenField = ({ label, when, onChange, zone, now, earliest, tooEarly }: WhenFieldProps) => {
+export const WhenField = ({ label, when, onChange, zone, now, earliest, tooEarly, describedBy }: WhenFieldProps) => {
   const [followsSwap] = useState(focusFollowsSwap)
   const messageId = useId()
   if (when.kind === "now") {
@@ -59,8 +61,8 @@ export const WhenField = ({ label, when, onChange, zone, now, earliest, tooEarly
             type="datetime-local"
             step={60}
             value={when.local}
-            aria-invalid={message !== ""}
-            aria-describedby={messageId}
+            aria-invalid={message !== "" || describedBy?.invalid === true}
+            aria-describedby={describedBy === undefined ? messageId : `${messageId} ${describedBy.id}`}
             onChange={(event) => onChange({ kind: "at", local: event.target.value, pick: null })}
           />
         </label>
@@ -69,9 +71,7 @@ export const WhenField = ({ label, when, onChange, zone, now, earliest, tooEarly
         </Button>
       </div>
       <AmbiguityChoice when={when} zone={zone} onChange={onChange} />
-      <p id={messageId} aria-live="polite" className="text-sm text-destructive empty:sr-only">
-        {message}
-      </p>
+      <FieldMessage id={messageId}>{message}</FieldMessage>
     </div>
   )
 }

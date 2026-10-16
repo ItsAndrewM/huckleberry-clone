@@ -819,3 +819,188 @@ test.describe("a Settings save keeps focus while it saves", () => {
     await expect(sheet).toBeHidden()
   })
 })
+
+const beforeAnyMessage = async (scope: Locator, fields: ReadonlyArray<Locator>) => {
+  for (const field of fields) {
+    await expect(field).toBeVisible()
+    await expect(field).not.toHaveAttribute("aria-invalid", "true")
+  }
+  await scope.locator('[aria-live="polite"]').evaluateAll((regions) => {
+    for (const region of regions) region.setAttribute("data-polite-before", "")
+  })
+}
+
+interface Told {
+  readonly about: ReadonlyArray<Locator>
+  readonly notAbout?: ReadonlyArray<Locator>
+  readonly stopsSave: boolean
+}
+
+const expectToldPolitely = async (scope: Locator, said: RegExp, { about, notAbout = [], stopsSave }: Told) => {
+  for (const field of about) {
+    await expect(field).toHaveAccessibleDescription(said)
+    if (stopsSave) await expect(field).toHaveAttribute("aria-invalid", "true")
+    else await expect(field).not.toHaveAttribute("aria-invalid", "true")
+  }
+  for (const field of notAbout) {
+    await expect(field).not.toHaveAccessibleDescription(said)
+    await expect(field).not.toHaveAttribute("aria-invalid", "true")
+  }
+  await expect(scope.locator("[data-polite-before]").filter({ hasText: said })).toHaveCount(1)
+}
+
+const nursedAnHourAgo = (by: string): FeedAnswer => ({
+  id: "feed-1",
+  status: "completed",
+  startedAt: NOW - 90 * MINUTE,
+  endedAt: NOW - 67 * MINUTE,
+  segments: [
+    { id: "s1", side: "left", startedAt: NOW - 90 * MINUTE, endedAt: NOW - 76 * MINUTE },
+    { id: "s2", side: "right", startedAt: NOW - 76 * MINUTE, endedAt: NOW - 67 * MINUTE },
+  ],
+  portions: [],
+  ...savedBy(by),
+})
+
+const openEditFeed = async (page: Page) => {
+  const andrew = await inVancouver(page)
+  await playHousehold(page, { ...todayWith(), recent: [{ kind: "feed", feed: nursedAnHourAgo(andrew) }] })
+  await openToday(page)
+  await recent(page)
+    .getByRole("button", { name: /Nursing/u })
+    .click()
+  return page.getByRole("dialog", { name: "Edit feed" })
+}
+
+const refuseTheChild = async (page: Page, fieldError: { readonly path: string; readonly issue: string }) => {
+  const { me } = await caregiversOf(page)
+  await page.route("**/api/me", (route) => route.fulfill({ json: me }))
+  await page.route("**/api/child", (route) =>
+    route.fulfill({ status: 400, json: { _tag: "InvalidInput", fieldErrors: [fieldError] } }),
+  )
+  await page.clock.setFixedTime(NOW)
+  await page.goto("/settings")
+  return page.locator("section", { has: page.getByRole("heading", { name: "Child", exact: true }) })
+}
+
+test.describe("a field's message describes each field it's about and is said politely, from a region that was there before it", () => {
+  test("That's after this side ended., on a stopped side's start, which stops Save start", async ({ page }) => {
+    await inVancouver(page)
+    await playHousehold(page, todayWith(pausedAt(await runningFor(page), NOW - 5 * MINUTE)))
+    const sheet = await openNursing(page)
+    await sheet.getByRole("button", { name: "Change, Started" }).click()
+    const started = sheet.getByLabel("Started", { exact: true })
+    await beforeAnyMessage(sheet, [started])
+    await started.fill("2026-10-09T09:28")
+    await expectToldPolitely(sheet, /That's after this side ended\./u, { about: [started], stopsSave: true })
+    await expect(sheet.getByRole("button", { name: "Save start" })).toBeDisabled()
+  })
+
+  test("Past feed's end in the future, on its start and both sides' minutes, which stops Save", async ({ page }) => {
+    await inVancouver(page)
+    await playHousehold(page, todayWith())
+    await (await openNursing(page)).getByRole("button", { name: "Log a past feed" }).click()
+    const sheet = page.getByRole("dialog", { name: "Past feed" })
+    const left = sheet.getByRole("textbox", { name: "Left" })
+    const fields = [sheet.getByLabel("Started", { exact: true }), left, sheet.getByRole("textbox", { name: "Right" })]
+    await beforeAnyMessage(sheet, fields)
+    await left.fill("45")
+    await expectToldPolitely(sheet, /That would end at 9:45\sAM, in the future\./u, { about: fields, stopsSave: true })
+    await expect(sheet.getByRole("button", { name: "Save" })).toBeDisabled()
+  })
+
+  test("a sleep longer than a day, on both its times, which stops Save", async ({ page }) => {
+    await inVancouver(page)
+    await playHousehold(page, todayWith())
+    await openToday(page)
+    await quickAction(page, "Sleep").click()
+    await page.getByRole("dialog", { name: "Sleep" }).getByRole("button", { name: "Log a past sleep" }).click()
+    const sheet = page.getByRole("dialog", { name: "Past sleep" })
+    const fellAsleep = sheet.getByLabel("Fell asleep", { exact: true })
+    const times = [fellAsleep, sheet.getByLabel("Woke", { exact: true })]
+    await beforeAnyMessage(sheet, times)
+    await fellAsleep.fill("2026-10-08T08:00")
+    await expectToldPolitely(sheet, /A sleep can last a day at most\./u, { about: times, stopsSave: true })
+    await expect(sheet.getByRole("button", { name: "Save" })).toBeDisabled()
+  })
+
+  test("Edit feed's issue, on the fields of each part it's about and no others, which stops Save", async ({ page }) => {
+    const sheet = await openEditFeed(page)
+    const first = sheet.getByRole("group", { name: "Side 1" })
+    const second = sheet.getByRole("group", { name: "Side 2" })
+    const firstStart = first.getByLabel("Started", { exact: true })
+    const firstMinutes = first.getByLabel("Minutes", { exact: true })
+    const secondStart = second.getByLabel("Started", { exact: true })
+    const secondMinutes = second.getByLabel("Minutes", { exact: true })
+    const sides = [firstStart, firstMinutes, secondStart, secondMinutes]
+    await beforeAnyMessage(sheet, sides)
+    await firstMinutes.fill("0")
+    await expectToldPolitely(sheet, /Give each side 1 to 240 minutes\./u, {
+      about: [firstMinutes],
+      notAbout: [firstStart, secondStart, secondMinutes],
+      stopsSave: true,
+    })
+    await firstMinutes.fill("14")
+    await secondStart.fill("2026-10-09T08:05")
+    await expectToldPolitely(sheet, /Two sides overlap\. Move one so they don't\./u, { about: sides, stopsSave: true })
+    await expect(sheet.getByRole("button", { name: "Save" })).toBeDisabled()
+  })
+
+  test("Edit feed's move, on Feed started, which only informs", async ({ page }) => {
+    const sheet = await openEditFeed(page)
+    const feedStarted = sheet.getByLabel("Feed started", { exact: true })
+    await beforeAnyMessage(sheet, [feedStarted])
+    await feedStarted.fill("2026-10-09T07:00")
+    await expectToldPolitely(sheet, /Moves every side and bottle 1 h earlier\./u, {
+      about: [feedStarted],
+      stopsSave: false,
+    })
+    await expect(sheet.getByRole("button", { name: "Save" })).toBeEnabled()
+  })
+
+  test("a birth date the household refused, on the birth date alone", async ({ page }) => {
+    const child = await refuseTheChild(page, { path: "birthDate", issue: "before_birth" })
+    const birthDate = child.getByLabel("Birth date", { exact: true })
+    await beforeAnyMessage(child, [birthDate])
+    await birthDate.fill("2026-09-04")
+    await child.getByRole("button", { name: "Save", exact: true }).click()
+    await expectToldPolitely(child, /Some entries are from before this date\. Move or delete them first\./u, {
+      about: [birthDate],
+      notAbout: [child.getByLabel("Name", { exact: true })],
+      stopsSave: true,
+    })
+  })
+
+  test("a Born at that can't be saved, on its weeks and its days", async ({ page }) => {
+    const child = await refuseTheChild(page, { path: "gestationalAgeDays", issue: "invalid" })
+    const weeks = child.getByRole("spinbutton", { name: "weeks", exact: true })
+    const days = child.getByRole("spinbutton", { name: "days", exact: true })
+    await beforeAnyMessage(child, [weeks, days])
+    await weeks.fill("50")
+    await child.getByRole("button", { name: "Save", exact: true }).click()
+    await expectToldPolitely(child, /Enter 22 to 44 weeks and 0 to 6 days\./u, {
+      about: [weeks, days],
+      stopsSave: true,
+    })
+  })
+
+  test("a weight out of range, on the weight alone, which stops Save", async ({ page }) => {
+    const { me } = await caregiversOf(page)
+    const household = { ...me.household, units: { ...me.household.units, weight: "kg", length: "cm" } }
+    await page.route("**/api/me", (route) => route.fulfill({ json: { ...me, household } }))
+    await page.route("**/api/growth", (route) => route.fulfill({ json: { measurements: [] } }))
+    await page.clock.setFixedTime(NOW)
+    await page.goto("/growth")
+    await page.getByRole("button", { name: "Add measurement" }).click()
+    const sheet = page.getByRole("dialog", { name: "Add measurement" })
+    const weight = sheet.getByRole("textbox", { name: "Weight" })
+    await beforeAnyMessage(sheet, [weight])
+    await weight.fill("4325")
+    await expectToldPolitely(sheet, /Out of range\. Check the number and its unit\./u, {
+      about: [weight],
+      notAbout: [sheet.getByRole("textbox", { name: "Length" })],
+      stopsSave: true,
+    })
+    await expect(sheet.getByRole("button", { name: "Save" })).toBeDisabled()
+  })
+})
