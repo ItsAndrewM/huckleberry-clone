@@ -9,6 +9,7 @@ import {
   keptWithHeld,
   keptWithout,
   readKept,
+  Unsaved,
   writeKept,
 } from "../src/sheets/kept.ts"
 import type { Failed, Sending } from "../src/sheets/sending.ts"
@@ -127,37 +128,50 @@ describe("controls kept in step with what's held", () => {
   const PAUSE_KEPT: KeptEntry = { sending: PAUSE, keptAt: NOW, idSince: NOW, failed: true }
 
   it("keeps a control held on Nursing or Sleep from when it was first kept, returning the same list while nothing changes", () => {
-    const kept = keptWithHeld([], [offline(PAUSE)], null, NOW)
+    const kept = keptWithHeld([], [offline(PAUSE)], [], NOW)
     expect(kept).toEqual([PAUSE_KEPT])
-    expect(keptWithHeld(kept, [offline(PAUSE)], null, NOW + 5000)).toBe(kept)
+    expect(keptWithHeld(kept, [offline(PAUSE)], [], NOW + 5000)).toBe(kept)
   })
 
   it("keeps what a control last sent through every retry, from when it was first kept", () => {
-    const left = keptWithHeld([], [offline(resume("left"))], null, NOW)
-    expect(keptWithHeld(left, [offline(resume("right"))], null, NOW + 5000)).toEqual([
+    const left = keptWithHeld([], [offline(resume("left"))], [], NOW)
+    expect(keptWithHeld(left, [offline(resume("right"))], [], NOW + 5000)).toEqual([
       { sending: resume("right"), keptAt: NOW, idSince: NOW, failed: true },
     ])
   })
 
   it("keeps a kept control while it's sent again, allowing that it may land, but never a control on its first send", () => {
-    expect(keptWithHeld([PAUSE_KEPT], [], PAUSE, NOW + 5000)).toEqual([{ ...PAUSE_KEPT, failed: false }])
+    expect(keptWithHeld([PAUSE_KEPT], [], [PAUSE], NOW + 5000)).toEqual([{ ...PAUSE_KEPT, failed: false }])
     const none: ReadonlyArray<KeptEntry> = []
-    expect(keptWithHeld(none, [], PAUSE, NOW)).toBe(none)
+    expect(keptWithHeld(none, [], [PAUSE], NOW)).toBe(none)
+  })
+
+  it("keeps a kept control while it's sent again, even once another send starts before it lands", () => {
+    expect(keptWithHeld([KEPT, PAUSE_KEPT], [], [PAUSE, POO], NOW + 5000)).toEqual([
+      KEPT,
+      { ...PAUSE_KEPT, failed: false },
+    ])
+  })
+
+  it("keeps whether a control a reload brought back had failed or was still on its way", () => {
+    const onItsWay = [{ ...PAUSE_KEPT, failed: false }]
+    const back = { sending: PAUSE, error: new Unsaved({ keptAt: NOW, failed: false }) }
+    expect(keptWithHeld(onItsWay, [back], [], NOW + 5000)).toBe(onItsWay)
   })
 
   it("lets a control go once it's neither held nor on its way: saved, discarded, replaced, or let go with its sheet", () => {
-    expect(keptWithHeld([KEPT, PAUSE_KEPT], [], null, NOW)).toEqual([KEPT])
+    expect(keptWithHeld([KEPT, PAUSE_KEPT], [], [], NOW)).toEqual([KEPT])
   })
 
   it("never keeps a control that can't be saved as it is, or one from an Edit sheet", () => {
     const none: ReadonlyArray<KeptEntry> = []
     const gone = { sending: PAUSE, error: new NotFound() }
-    expect(keptWithHeld(none, [gone, offline(EDIT_SHEET_DELETE)], null, NOW)).toBe(none)
+    expect(keptWithHeld(none, [gone, offline(EDIT_SHEET_DELETE)], [], NOW)).toBe(none)
   })
 
   it("leaves the entries as they are, held or not", () => {
     const entries = [KEPT]
-    expect(keptWithHeld(entries, [offline(DIAPER)], null, NOW)).toBe(entries)
-    expect(keptWithHeld(entries, [offline(DIAPER), offline(PAUSE)], null, NOW)).toEqual([KEPT, PAUSE_KEPT])
+    expect(keptWithHeld(entries, [offline(DIAPER)], [], NOW)).toBe(entries)
+    expect(keptWithHeld(entries, [offline(DIAPER), offline(PAUSE)], [], NOW)).toEqual([KEPT, PAUSE_KEPT])
   })
 })

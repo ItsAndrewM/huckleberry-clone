@@ -20,15 +20,15 @@ export const useKeptEntries = ({ kept, unreadable }: Restored) => {
     entries.current = next
     setKeeping(writeKept(keptStorage, next, unreadable))
   })
-  const [held] = useState(
-    () => (held: ReadonlyArray<Failed>, busy: Sending | null) =>
-      store(keptWithHeld(entries.current, held, busy, Date.now())),
+  const [follow] = useState(
+    () => (held: ReadonlyArray<Failed>, onTheirWay: ReadonlyArray<Sending>) =>
+      store(keptWithHeld(entries.current, held, onTheirWay, Date.now())),
   )
   return {
     keeping,
     sending: (sending: Sending) => store(keptAfterSend(entries.current, sending, Date.now())),
     failed: (failed: Failed) => store(keptAfterFailure(entries.current, failed, Date.now())),
     done: (sending: Sending) => store(keptWithout(entries.current, actionIdOf(sending))),
-    held,
+    follow,
   }
 }

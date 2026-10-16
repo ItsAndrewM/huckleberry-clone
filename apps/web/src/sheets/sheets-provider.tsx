@@ -23,6 +23,7 @@ import { TOAST_MS } from "./undo.ts"
 import { useHeldDrafts } from "./use-held-drafts.ts"
 import { useKeptControls } from "./use-kept-controls.ts"
 import { useKeptEntries } from "./use-kept-entries.ts"
+import { useOnTheirWay } from "./use-on-their-way.ts"
 import { useReopenWhenReady } from "./use-reopen.ts"
 import { useResumedDraft } from "./use-resumed-draft.ts"
 import { useSend } from "./use-send.ts"
@@ -36,19 +37,23 @@ export const SheetsProvider = ({ restored, children }: SheetsProviderProps) => {
   const [state, setState] = useState(() => restoredState(restored.held))
   const [dismiss] = useState(() => (sheet: SheetKind) => setState((current) => dismissedKindState(current, sheet)))
   const kept = useKeptEntries(restored)
+  const inFlight = useOnTheirWay(restored.resend)
   const online = useConnectivity() === "online"
   useHeldDrafts(state.held)
   useReopenWhenReady(state, () => setState(reopenedState))
+  useKeptControls(kept.follow, state.held, inFlight.onTheirWay)
   const sweepAfter = (shownAt: number) =>
     setTimeout(() => setState((current) => expiredState(current, shownAt + TOAST_MS)), TOAST_MS)
   const mutation = useSend({
     onFailed: (failed) => {
+      inFlight.settled(failed.sending)
       kept.failed(failed)
       const now = Date.now()
       setState((current) => failedState(current, failed, now))
       sweepAfter(now)
     },
     onSaved: (sending, saved) => {
+      inFlight.settled(sending)
       kept.done(sending)
       const now = Date.now()
       setState((current) => savedState(current, sending, saved, now))
@@ -56,9 +61,9 @@ export const SheetsProvider = ({ restored, children }: SheetsProviderProps) => {
     },
   })
   const busy = mutation.isPending ? (mutation.variables ?? null) : null
-  useKeptControls(kept.held, state.held, busy)
   const deliver = (sending: Sending) => {
     kept.sending(sending)
+    inFlight.left(sending)
     setState((current) => sendingState(current, sending, online))
     mutation.mutate(sending)
   }
@@ -67,7 +72,7 @@ export const SheetsProvider = ({ restored, children }: SheetsProviderProps) => {
     if (blocker === null) deliver(sending)
     else setState((current) => askedBeforeSending(current, sending, blocker))
   }
-  useResumedDraft(restored.resend, send)
+  useResumedDraft(restored.resend, deliver)
   const sheets: Sheets = {
     ...state,
     keeping: kept.keeping,

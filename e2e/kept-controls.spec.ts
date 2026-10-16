@@ -9,6 +9,7 @@ import {
   quickAction,
   runningFeed,
   runningSleep,
+  savedDiaper,
   type SleepAnswer,
   sleepingToday,
   type TodayAnswer,
@@ -201,4 +202,81 @@ test("lets a kept pause go for good once a later Switch replaces it", async ({ p
   await page.getByText("Totals").waitFor()
   await expect(sheet).toBeHidden()
   expect(paused).toHaveLength(1)
+})
+
+test("keeps a kept wake-up on the phone while it's sent again, even when a diaper is logged before it lands", async ({
+  page,
+}) => {
+  const { andrew } = await caregiversOf(page)
+  const { answer } = await playHousehold(page, sleeping(andrew.id))
+  await answer("**/api/diapers", ({ body }) => ({ status: 201, json: savedDiaper(andrew.id)(body) }))
+  const woke: Body[] = []
+  await page.route("**/api/sleeps/sleep-1/wake", async (route) => {
+    woke.push(route.request().postDataJSON() ?? {})
+    if (woke.length === 1) await route.abort("internetdisconnected")
+  })
+  await openToday(page)
+  await quickAction(page, "Sleep").click()
+  const sheet = page.getByRole("dialog", { name: "Sleep" })
+  await sheet.getByRole("button", { name: "Wake up", exact: true }).click()
+  await expect(sheet.getByRole("alert")).toContainText("No connection. This is kept on this phone:")
+  await sheet.getByRole("button", { name: "Try again" }).click()
+  await expect.poll(() => woke.length).toBe(2)
+  await quickAction(page, "Diaper").click()
+  await page.getByRole("dialog", { name: "Diaper" }).getByRole("button", { name: "Pee" }).click()
+  await expect(page.getByText("Diaper saved")).toBeVisible()
+  expect(await keptOnThePhone(page)).toContain("wakeSleep")
+  await page.reload()
+  await expect(sheet.getByRole("alert")).toHaveText(
+    /^The wake-up (?:might not have been|wasn't) saved, Fri 9:30\sAM\. Save it now\?Save now$/u,
+  )
+})
+
+test("sends a sign-in draft again at startup, kept on the phone until it lands, while another kept control waits on its sheet", async ({
+  page,
+}) => {
+  const { andrew } = await caregiversOf(page)
+  await playHousehold(page, feeding(andrew.id))
+  const pause = {
+    sheet: "nursing",
+    action: {
+      kind: "pauseFeed",
+      id: "feed-1",
+      payload: { actionId: "3f2e1d0c-9b8a-4c7d-8e6f-5a4b3c2d1e0f", version: 1, occurredAt: NOW - 2 * MINUTE },
+    },
+  }
+  const startChange = {
+    sheet: "nursing",
+    action: {
+      kind: "editSegment",
+      id: "segment-1",
+      payload: {
+        actionId: "8e7d6c5b-4a39-4281-9f0e-1d2c3b4a5968",
+        version: 1,
+        side: "left",
+        startedAt: STARTED - 5 * MINUTE,
+        endedAt: null,
+      },
+    },
+  }
+  const kept = [pause, startChange].map((sending) => ({
+    sending,
+    keptAt: NOW - 2 * MINUTE,
+    idSince: NOW - 2 * MINUTE,
+    failed: true,
+  }))
+  const draft = { route: "/", sending: startChange, createdAt: NOW - MINUTE }
+  await page.addInitScript((stored) => localStorage.setItem("bt.kept", stored), JSON.stringify(kept))
+  await page.addInitScript((stored) => sessionStorage.setItem("bt.draft", stored), JSON.stringify(draft))
+  const changed: Body[] = []
+  await page.route("**/api/segments/segment-1", (route) => {
+    changed.push(route.request().postDataJSON() ?? {})
+  })
+  await openToday(page)
+  await expect(page.getByRole("dialog", { name: "Nursing" }).getByRole("alert")).toHaveText(
+    /^The pause wasn't saved, Fri 9:28\sAM\. Save it now\?Save now$/u,
+  )
+  await expect.poll(() => changed.length).toBe(1)
+  expect(changed[0]).toEqual(startChange.action.payload)
+  await expect.poll(() => keptOnThePhone(page)).toContain("editSegment")
 })

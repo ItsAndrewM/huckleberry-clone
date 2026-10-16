@@ -1,13 +1,13 @@
 import { useEffect } from "react"
 import type { Failed, Sending } from "./sending.ts"
 
-type Keep = (held: ReadonlyArray<Failed>, busy: Sending | null) => void
+type Follow = (held: ReadonlyArray<Failed>, onTheirWay: ReadonlyArray<Sending>) => void
 
-export const useKeptControls = (keep: Keep, held: ReadonlyArray<Failed>, busy: Sending | null) => {
+export const useKeptControls = (follow: Follow, held: ReadonlyArray<Failed>, onTheirWay: ReadonlyArray<Sending>) => {
   useEffect(
     function keepHeldControls() {
-      keep(held, busy)
+      follow(held, onTheirWay)
     },
-    [keep, held, busy],
+    [follow, held, onTheirWay],
   )
 }

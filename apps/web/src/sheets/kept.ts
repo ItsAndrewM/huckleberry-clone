@@ -79,16 +79,24 @@ interface KeptControl {
   readonly failed: boolean
 }
 
+const surelyFailed = ({ error }: Failed) => !(error instanceof Unsaved) || error.failed
+
 const controlsToKeep = (
   entries: ReadonlyArray<KeptEntry>,
   held: ReadonlyArray<Failed>,
-  busy: Sending | null,
+  onTheirWay: ReadonlyArray<Sending>,
 ): ReadonlyArray<KeptControl> => {
   const asking = held.flatMap((failed) =>
-    isKeptControl(failed.sending) && stillSaveable(failed) ? [{ sending: failed.sending, failed: true }] : [],
+    isKeptControl(failed.sending) && stillSaveable(failed)
+      ? [{ sending: failed.sending, failed: surelyFailed(failed) }]
+      : [],
   )
-  const resent = busy !== null && isKeptControl(busy) && entries.some((entry) => idOf(entry) === actionIdOf(busy))
-  return resent ? [...asking, { sending: busy, failed: false }] : asking
+  const resent = onTheirWay.flatMap((sending) =>
+    isKeptControl(sending) && entries.some((entry) => idOf(entry) === actionIdOf(sending))
+      ? [{ sending, failed: false }]
+      : [],
+  )
+  return [...asking, ...resent]
 }
 
 const withControl = (entries: ReadonlyArray<KeptEntry>, { sending, failed }: KeptControl, now: number) =>
@@ -102,10 +110,10 @@ const sameRecords = (next: ReadonlyArray<KeptEntry>, entries: ReadonlyArray<Kept
 export const keptWithHeld = (
   entries: ReadonlyArray<KeptEntry>,
   held: ReadonlyArray<Failed>,
-  busy: Sending | null,
+  onTheirWay: ReadonlyArray<Sending>,
   now: number,
 ) => {
-  const controls = controlsToKeep(entries, held, busy)
+  const controls = controlsToKeep(entries, held, onTheirWay)
   const ids = new Set(controls.map(({ sending }) => actionIdOf(sending)))
   const still = entries.filter((entry) => isEntry(entry.sending) || ids.has(idOf(entry)))
   const next = controls.reduce<ReadonlyArray<KeptEntry>>((list, control) => withControl(list, control, now), still)

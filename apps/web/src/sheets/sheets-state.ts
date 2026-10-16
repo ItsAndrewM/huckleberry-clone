@@ -202,7 +202,10 @@ export const failedState = (state: SheetsState, failed: Failed, now: number): Sh
   return { ...state, held, keptOpen: own ? null : state.keptOpen }
 }
 
-export const restoredState = (held: ReadonlyArray<Failed>): SheetsState => ({ ...CLOSED, held })
+export const restoredState = (held: ReadonlyArray<Failed>): SheetsState => ({
+  ...CLOSED,
+  held: held.reduce<ReadonlyArray<Failed>>((ranked, failed) => heldWith(ranked, failed), []),
+})
 
 export const reopenedState = (state: SheetsState): SheetsState => {
   const first = state.held[0]
