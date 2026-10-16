@@ -1,6 +1,7 @@
 import { createContext, use } from "react"
 import { heldFor } from "./held.ts"
 import type { Failed, Sending, SheetKind } from "./sending.ts"
+import type { Pending } from "./sheets-state.ts"
 import type { Toast } from "./undo.ts"
 
 export type TimedSheet = "bottle" | "pastFeed" | "diaper" | "measurement" | "pastSleep" | "dose" | "logAt"
@@ -12,6 +13,7 @@ export interface Sheets {
   readonly opened: number
   readonly held: ReadonlyArray<Failed>
   readonly asking: boolean
+  readonly pending: Pending | null
   readonly busy: Sending | null
   readonly toast: Toast | null
   readonly queued: boolean

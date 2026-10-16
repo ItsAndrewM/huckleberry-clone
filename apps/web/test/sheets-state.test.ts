@@ -5,11 +5,14 @@ import { AuthRequired, Offline } from "../src/api/errors.ts"
 import { heldFor } from "../src/sheets/held.ts"
 import { closesOnSend, type Failed, isEntry, type Sending } from "../src/sheets/sending.ts"
 import {
+  askedBeforeSending,
+  blockerFor,
   CLOSED,
   discardedState,
   dismissedState,
   expiredState,
   failedState,
+  keptState,
   reopenedState,
   restoredState,
   shownState,
@@ -744,5 +747,122 @@ describe("closing a sheet that holds a failed control", () => {
     const state = failedState(sendingState(shownWith(paused), SWITCHED, true), switched, NOW)
     expect(state.held).toEqual([switched])
     expect(heldFor(state.held, "nursing")).toBe(switched)
+  })
+})
+
+describe("one failed control per sheet", () => {
+  const paused = { sending: PAUSE, error: new Offline() }
+  const woke = { sending: WOKE, error: new Offline() }
+  const running = feedAt(NOW - 600_000, {
+    id: "feed-1",
+    status: "active",
+    endedAt: null,
+    version: 4,
+    segments: [{ id: "segment-1", side: "left", startedAt: NOW - 600_000, endedAt: null }],
+  })
+
+  const START_CHANGED: Sending = {
+    sheet: "nursing",
+    action: {
+      kind: "editSegment",
+      id: "segment-1",
+      payload: { actionId: RENEWED, version: 3, side: "left", startedAt: NOW - 900_000, endedAt: null },
+    },
+  }
+  const NIGHT: Sending = {
+    sheet: "sleep",
+    action: {
+      kind: "editSleep",
+      id: "sleep-1",
+      payload: { actionId: RENEWED, version: 1, kind: "night", startedAt: NOW - 3_600_000, endedAt: null },
+    },
+  }
+  const SWITCHED_AFTER: Sending = {
+    sheet: "nursing",
+    action: {
+      kind: "switchSide",
+      id: "feed-1",
+      payload: { actionId: "6a5b4c3d-2e1f-4a0b-9c8d-7e6f5a4b3c2d", version: 3, occurredAt: NOW },
+    },
+  }
+  const ANOTHER_BOTTLE: Sending = {
+    sheet: "bottle",
+    action: {
+      kind: "addBottle",
+      id: "feed-1",
+      payload: { actionId: RENEWED, version: 3, occurredAt: NOW, breastMilkMl: 40, formulaMl: 0 },
+    },
+  }
+
+  const holding = (failed: Failed) => failedState(CLOSED, failed, NOW)
+
+  it.each([
+    { label: "a pause, before its feed's start is changed", failed: paused, fresh: START_CHANGED },
+    { label: "a wake, before Nap or night is changed", failed: woke, fresh: NIGHT },
+    {
+      label: "a pause whose conflict Pause anyway would still save",
+      failed: { sending: PAUSE, error: new FeedConflict({ code: "STALE_VERSION", current: running }) },
+      fresh: START_CHANGED,
+    },
+    {
+      label: "a failed start change, before the feed is switched",
+      failed: { sending: START_CHANGED, error: new Offline() },
+      fresh: SWITCHED_AFTER,
+    },
+  ])("asks first when another send would leave a second failure: $label", ({ failed, fresh }) => {
+    expect(blockerFor(holding(failed), fresh)).toBe(failed)
+  })
+
+  it.each([
+    { label: "a send that replaces it, Switch after a pause", failed: paused, fresh: SWITCHED_AFTER },
+    { label: "its own resend", failed: paused, fresh: PAUSE },
+    { label: "a send from another sheet", failed: paused, fresh: ANOTHER_BOTTLE },
+    {
+      label: "a conflict nothing would save",
+      failed: { sending: PAUSE, error: new FeedConflict({ code: "STALE_VERSION", current: feedAt(NOW) }) },
+      fresh: START_CHANGED,
+    },
+    {
+      label: "a held entry, which keeps its own rule",
+      failed: { sending: DIAPER, error: new Offline() },
+      fresh: OTHER_DIAPER,
+    },
+  ])("lets it through without asking: $label", ({ failed, fresh }) => {
+    expect(blockerFor(holding(failed), fresh)).toBeNull()
+  })
+
+  it("lets a diaper's Save my changes go with its form's next tap, without asking", () => {
+    const failed = { sending: EDIT_DIAPER, error: new Offline() }
+    const saving = sendingState(shownState(CLOSED, "diaper"), EDIT_DIAPER, true)
+    const failedThere = failedState(saving, failed, NOW)
+    expect(failedThere.held).toEqual([failed])
+    expect(blockerFor(failedThere, DIAPER)).toBeNull()
+  })
+
+  it("holds the send behind the question until the parent answers", () => {
+    const asking = askedBeforeSending(holding(paused), START_CHANGED, paused)
+    expect(asking).toMatchObject({
+      open: "nursing",
+      asking: true,
+      pending: { sending: START_CHANGED, blocker: paused },
+    })
+    expect(keptState(asking)).toMatchObject({ open: "nursing", asking: false, pending: null, held: [paused] })
+  })
+
+  it("lets the failure go on Discard and keeps the sheet open, so the held send can go out", () => {
+    const asking = askedBeforeSending(holding(paused), START_CHANGED, paused)
+    expect(discardedState(asking, paused)).toMatchObject({ open: "nursing", asking: false, pending: null, held: [] })
+  })
+
+  it("forgets the held send when the parent closes the sheet instead, and asks about the failure", () => {
+    const asking = askedBeforeSending(holding(paused), START_CHANGED, paused)
+    expect(dismissedState(asking)).toMatchObject({ open: "nursing", asking: true, pending: null })
+  })
+
+  it("puts a failed control ahead of a failed edit on its sheet, so its own buttons act on it first", () => {
+    const edited = { sending: START_CHANGED, error: new Offline() }
+    const both = failedState(holding(edited), paused, NOW)
+    expect(both.held).toEqual([paused, edited])
+    expect(heldFor(both.held, "nursing")).toBe(paused)
   })
 })

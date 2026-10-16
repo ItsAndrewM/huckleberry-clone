@@ -162,6 +162,78 @@ test("a diaper changed after its first send landed unanswered keeps that send's 
   expect(answered).toEqual([201, 409])
 })
 
+const failPauseThenChangeStart = async (page: Page) => {
+  const { andrew } = await caregiversOf(page)
+  const feed = runningFeed(andrew.id, STARTED, "left")
+  const { played, answer } = await playHousehold(page, todayWith(feed))
+  await answer("**/api/segments/segment-1", () => ({
+    status: 200,
+    json: { feed: { ...feed, version: 2 }, changed: [["today"]] },
+  }))
+  const paused = await loseSaves(page, "**/api/feeds/feed-1/pause", {
+    lost: 1,
+    until: Promise.resolve(),
+    answer: () => ({ feed: { ...feed, version: 2 }, changed: [["today"]] }),
+  })
+  await openToday(page)
+  await page.clock.setFixedTime(FIRST_TAP)
+  const sheet = await openSheet(page, "Nursing")
+  await sheet.getByRole("button", { name: "Pause", exact: true }).click()
+  await expect(sheet.getByRole("alert")).toContainText("No connection")
+  await sheet.getByRole("button", { name: "Change" }).click()
+  await sheet.getByLabel("Started").fill("2026-10-09T08:45")
+  await sheet.getByRole("button", { name: "Save start" }).click()
+  await expect(sheet.getByRole("alert")).toHaveText(/^Discard the pause at 9:30\sAM\?DiscardKeep$/u)
+  return { sheet, played, paused }
+}
+
+test("a failed pause asks before its feed's start is changed, and Keep sends nothing, so Try again saves the first tap's time", async ({
+  page,
+}) => {
+  const { sheet, played, paused } = await failPauseThenChangeStart(page)
+  await sheet.getByRole("button", { name: "Keep" }).click()
+  await expect(sheet.getByRole("alert")).toContainText("No connection")
+  expect(played.sent).toEqual([])
+  await sheet.getByRole("button", { name: "Try again" }).click()
+  await expect.poll(() => paused.length).toBe(2)
+  expect(paused[1]?.actionId).toBe(paused[0]?.actionId)
+  expect(paused[1]?.occurredAt).toBe(FIRST_TAP)
+})
+
+test("a failed pause's Discard lets it go and sends the start change", async ({ page }) => {
+  const { sheet, played, paused } = await failPauseThenChangeStart(page)
+  await sheet.getByRole("button", { name: "Discard" }).click()
+  await expect.poll(() => played.sent.length).toBe(1)
+  expect(played.sent[0]?.path).toBe("/api/segments/segment-1")
+  await expect(sheet.getByRole("alert")).toHaveCount(0)
+  expect(paused).toHaveLength(1)
+})
+
+test("a failed wake asks before Nap or night is changed, and Keep sends nothing", async ({ page }) => {
+  const { andrew } = await caregiversOf(page)
+  const sleep = runningSleep(andrew.id, STARTED)
+  const { played, answer } = await playHousehold(page, sleepingToday(sleep))
+  await answer("**/api/sleeps/sleep-1", () => ({
+    status: 200,
+    json: { sleep: { ...sleep, kind: "night", version: 2 }, changed: [["today"]] },
+  }))
+  await loseSaves(page, "**/api/sleeps/sleep-1/wake", {
+    lost: 1,
+    until: Promise.resolve(),
+    answer: (body) => ({ sleep: { ...sleep, endedAt: body.occurredAt ?? NOW, version: 2 }, changed: [["today"]] }),
+  })
+  await openToday(page)
+  await page.clock.setFixedTime(FIRST_TAP)
+  const sheet = await openSheet(page, "Sleep")
+  await sheet.getByRole("button", { name: "Wake up", exact: true }).click()
+  await expect(sheet.getByRole("alert")).toContainText("No connection")
+  await sheet.getByRole("button", { name: "Night", exact: true }).click()
+  await expect(sheet.getByRole("alert")).toHaveText(/^Discard the wake-up at 9:30\sAM\?DiscardKeep$/u)
+  await sheet.getByRole("button", { name: "Keep" }).click()
+  await expect(sheet.getByRole("alert")).toContainText("No connection")
+  expect(played.sent).toEqual([])
+})
+
 test("a pause whose resend meets a change Pause anyway would still save asks before closing drops it", async ({
   page,
 }) => {

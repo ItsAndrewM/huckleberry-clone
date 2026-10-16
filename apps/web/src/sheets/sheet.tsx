@@ -17,7 +17,7 @@ interface SheetProps {
 
 export const Sheet = ({ sheet, title, description, children }: SheetProps) => {
   const sheets = useSheets()
-  const failed = failedFor(sheets, sheet)
+  const failed = sheets.pending?.blocker ?? failedFor(sheets, sheet)
   const asking = sheets.asking && sheets.open === sheet && failed !== null
   return (
     <Drawer
