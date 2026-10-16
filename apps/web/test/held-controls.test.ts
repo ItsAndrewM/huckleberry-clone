@@ -53,7 +53,11 @@ describe("a refused running-feed control", () => {
 describe("a control the sheet let go", () => {
   const START_CHANGE: Sending = {
     sheet: "nursing",
-    action: { kind: "editSegment", id: "segment-1", payload: { actionId: "action-start", version: 3, startedAt: NOW } },
+    action: {
+      kind: "editSegment",
+      id: "segment-1",
+      payload: { actionId: "action-start", version: 3, side: "left", startedAt: NOW, endedAt: null },
+    },
   }
 
   it("is let go once it's no longer held, while its sheet shows and its own resend isn't on its way", () => {
