@@ -36,6 +36,37 @@ const playTheHousehold = async (context: BrowserContext) => {
   }
 }
 
+const keepDateNowWhole = () => {
+  const now = Date.now
+  if (Object.hasOwn(now, "whole")) return
+  Date.now = Object.assign(() => Math.floor(now()), { whole: true })
+}
+
+const keepTheFakeClockWhole = (context: BrowserContext) => {
+  let kept: Promise<void> | undefined
+  const keep = () => {
+    kept ??= context
+      .addInitScript(keepDateNowWhole)
+      .then(() => Promise.all(context.pages().map((page) => page.evaluate(keepDateNowWhole))))
+      .then(() => undefined)
+    return kept
+  }
+  const thenKeep =
+    <Args extends ReadonlyArray<unknown>>(call: (...args: Args) => Promise<void>) =>
+    async (...args: Args) => {
+      await call(...args)
+      await keep()
+    }
+  const { clock } = context
+  clock.install = thenKeep(clock.install.bind(clock))
+  clock.fastForward = thenKeep(clock.fastForward.bind(clock))
+  clock.pauseAt = thenKeep(clock.pauseAt.bind(clock))
+  clock.resume = thenKeep(clock.resume.bind(clock))
+  clock.runFor = thenKeep(clock.runFor.bind(clock))
+  clock.setFixedTime = thenKeep(clock.setFixedTime.bind(clock))
+  clock.setSystemTime = thenKeep(clock.setSystemTime.bind(clock))
+}
+
 const sendChanged = async (context: BrowserContext, keys: ReadonlyArray<QueryKey>) => {
   const open = openSocketsOf.get(context)
   if (open === undefined)
@@ -49,6 +80,7 @@ export const test = base.extend<{ household: Household; socket: PlayedSocket }>(
   household: ["played", { option: true }],
   context: async ({ context, household }, use) => {
     if (household === "played") await playTheHousehold(context)
+    keepTheFakeClockWhole(context)
     await use(context)
   },
   socket: async ({ context }, use) => {
