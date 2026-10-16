@@ -24,5 +24,28 @@ const leavingWithFocus = (homeFor: (control: HTMLElement) => FocusHome) => (cont
 
 export const focusHomeOnLeave = leavingWithFocus(homeOf)
 
+const SHEET = '[data-slot="drawer-popup"]'
+
+const isUsableIn = (sheet: Element | null, element: Element | null): element is HTMLElement =>
+  element instanceof HTMLElement && element.isConnected && element.matches(CONTROL) && sheet?.contains(element) === true
+
+const isLost = (sheet: Element | null) => [null, document.body, sheet].includes(document.activeElement)
+
+const focusBack = (note: HTMLElement, sheet: Element | null, from: Element | null) =>
+  queueMicrotask(() => {
+    if (note.isConnected || !isLost(sheet)) return
+    const target = isUsableIn(sheet, from) ? from : sheet?.querySelector<HTMLElement>(CONTROL)
+    target?.focus()
+  })
+
+export const noteTakesFocus = (note: HTMLElement | null) => {
+  if (note === null) return undefined
+  const from = document.activeElement
+  note.focus()
+  return () => {
+    if (note.contains(document.activeElement)) focusBack(note, note.closest(SHEET), from)
+  }
+}
+
 export const focusOpenerOnLeave = (openerId: string) =>
   leavingWithFocus(() => ({ ...NO_HOME, opener: document.getElementById(openerId) }))

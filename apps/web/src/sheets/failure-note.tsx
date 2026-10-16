@@ -1,6 +1,7 @@
 import { useLocation } from "@tanstack/react-router"
 import { useState } from "react"
 import { Button, buttonVariants } from "../components/ui/button.tsx"
+import { noteTakesFocus } from "../shell/focus-hand-off.ts"
 import { signInUrl } from "../shell/sign-in.ts"
 import { draftStorage, stashDraft } from "./drafts.ts"
 import { failureNote } from "./failure.ts"
@@ -9,8 +10,6 @@ import type { Sending, SheetKind } from "./sending.ts"
 import { failedFor, useSheets } from "./sheets-context.ts"
 import { isEntry } from "./sheets-state.ts"
 import { useHousehold } from "./use-household.ts"
-
-const focusOnArrival = (note: HTMLDivElement | null) => note?.focus()
 
 const CANT_KEEP = "This phone can't keep the entry while you sign in. Sign in, then log it again."
 
@@ -64,7 +63,7 @@ export const FailureNote = ({ sheet }: { readonly sheet: SheetKind }) => {
   })
   return (
     <div
-      ref={focusOnArrival}
+      ref={noteTakesFocus}
       role="alert"
       tabIndex={-1}
       className="flex flex-col gap-3 rounded-lg bg-destructive/10 p-3 text-sm text-destructive outline-none"

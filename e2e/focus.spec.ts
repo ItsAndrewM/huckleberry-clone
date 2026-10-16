@@ -681,3 +681,55 @@ test("Escape in Go to closes it and gives focus back to Change, after a typed di
   await expect(change).toBeFocused()
   await expect(dayHeading(page)).toHaveText("Fri, Oct 9")
 })
+
+const NOT_SAVED = { status: 503, json: { _tag: "ServiceUnavailable" } }
+
+test.describe("a failure note's Try again hands focus to the control it retries", () => {
+  test("Pause, which waits, then the paused view's first control", async ({ page }) => {
+    const running = await runningFor(page)
+    const household = await playHousehold(page, todayWith(running))
+    const retried = gate()
+    let pauses = 0
+    await page.route("**/api/feeds/feed-1/pause", async (route) => {
+      pauses += 1
+      if (pauses === 1) return route.fulfill(NOT_SAVED)
+      await retried.opened
+      household.played.today = todayWith(pausedAt(running, NOW))
+      return route.fulfill({ json: { feed: pausedAt(running, NOW), changed: [["today"]] } })
+    })
+    const sheet = await openNursing(page)
+    const pause = sheet.getByRole("button", { name: "Pause" })
+    await pause.press("Enter")
+    await expect(sheet.getByRole("alert")).toBeFocused()
+    await sheet.getByRole("alert").getByRole("button", { name: "Try again" }).press("Enter")
+    await expectWaitingWithFocus(page, pause)
+    retried.open()
+    await expect(sheet.getByText("Paused")).toBeVisible()
+    await expect(sheet.getByRole("button", { name: "Change, Started" })).toBeFocused()
+  })
+
+  test("a sleep's Change, which waits, and a note that comes back takes focus again", async ({ page }) => {
+    const andrew = await inVancouver(page)
+    await playHousehold(page, sleepingToday(runningSleep(andrew, NOW - 30 * MINUTE)))
+    const retried = gate()
+    let edits = 0
+    await page.route("**/api/sleeps/sleep-1", async (route) => {
+      edits += 1
+      if (edits === 2) await retried.opened
+      return route.fulfill(NOT_SAVED)
+    })
+    await openToday(page)
+    await quickAction(page, "Sleep").click()
+    const sheet = page.getByRole("dialog", { name: "Sleep" })
+    const change = sheet.getByRole("button", { name: "Change, Fell asleep" })
+    await change.press("Enter")
+    await sheet.getByLabel("Fell asleep", { exact: true }).fill("2026-10-09T08:50")
+    await sheet.getByRole("button", { name: "Save start" }).press("Enter")
+    const note = sheet.getByRole("alert")
+    await expect(note).toBeFocused()
+    await note.getByRole("button", { name: "Try again" }).press("Enter")
+    await expectWaitingWithFocus(page, change)
+    retried.open()
+    await expect(note).toBeFocused()
+  })
+})
