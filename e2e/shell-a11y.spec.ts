@@ -1,4 +1,4 @@
-import type { Locator, Page } from "@playwright/test"
+import type { BrowserContext, Locator, Page } from "@playwright/test"
 import { emptyDay, openHistory, playHistory } from "./played-day.ts"
 import {
   caregiversOf,
@@ -93,6 +93,40 @@ const focusUnderSwitcher = async (page: Page, rows: Locator) => {
   await expect.poll(async () => (await rectOf(row)).top).toBeGreaterThanOrEqual(bottom)
 }
 
+const noConnection = (page: Page) => page.getByRole("alert").filter({ hasText: "No connection" })
+
+const dayGridWithoutConnection = async (page: Page, context: BrowserContext) => {
+  const rows = await dayGrid(page)
+  await expect(rows.first()).toBeEnabled()
+  await context.setOffline(true)
+  await expect(noConnection(page)).toBeVisible()
+  return rows
+}
+
+const changeDayButton = (page: Page) =>
+  page.getByRole("navigation", { name: "Days" }).getByRole("button", { name: "Change day", exact: true })
+
+const reachedByATapAtItsCentre = (target: Locator) =>
+  target.evaluate((element) => {
+    const { left, top, width, height } = element.getBoundingClientRect()
+    const hit = element.ownerDocument.elementFromPoint(left + width / 2, top + height / 2)
+    return hit !== null && element.contains(hit)
+  })
+
+const focusUnderBanner = async (page: Page, rows: Locator) => {
+  const banner = noConnection(page)
+  await expect(rows.first()).toBeVisible()
+  await page.evaluate("window.scrollTo(0, 0)")
+  const { bottom } = await rectOf(banner)
+  const row = rows.nth(6)
+  const { top } = await rectOf(row)
+  await page.evaluate(`window.scrollBy(0, ${top - (bottom - 10)})`)
+  await page.evaluate(TWO_FRAMES)
+  expect((await rectOf(row)).top).toBeLessThan(bottom)
+  await row.focus()
+  await expect.poll(async () => (await rectOf(row)).top).toBeGreaterThanOrEqual(bottom)
+}
+
 const openDiaperSheet = async (page: Page) => {
   await playHousehold(page, todayWith())
   await openToday(page)
@@ -154,7 +188,7 @@ test.describe("a focused hour row never sits under History's switcher", () => {
   })
 })
 
-test("a focused row on Today never sits under the quick actions", async ({ page }) => {
+const openTodayWithManyDiapers = async (page: Page) => {
   const { andrew } = await caregiversOf(page)
   const diapers = Array.from({ length: 14 }, (_, index) => ({
     kind: "diaper" as const,
@@ -168,10 +202,58 @@ test("a focused row on Today never sits under the quick actions", async ({ page 
   }))
   await playHousehold(page, { ...todayWith(), recent: diapers })
   await openToday(page)
-  const rows = page.getByRole("list", { name: "Last 24 hours" }).getByRole("button")
+  return page.getByRole("list", { name: "Last 24 hours" }).getByRole("button")
+}
+
+test("a focused row on Today never sits under the quick actions", async ({ page }) => {
+  const rows = await openTodayWithManyDiapers(page)
   const bar = page.getByRole("region", { name: "Log", exact: true })
   const { row, barTop } = await focusUnder(page, rows, bar)
   await expect.poll(async () => (await rectOf(row)).bottom).toBeLessThanOrEqual(barTop)
+})
+
+test.describe("with no connection, the banner stays above History's switcher and the rows under it", () => {
+  const scrolled = async (page: Page, context: BrowserContext) => {
+    await dayGridWithoutConnection(page, context)
+    await page.evaluate("window.scrollTo(0, 600)")
+    await page.evaluate(TWO_FRAMES)
+  }
+
+  test("the switcher sits flush under the banner's bottom once the page is scrolled", async ({ page, context }) => {
+    await scrolled(page, context)
+    const { bottom } = await rectOf(noConnection(page))
+    const { top } = await rectOf(page.locator("[data-sticky-switcher]"))
+    expect(top).toBeGreaterThanOrEqual(bottom)
+    expect(top).toBeLessThanOrEqual(bottom + 1)
+  })
+
+  test("the switcher goes back to the top of the page once the connection is back", async ({ page, context }) => {
+    await scrolled(page, context)
+    await context.setOffline(false)
+    await expect(noConnection(page)).toBeHidden()
+    await expect.poll(async () => (await rectOf(page.locator("[data-sticky-switcher]"))).top).toBe(0)
+  })
+
+  test("a tap at the centre of Change day reaches it", async ({ page, context }) => {
+    await scrolled(page, context)
+    expect(await reachedByATapAtItsCentre(changeDayButton(page))).toBe(true)
+  })
+
+  test("a focused hour row clears both", async ({ page, context }) => {
+    const rows = await dayGridWithoutConnection(page, context)
+    await focusUnderSwitcher(page, rows)
+    const { top } = await rectOf(rows.nth(8))
+    expect(top).toBeGreaterThanOrEqual((await rectOf(noConnection(page))).bottom)
+    expect(top).toBeGreaterThanOrEqual((await rectOf(page.locator("[data-sticky-switcher]"))).bottom)
+  })
+})
+
+test("with no connection, a focused row on Today never sits under the banner", async ({ page, context }) => {
+  const rows = await openTodayWithManyDiapers(page)
+  await expect(rows.first()).toBeEnabled()
+  await context.setOffline(true)
+  await expect(noConnection(page)).toBeVisible()
+  await focusUnderBanner(page, rows)
 })
 
 test.describe("with Reduce Motion on", () => {

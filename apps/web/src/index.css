@@ -132,6 +132,7 @@
     @apply border-border outline-ring;
   }
   html {
+    scroll-padding-top: calc(var(--banner-height, 0px) + env(safe-area-inset-top));
     scroll-padding-bottom: calc(4rem + env(safe-area-inset-bottom));
   }
   body > * {
@@ -141,7 +142,9 @@
     scroll-padding-bottom: calc(8.5rem + env(safe-area-inset-bottom));
   }
   html:has([data-sticky-switcher]) {
-    scroll-padding-top: calc(var(--switcher-height, 3rem) + 1.5rem + env(safe-area-inset-top));
+    scroll-padding-top: calc(
+      var(--banner-height, 0px) + var(--switcher-height, 3rem) + 1.5rem + env(safe-area-inset-top)
+    );
   }
   body {
     @apply bg-background text-foreground antialiased;

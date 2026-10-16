@@ -69,7 +69,7 @@ export const HistorySwitcher = ({ navigation, today, birthDate, hidden }: Histor
     <div
       ref={publishHeight}
       data-sticky-switcher
-      className="sticky top-[env(safe-area-inset-top)] z-[5] -mx-4 -mt-3 flex flex-col bg-background px-4 pb-1"
+      className="sticky top-[calc(env(safe-area-inset-top)+var(--banner-height,0px))] z-[5] -mx-4 -mt-3 flex flex-col bg-background px-4 pb-1"
     >
       <nav aria-label={NAMES[noun]} className="flex items-center justify-between gap-2">
         <Step search={navigation.previous} label={`Previous ${noun}`} Icon={ChevronLeftIcon} />
