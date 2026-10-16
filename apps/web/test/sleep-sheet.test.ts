@@ -1,7 +1,14 @@
 import { describe, expect, it } from "vitest"
 import { Offline } from "../src/api/errors.ts"
 import { pendingId } from "../src/api/pending.ts"
-import { kindShown, sleepStartSession, startedAtOf, wakeAt, wakeSession } from "../src/features/sleep/sleep-session.ts"
+import {
+  kindShown,
+  sleepStartSession,
+  startedAtOf,
+  wakeAt,
+  wakeLetGo,
+  wakeSession,
+} from "../src/features/sleep/sleep-session.ts"
 import {
   deleteAction,
   runningEdit,
@@ -138,6 +145,21 @@ describe("a wake", () => {
     const session = wakeSession(failed, "sleep-2", ZONE)
     expect(session).toEqual({ actionId: UUID, when: NOW_WHEN, occurredAt: null })
     expect(session.actionId).not.toBe(ACTION_ID)
+  })
+
+  it("starts fresh at Now once its held wake is let go on the Sleep sheet, and never when it started fresh", () => {
+    const failed = {
+      sending: { sheet: "sleep" as const, action: wakeAction(RUNNING, FIRST_TAP, ACTION_ID) },
+      error: new Offline(),
+    }
+    const session = wakeSession(failed, RUNNING.id, ZONE)
+    const shown = { open: "sleep" as const, busy: null }
+    expect(wakeLetGo(session, null, shown)).toBe(true)
+    expect([
+      wakeLetGo(session, failed, shown),
+      wakeLetGo(NO_WAKE_HELD, null, shown),
+      wakeLetGo(session, null, { open: "nursing", busy: null }),
+    ]).toEqual([false, false, false])
   })
 
   it("asks for a time after she fell asleep when the start moved past the held wake", () => {

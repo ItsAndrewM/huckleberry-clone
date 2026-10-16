@@ -209,29 +209,85 @@ test("a failed pause's Discard lets it go and sends the start change", async ({ 
   expect(paused).toHaveLength(1)
 })
 
-test("a failed wake asks before Nap or night is changed, and Keep sends nothing", async ({ page }) => {
+const failWakeThenPickNight = async (page: Page) => {
   const { andrew } = await caregiversOf(page)
   const sleep = runningSleep(andrew.id, STARTED)
+  const night = runningSleep(andrew.id, STARTED, "night", 2)
   const { played, answer } = await playHousehold(page, sleepingToday(sleep))
-  await answer("**/api/sleeps/sleep-1", () => ({
-    status: 200,
-    json: { sleep: { ...sleep, kind: "night", version: 2 }, changed: [["today"]] },
-  }))
-  await loseSaves(page, "**/api/sleeps/sleep-1/wake", {
+  await answer("**/api/sleeps/sleep-1", () => {
+    played.today = sleepingToday(night)
+    return { status: 200, json: { sleep: night, changed: [["today"]] } }
+  })
+  const woke = await loseSaves(page, "**/api/sleeps/sleep-1/wake", {
     lost: 1,
     until: Promise.resolve(),
-    answer: (body) => ({ sleep: { ...sleep, endedAt: body.occurredAt ?? NOW, version: 2 }, changed: [["today"]] }),
+    answer: (body) => ({ sleep: { ...night, endedAt: body.occurredAt ?? NOW, version: 3 }, changed: [["today"]] }),
   })
   await openToday(page)
   await page.clock.setFixedTime(FIRST_TAP)
   const sheet = await openSheet(page, "Sleep")
   await sheet.getByRole("button", { name: "Wake up", exact: true }).click()
   await expect(sheet.getByRole("alert")).toContainText("No connection")
+  await expect(sheet.getByLabel("Woke", { exact: true })).toHaveValue("2026-10-09T09:30")
   await sheet.getByRole("button", { name: "Night", exact: true }).click()
   await expect(sheet.getByRole("alert")).toHaveText(/^Discard the wake-up at 9:30\sAM\?DiscardKeep$/u)
+  return { sheet, played, woke }
+}
+
+test("a failed wake asks before Nap or night is changed, and Keep sends nothing", async ({ page }) => {
+  const { sheet, played } = await failWakeThenPickNight(page)
   await sheet.getByRole("button", { name: "Keep" }).click()
   await expect(sheet.getByRole("alert")).toContainText("No connection")
   expect(played.sent).toEqual([])
+})
+
+test("a failed wake's Discard sends Nap or night, and Wake up then sends a new wake at its own tap's time", async ({
+  page,
+}) => {
+  const { sheet, played, woke } = await failWakeThenPickNight(page)
+  await sheet.getByRole("button", { name: "Discard" }).click()
+  await expect.poll(() => played.sent.length).toBe(1)
+  expect(played.sent[0]?.path).toBe("/api/sleeps/sleep-1")
+  await expect(sheet.getByRole("alert")).toHaveCount(0)
+  await expect(sheet.getByLabel("Woke", { exact: true })).toHaveCount(0)
+  await page.clock.setFixedTime(FIRST_TAP + 30 * MINUTE)
+  await sheet.getByRole("button", { name: "Wake up", exact: true }).click()
+  await expect.poll(() => woke.length).toBe(2)
+  expect(woke[1]?.actionId).not.toBe(woke[0]?.actionId)
+  expect(woke[1]?.occurredAt).toBe(FIRST_TAP + 30 * MINUTE)
+})
+
+test("a finish that met the other phone's change and was let go with OK leaves Finish feed to send a new finish at its own tap's time", async ({
+  page,
+}) => {
+  const { andrew, emily } = await caregiversOf(page)
+  const feed = runningFeed(andrew.id, STARTED, "left")
+  const { played } = await playHousehold(page, todayWith(feed))
+  const theirs = { ...feed, version: 2, updatedBy: emily.id }
+  const finished: Array<{ readonly actionId?: string; readonly version?: number; readonly occurredAt?: number }> = []
+  await page.route("**/api/feeds/feed-1/finish", async (route) => {
+    finished.push(route.request().postDataJSON())
+    if (finished.length === 1) {
+      played.today = todayWith(theirs)
+      return route.fulfill({ status: 409, json: { _tag: "Conflict", code: "STALE_VERSION", current: theirs } })
+    }
+    return route.fulfill({ status: 200, json: { feed: { ...theirs, status: "completed", version: 3 }, changed: [] } })
+  })
+  await openToday(page)
+  await page.clock.setFixedTime(FIRST_TAP)
+  const sheet = await openSheet(page, "Nursing")
+  await sheet.getByRole("button", { name: "Finish", exact: true }).click()
+  await sheet.getByRole("button", { name: "Finish feed" }).click()
+  await expect(sheet.getByRole("alert")).toContainText(`${emily.displayName} changed this feed a moment ago.`)
+  await expect(sheet.getByLabel("Stopped", { exact: true })).toHaveValue("2026-10-09T09:30")
+  await sheet.getByRole("alert").getByRole("button", { name: "OK" }).click()
+  await expect(sheet.getByRole("alert")).toHaveCount(0)
+  await expect(sheet.getByLabel("Stopped", { exact: true })).toHaveCount(0)
+  await page.clock.setFixedTime(FIRST_TAP + 3 * MINUTE)
+  await sheet.getByRole("button", { name: "Finish feed" }).click()
+  await expect.poll(() => finished.length).toBe(2)
+  expect(finished[1]).toMatchObject({ version: 2, occurredAt: FIRST_TAP + 3 * MINUTE })
+  expect(finished[1]?.actionId).not.toBe(finished[0]?.actionId)
 })
 
 test("a pause whose resend meets a change Pause anyway would still save asks before closing drops it", async ({

@@ -1,4 +1,5 @@
 import { FeedConflict } from "@bt/contracts"
+import { letGo, type Showing } from "../../sheets/held.ts"
 import { stillSaveable } from "../../sheets/saveable.ts"
 import type { Failed } from "../../sheets/sending.ts"
 import { NOW, type Resolved, resolveSent, type When, whenAt } from "../../sheets/when.ts"
@@ -36,6 +37,9 @@ export const stopSession = (failed: Failed | null, feedId: string, zone: string)
 
 export const stoppedAtOf = (session: StopSession, when: When, zone: string, now: number, startedAt: number): Resolved =>
   resolveSent(session.stoppedAt, session.when, when, zone, now, startedAt)
+
+export const finishLetGo = (session: StopSession, held: Failed | null, showing: Showing) =>
+  session.stoppedAt !== null && letGo(showing, "nursing", held, session.actionId)
 
 export const emptiedBy = (failed: Failed | null) => {
   const action = failed?.sending.action
