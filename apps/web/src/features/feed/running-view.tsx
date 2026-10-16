@@ -3,8 +3,8 @@ import type { FeedAction } from "../../api/actions.ts"
 import { Button } from "../../components/ui/button.tsx"
 import { DeleteEntry } from "../../sheets/delete-entry.tsx"
 import { FailureNote } from "../../sheets/failure-note.tsx"
-import { retapped } from "../../sheets/held.ts"
-import { failedFor, useSheets } from "../../sheets/sheets-context.ts"
+import { retapped } from "../../sheets/retap.ts"
+import { useSheets } from "../../sheets/sheets-context.ts"
 import { tapTime } from "../../sheets/tap-time.ts"
 import { OTHER_SIDE, SIDE_NAMES } from "../../sides.ts"
 import { useNow } from "../../timer/use-now.ts"
@@ -23,7 +23,7 @@ export const RunningView = ({ feed, segment, zone, onFinish }: RunningViewProps)
   const sheets = useSheets()
   const now = useNow()
   const busy = controlsWait(sheets.busy, feed)
-  const act = (action: FeedAction) => sheets.send(retapped(failedFor(sheets, "nursing"), { sheet: "nursing", action }))
+  const act = (action: FeedAction) => sheets.send(retapped(sheets.held, { sheet: "nursing", action }))
   return (
     <>
       <FailureNote sheet="nursing" />

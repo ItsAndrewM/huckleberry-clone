@@ -4,7 +4,8 @@ import type { SleepAction } from "../../api/actions.ts"
 import { Button } from "../../components/ui/button.tsx"
 import { DeleteEntry } from "../../sheets/delete-entry.tsx"
 import { FailureNote } from "../../sheets/failure-note.tsx"
-import { failedFor, useSheets } from "../../sheets/sheets-context.ts"
+import { heldAs } from "../../sheets/retap.ts"
+import { useSheets } from "../../sheets/sheets-context.ts"
 import { tapTime } from "../../sheets/tap-time.ts"
 import { WhenField } from "../../sheets/when-field.tsx"
 import { useNow } from "../../timer/use-now.ts"
@@ -22,7 +23,7 @@ interface RunningSleepViewProps {
 export const RunningSleepView = ({ sleep, zone }: RunningSleepViewProps) => {
   const sheets = useSheets()
   const now = useNow()
-  const [session] = useState(() => wakeSession(failedFor(sheets, "sleep"), sleep.id, zone))
+  const [session] = useState(() => wakeSession(heldAs(sheets.held, "wakeSleep", sleep.id), sleep.id, zone))
   const [woke, setWoke] = useState(session.when)
   const busy = sleepWaits(sheets.busy)
   const act = (action: SleepAction) => sheets.send({ sheet: "sleep", action })

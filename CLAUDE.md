@@ -12,7 +12,7 @@ Work is tracked in GitHub issues. The Baby Tracker Roadmap artifact was frozen o
 - **Hand-offs:** a note for a later task goes in a comment on that task's issue. If it has no issue, open one.
 - **Branches and PRs:** a branch ends with the plan ID (`feature/<title>.M3.1`), or `GH-<number>` for an issue without one. A PR's description says `Closes #<number>`, so the merge closes the issue.
 - **Andrew's to-dos:** checks on the phones and decisions are issues labelled `andrew` and assigned to him.
-- **Bugs and debt:** anything found along the way gets an issue of its own, labelled `bug`, `enhancement` or `tech debt`.
+- **Bugs and debt:** a finding gets an issue of its own, labelled `bug`, `enhancement` or `tech debt`, only when one of the two parents would notice it on their iPhone in normal use, it could lose or mislabel an entry, or it keeps `main` from passing its gates or deploying. Anything else goes in the PR's description and stops there: a review's Minor finding, a tidier test, or a gap only VoiceOver or a physical keyboard would meet, since neither parent uses either (#106).
 - **Household values:** the child's name and birth date, the parents' emails, and the household's name and time zone never go in issues, PRs, commits or the repo.
 
 ## Cross-cutting rules
@@ -22,6 +22,7 @@ Work is tracked in GitHub issues. The Baby Tracker Roadmap artifact was frozen o
 - **Receipts after a deploy:** every endpoint built on `mutations` (`apps/worker/src/mutations.ts`) stores its response as a receipt, which a retry within a day replays: today `Diaper`, `Feed`, `Measurement`, `Sleep`, `Supplement`, `Dose`, `Household` and `Child`. A field that's added, removed or renamed, or a tightened check, must stay decodable for 24 hours, or that retry answers 500. Only `Feed` has a test for it: `apps/worker/test/feeds.test.ts`'s "decode the response and changed keys stored before a deploy…".
 - **Installed apps after a deploy:** an app older than the Worker reads `ChangedMessage`, so add fields to it, but never rename or remove one.
 - **25-hour days in tests:** tzdata 2026c keeps America/Vancouver on UTC−7 after 1 Nov 2026, so it has no 25-hour day that year; use America/Los_Angeles.
+- **Rejections in Worker tests:** call a household method that rejects, or that restarts the object, from inside it with `runInDurableObject`, and handle the outcome outside. Over RPC (`stub.restart()`), workerd prints the rejection as an uncaught exception, even though the test handles it. A full `pnpm test` prints none, so a new one is a real error (#77).
 - **Service workers in E2E:** `playwright.config.ts` blocks them, so `page.route` sees every request; only `offline.spec.ts`, `sheets-offline.spec.ts` and `new-version.spec.ts` allow them. `new-version.spec.ts` deploys by cookie: with `bt-preview-next-build=1`, the preview serves the same build stamped `<version>-next` (`apps/web/preview-next-build.ts`). Playwright's block resolves `register` rather than refusing it, so no E2E test sees a refused registration.
 - **The live socket in E2E:** specs take `test` from `e2e/test.ts`, as lint enforces, so every page hears a played socket rather than the local household that every spec writes to (#72).
   - It answers the heartbeat, and `socket.changed(…)` sends it the household's `changed` message.
