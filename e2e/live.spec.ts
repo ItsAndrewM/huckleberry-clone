@@ -41,10 +41,13 @@ test.describe("with the household's real socket", () => {
     socket.on("framesent", ({ payload }) => frames.push(`sent ${String(payload)}`))
     socket.on("framereceived", ({ payload }) => frames.push(`received ${String(payload)}`))
     await expect
-      .poll(async () => {
-        await page.clock.runFor(HEARTBEAT_MS)
-        return frames
-      })
+      .poll(
+        async () => {
+          if (!frames.includes("sent ping")) await page.clock.runFor(HEARTBEAT_MS)
+          return frames
+        },
+        { timeout: 10_000 },
+      )
       .toEqual(expect.arrayContaining(["sent ping", "received pong"]))
   })
 })
