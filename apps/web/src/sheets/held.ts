@@ -35,6 +35,14 @@ export const heldFor = (held: ReadonlyArray<Failed>, sheet: SheetKind, editing: 
 export const isHeld = (held: ReadonlyArray<Failed>, sending: Sending) =>
   held.some((failed) => actionIdOf(failed.sending) === actionIdOf(sending))
 
+export interface Showing {
+  readonly open: SheetKind | null
+  readonly busy: Sending | null
+}
+
+export const letGo = ({ open, busy }: Showing, sheet: SheetKind, held: Failed | null, actionId: string) =>
+  held === null && open === sheet && (busy === null || actionIdOf(busy) !== actionId)
+
 export const settlesWithoutAsking = (error: Error) => "code" in error && CANT_SAVE_AS_IS.has(String(error.code))
 
 const refusedByTheCore = (error: Error) =>

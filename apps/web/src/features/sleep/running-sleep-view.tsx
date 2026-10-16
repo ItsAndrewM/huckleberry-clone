@@ -10,7 +10,7 @@ import { tapTime } from "../../sheets/tap-time.ts"
 import { WhenField } from "../../sheets/when-field.tsx"
 import { useNow } from "../../timer/use-now.ts"
 import { SleepKindToggle } from "./sleep-kind-toggle.tsx"
-import { AFTER_SLEEP, wakeAt, wakeSession } from "./sleep-session.ts"
+import { AFTER_SLEEP, wakeAt, wakeLetGo, wakeSession } from "./sleep-session.ts"
 import { SleepStart } from "./sleep-start.tsx"
 import { deleteAction, runningEdit, sleepWaits, wakeAction } from "./sleep-state.ts"
 import { SleepTimer } from "./sleep-timer.tsx"
@@ -23,9 +23,15 @@ interface RunningSleepViewProps {
 export const RunningSleepView = ({ sleep, zone }: RunningSleepViewProps) => {
   const sheets = useSheets()
   const now = useNow()
-  const [session] = useState(() => wakeSession(heldAs(sheets.held, "wakeSleep", sleep.id), sleep.id, zone))
+  const held = heldAs(sheets.held, "wakeSleep", sleep.id)
+  const [session, setSession] = useState(() => wakeSession(held, sleep.id, zone))
   const [woke, setWoke] = useState(session.when)
   const busy = sleepWaits(sheets.busy)
+  if (wakeLetGo(session, held, sheets)) {
+    const fresh = wakeSession(null, sleep.id, zone)
+    setSession(fresh)
+    setWoke(fresh.when)
+  }
   const act = (action: SleepAction) => sheets.send({ sheet: "sleep", action })
   const wake = () => {
     const resolved = wakeAt(session, woke, zone, tapTime(), sleep.startedAt)

@@ -5,6 +5,7 @@ import {
   backAsksFirst,
   emptiedBy,
   finishingAfter,
+  finishLetGo,
   startedAtOf,
   startSession,
   stoppedAtOf,
@@ -110,6 +111,17 @@ describe("stopSession", () => {
     const session = stopSession(failedWith(FINISH), "feed-2", ZONE)
     expect(session).toEqual({ actionId: expect.stringMatching(UUID), when: WHEN_NOW, stoppedAt: null })
     expect(session.actionId).not.toBe(ACTION_ID)
+  })
+
+  it("stops fresh at Now once its held stop is let go on the Nursing sheet, and never when it started fresh", () => {
+    const session = stopSession(failedWith(FINISH), "feed-1", ZONE)
+    const shown = { open: "nursing" as const, busy: null }
+    expect(finishLetGo(session, null, shown)).toBe(true)
+    expect([
+      finishLetGo(session, failedWith(FINISH), shown),
+      finishLetGo(stopSession(null, "feed-1", ZONE), null, shown),
+      finishLetGo(session, null, { open: "sleep", busy: null }),
+    ]).toEqual([false, false, false])
   })
 
   it("asks for a time after the side started when the side now starts after the held stop", () => {

@@ -1,5 +1,17 @@
-import type { Page } from "@playwright/test"
-import { DAY, diaper, dose, emptyDay, local, NO_TOTALS, openHistory, playHistory, stopVitaminD } from "./played-day.ts"
+import type { Locator, Page } from "@playwright/test"
+import {
+  DAY,
+  diaper,
+  dose,
+  emptyDay,
+  local,
+  NO_TOTALS,
+  NOW,
+  openHistory,
+  playHistory,
+  stopVitaminD,
+} from "./played-day.ts"
+import { gate } from "./played-household.ts"
 import { expect, test } from "./test.ts"
 
 const HOUR_PX = 60
@@ -134,6 +146,135 @@ test("offers a supplement stopped at 8:00 at a slot before it, and leaves it out
   const after = page.getByRole("dialog", { name: "Log at 8:45 AM" })
   await expect(after.getByRole("button", { name: "Diaper" })).toBeVisible()
   await expect(after.getByRole("button", { name: "Vitamin D" })).toHaveCount(0)
+})
+
+const recordUntilItLeaves = (sheet: Locator) =>
+  sheet.evaluateHandle((dialog) => {
+    const seen: Array<{ readonly title: string; readonly choices: ReadonlyArray<string> }> = []
+    const textOf = (element: { readonly textContent: string | null } | null) =>
+      element?.textContent?.replace(/\s+/gu, " ") ?? ""
+    const observer = new dialog.ownerDocument.defaultView.MutationObserver(() => {
+      if (!dialog.isConnected) {
+        observer.disconnect()
+        return
+      }
+      seen.push({
+        title: textOf(dialog.querySelector('[data-slot="drawer-title"]')),
+        choices: [...dialog.querySelectorAll("button")].map(textOf),
+      })
+    })
+    observer.observe(dialog.ownerDocument.body, {
+      subtree: true,
+      childList: true,
+      characterData: true,
+      attributes: true,
+    })
+    return seen
+  })
+
+test("keeps the slot's time in its title, and a supplement stopped after the slot, while it slides away", async ({
+  page,
+}) => {
+  const { me } = await playHistory(page, [emptyDay(DAY)])
+  await stopVitaminD(page, me, local("08:00"))
+  await openHistory(page)
+  await tapHour(page, "7 AM", 40)
+  const menu = page.getByRole("dialog", { name: "Log at 7:30 AM" })
+  await expect(menu.getByRole("button", { name: "Vitamin D" })).toBeVisible()
+  const seen = await recordUntilItLeaves(menu)
+  await page.keyboard.press("Escape")
+  await expect(page.getByRole("dialog")).toHaveCount(0)
+  const sliding = await seen.jsonValue()
+  expect(sliding.length).toBeGreaterThan(0)
+  expect(sliding.map(({ title }) => title).filter((title) => title !== "Log at 7:30 AM")).toEqual([])
+  expect(sliding.filter(({ choices }) => !choices.includes("Vitamin D"))).toEqual([])
+})
+
+test("keeps the slot's time in its title while it slides away for a failed diaper's sheet, which opens in its place", async ({
+  page,
+}) => {
+  await playHistory(page, [emptyDay(DAY)])
+  const lost = gate()
+  await page.route("**/api/diapers", async (route) => {
+    await lost.opened
+    await route.abort("internetdisconnected")
+  })
+  await openHistory(page)
+  await tapHour(page, "7 AM", 40)
+  await page.getByRole("dialog", { name: "Log at 7:30 AM" }).getByRole("button", { name: "Diaper" }).click()
+  const diaper = page.getByRole("dialog", { name: "Diaper" })
+  await diaper.getByRole("button", { name: "Pee" }).click()
+  await expect(diaper).toBeHidden()
+  await tapHour(page, "8 AM", 20)
+  const menu = page.getByRole("dialog", { name: "Log at 8:15 AM" })
+  await expect(menu.getByRole("button", { name: "Diaper" })).toBeVisible()
+  lost.open()
+  await expect.poll(() => page.evaluate(() => localStorage.getItem("bt.kept"))).toContain('"failed":true')
+  const seen = await recordUntilItLeaves(menu)
+  await page.keyboard.press("Escape")
+  await expect(diaper.getByRole("alert")).toContainText("No connection")
+  await expect(menu).toHaveCount(0)
+  const sliding = await seen.jsonValue()
+  expect(sliding.length).toBeGreaterThan(0)
+  expect(sliding.map(({ title }) => title).filter((title) => title !== "Log at 8:15 AM")).toEqual([])
+})
+
+const supplementNamed = (id: string, name: string) => ({
+  id,
+  name,
+  dose: "1 mL",
+  stoppedAt: null,
+  version: 1,
+  createdBy: null,
+  createdAt: NOW,
+  updatedBy: null,
+  updatedAt: NOW,
+})
+
+const SHARING_A_PREFIX = ["Multivitamin drops", "Multivitamin syrup"]
+const UNBROKEN = "Multivitamin".repeat(5)
+
+const overflowOf = (button: Locator) =>
+  button.evaluate((element) => {
+    const px = (overflow: number) => Math.max(0, Math.round(overflow))
+    const label = element.querySelector("span")
+    const range = element.ownerDocument.createRange()
+    range.selectNodeContents(label)
+    const text = range.getBoundingClientRect()
+    const shown = label.getBoundingClientRect()
+    const edge = element.getBoundingClientRect()
+    return {
+      text: { right: px(text.right - shown.right), bottom: px(text.bottom - shown.bottom) },
+      label: {
+        left: px(edge.left - shown.left),
+        right: px(shown.right - edge.right),
+        top: px(edge.top - shown.top),
+        bottom: px(shown.bottom - edge.bottom),
+      },
+    }
+  })
+
+test("shows a long supplement name in full over two lines on a 360-pixel-wide phone, and wraps an unbroken one inside its button", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 360, height: 900 })
+  const { me } = await playHistory(page, [emptyDay(DAY)])
+  const added = [...SHARING_A_PREFIX, UNBROKEN].map((name, index) => supplementNamed(`supplement-${index}`, name))
+  const household = { ...me.household, supplements: [...me.household.supplements, ...added] }
+  await page.route("**/api/me", (route) => route.fulfill({ json: { ...me, household } }))
+  await openHistory(page)
+  await tapHour(page, "7 AM", 40)
+  const menu = page.getByRole("dialog", { name: "Log at 7:30 AM" })
+  const buttonFor = (name: string) => menu.getByRole("button", { name, exact: true })
+  for (const name of SHARING_A_PREFIX) {
+    expect(await overflowOf(buttonFor(name))).toEqual({
+      text: { right: 0, bottom: 0 },
+      label: { left: 0, right: 0, top: 0, bottom: 0 },
+    })
+  }
+  const unbroken = await overflowOf(buttonFor(UNBROKEN))
+  expect(unbroken.text.right).toBe(0)
+  expect(unbroken.label).toEqual({ left: 0, right: 0, top: 0, bottom: 0 })
 })
 
 test("opens Measurement at the slot", async ({ page }) => {
