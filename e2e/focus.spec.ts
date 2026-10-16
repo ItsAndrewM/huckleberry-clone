@@ -1,5 +1,5 @@
 import type { Locator, Page } from "@playwright/test"
-import { busyDay, emptyDay, openHistory, playHistory } from "./played-day.ts"
+import { busyDay, emptyDay, measurement, openHistory, playHistory } from "./played-day.ts"
 import {
   caregiversOf,
   gate,
@@ -112,16 +112,8 @@ test("deleting an entry moves focus to the row after it", async ({ page }) => {
 })
 
 test("a measurement that's still saving keeps focus on its card", async ({ page }) => {
-  const me = await (await page.request.get("/api/me")).json()
-  const [andrew] = me.household.caregivers
-  const weighed = {
-    id: "m3",
-    measuredAt: NOW - 3 * 24 * 60 * MINUTE,
-    weightG: 4300,
-    lengthCm: 54.5,
-    headCm: 36.8,
-    ...savedBy(andrew.id),
-  }
+  const { andrew } = await caregiversOf(page)
+  const weighed = measurement("m3", NOW - 3 * 24 * 60 * MINUTE, 4300, 54.5, 36.8, andrew.id)
   await page.route("**/api/growth", (route) => route.fulfill({ json: { measurements: [weighed] } }))
   const answered = gate()
   await page.route("**/api/growth/m3", async (route) => {
@@ -135,7 +127,8 @@ test("a measurement that's still saving keeps focus on its card", async ({ page 
   await sheet.getByRole("textbox", { name: "Weight" }).fill("4.4")
   await sheet.getByRole("button", { name: "Save" }).click()
   await expect(sheet).toBeHidden()
-  await expect(page.getByRole("region", { name: "Measurements" }).getByRole("listitem").first()).toBeFocused()
+  const card = page.getByRole("region", { name: "Measurements" }).getByRole("listitem").filter({ hasText: "Saving" })
+  await expect(card).toBeFocused()
   answered.open()
 })
 

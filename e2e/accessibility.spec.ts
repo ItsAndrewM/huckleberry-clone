@@ -73,6 +73,13 @@ const closeSheet = async (page: Page) => {
   await expect(page.getByRole("dialog")).toHaveCount(0)
 }
 
+const EDIT_SHEETS = [
+  ["Pee and poo", "Edit diaper"],
+  ["Nursing and bottle", "Edit feed"],
+  ["Nap", "Edit sleep"],
+  ["Vitamin D", "Edit dose"],
+] as const
+
 test.use({ timezoneId: "America/Vancouver" })
 
 for (const colorScheme of ["light", "dark"] as const) {
@@ -119,8 +126,9 @@ for (const colorScheme of ["light", "dark"] as const) {
     test("Today's edit sheets pass axe", async ({ page }) => {
       await page.goto("/")
       const recent = page.getByRole("list", { name: "Last 24 hours" })
-      for (const kind of ["Pee and poo", "Nursing", "Nap", "Vitamin D"]) {
+      for (const [kind, name] of EDIT_SHEETS) {
         await openSheet(page, recent.getByRole("button").filter({ hasText: kind }).first())
+        await expect(page.getByRole("dialog", { name })).toBeVisible()
         await expectNoViolations(page)
         await closeSheet(page)
       }
@@ -132,7 +140,6 @@ for (const colorScheme of ["light", "dark"] as const) {
       await context.setOffline(true)
       await expect(page.getByText("No connection")).toBeVisible()
       await expectNoViolations(page)
-      await context.setOffline(false)
     })
 
     test("Growth's and Settings' sheets pass axe", async ({ page }) => {
@@ -147,20 +154,19 @@ for (const colorScheme of ["light", "dark"] as const) {
       await openSheet(page, page.getByRole("button", { name: /^Vitamin D/u }))
       await expectNoViolations(page)
     })
+
+    test.describe("on an iPhone's browser tab", () => {
+      test.use({ storageState: { cookies: [], origins: [] } })
+
+      test("the install card passes axe", async ({ page }) => {
+        await page.addInitScript(() => {
+          Object.defineProperty(Navigator.prototype, "standalone", { configurable: true, get: () => false })
+          Object.defineProperty(Navigator.prototype, "maxTouchPoints", { configurable: true, get: () => 5 })
+        })
+        await page.goto("/")
+        await expect(page.getByRole("region", { name: "Install Baby tracker" })).toBeVisible()
+        await expectNoViolations(page)
+      })
+    })
   })
 }
-
-test.describe("on an iPhone's browser tab", () => {
-  test.use({ storageState: { cookies: [], origins: [] }, timezoneId: "America/Vancouver" })
-
-  test("the install card passes axe", async ({ page }) => {
-    await playEveryScreen(page)
-    await page.addInitScript(() => {
-      Object.defineProperty(Navigator.prototype, "standalone", { configurable: true, get: () => false })
-      Object.defineProperty(Navigator.prototype, "maxTouchPoints", { configurable: true, get: () => 5 })
-    })
-    await page.goto("/")
-    await expect(page.getByRole("region", { name: "Install Baby tracker" })).toBeVisible()
-    await expectNoViolations(page)
-  })
-})
