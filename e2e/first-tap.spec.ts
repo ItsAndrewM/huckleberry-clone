@@ -235,7 +235,7 @@ test("Add measurement, tapped again after its send failed offline, saves the fir
   }))
   await page.clock.setFixedTime(NOW)
   await page.goto("/growth")
-  await page.getByRole("button", { name: "Add measurement" }).waitFor()
+  await expect(page.getByRole("button", { name: "Add measurement" })).toBeEnabled()
   await goOffline(page, context)
   await page.clock.setFixedTime(FIRST_TAP)
   await page.getByRole("button", { name: "Add measurement" }).click()
