@@ -25,6 +25,16 @@ test("the running sleep's Change buttons are named by their field", async ({ pag
   await expect(sheet.getByRole("button", { name: "Change, Woke", exact: true })).toBeVisible()
 })
 
+test("the running sleep's timer is described by its status line", async ({ page }) => {
+  const { andrew } = await caregiversOf(page)
+  await playHousehold(page, sleepingToday(runningSleep(andrew.id, NOW - 40 * MINUTE)))
+  await openToday(page)
+  await quickAction(page, "Sleep").click()
+  await expect(page.getByRole("dialog", { name: "Sleep" }).getByRole("timer")).toHaveAccessibleDescription(
+    "Asleep · Nap",
+  )
+})
+
 test("the running feed's timer is described by its side", async ({ page }) => {
   const { andrew } = await caregiversOf(page)
   await playHousehold(page, todayWith(runningFeed(andrew.id, NOW - 10 * MINUTE, "left")))
@@ -33,6 +43,16 @@ test("the running feed's timer is described by its side", async ({ page }) => {
   await expect(page.getByRole("dialog", { name: "Nursing" }).getByRole("timer")).toHaveAccessibleDescription(
     "Left side",
   )
+})
+
+test("the running feed's Change button is named by its field", async ({ page }) => {
+  const { andrew } = await caregiversOf(page)
+  await playHousehold(page, todayWith(runningFeed(andrew.id, NOW - 10 * MINUTE, "left")))
+  await openToday(page)
+  await quickAction(page, "Nursing").click()
+  await expect(
+    page.getByRole("dialog", { name: "Nursing" }).getByRole("button", { name: "Change, Started", exact: true }),
+  ).toBeVisible()
 })
 
 test("History's Change says what it changes", async ({ page }) => {
