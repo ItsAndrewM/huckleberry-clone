@@ -357,7 +357,7 @@ index 94a0820..764af59 100644
 . A test calls a household method that rejects, or that restarts the object, from inside it with `runInDurableObject`. Over RPC, workerd prints the rejection as an uncaught exception, even though the test handles it, so `pnpm test` printed four such lines on every run until #77
 ```
 
-- [ ] **Step 6: Run the whole suite.** Run `pnpm test`. Expected: `Test Files  234 passed (234)` and `Tests  3932 passed (3932)`. The output holds only Vitest's header and summary, with no `uncaught exception`.
+- [ ] **Step 6: Run the whole suite.** Run `pnpm test`. Expected: `Test Files  234 passed (234)` and `Tests  3933 passed (3933)`. The output holds only Vitest's header and summary, with no `uncaught exception`.
 
 - [ ] **Step 7: Lint, typecheck and commit.** Commit with `61c6607`'s message.
 
