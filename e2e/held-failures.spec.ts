@@ -136,3 +136,28 @@ test("a pause that failed asks before its sheet lets it go, and Discard lets it 
   await expect(sheet.getByRole("alert")).toHaveCount(0)
   expect(bodies).toHaveLength(1)
 })
+
+test("a diaper changed after its first send landed unanswered keeps that send's actionId, so the household says it was already saved", async ({
+  page,
+}) => {
+  await playHousehold(page, todayWith())
+  const sent: Array<{ readonly actionId?: string; readonly dirty?: boolean }> = []
+  const answered: number[] = []
+  await page.route("**/api/diapers", async (route) => {
+    if (route.request().method() !== "POST") return route.fallback()
+    sent.push(route.request().postDataJSON())
+    const response = await route.fetch()
+    answered.push(response.status())
+    if (sent.length === 1) return route.abort("internetdisconnected")
+    return route.fulfill({ response })
+  })
+  await openToday(page)
+  const sheet = await openSheet(page, "Diaper")
+  await sheet.getByRole("button", { name: "Pee" }).click()
+  await expect(sheet.getByRole("alert")).toContainText("No connection")
+  await sheet.getByRole("button", { name: "Poo" }).click()
+  await expect(sheet.getByRole("alert")).toContainText("This was already saved as you first entered it.")
+  expect(sent.map(({ actionId }) => actionId)).toEqual([sent[0]?.actionId, sent[0]?.actionId])
+  expect(sent[1]?.dirty).toBe(true)
+  expect(answered).toEqual([201, 409])
+})

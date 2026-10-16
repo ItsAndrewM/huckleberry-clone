@@ -717,12 +717,21 @@ describe("closing a sheet that holds a failed control", () => {
     expect(dismissedState(bottle)).toMatchObject({ open: "nursing", queued: true, held: [failed] })
   })
 
+  const SWITCHED: Sending = {
+    sheet: "nursing",
+    action: { kind: "switchSide", id: "feed-1", payload: { actionId: RENEWED, version: 3, occurredAt: NOW } },
+  }
+
   it("lets it go when another control on its sheet is sent, which acts at its own tap", () => {
     const failed = { sending: PAUSE, error: new Offline() }
-    const switched: Sending = {
-      sheet: "nursing",
-      action: { kind: "switchSide", id: "feed-1", payload: { actionId: RENEWED, version: 3, occurredAt: NOW } },
-    }
-    expect(sendingState(shownWith(failed), switched, true).held).toEqual([])
+    expect(sendingState(shownWith(failed), SWITCHED, true).held).toEqual([])
+  })
+
+  it("holds one failed control on a running feed at a time, so a tap again meets the latest failure", () => {
+    const paused = { sending: PAUSE, error: new Offline() }
+    const switched = { sending: SWITCHED, error: new Offline() }
+    const state = failedState(sendingState(shownWith(paused), SWITCHED, true), switched, NOW)
+    expect(state.held).toEqual([switched])
+    expect(heldFor(state.held, "nursing")).toBe(switched)
   })
 })
