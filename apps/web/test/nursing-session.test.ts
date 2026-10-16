@@ -2,6 +2,7 @@ import { FeedConflict } from "@bt/contracts"
 import { describe, expect, it } from "vitest"
 import { Offline } from "../src/api/errors.ts"
 import {
+  backAsksFirst,
   emptiedBy,
   finishingAfter,
   startedAtOf,
@@ -147,5 +148,19 @@ describe("finishingAfter", () => {
     expect(finishingAfter(null)).toBe(false)
     expect(finishingAfter(failedWith(SWITCH))).toBe(false)
     expect(finishingAfter(failedWith(START))).toBe(false)
+  })
+})
+
+describe("backAsksFirst", () => {
+  it("asks before Back lets go of a finish that could still be saved as it is", () => {
+    expect(backAsksFirst(failedWith(FINISH))).toBe(true)
+    expect(backAsksFirst(failedWith(FINISH, new Error("Not saved")))).toBe(true)
+  })
+
+  it("lets Back go without asking after a finish that can't be saved as it is, or anything else", () => {
+    expect(backAsksFirst(failedWith(FINISH, STALE))).toBe(false)
+    expect(backAsksFirst(failedWith(FINISH, EMPTY))).toBe(false)
+    expect(backAsksFirst(failedWith(SWITCH))).toBe(false)
+    expect(backAsksFirst(null)).toBe(false)
   })
 })
