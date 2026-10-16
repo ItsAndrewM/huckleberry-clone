@@ -1,7 +1,15 @@
 import AxeBuilder from "@axe-core/playwright"
 import type { Page } from "@playwright/test"
 import { type OpenedSheet, openedSheet } from "./opened-sheets.ts"
-import { quickAction } from "./played-household.ts"
+import {
+  caregiversOf,
+  MINUTE,
+  NOW,
+  playHousehold,
+  quickAction,
+  runningSleep,
+  sleepingToday,
+} from "./played-household.ts"
 import { playEveryScreen, SCREENS } from "./played-screens.ts"
 import { STILL } from "./still.ts"
 import { expect, test } from "./test.ts"
@@ -82,6 +90,19 @@ for (const colorScheme of ["light", "dark"] as const) {
         await expectNoViolationsIn(page, openedSheet(name))
       }
       await expectNoViolationsIn(page, VITAMIN_D_SHEET)
+    })
+
+    test("Today with a running sleep passes axe", async ({ page }) => {
+      const { andrew } = await caregiversOf(page)
+      await playHousehold(page, sleepingToday(runningSleep(andrew.id, NOW - 40 * MINUTE)))
+      await page.goto("/")
+      await expect(page.getByText("Asleep now · Nap")).toBeVisible()
+      await expectNoViolations(page)
+      await openSheet(page, openedSheet("Sleep"))
+      const sheet = page.getByRole("dialog", { name: "Sleep" })
+      await expect(sheet.getByRole("timer")).toBeVisible()
+      await expect(sheet.getByRole("button", { name: "Change, Fell asleep", exact: true })).toBeVisible()
+      await expectNoViolations(page)
     })
 
     test("History's details, Log at and Go to pass axe", async ({ page }) => {
