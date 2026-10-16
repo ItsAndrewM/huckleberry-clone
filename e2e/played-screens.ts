@@ -1,4 +1,4 @@
-import type { Page } from "@playwright/test"
+import type { Locator, Page } from "@playwright/test"
 import { BIRTH_DATE, busyDay, DAY, diaper, dose, emptyDay, feed, local, measurement, NOW, sleep } from "./played-day.ts"
 import { datesFrom, periodOf, TRENDS_DAYS } from "./played-period.ts"
 import { LAST_WEEK, THIS_WEEK, weekOf } from "./played-week.ts"
@@ -109,3 +109,46 @@ export const playEveryScreen = async (page: Page) => {
   await page.route("**/api/deleted", (route) => route.fulfill({ json: deletedOf(andrew.id, vitaminD) }))
   await page.clock.setFixedTime(NOW)
 }
+
+export interface Screen {
+  readonly name: string
+  readonly path: string
+  readonly ready: (page: Page) => Locator
+}
+
+export const SCREENS: ReadonlyArray<Screen> = [
+  { name: "Today", path: "/", ready: (page) => page.getByText("Totals") },
+  {
+    name: "History's Day view",
+    path: "/history",
+    ready: (page) => page.getByRole("region", { name: "The day by hour" }),
+  },
+  {
+    name: "History's Week view",
+    path: "/history?view=week",
+    ready: (page) => page.getByRole("region", { name: "The week by hour" }),
+  },
+  {
+    name: "History's List view",
+    path: "/history?view=list",
+    ready: (page) => page.getByRole("region", { name: "The day's entries" }),
+  },
+  { name: "Trends by week", path: "/trends", ready: (page) => page.getByRole("region", { name: "Feeds started" }) },
+  {
+    name: "Trends by day",
+    path: "/trends?view=day",
+    ready: (page) => page.getByRole("region", { name: "Feeds started" }).getByText(/^Usual /u),
+  },
+  {
+    name: "Trends by month",
+    path: "/trends?view=month",
+    ready: (page) => page.getByRole("region", { name: "Feeds started" }),
+  },
+  { name: "Growth", path: "/growth", ready: (page) => page.getByRole("region", { name: "Measurements" }) },
+  { name: "Settings", path: "/settings", ready: (page) => page.getByRole("heading", { name: "Theme" }) },
+  {
+    name: "Recently deleted",
+    path: "/settings/deleted",
+    ready: (page) => page.getByRole("button", { name: /^Restore/u }).first(),
+  },
+]

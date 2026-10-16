@@ -1,11 +1,10 @@
 import type { Locator, Page } from "@playwright/test"
 import { quickAction } from "./played-household.ts"
-import { playEveryScreen } from "./played-screens.ts"
+import { playEveryScreen, SCREENS } from "./played-screens.ts"
+import { STILL } from "./still.ts"
 import { expect, test } from "./test.ts"
 
 const LARGEST = `${(23 * 16) / 17}px`
-
-const STILL = "*, *::before, *::after { transition: none !important; animation: none !important; }"
 
 const atLargestText = (page: Page) =>
   page.addStyleTag({ content: `${STILL} body { --text-unit: ${LARGEST} !important; }` })
@@ -39,6 +38,27 @@ const roomAround = (link: Locator) =>
     return { left: inner.left - (outer?.left ?? Number.NaN), bottom: (outer?.bottom ?? Number.NaN) - inner.bottom }
   })
 
+const IOS_BODY_SIZES = [14, 15, 16, 17, 19, 21, 23, 28]
+
+const iphoneTextUnits = (sizes: ReadonlyArray<number>) => `(() => {
+  const inside = (rules) => [...rules].flatMap((rule) => [rule, ...(rule.cssRules ? inside(rule.cssRules) : [])])
+  const rule = [...document.styleSheets]
+    .flatMap((sheet) => inside(sheet.cssRules))
+    .filter((found) => found instanceof CSSSupportsRule && found.conditionText.includes("-webkit-touch-callout"))
+    .flatMap((supports) => [...supports.cssRules])
+    .find((inner) => inner.selectorText === "body" && inner.style.getPropertyValue("--text-unit") !== "")
+  const value = rule === undefined ? "" : rule.style.getPropertyValue("--text-unit")
+  return ${JSON.stringify(sizes)}.map((size) => {
+    const probe = document.createElement("div")
+    probe.style.fontSize = size + "px"
+    probe.style.setProperty("--text-unit", value)
+    document.body.append(probe)
+    const unit = Number.parseFloat(getComputedStyle(probe).getPropertyValue("--text-unit"))
+    probe.remove()
+    return Math.round(unit * 100) / 100
+  })
+})()`
+
 test.use({ timezoneId: "America/Vancouver" })
 
 test.beforeEach(async ({ page }) => {
@@ -50,6 +70,15 @@ test("at iOS's usual text size, text keeps the sizes it has today", async ({ pag
   await expect(page.getByText("Totals")).toBeVisible()
   expect(await fontSizeOf(page, "main h1")).toBe(24)
   expect(await fontSizeOf(page, "main .text-sm")).toBe(14)
+})
+
+test("on an iPhone, the text unit grows from iOS's body size, never drops below today's 16 px, and stops at the largest standard size", async ({
+  page,
+}) => {
+  await page.goto("/")
+  expect(await page.evaluate<number[]>(iphoneTextUnits(IOS_BODY_SIZES))).toEqual([
+    16, 16, 16, 16, 17.88, 19.76, 21.65, 21.65,
+  ])
 })
 
 test("at the largest standard size, text grows by about a third while boxes and the grid's labels keep theirs", async ({
@@ -72,18 +101,10 @@ test("at the largest standard size, text grows by about a third while boxes and 
   ).toBe(11)
 })
 
-for (const [name, path] of [
-  ["Today", "/"],
-  ["History's Day view", "/history"],
-  ["History's List view", "/history?view=list"],
-  ["Trends", "/trends"],
-  ["Growth", "/growth"],
-  ["Settings", "/settings"],
-  ["Recently deleted", "/settings/deleted"],
-] as const) {
+for (const { name, path, ready } of SCREENS) {
   test(`${name} doesn't scroll sideways at the largest standard size`, async ({ page }) => {
     await page.goto(path)
-    await expect(page.getByRole("heading", { level: 1 })).toBeVisible()
+    await expect(ready(page)).toBeVisible()
     await atLargestText(page)
     expect(await scrollsSideways(page)).toBe(false)
   })

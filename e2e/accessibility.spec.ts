@@ -1,13 +1,12 @@
 import AxeBuilder from "@axe-core/playwright"
 import type { Locator, Page } from "@playwright/test"
 import { quickAction } from "./played-household.ts"
-import { playEveryScreen } from "./played-screens.ts"
+import { playEveryScreen, SCREENS } from "./played-screens.ts"
+import { STILL } from "./still.ts"
 import { expect, test } from "./test.ts"
 
 const WCAG_A_AND_AA = ["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22a", "wcag22aa"]
 const BASE_UI_FOCUS_GUARDS = "[data-base-ui-focus-guard]"
-
-const STILL = "*, *::before, *::after { transition: none !important; animation: none !important; }"
 
 const violationsOn = async (page: Page) => {
   await page.addStyleTag({ content: STILL })
@@ -19,49 +18,6 @@ const violationsOn = async (page: Page) => {
 const expectNoViolations = async (page: Page) => {
   expect(await violationsOn(page)).toEqual([])
 }
-
-interface Screen {
-  readonly name: string
-  readonly path: string
-  readonly ready: (page: Page) => Locator
-}
-
-const SCREENS: ReadonlyArray<Screen> = [
-  { name: "Today", path: "/", ready: (page) => page.getByText("Totals") },
-  {
-    name: "History's Day view",
-    path: "/history",
-    ready: (page) => page.getByRole("region", { name: "The day by hour" }),
-  },
-  {
-    name: "History's Week view",
-    path: "/history?view=week",
-    ready: (page) => page.getByRole("region", { name: "The week by hour" }),
-  },
-  {
-    name: "History's List view",
-    path: "/history?view=list",
-    ready: (page) => page.getByRole("region", { name: "The day's entries" }),
-  },
-  { name: "Trends by week", path: "/trends", ready: (page) => page.getByRole("region", { name: "Feeds started" }) },
-  {
-    name: "Trends by day",
-    path: "/trends?view=day",
-    ready: (page) => page.getByRole("region", { name: "Feeds started" }).getByText(/^Usual /u),
-  },
-  {
-    name: "Trends by month",
-    path: "/trends?view=month",
-    ready: (page) => page.getByRole("region", { name: "Feeds started" }),
-  },
-  { name: "Growth", path: "/growth", ready: (page) => page.getByRole("region", { name: "Measurements" }) },
-  { name: "Settings", path: "/settings", ready: (page) => page.getByRole("heading", { name: "Theme" }) },
-  {
-    name: "Recently deleted",
-    path: "/settings/deleted",
-    ready: (page) => page.getByRole("button", { name: /^Restore/u }).first(),
-  },
-]
 
 const openSheet = async (page: Page, opener: Locator) => {
   await opener.click()
