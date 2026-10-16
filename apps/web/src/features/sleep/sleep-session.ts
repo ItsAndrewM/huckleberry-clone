@@ -42,6 +42,9 @@ export const wakeSession = (failed: Failed | null, sleepId: string, zone: string
   return { actionId, when: whenAt(occurredAt, zone), occurredAt }
 }
 
+export const wakeLetGo = (session: WakeSession, held: Failed | null, sending: boolean) =>
+  session.occurredAt !== null && held === null && !sending
+
 export const wakeAt = (session: WakeSession, woke: When, zone: string, now: number, startedAt: number): Resolved => {
   const resolved =
     woke.kind === "now"
