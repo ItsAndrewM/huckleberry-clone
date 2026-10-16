@@ -557,8 +557,11 @@ index 309d0a0..49dfd54 100644
   - RED: with the played answer held 1.5 s, the test timed out in both engines.
   - GREEN: waiting for Add to be enabled before going offline, 6 of 6 with the same delay. Then the delay came out.
   - CLAUDE.md's rule now says to wait for a control to be enabled, not just visible, and that the refusal covers `page.route` in the test's own context.
+- **A second fix, graded Minor by the review and fixed anyway.** It could still cause the issue's own harm, a flake.
+  - sheets-offline.spec's retry test (Chromium only) went offline once "Robin" and the service worker's controller were there, before Today had certainly loaded. A late Today answer would then be refused, and the Diaper quick action would stay disabled.
+  - RED: with the played `/api/today` answer held 3 s, it timed out.
+  - GREEN: the test waits for Diaper to be enabled before going offline, 3 of 3 with the same delay. Then the delay came out.
 - **Deferred minors, from the same review:**
-  - sheets-offline.spec's second test goes offline before Today has certainly loaded (Chromium only, a narrow window).
   - `page.unroute(url, handler)` no longer matches a handler, and `routeFromHAR` would hit a redirect the stand-in route lacks. No spec uses either.
   - The floor's `page.evaluate` would fail on a page mid-navigation and memoize the failure. Every first clock call comes before `goto` or on an idle page.
   - Nothing pins that `continue` is refused, a `context.newPage()` page, or the real household being covered.
