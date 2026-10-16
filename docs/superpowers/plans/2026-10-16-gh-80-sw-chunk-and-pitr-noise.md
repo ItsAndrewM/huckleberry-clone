@@ -376,3 +376,19 @@ index 94a0820..764af59 100644
 ## Unresolved questions
 
 None.
+
+## Build record (16 Oct 2026)
+
+- **Tasks:** Task 1 is `4cf5baf` and Task 2 is `d9f0879`, each byte for byte its replay commit. Each check failed first: Task 1's tests 4 failed and 5 passed (`workerImportProblem is not a function`), and Task 2's file printed 4 uncaught exception lines.
+- **Ruling:** Task 2's Step 6 said 3,932 tests. It measured 3,933, because the figure was taken before the replay's fourth build-check test was added (3,929 + 4). `vitest list` is identical on the branch and the replay. The figure is fixed in `7147f2a`.
+- **Gates on `7147f2a`:** `install`, `pins:check`, `lint`, `typecheck`, `build` and `bundle:check` pass.
+  - `test`: 3,933 in 234 files, and no uncaught exception.
+  - `coverage`: 576 tests, at the domain's 100 %.
+  - `bundle:check`: the app's script is `main`'s `index-C8nxDHAQ.js`.
+- **E2E, both engines, from the private config with no retries:** two whole runs, each with 829 passed, 2 skipped and one WebKit failure in a spec this branch doesn't touch.
+  - Run 1, at a load of about 16: `deleted.spec.ts:388` timed out "while setting up "context"", before the test's own code ran. That spec then passed 60 of 60 in WebKit (5 repeats).
+  - Run 2, at a load of 15–30: `history-list.spec.ts:226` hit "Target crashed". That spec then passed 70 of 70 in WebKit (5 repeats).
+  - ci.yml's own E2E keeps one retry, so either would have been retried there.
+- **Final review:** one fresh Opus review, which judged the branch ready to merge, with no Critical or Important findings.
+  - Its probes confirmed all five Review Focus lines on real builds: an indirect share and Rolldown's runtime both fail the build, a renamed `BuiltFiles` field fails typecheck, and the mutants are caught.
+  - **Left for later in #103:** two Minors (the message's advice for `import()` and Rolldown's runtime, and M1.14's "module" wording), plus the review's idea to parse `sw.js` with `node:vm`, which would also catch `import.meta` and top-level await.
