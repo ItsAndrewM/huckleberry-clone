@@ -107,3 +107,9 @@ export const OPENED_SHEETS: ReadonlyArray<OpenedSheet> = [
         .click(),
   },
 ]
+
+export const openedSheet = (name: string) => {
+  const found = OPENED_SHEETS.find((sheet) => sheet.name === name)
+  if (found === undefined) throw new Error(`${name} isn't an opened sheet`)
+  return found
+}

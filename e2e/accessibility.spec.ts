@@ -1,5 +1,6 @@
 import AxeBuilder from "@axe-core/playwright"
-import type { Locator, Page } from "@playwright/test"
+import type { Page } from "@playwright/test"
+import { type OpenedSheet, openedSheet } from "./opened-sheets.ts"
 import { quickAction } from "./played-household.ts"
 import { playEveryScreen, SCREENS } from "./played-screens.ts"
 import { STILL } from "./still.ts"
@@ -19,9 +20,12 @@ const expectNoViolations = async (page: Page) => {
   expect(await violationsOn(page)).toEqual([])
 }
 
-const openSheet = async (page: Page, opener: Locator) => {
-  await opener.click()
-  await expect(page.getByRole("dialog")).toBeVisible()
+type Opening = Pick<OpenedSheet, "dialog" | "open">
+
+const openSheet = async (page: Page, { dialog, open }: Opening) => {
+  await open(page)
+  await expect(page.getByRole("dialog")).toHaveCount(1)
+  await expect(page.getByRole("dialog", { name: dialog })).toBeVisible()
 }
 
 const closeSheet = async (page: Page) => {
@@ -29,12 +33,20 @@ const closeSheet = async (page: Page) => {
   await expect(page.getByRole("dialog")).toHaveCount(0)
 }
 
-const EDIT_SHEETS = [
-  ["Pee and poo", "Edit diaper"],
-  ["Nursing and bottle", "Edit feed"],
-  ["Nap", "Edit sleep"],
-  ["Vitamin D", "Edit dose"],
-] as const
+const expectNoViolationsIn = async (page: Page, opening: Opening) => {
+  await openSheet(page, opening)
+  await expectNoViolations(page)
+  await closeSheet(page)
+}
+
+const VITAMIN_D_SHEET: Opening = {
+  dialog: "Vitamin D",
+  open: (page) =>
+    page
+      .getByRole("list", { name: "Supplements" })
+      .getByRole("button", { name: /^Vitamin D/u })
+      .click(),
+}
 
 test.use({ timezoneId: "America/Vancouver" })
 
@@ -58,41 +70,32 @@ for (const colorScheme of ["light", "dark"] as const) {
       await page.goto("/")
       await expect(page.getByText("Totals")).toBeVisible()
       for (const name of ["Bottle", "Nursing", "Diaper", "Sleep"]) {
-        await openSheet(page, quickAction(page, name))
-        await expectNoViolations(page)
-        await closeSheet(page)
+        await expectNoViolationsIn(page, openedSheet(name))
       }
-      await openSheet(page, page.getByRole("list", { name: "Supplements" }).getByRole("button").first())
-      await expectNoViolations(page)
+      await expectNoViolationsIn(page, VITAMIN_D_SHEET)
     })
 
     test("History's details, Log at and Go to pass axe", async ({ page }) => {
       await page.goto("/history")
-      const grid = page.getByRole("region", { name: "The day by hour" })
-      await openSheet(page, grid.getByRole("button", { name: /^Diaper/u }).first())
-      await expectNoViolations(page)
-      await closeSheet(page)
-      await openSheet(page, grid.getByRole("button", { name: /^Log at 6/u }).first())
-      await expectNoViolations(page)
-      await closeSheet(page)
-      await page.getByRole("navigation", { name: "Days" }).getByRole("button", { name: "Change" }).click()
+      for (const name of ["History's details", "History's Log at"]) {
+        await expectNoViolationsIn(page, openedSheet(name))
+      }
+      const days = page.getByRole("navigation", { name: "Days" })
+      await days.getByRole("button", { name: "Change day", exact: true }).click()
+      await expect(page.getByLabel("Go to", { exact: true })).toBeVisible()
       await expectNoViolations(page)
     })
 
     test("Today's edit sheets pass axe", async ({ page }) => {
       await page.goto("/")
-      const recent = page.getByRole("list", { name: "Last 24 hours" })
-      for (const [kind, name] of EDIT_SHEETS) {
-        await openSheet(page, recent.getByRole("button").filter({ hasText: kind }).first())
-        await expect(page.getByRole("dialog", { name })).toBeVisible()
-        await expectNoViolations(page)
-        await closeSheet(page)
+      for (const name of ["Edit diaper", "Edit feed", "Edit sleep", "Edit dose"]) {
+        await expectNoViolationsIn(page, openedSheet(name))
       }
     })
 
     test("No connection passes axe", async ({ page, context }) => {
       await page.goto("/")
-      await expect(page.getByText("Totals")).toBeVisible()
+      await expect(quickAction(page, "Bottle")).toBeEnabled()
       await context.setOffline(true)
       await expect(page.getByText("No connection")).toBeVisible()
       await expectNoViolations(page)
@@ -100,15 +103,11 @@ for (const colorScheme of ["light", "dark"] as const) {
 
     test("Growth's and Settings' sheets pass axe", async ({ page }) => {
       await page.goto("/growth")
-      await openSheet(page, page.getByRole("button", { name: "Add measurement" }).first())
-      await expectNoViolations(page)
-      await closeSheet(page)
-      await openSheet(page, page.getByRole("button", { name: /^Edit the measurement from/u }).first())
-      await expectNoViolations(page)
-      await closeSheet(page)
+      for (const name of ["Add measurement", "Edit measurement"]) {
+        await expectNoViolationsIn(page, openedSheet(name))
+      }
       await page.goto("/settings")
-      await openSheet(page, page.getByRole("button", { name: /^Vitamin D/u }))
-      await expectNoViolations(page)
+      await expectNoViolationsIn(page, VITAMIN_D_SHEET)
     })
 
     test.describe("on an iPhone's browser tab", () => {

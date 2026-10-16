@@ -161,7 +161,7 @@ export const SCREENS: ReadonlyArray<Screen> = [
     ready: (page) => page.getByRole("region", { name: "Feeds started" }),
   },
   { name: "Growth", path: "/growth", ready: (page) => page.getByRole("region", { name: "Measurements" }) },
-  { name: "Settings", path: "/settings", ready: (page) => page.getByRole("heading", { name: "Theme" }) },
+  { name: "Settings", path: "/settings", ready: (page) => page.getByRole("heading", { name: "Export", exact: true }) },
   {
     name: "Recently deleted",
     path: "/settings/deleted",
