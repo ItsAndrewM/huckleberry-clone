@@ -116,9 +116,31 @@ for (const colorScheme of ["light", "dark"] as const) {
       await expectNoViolations(page)
     })
 
+    test("Today's edit sheets pass axe", async ({ page }) => {
+      await page.goto("/")
+      const recent = page.getByRole("list", { name: "Last 24 hours" })
+      for (const kind of ["Pee and poo", "Nursing", "Nap", "Vitamin D"]) {
+        await openSheet(page, recent.getByRole("button").filter({ hasText: kind }).first())
+        await expectNoViolations(page)
+        await closeSheet(page)
+      }
+    })
+
+    test("No connection passes axe", async ({ page, context }) => {
+      await page.goto("/")
+      await expect(page.getByText("Totals")).toBeVisible()
+      await context.setOffline(true)
+      await expect(page.getByText("No connection")).toBeVisible()
+      await expectNoViolations(page)
+      await context.setOffline(false)
+    })
+
     test("Growth's and Settings' sheets pass axe", async ({ page }) => {
       await page.goto("/growth")
       await openSheet(page, page.getByRole("button", { name: "Add measurement" }).first())
+      await expectNoViolations(page)
+      await closeSheet(page)
+      await openSheet(page, page.getByRole("button", { name: /^Edit the measurement from/u }).first())
       await expectNoViolations(page)
       await closeSheet(page)
       await page.goto("/settings")
@@ -127,3 +149,18 @@ for (const colorScheme of ["light", "dark"] as const) {
     })
   })
 }
+
+test.describe("on an iPhone's browser tab", () => {
+  test.use({ storageState: { cookies: [], origins: [] }, timezoneId: "America/Vancouver" })
+
+  test("the install card passes axe", async ({ page }) => {
+    await playEveryScreen(page)
+    await page.addInitScript(() => {
+      Object.defineProperty(Navigator.prototype, "standalone", { configurable: true, get: () => false })
+      Object.defineProperty(Navigator.prototype, "maxTouchPoints", { configurable: true, get: () => 5 })
+    })
+    await page.goto("/")
+    await expect(page.getByRole("region", { name: "Install Baby tracker" })).toBeVisible()
+    await expectNoViolations(page)
+  })
+})

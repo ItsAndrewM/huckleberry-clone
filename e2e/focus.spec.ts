@@ -111,6 +111,34 @@ test("deleting an entry moves focus to the row after it", async ({ page }) => {
   answered.open()
 })
 
+test("a measurement that's still saving keeps focus on its card", async ({ page }) => {
+  const me = await (await page.request.get("/api/me")).json()
+  const [andrew] = me.household.caregivers
+  const weighed = {
+    id: "m3",
+    measuredAt: NOW - 3 * 24 * 60 * MINUTE,
+    weightG: 4300,
+    lengthCm: 54.5,
+    headCm: 36.8,
+    ...savedBy(andrew.id),
+  }
+  await page.route("**/api/growth", (route) => route.fulfill({ json: { measurements: [weighed] } }))
+  const answered = gate()
+  await page.route("**/api/growth/m3", async (route) => {
+    await answered.opened
+    await route.fulfill({ status: 503, json: { _tag: "ServiceUnavailable" } })
+  })
+  await page.clock.setFixedTime(NOW)
+  await page.goto("/growth")
+  await page.getByRole("button", { name: /^Edit the measurement from/u }).click()
+  const sheet = page.getByRole("dialog", { name: "Edit measurement" })
+  await sheet.getByRole("textbox", { name: "Weight" }).fill("4.4")
+  await sheet.getByRole("button", { name: "Save" }).click()
+  await expect(sheet).toBeHidden()
+  await expect(page.getByRole("region", { name: "Measurements" }).getByRole("listitem").first()).toBeFocused()
+  answered.open()
+})
+
 test("a failure that comes back to an open sheet takes focus, with its buttons next", async ({ page }) => {
   const { andrew } = await caregiversOf(page)
   const { answer } = await playHousehold(page, todayWith(runningFeed(andrew.id, NOW - 10 * MINUTE, "left")))

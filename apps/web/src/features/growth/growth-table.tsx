@@ -1,3 +1,4 @@
+import { ShowAsTable } from "../../components/show-as-table.tsx"
 import type { GrowthRow } from "./chart-model.ts"
 import type { GrowthMetricInfo } from "./metrics.ts"
 import { SpokenAs } from "./spoken-text.tsx"
@@ -8,10 +9,7 @@ interface GrowthTableProps {
 }
 
 export const GrowthTable = ({ info, rows }: GrowthTableProps) => (
-  <details>
-    <summary className="flex min-h-11 cursor-pointer items-center text-sm font-medium text-primary">
-      Show as a table
-    </summary>
+  <ShowAsTable>
     <table className="w-full text-left text-sm tabular-nums">
       <caption className="sr-only">{`${info.name}, newest first`}</caption>
       <thead className="text-muted-foreground">
@@ -45,5 +43,5 @@ export const GrowthTable = ({ info, rows }: GrowthTableProps) => (
         ))}
       </tbody>
     </table>
-  </details>
+  </ShowAsTable>
 )

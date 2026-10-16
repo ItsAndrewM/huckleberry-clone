@@ -114,6 +114,18 @@ test.describe("Growth, with the household's answers played by the test", () => {
     await expect(tiles(page).nth(0)).toHaveAttribute("aria-pressed", "true")
   })
 
+  test("Show as a table shows whether the table is open", async ({ page }) => {
+    await playGrowth(page, MEASUREMENTS)
+    await openGrowth(page)
+    const summary = page.getByText("Show as a table", { exact: true })
+    const cue = summary.locator("svg")
+    await expect(cue).toBeVisible()
+    const turn = () => cue.evaluate((icon) => icon.ownerDocument.defaultView?.getComputedStyle(icon).rotate)
+    const closed = await turn()
+    await summary.click()
+    await expect.poll(turn).not.toBe(closed)
+  })
+
   test("lists every measurement on a card, newest first, saying which metric wasn't measured", async ({ page }) => {
     await playGrowth(page, MEASUREMENTS)
     await openGrowth(page)
