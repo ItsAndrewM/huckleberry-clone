@@ -36,3 +36,9 @@ export const focusTarget = (home: FocusHome) => {
   const target = homeTarget(home)
   return target === null ? true : readyForFocus(target)
 }
+
+export const handFocusHome = (home: FocusHome) =>
+  queueMicrotask(() => {
+    const target = focusTarget(home)
+    if (target !== true) target.focus()
+  })

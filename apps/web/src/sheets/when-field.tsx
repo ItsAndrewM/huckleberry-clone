@@ -1,5 +1,7 @@
+import { type Ref, useState } from "react"
 import { Button } from "../components/ui/button.tsx"
 import { Input } from "../components/ui/input.tsx"
+import { focusFollowsSwap } from "../shell/focus-hand-off.ts"
 import { AmbiguityChoice } from "./ambiguity-choice.tsx"
 import { NOW, resolveWhen, type When, type WhenIssue, whenAt } from "./when.ts"
 
@@ -21,8 +23,14 @@ const MESSAGES = {
   too_early: "That's before this side started.",
 } satisfies Record<WhenIssue, string>
 
-const NowRow = ({ label, onChange }: { readonly label: string; readonly onChange: () => void }) => (
-  <div className="flex items-center justify-between gap-3">
+interface NowRowProps {
+  readonly label: string
+  readonly onChange: () => void
+  readonly ref: Ref<HTMLDivElement>
+}
+
+const NowRow = ({ label, onChange, ref }: NowRowProps) => (
+  <div ref={ref} className="flex items-center justify-between gap-3">
     <span className="text-sm font-medium">{label}</span>
     <span className="flex items-center gap-1">
       <span className="text-base">Now</span>
@@ -34,12 +42,15 @@ const NowRow = ({ label, onChange }: { readonly label: string; readonly onChange
 )
 
 export const WhenField = ({ label, when, onChange, zone, now, earliest, tooEarly }: WhenFieldProps) => {
-  if (when.kind === "now") return <NowRow label={label} onChange={() => onChange(whenAt(now, zone))} />
+  const [followsSwap] = useState(focusFollowsSwap)
+  if (when.kind === "now") {
+    return <NowRow ref={followsSwap} label={label} onChange={() => onChange(whenAt(now, zone))} />
+  }
   const resolved = resolveWhen(when, zone, now, earliest)
   const messages = tooEarly === undefined ? MESSAGES : { ...MESSAGES, too_early: tooEarly }
   const message = resolved.ok ? "" : messages[resolved.issue]
   return (
-    <div className="flex flex-col gap-2">
+    <div ref={followsSwap} className="flex flex-col gap-2">
       <div className="flex items-end gap-2">
         <label className="flex min-w-0 flex-1 flex-col gap-2 text-sm font-medium">
           {label}

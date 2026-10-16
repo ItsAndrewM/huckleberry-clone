@@ -12,7 +12,10 @@ import {
   playHousehold,
   quickAction,
   runningFeed,
+  runningSleep,
   savedBy,
+  savedDiaper,
+  sleepingToday,
   todayWith,
 } from "./played-household.ts"
 import { expect, test } from "./test.ts"
@@ -408,5 +411,170 @@ test.describe("a control that waits on what it asked for keeps focus", () => {
     await expect(restoreIn(rows.first())).toHaveAccessibleName(/^Restoring…/u)
     await expectWaitingWithFocus(page, restoreIn(rows.first()))
     answered.open()
+  })
+})
+
+const expectStartHandsFocusOn = async (sheet: Locator, label: string, earlier: string) => {
+  const change = sheet.getByRole("button", { name: `Change, ${label}` })
+  const time = sheet.getByLabel(label, { exact: true })
+  await change.press("Enter")
+  await expect(time).toBeFocused()
+  await sheet.getByRole("button", { name: "Cancel" }).press("Enter")
+  await expect(change).toBeFocused()
+  await change.press("Enter")
+  await time.fill(earlier)
+  await sheet.getByRole("button", { name: "Save start" }).press("Enter")
+  await expect(change).toBeFocused()
+}
+
+const inVancouver = async (page: Page) => {
+  const { andrew, me } = await caregiversOf(page)
+  const household = { ...me.household, timeZone: "America/Vancouver" }
+  await page.route("**/api/me", (route) => route.fulfill({ json: { ...me, household } }))
+  return andrew.id
+}
+
+const playDiaperSaves = async (page: Page) => {
+  const { andrew } = await caregiversOf(page)
+  const { answer } = await playHousehold(page, todayWith())
+  await answer("**/api/diapers", ({ body }) => ({ status: 201, json: savedDiaper(andrew.id)(body) }))
+  await answer("**/api/diapers/*", () => ({ status: 503, json: { _tag: "ServiceUnavailable" } }))
+  await openToday(page)
+  await quickAction(page, "Diaper").click()
+  await page.getByRole("dialog", { name: "Diaper" }).getByRole("button", { name: "Pee" }).click()
+  await expect(dialogsInThePage(page)).toHaveCount(0)
+  return page.getByRole("button", { name: "Undo" })
+}
+
+const todayHeading = (page: Page) => page.getByRole("heading", { name: "Today", level: 1 })
+
+test.describe("a control that gives way hands focus on", () => {
+  test("Change on a When field to its time, and Now back to Change", async ({ page }) => {
+    await playHousehold(page, todayWith())
+    await openToday(page)
+    await quickAction(page, "Diaper").click()
+    const sheet = page.getByRole("dialog", { name: "Diaper" })
+    const change = sheet.getByRole("button", { name: "Change, When" })
+    await change.press("Enter")
+    await expect(sheet.getByLabel("When", { exact: true })).toBeFocused()
+    await sheet.getByRole("button", { name: "Now", exact: true }).press("Enter")
+    await expect(change).toBeFocused()
+  })
+
+  test("a running feed's Change to its start, and Cancel and Save start back to Change", async ({ page }) => {
+    const andrew = await inVancouver(page)
+    const { answer } = await playHousehold(page, todayWith(runningFeed(andrew, NOW - 10 * MINUTE, "left")))
+    await answer("**/api/segments/segment-1", () => ({ status: 503, json: { _tag: "ServiceUnavailable" } }))
+    const answered = await heldUntilOpened(page, "**/api/segments/segment-1")
+    await expectStartHandsFocusOn(await openNursing(page), "Started", "2026-10-09T09:10")
+    answered.open()
+  })
+
+  test("a running sleep's Change to its start, and Cancel and Save start back to Change", async ({ page }) => {
+    const andrew = await inVancouver(page)
+    const { answer } = await playHousehold(page, sleepingToday(runningSleep(andrew, NOW - 30 * MINUTE)))
+    await answer("**/api/sleeps/sleep-1", () => ({ status: 503, json: { _tag: "ServiceUnavailable" } }))
+    const answered = await heldUntilOpened(page, "**/api/sleeps/sleep-1")
+    await openToday(page)
+    await quickAction(page, "Sleep").click()
+    await expectStartHandsFocusOn(page.getByRole("dialog", { name: "Sleep" }), "Fell asleep", "2026-10-09T08:50")
+    answered.open()
+  })
+
+  test("Pause to the paused view's first control, once the feed has paused", async ({ page }) => {
+    const running = await runningFor(page)
+    await playFeed(page, running, "pause", pausedAt(running, NOW))
+    const sheet = await openNursing(page)
+    await sheet.getByRole("button", { name: "Pause" }).press("Enter")
+    await expect(sheet.getByText("Paused")).toBeVisible()
+    await expect(sheet.getByRole("button", { name: "Change, Started" })).toBeFocused()
+  })
+
+  test("a side to resume on to the running view's first control, once the feed has resumed", async ({ page }) => {
+    const resting = pausedAt(await runningFor(page), NOW - 5 * MINUTE)
+    await playFeed(page, resting, "resume", resumedOn(resting, "right", NOW))
+    const sheet = await openNursing(page)
+    await sheet.getByRole("button", { name: "Right", exact: true }).press("Enter")
+    await expect(sheet.getByText("Right side")).toBeVisible()
+    await expect(sheet.getByRole("button", { name: "Change, Started" })).toBeFocused()
+  })
+
+  test("Finish to the stop time's Change, and Back to the running view's first control", async ({ page }) => {
+    await playHousehold(page, todayWith(await runningFor(page)))
+    const sheet = await openNursing(page)
+    await sheet.getByRole("button", { name: "Finish", exact: true }).press("Enter")
+    await expect(sheet.getByRole("button", { name: "Change, Stopped" })).toBeFocused()
+    await sheet.getByRole("button", { name: "Back", exact: true }).press("Enter")
+    await expect(sheet.getByRole("button", { name: "Change, Started" })).toBeFocused()
+  })
+
+  test("Keep it back to Delete", async ({ page }) => {
+    await playDiapers(page)
+    await openToday(page)
+    await recent(page)
+      .getByRole("button", { name: /Diaper/u })
+      .first()
+      .click()
+    const sheet = page.getByRole("dialog", { name: "Edit diaper" })
+    const remove = sheet.getByRole("button", { name: "Delete diaper" })
+    await remove.press("Enter")
+    await sheet.getByRole("button", { name: "Keep it" }).press("Enter")
+    await expect(remove).toBeFocused()
+  })
+
+  test("Keep giving it back to Stop giving it", async ({ page }) => {
+    const { me } = await caregiversOf(page)
+    const supplements = [{ ...me.household.supplements[0], name: "Vitamin D", dose: "400 IU", stoppedAt: null }]
+    await page.route("**/api/me", (route) =>
+      route.fulfill({ json: { ...me, household: { ...me.household, supplements } } }),
+    )
+    await page.clock.setFixedTime(NOW)
+    await page.goto("/settings")
+    await page.getByRole("list", { name: "Supplements" }).getByRole("button", { name: "Vitamin D · 400 IU" }).click()
+    const sheet = page.getByRole("dialog", { name: "Vitamin D" })
+    const stop = sheet.getByRole("button", { name: "Stop giving it" })
+    await stop.press("Enter")
+    await sheet.getByRole("button", { name: "Keep giving it" }).press("Enter")
+    await expect(stop).toBeFocused()
+  })
+
+  test("Restore to the next row's Restore, else the previous row's, else the page's heading", async ({ page }) => {
+    const rows = await playDeleted(page, ["first", "second", "third"])
+    await expect(rows).toHaveCount(3)
+    const [first, second, third] = await Promise.all(
+      [0, 1, 2].map(async (index) => (await restoreIn(rows.nth(index)).getAttribute("aria-label")) ?? ""),
+    )
+    const restore = (name: string) => page.getByRole("button", { name, exact: true })
+    await restore(second ?? "").press("Enter")
+    await expect(restore(third ?? "")).toBeFocused()
+    await restore(third ?? "").press("Enter")
+    await expect(restore(first ?? "")).toBeFocused()
+    await restore(first ?? "").press("Enter")
+    await expect(page.getByRole("heading", { name: "Recently deleted", level: 1 })).toBeFocused()
+  })
+
+  test("Undo to the page's heading", async ({ page }) => {
+    const undo = await playDiaperSaves(page)
+    await undo.press("Enter")
+    await expect(undo).toHaveCount(0)
+    await expect(todayHeading(page)).toBeFocused()
+  })
+
+  test("a toast that goes while Undo has focus to the page's heading", async ({ page }) => {
+    const undo = await playDiaperSaves(page)
+    await undo.focus()
+    await expect(undo).toHaveCount(0, { timeout: 10_000 })
+    await expect(todayHeading(page)).toBeFocused()
+  })
+
+  test("Try again to the page's heading, once the day loads", async ({ page }) => {
+    const { played } = await playHistory(page, [])
+    await openHistory(page)
+    const tryAgain = page.getByRole("button", { name: "Try again" })
+    await expect(tryAgain).toBeVisible()
+    played.days.push(emptyDay(DAY))
+    await tryAgain.press("Enter")
+    await expect(page.getByRole("region", { name: "This day" })).toBeVisible()
+    await expect(page.getByRole("heading", { name: "History", level: 1 })).toBeFocused()
   })
 })

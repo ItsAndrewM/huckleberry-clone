@@ -6,6 +6,7 @@ import { useSheets } from "../../sheets/sheets-context.ts"
 import { tapTime } from "../../sheets/tap-time.ts"
 import { WhenField } from "../../sheets/when-field.tsx"
 import { resolveWhen, sameWhen, type When, whenAt } from "../../sheets/when.ts"
+import { focusFollowsSwap } from "../../shell/focus-hand-off.ts"
 import { useNow } from "../../timer/use-now.ts"
 import { runningEdit } from "./sleep-state.ts"
 
@@ -19,9 +20,10 @@ export const SleepStart = ({ sleep, zone, busy }: SleepStartProps) => {
   const sheets = useSheets()
   const now = useNow()
   const [when, setWhen] = useState<When | null>(null)
+  const [followsSwap] = useState(focusFollowsSwap)
   if (when === null) {
     return (
-      <div className="flex items-center justify-between gap-3">
+      <div key="shown" ref={followsSwap} className="flex items-center justify-between gap-3">
         <span className="text-sm font-medium">Fell asleep</span>
         <span className="flex items-center gap-1">
           <span className="text-base tabular-nums">{clockOf(sleep.startedAt, zone)}</span>
@@ -47,7 +49,7 @@ export const SleepStart = ({ sleep, zone, busy }: SleepStartProps) => {
     setWhen(null)
   }
   return (
-    <div className="flex flex-col gap-2">
+    <div key="changing" ref={followsSwap} className="flex flex-col gap-2">
       <WhenField label="Fell asleep" when={when} onChange={setWhen} zone={zone} now={now} />
       <div className="grid grid-cols-2 gap-2">
         <Button size="lg" disabled={busy || !changed || !resolveWhen(when, zone, now).ok} onClick={save}>

@@ -6,6 +6,7 @@ import { useSheets } from "../../sheets/sheets-context.ts"
 import { tapTime } from "../../sheets/tap-time.ts"
 import { WhenField } from "../../sheets/when-field.tsx"
 import { type When, whenAt } from "../../sheets/when.ts"
+import { focusFollowsSwap } from "../../shell/focus-hand-off.ts"
 import { useNow } from "../../timer/use-now.ts"
 import { firstSideOf, startAction, startChanged, startedAtOf } from "./nursing-state.ts"
 
@@ -19,11 +20,12 @@ export const FeedStart = ({ feed, zone, busy }: FeedStartProps) => {
   const sheets = useSheets()
   const now = useNow()
   const [when, setWhen] = useState<When | null>(null)
+  const [followsSwap] = useState(focusFollowsSwap)
   const first = firstSideOf(feed)
   if (first === undefined) return null
   if (when === null) {
     return (
-      <div className="flex items-center justify-between gap-3">
+      <div key="shown" ref={followsSwap} className="flex items-center justify-between gap-3">
         <span className="text-sm font-medium">Started</span>
         <span className="flex items-center gap-1">
           <span className="text-base tabular-nums">{clockOf(first.startedAt, zone)}</span>
@@ -53,7 +55,7 @@ export const FeedStart = ({ feed, zone, busy }: FeedStartProps) => {
     setWhen(null)
   }
   return (
-    <div className="flex flex-col gap-2">
+    <div key="changing" ref={followsSwap} className="flex flex-col gap-2">
       <WhenField label="Started" when={when} onChange={setWhen} zone={zone} now={now} />
       {tooLate ? (
         <p className="text-sm text-destructive">
