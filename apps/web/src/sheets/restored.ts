@@ -1,8 +1,7 @@
 import { DRAFT_RETRY_MS, type Draft, isFresh, renewed, StaleDraft } from "./drafts.ts"
 import { actionIdOf } from "./held.ts"
 import { type KeptEntry, type Stored, Unsaved } from "./kept.ts"
-import type { Failed, Sending } from "./sending.ts"
-import { isEntry } from "./sheets-state.ts"
+import { type Failed, isEntry, type Sending } from "./sending.ts"
 
 export interface Restored {
   readonly held: ReadonlyArray<Failed>

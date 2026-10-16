@@ -161,3 +161,34 @@ test("a diaper changed after its first send landed unanswered keeps that send's 
   expect(sent[1]?.dirty).toBe(true)
   expect(answered).toEqual([201, 409])
 })
+
+test("a pause whose resend meets a change Pause anyway would still save asks before closing drops it", async ({
+  page,
+}) => {
+  const { andrew, emily } = await caregiversOf(page)
+  const feed = runningFeed(andrew.id, STARTED, "left")
+  await playHousehold(page, todayWith(feed))
+  const theirs = { ...feed, version: 2, updatedBy: emily.id }
+  const sent: Array<{ readonly actionId?: string; readonly version?: number; readonly occurredAt?: number }> = []
+  await page.route("**/api/feeds/feed-1/pause", async (route) => {
+    sent.push(route.request().postDataJSON())
+    if (sent.length === 1) return route.abort("internetdisconnected")
+    if (sent.length === 2) {
+      return route.fulfill({ status: 409, json: { _tag: "Conflict", code: "STALE_VERSION", current: theirs } })
+    }
+    return route.fulfill({ status: 200, json: { feed: { ...theirs, version: 3 }, changed: [["today"]] } })
+  })
+  await openToday(page)
+  await page.clock.setFixedTime(FIRST_TAP)
+  const sheet = await openSheet(page, "Nursing")
+  await sheet.getByRole("button", { name: "Pause", exact: true }).click()
+  await expect(sheet.getByRole("alert")).toContainText("No connection")
+  await sheet.getByRole("button", { name: "Try again" }).click()
+  await expect(sheet.getByRole("alert")).toContainText(`${emily.displayName} changed this feed a moment ago.`)
+  await page.keyboard.press("Escape")
+  await expect(sheet.getByRole("alert")).toHaveText(/^Discard the pause at 9:30\sAM\?DiscardKeep$/u)
+  await sheet.getByRole("button", { name: "Keep" }).click()
+  await sheet.getByRole("button", { name: "Pause anyway" }).click()
+  await expect.poll(() => sent.length).toBe(3)
+  expect(sent[2]).toMatchObject({ actionId: sent[0]?.actionId, version: 2, occurredAt: FIRST_TAP })
+})

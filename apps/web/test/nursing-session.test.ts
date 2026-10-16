@@ -152,13 +152,17 @@ describe("finishingAfter", () => {
 })
 
 describe("backAsksFirst", () => {
-  it("asks before Back lets go of a finish that could still be saved as it is", () => {
+  it("asks before Back lets go of a finish that could still be saved, by Try again or Finish anyway", () => {
     expect(backAsksFirst(failedWith(FINISH))).toBe(true)
     expect(backAsksFirst(failedWith(FINISH, new Error("Not saved")))).toBe(true)
+    expect(backAsksFirst(failedWith(FINISH, STALE))).toBe(true)
   })
 
-  it("lets Back go without asking after a finish that can't be saved as it is, or anything else", () => {
-    expect(backAsksFirst(failedWith(FINISH, STALE))).toBe(false)
+  it("lets Back go without asking after a finish that nothing would save, or anything else", () => {
+    const finished = { ...HOUSEHOLD_COPY, status: "completed" as const, endedAt: STOPPED_AT }
+    expect(backAsksFirst(failedWith(FINISH, new FeedConflict({ code: "STALE_VERSION", current: finished })))).toBe(
+      false,
+    )
     expect(backAsksFirst(failedWith(FINISH, EMPTY))).toBe(false)
     expect(backAsksFirst(failedWith(SWITCH))).toBe(false)
     expect(backAsksFirst(null)).toBe(false)

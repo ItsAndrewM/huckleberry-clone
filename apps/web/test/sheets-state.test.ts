@@ -3,14 +3,13 @@ import { describe, expect, it } from "vitest"
 import type { Action } from "../src/api/actions.ts"
 import { AuthRequired, Offline } from "../src/api/errors.ts"
 import { heldFor } from "../src/sheets/held.ts"
-import { closesOnSend, type Failed, type Sending } from "../src/sheets/sending.ts"
+import { closesOnSend, type Failed, isEntry, type Sending } from "../src/sheets/sending.ts"
 import {
   CLOSED,
   discardedState,
   dismissedState,
   expiredState,
   failedState,
-  isEntry,
   reopenedState,
   restoredState,
   shownState,
@@ -702,6 +701,18 @@ describe("closing a sheet that holds a failed control", () => {
     const current = feedAt(NOW, { id: "feed-1", version: 4 })
     const failed = { sending: PAUSE, error: new FeedConflict({ code: "STALE_VERSION", current }) }
     expect(dismissedState(shownWith(failed))).toMatchObject({ open: null, asking: false, held: [] })
+  })
+
+  it("asks before letting go of a conflict that Pause anyway would still save", () => {
+    const current = feedAt(NOW - 600_000, {
+      id: "feed-1",
+      status: "active",
+      endedAt: null,
+      version: 4,
+      segments: [{ id: "segment-1", side: "left", startedAt: NOW - 600_000, endedAt: null }],
+    })
+    const failed = { sending: PAUSE, error: new FeedConflict({ code: "STALE_VERSION", current }) }
+    expect(dismissedState(shownWith(failed))).toMatchObject({ open: "nursing", asking: true, held: [failed] })
   })
 
   it("lets it go once the parent discards it", () => {

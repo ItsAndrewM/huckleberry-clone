@@ -1,19 +1,12 @@
-import type { Action } from "../api/actions.ts"
 import type { Saved } from "../api/send.ts"
-import {
-  actionIdOf,
-  editingOf,
-  heldFor,
-  isOnOpening,
-  savesAsItIs,
-  settlesWithoutAsking,
-  withoutAction,
-} from "./held.ts"
+import { actionIdOf, editingOf, heldFor, isOnOpening, settlesWithoutAsking, withoutAction } from "./held.ts"
+import { stillSaveable } from "./saveable.ts"
 import {
   addsOrEdits,
   closesOnSave,
   closesOnSend,
   type Failed,
+  isEntry,
   isUndo,
   type Sending,
   type SheetKind,
@@ -44,20 +37,8 @@ export const CLOSED: SheetsState = {
   queued: false,
 }
 
-const NEW_ENTRIES = new Set<Action["kind"]>([
-  "logDiaper",
-  "logFeed",
-  "startFeed",
-  "addBottle",
-  "logMeasurement",
-  "logSleep",
-  "startSleep",
-  "logDose",
-])
-
-export const isEntry = ({ action }: Sending) => NEW_ENTRIES.has(action.kind)
-
-const asksFirst = ({ sending, error }: Failed) => (isEntry(sending) ? !settlesWithoutAsking(error) : savesAsItIs(error))
+const asksFirst = (failed: Failed) =>
+  isEntry(failed.sending) ? !settlesWithoutAsking(failed.error) : stillSaveable(failed)
 
 const goesOnAnotherSend = ({ sending, error }: Failed) => !isEntry(sending) || settlesWithoutAsking(error)
 

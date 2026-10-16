@@ -2,8 +2,7 @@ import { DiaperConflict, FeedConflict, MeasurementConflict, SleepConflict } from
 import { isConflict } from "./held.ts"
 import { joined, mineAnyway, redone, redoneSleep } from "./redo.ts"
 import { diaperEdit, feedReplay, measurementReplay, sleepReplay } from "./save-changes.ts"
-import type { Failed, Recovery, Sending } from "./sending.ts"
-import { isEntry } from "./sheets-state.ts"
+import { type Failed, isEntry, type Recovery, type Sending } from "./sending.ts"
 
 const SETTLED_BY_OK = new Set([
   "STALE_VERSION",
@@ -12,35 +11,31 @@ const SETTLED_BY_OK = new Set([
   "ACTION_REPLAY_MISMATCH",
 ])
 
+export const redoOf = ({ sending, error }: Failed): Recovery | null => {
+  if (error instanceof SleepConflict && error.code === "STALE_VERSION") return redoneSleep(sending, error.current)
+  if (error instanceof FeedConflict && error.code === "STALE_VERSION") return redone(sending, error.current)
+  if (error instanceof MeasurementConflict && error.code !== "ACTION_REPLAY_MISMATCH")
+    return mineAnyway(sending, error.current)
+  return null
+}
+
 const feedRecovery = (sending: Sending, error: FeedConflict): Recovery | null => {
-  switch (error.code) {
-    case "STALE_VERSION":
-      return redone(sending, error.current)
-    case "FEED_ALREADY_ACTIVE":
-      return joined(sending, error.current)
-    case "ACTION_REPLAY_MISMATCH":
-      return feedReplay(sending, error.current)
-    default:
-      return null
-  }
+  if (error.code === "FEED_ALREADY_ACTIVE") return joined(sending, error.current)
+  return error.code === "ACTION_REPLAY_MISMATCH" ? feedReplay(sending, error.current) : null
 }
 
-const measurementRecovery = (sending: Sending, { code, current }: MeasurementConflict): Recovery | null =>
-  code === "ACTION_REPLAY_MISMATCH" ? measurementReplay(sending, current) : mineAnyway(sending, current)
-
-const sleepRecovery = (sending: Sending, { code, current }: SleepConflict): Recovery | null => {
-  if (code === "STALE_VERSION") return redoneSleep(sending, current)
-  return code === "ACTION_REPLAY_MISMATCH" ? sleepReplay(sending, current) : null
-}
-
-export const recoveryOf = ({ sending, error }: Failed): Recovery | null => {
-  if (error instanceof SleepConflict) return sleepRecovery(sending, error)
+const replayOf = ({ sending, error }: Failed): Recovery | null => {
+  if (error instanceof SleepConflict && error.code === "ACTION_REPLAY_MISMATCH")
+    return sleepReplay(sending, error.current)
   if (error instanceof FeedConflict) return feedRecovery(sending, error)
-  if (error instanceof MeasurementConflict) return measurementRecovery(sending, error)
+  if (error instanceof MeasurementConflict && error.code === "ACTION_REPLAY_MISMATCH")
+    return measurementReplay(sending, error.current)
   if (error instanceof DiaperConflict && error.code === "ACTION_REPLAY_MISMATCH")
     return diaperEdit(sending, error.current)
   return null
 }
+
+export const recoveryOf = (failed: Failed): Recovery | null => redoOf(failed) ?? replayOf(failed)
 
 export const offersOk = ({ sending, error }: Failed) =>
   isConflict(error) &&
