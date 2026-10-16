@@ -9,7 +9,7 @@ interface PartGroupProps {
 }
 
 export const PartGroup = ({ name, onRemove, children }: PartGroupProps) => (
-  <fieldset className="flex flex-col gap-3 rounded-lg border p-3">
+  <fieldset className="flex min-w-0 flex-col gap-3 rounded-lg border p-3">
     <legend className="sr-only">{name}</legend>
     <div className="flex items-center justify-between gap-2">
       <span aria-hidden="true" className="text-sm font-medium text-muted-foreground">

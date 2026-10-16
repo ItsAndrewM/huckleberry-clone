@@ -1,5 +1,5 @@
 import type { Locator, Page } from "@playwright/test"
-import { quickAction } from "./played-household.ts"
+import { OPENED_SHEETS } from "./opened-sheets.ts"
 import { playEveryScreen, SCREENS } from "./played-screens.ts"
 import { STILL } from "./still.ts"
 import { expect, test } from "./test.ts"
@@ -19,6 +19,14 @@ const fontSizeOf = (page: Page, selector: string) =>
 
 const scrollsSideways = (page: Page) =>
   page.evaluate<boolean>("document.documentElement.scrollWidth > document.documentElement.clientWidth")
+
+const sheetScrollsSideways = async (page: Page) => {
+  const scroller = page.locator('[data-slot="drawer-popup"] .overflow-y-auto')
+  await expect(scroller).toHaveCount(1)
+  return scroller.evaluate((element) => element.scrollWidth > element.clientWidth)
+}
+
+const atTheUsualSize = (page: Page) => page.addStyleTag({ content: STILL })
 
 const overhangOf = (section: Locator) =>
   section.evaluate((element) => {
@@ -110,20 +118,23 @@ for (const { name, path, ready } of SCREENS) {
   })
 }
 
-test("Today's sheets don't scroll sideways at the largest standard size", async ({ page }) => {
-  await page.goto("/")
-  await expect(page.getByText("Totals")).toBeVisible()
-  await atLargestText(page)
-  for (const sheet of ["Bottle", "Nursing", "Diaper", "Sleep"]) {
-    await quickAction(page, sheet).click()
-    const popup = page.locator('[data-slot="drawer-popup"]')
-    await expect(popup).toBeVisible()
-    expect(await popup.evaluate((element) => element.scrollWidth > element.clientWidth)).toBe(false)
-    expect(await scrollsSideways(page)).toBe(false)
-    await page.keyboard.press("Escape")
-    await expect(page.getByRole("dialog")).toHaveCount(0)
+for (const [size, settle] of [
+  ["the usual size", atTheUsualSize],
+  ["the largest standard size", atLargestText],
+] as const) {
+  for (const { name, dialog, path, ready, open } of OPENED_SHEETS) {
+    test(`${name} doesn't scroll sideways at ${size}`, async ({ page }) => {
+      await page.goto(path)
+      await expect(ready(page)).toBeVisible()
+      await settle(page)
+      await open(page)
+      await expect(page.getByRole("dialog")).toHaveCount(1)
+      await expect(page.getByRole("dialog", { name: dialog })).toBeVisible()
+      expect(await sheetScrollsSideways(page)).toBe(false)
+      expect(await scrollsSideways(page)).toBe(false)
+    })
   }
-})
+}
 
 for (const [name, path] of [
   ["Trends by week", "/trends"],
