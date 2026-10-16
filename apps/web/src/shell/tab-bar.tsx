@@ -19,6 +19,7 @@ export const TabBar = () => (
         <li key={to} className="flex-1">
           <Link
             to={to}
+            state={{ fromTab: true }}
             resetScroll={opensAtTop}
             activeOptions={{ exact: to === "/", includeSearch: false }}
             className="flex h-14 flex-col items-center justify-center gap-1 text-xs font-medium text-muted-foreground transition-colors data-[status=active]:text-primary"

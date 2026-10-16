@@ -1,5 +1,7 @@
 import { type HourRow, slotIn } from "@bt/domain"
+import { type RouterEvents, useRouter } from "@tanstack/react-router"
 import { cn } from "cn"
+import { useState } from "react"
 import { useSheets } from "../../sheets/sheets-context.ts"
 import { tapTime } from "../../sheets/tap-time.ts"
 import type { Display } from "../today/display.ts"
@@ -16,10 +18,21 @@ interface DayGridProps {
   readonly onOpen: (ids: ReadonlyArray<string>) => void
 }
 
-const scrollIntoMiddle = (node: HTMLDivElement | null) => node?.scrollIntoView({ block: "center" })
+const scrollIntoMiddle = (node: HTMLDivElement) => node.scrollIntoView({ block: "center" })
+
+const tappedAgain = ({ pathChanged, toLocation }: RouterEvents["onRendered"]) =>
+  !pathChanged && toLocation.state.fromTab === true
 
 export const DayGrid = ({ model, display, now, onOpen }: DayGridProps) => {
   const sheets = useSheets()
+  const router = useRouter()
+  const [placeAtAnchor] = useState(() => (node: HTMLDivElement | null) => {
+    if (node === null) return undefined
+    scrollIntoMiddle(node)
+    return router.subscribe("onRendered", (event) => {
+      if (tappedAgain(event)) scrollIntoMiddle(node)
+    })
+  })
   const { grid } = model
   const logAt = (row: HourRow, fraction: number) => {
     const slot = slotIn(row, fraction, tapTime())
@@ -30,7 +43,7 @@ export const DayGrid = ({ model, display, now, onOpen }: DayGridProps) => {
       aria-label="The day by hour"
       className={cn("relative isolate mt-2 mb-4 [--cal-step:5px]", stepsTall(grid.steps))}
     >
-      <div ref={scrollIntoMiddle} aria-hidden="true" className={cn("absolute", atStep(anchorOf(model)))} />
+      <div ref={placeAtAnchor} aria-hidden="true" className={cn("absolute", atStep(anchorOf(model)))} />
       {gridItems(model, display, now).map((item) => (
         <GridItemView key={item.key} item={item} model={model} display={display} now={now} onOpen={onOpen} />
       ))}
