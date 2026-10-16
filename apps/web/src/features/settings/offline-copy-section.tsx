@@ -32,6 +32,7 @@ const NewerCopy = () => {
         <p className="text-base">{STATUS.newer}</p>
         <Button
           size="lg"
+          aria-label="Open it now, the newer version"
           disabled={reason !== null}
           aria-describedby={reason === null ? undefined : reasonId}
           onClick={() => window.location.reload()}

@@ -27,7 +27,13 @@ export const FeedStart = ({ feed, zone, busy }: FeedStartProps) => {
         <span className="text-sm font-medium">Started</span>
         <span className="flex items-center gap-1">
           <span className="text-base tabular-nums">{clockOf(first.startedAt, zone)}</span>
-          <Button variant="ghost" size="lg" disabled={busy} onClick={() => setWhen(whenAt(first.startedAt, zone))}>
+          <Button
+            variant="ghost"
+            size="lg"
+            aria-label="Change, Started"
+            disabled={busy}
+            onClick={() => setWhen(whenAt(first.startedAt, zone))}
+          >
             Change
           </Button>
         </span>

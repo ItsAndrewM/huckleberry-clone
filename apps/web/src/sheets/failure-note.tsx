@@ -57,7 +57,7 @@ export const FailureNote = ({ sheet }: { readonly sheet: SheetKind }) => {
   const failed = failedFor(sheets, sheet)
   if (failed === null || household === null) return null
   const keptOn = isEntry(failed.sending) ? (sheets.keeping ? "phone" : "app") : null
-  const { message, retry, signIn } = failureNote(failed.error, household, {
+  const { message, retry, signIn, about } = failureNote(failed.error, household, {
     keptOn,
     sheet,
     action: failed.sending.action.kind,
@@ -75,7 +75,7 @@ export const FailureNote = ({ sheet }: { readonly sheet: SheetKind }) => {
           {retry}
         </Button>
       )}
-      <RecoveryButtons failed={failed} />
+      <RecoveryButtons failed={failed} about={about} />
     </div>
   )
 }

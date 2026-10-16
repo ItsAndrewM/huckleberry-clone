@@ -1,3 +1,4 @@
+import { localDateOf } from "@bt/domain"
 import { type LucideIcon, RulerIcon } from "lucide-react"
 import { useId } from "react"
 import { useMe } from "../../api/hooks.ts"
@@ -6,7 +7,9 @@ import { Button } from "../../components/ui/button.tsx"
 import { Sheet } from "../../sheets/sheet.tsx"
 import { type TimedSheet, useSheets } from "../../sheets/sheets-context.ts"
 import { useTodayLoaded } from "../../sheets/use-today-loaded.ts"
+import { useNow } from "../../timer/use-now.ts"
 import { KIND_ICONS } from "../today/kind-icons.ts"
+import { dayTitle } from "./history-date.ts"
 import { supplementChoices } from "./log-at-supplements.ts"
 
 const BOTTLE_WAITS = "Bottle opens once Today loads."
@@ -84,10 +87,22 @@ const LogAtChoices = ({ at }: { readonly at: number | null }) => {
   )
 }
 
+const LogAtTitle = ({ at, zone }: { readonly at: number; readonly zone: string }) => {
+  const now = useNow()
+  const day = localDateOf(at, zone)
+  const isToday = day === localDateOf(now, zone)
+  return (
+    <>
+      Log at {clockTime(at, zone)}
+      {isToday ? null : <span className="sr-only"> on {dayTitle(day)}</span>}
+    </>
+  )
+}
+
 export const LogAtSheet = ({ zone }: { readonly zone: string }) => {
   const { at } = useSheets()
   return (
-    <Sheet sheet="logAt" title={at === null ? "Log" : `Log at ${clockTime(at, zone)}`}>
+    <Sheet sheet="logAt" title={at === null ? "Log" : <LogAtTitle at={at} zone={zone} />}>
       <LogAtChoices at={at} />
     </Sheet>
   )

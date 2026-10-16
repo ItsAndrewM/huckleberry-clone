@@ -88,6 +88,7 @@ export const HistorySwitcher = ({ navigation, today, birthDate, hidden }: Histor
             <button
               ref={change}
               type="button"
+              aria-label={`Change ${noun}`}
               aria-expanded={changing}
               onClick={() => setChangingFor(changing ? null : key)}
               className={LINK_TEXT}

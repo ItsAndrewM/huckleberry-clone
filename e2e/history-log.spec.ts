@@ -173,7 +173,7 @@ test("asks for both 1 AMs by name on the night the clocks go back", async ({ pag
   const grid = page.getByRole("region", { name: "The day by hour" })
   await expect(grid.getByRole("button", { name: /^Log at / })).toHaveCount(25)
   await grid.getByRole("button", { name: "Log at 1 AM (second)" }).click({ position: { x: 200, y: 31 } })
-  const menu = page.getByRole("dialog", { name: /^Log at 1:30\sAM$/u })
+  const menu = page.getByRole("dialog", { name: /^Log at 1:30\sAM on Sun, Nov 1$/u })
   await expect(menu).toBeVisible()
   await menu.getByRole("button", { name: "Diaper" }).click()
   const sheet = page.getByRole("dialog", { name: "Diaper" })

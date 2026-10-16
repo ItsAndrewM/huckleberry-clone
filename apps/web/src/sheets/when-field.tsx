@@ -26,7 +26,7 @@ const NowRow = ({ label, onChange }: { readonly label: string; readonly onChange
     <span className="text-sm font-medium">{label}</span>
     <span className="flex items-center gap-1">
       <span className="text-base">Now</span>
-      <Button variant="ghost" size="lg" onClick={onChange}>
+      <Button variant="ghost" size="lg" aria-label={`Change, ${label}`} onClick={onChange}>
         Change
       </Button>
     </span>

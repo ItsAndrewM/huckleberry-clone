@@ -25,7 +25,13 @@ export const SleepStart = ({ sleep, zone, busy }: SleepStartProps) => {
         <span className="text-sm font-medium">Fell asleep</span>
         <span className="flex items-center gap-1">
           <span className="text-base tabular-nums">{clockOf(sleep.startedAt, zone)}</span>
-          <Button variant="ghost" size="lg" disabled={busy} onClick={() => setWhen(whenAt(sleep.startedAt, zone))}>
+          <Button
+            variant="ghost"
+            size="lg"
+            aria-label="Change, Fell asleep"
+            disabled={busy}
+            onClick={() => setWhen(whenAt(sleep.startedAt, zone))}
+          >
             Change
           </Button>
         </span>

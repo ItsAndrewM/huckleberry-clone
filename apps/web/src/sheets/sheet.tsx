@@ -10,7 +10,7 @@ const SIZES_TO_CONTENT_ON_REOPEN = "*:data-[slot=drawer-content]:basis-auto"
 
 interface SheetProps {
   readonly sheet: SheetKind
-  readonly title: string
+  readonly title: ReactNode
   readonly description?: string | undefined
   readonly children: ReactNode
 }
