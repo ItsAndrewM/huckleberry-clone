@@ -1,5 +1,6 @@
 import type { GrowthRow } from "./chart-model.ts"
 import type { GrowthMetricInfo } from "./metrics.ts"
+import { SpokenAs } from "./spoken-text.tsx"
 
 interface GrowthTableProps {
   readonly info: GrowthMetricInfo
@@ -35,7 +36,9 @@ export const GrowthTable = ({ info, rows }: GrowthTableProps) => (
             <th scope="row" className="py-2 pr-3 font-normal">
               {row.measuredOn}
             </th>
-            <td className="py-2 pr-3">{row.age}</td>
+            <td className="py-2 pr-3">
+              <SpokenAs shown={row.age} said={row.ageWords} />
+            </td>
             <td className="py-2 pr-3">{row.value}</td>
             <td className="py-2">{row.percentile}</td>
           </tr>

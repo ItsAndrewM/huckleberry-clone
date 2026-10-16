@@ -7,7 +7,10 @@ import { expect, test } from "./test.ts"
 const WCAG_A_AND_AA = ["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22a", "wcag22aa"]
 const BASE_UI_FOCUS_GUARDS = "[data-base-ui-focus-guard]"
 
+const STILL = "*, *::before, *::after { transition: none !important; animation: none !important; }"
+
 const violationsOn = async (page: Page) => {
+  await page.addStyleTag({ content: STILL })
   const { violations } = await new AxeBuilder({ page }).withTags(WCAG_A_AND_AA).exclude(BASE_UI_FOCUS_GUARDS).analyze()
   return violations.map(({ id, nodes }) => `${id}: ${nodes.map(({ target }) => target.join(" ")).join(" | ")}`)
 }

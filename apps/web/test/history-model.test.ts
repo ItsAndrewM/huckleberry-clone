@@ -67,7 +67,7 @@ describe("dayModel", () => {
       expect.objectContaining({
         kind: "bottle",
         text: "60 mL",
-        name: "Nursing and bottle at 11:30 PM: Left 15 min, Right 15 min, 60 mL",
+        name: "Nursing and bottle at Thu 11:30 PM: Left 15 min, Right 15 min, 60 mL",
       }),
     ])
     expect(entriesIn(next, [BOTTLE_AT_MIDNIGHT.id])).toEqual([{ kind: "feed", feed: BOTTLE_AT_MIDNIGHT }])

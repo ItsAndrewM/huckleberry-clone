@@ -53,7 +53,7 @@ test("draws each nursing feed as a block, and bottles and diapers as markers by 
   ).toBeVisible()
   await expect(grid.getByRole("button", { name: "2 entries from 2:10 AM" })).toHaveText("2 entries")
   await expect(grid.getByRole("button", { name: "Bottle at 4:00 AM: 90 mL" })).toHaveText("90 mL")
-  await expect(grid.getByRole("button", { name: "Diaper at 5:30 AM: Pee and poo" })).toHaveText("Both")
+  await expect(grid.getByRole("button", { name: "Diaper at 5:30 AM: Both, pee and poo" })).toHaveText("Both")
 })
 
 test("draws the part of yesterday's feed after midnight, and a feed still going up to now", async ({ page }) => {
@@ -61,7 +61,7 @@ test("draws the part of yesterday's feed after midnight, and a feed still going 
   played.days.push(busyDay(andrew, emily))
   await openHistory(page)
   const grid = page.getByRole("region", { name: "The day by hour" })
-  await expect(grid.getByRole("button", { name: /^Nursing at 11:40 PM: Left 35 min$/u })).toBeVisible()
+  await expect(grid.getByRole("button", { name: /^Nursing at Thu 11:40 PM: Left 35 min$/u })).toBeVisible()
   await expect(grid.getByRole("button", { name: "Nursing at 9:10 AM: in progress, Left 20 min" })).toHaveText(
     "Nursing 20m L · now",
   )
@@ -152,8 +152,8 @@ test("reads and tabs through the day's entries by the time each began, then its 
   const names = await buttons.evaluateAll((all) => all.map((button) => button.getAttribute("aria-label") ?? ""))
   const upToTheTime = names.map((name) => /^.*?[AP]M/u.exec(name)?.[0])
   expect(upToTheTime.slice(0, 11)).toEqual([
-    "Night at 8:10 PM",
-    "Nursing at 11:40 PM",
+    "Night at Thu 8:10 PM",
+    "Nursing at Thu 11:40 PM",
     "Nursing at 1:05 AM",
     "2 entries from 2:10 AM",
     "Nursing and bottle at 3:00 AM",

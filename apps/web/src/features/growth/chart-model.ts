@@ -12,7 +12,7 @@ import {
   valueAtPercentile,
   WHO_LAST_DAY,
 } from "@bt/domain"
-import { formatAge, formatMeasuredOn, formatMeasurement, formatPercentile } from "./format.ts"
+import { formatAge, formatAgeWords, formatMeasuredOn, formatMeasurement, formatPercentile } from "./format.ts"
 import type { GrowthMetricInfo } from "./metrics.ts"
 
 export const DAYS_PER_MONTH = 30.4375
@@ -96,6 +96,7 @@ export interface GrowthRow {
   readonly id: string
   readonly measuredOn: string
   readonly age: string
+  readonly ageWords: string
   readonly value: string
   readonly percentile: string
   readonly point: ChartPoint | null
@@ -107,6 +108,7 @@ export const datedOf = (measurement: Measurement, { household, child }: Me, loca
     ageDays: ageInDays(measuredOn, child.birthDate),
     measuredOn: formatMeasuredOn(measurement.measuredAt, household.timeZone, locale),
     age: formatAge(ageInMonthsAndDays(measuredOn, child.birthDate)),
+    ageWords: formatAgeWords(ageInMonthsAndDays(measuredOn, child.birthDate)),
   }
 }
 
@@ -119,12 +121,13 @@ export const growthRowOf = (
   const recorded = info.recorded(measurement)
   if (recorded === null) return null
   const { household, child } = me
-  const { ageDays, measuredOn, age } = datedOf(measurement, me, locale)
+  const { ageDays, measuredOn, age, ageWords } = datedOf(measurement, me, locale)
   const onTheChart = ageDays >= 0 && ageDays <= WHO_LAST_DAY
   return {
     id: measurement.id,
     measuredOn,
     age,
+    ageWords,
     value: formatMeasurement(info.metric, recorded, household.units),
     percentile: formatPercentile(percentileFor(info.metric, child.sex, ageDays, recorded)),
     point: onTheChart

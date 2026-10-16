@@ -49,7 +49,7 @@ const ItemBody = ({ item, model, display, now, onOpen }: GridItemViewProps) => {
       <SleepBlock
         block={item.block}
         {...sleepBlockText(entry.sleep, now)}
-        name={entryName(entry, display, now)}
+        name={entryName(entry, display, now, model.date)}
         onOpen={() => onOpen([item.key])}
       />
     )
@@ -59,7 +59,7 @@ const ItemBody = ({ item, model, display, now, onOpen }: GridItemViewProps) => {
       <GridBlock
         block={item.block}
         text={blockText(entry.feed, display.volume, now)}
-        name={entryName(entry, display, now)}
+        name={entryName(entry, display, now, model.date)}
         onOpen={() => onOpen([item.key])}
       />
     )

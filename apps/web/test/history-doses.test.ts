@@ -101,11 +101,13 @@ describe("a dose on the Week view", () => {
   })
 
   it("names how many doses a day holds, and leaves them out when Supplements is off", () => {
-    expect(columnName(columnOn(weekOf()), "ml", CONTEXT.hidden, LOCALE)).toBe("Fri, Oct 9: a dose")
-    expect(columnName(columnOn(weekOf([MORNING, EVENING])), "ml", CONTEXT.hidden, LOCALE)).toBe("Fri, Oct 9: 2 doses")
+    expect(columnName(columnOn(weekOf()), "ml", CONTEXT.hidden, DATE, LOCALE)).toBe("Fri, Oct 9, today: a dose")
+    expect(columnName(columnOn(weekOf([MORNING, EVENING])), "ml", CONTEXT.hidden, DATE, LOCALE)).toBe(
+      "Fri, Oct 9, today: 2 doses",
+    )
     const hidden = hiddenIn("supplements")
     const column = columnOn(weekOf(), { ...CONTEXT, hidden })
     expect(column.doses).toEqual([])
-    expect(columnName(column, "ml", hidden, LOCALE)).toBe("Fri, Oct 9: nothing shown")
+    expect(columnName(column, "ml", hidden, DATE, LOCALE)).toBe("Fri, Oct 9, today: nothing shown")
   })
 })

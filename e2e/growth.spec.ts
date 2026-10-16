@@ -113,6 +113,7 @@ test.describe("Growth, with the household's answers played by the test", () => {
       "Sep 15, 2026 · 14 d",
       "Sep 1, 2026 · Birth",
     ])
+    await expect(cards.first().getByRole("heading", { level: 3 })).toHaveAccessibleName("Oct 6, 2026, 1 month 5 days")
     await expect(cards.nth(1).getByRole("definition")).toHaveText([
       "3.60 kg",
       "52nd",
@@ -138,7 +139,7 @@ test.describe("Growth, with the household's answers played by the test", () => {
     await playGrowth(page, MEASUREMENTS)
     await openGrowth(page)
     await tapPoint(page, 2)
-    await expect(page.getByRole("dialog", { name: "Oct 6, 2026 · 1 mo 5 d · 4.30 kg · 47th" })).toBeVisible()
+    await expect(page.getByRole("dialog", { name: "Oct 6, 2026, 1 month 5 days, 4.30 kg, 47th" })).toBeVisible()
     await expect(tooltip(page)).toContainText("4.30 kg · 47th")
     await expect(tooltip(page)).toContainText("Oct 6, 2026 · 1 mo 5 d")
     await page.getByRole("heading", { name: "Growth", level: 1 }).tap()
@@ -153,12 +154,12 @@ test.describe("Growth, with the household's answers played by the test", () => {
     await playGrowth(page, MEASUREMENTS)
     await openGrowth(page)
     await chart(page).focus()
-    await expect(page.getByRole("status", { name: "Sep 1, 2026 · Birth · 3.20 kg · 47th" })).toBeVisible()
+    await expect(page.getByRole("status", { name: "Sep 1, 2026, Birth, 3.20 kg, 47th" })).toBeVisible()
     await page.keyboard.press("ArrowRight")
-    await expect(page.getByRole("status", { name: "Sep 15, 2026 · 14 d · 3.60 kg · 52nd" })).toBeVisible()
+    await expect(page.getByRole("status", { name: "Sep 15, 2026, 14 days, 3.60 kg, 52nd" })).toBeVisible()
     await page.keyboard.press("End")
     await page.keyboard.press("Enter")
-    await expect(page.getByRole("dialog", { name: "Oct 6, 2026 · 1 mo 5 d · 4.30 kg · 47th" })).toBeVisible()
+    await expect(page.getByRole("dialog", { name: "Oct 6, 2026, 1 month 5 days, 4.30 kg, 47th" })).toBeVisible()
     await page.keyboard.press("Escape")
     await expect(tooltip(page)).toBeHidden()
   })
@@ -172,8 +173,8 @@ test.describe("Growth, with the household's answers played by the test", () => {
     await expect(table.getByRole("columnheader")).toHaveText(["Date", "Age", "Weight", "Percentile"])
     await expect(table.getByRole("row")).toHaveCount(4)
     await expect(table.getByRole("rowheader")).toHaveText(["Oct 6, 2026", "Sep 15, 2026", "Sep 1, 2026"])
-    await expect(tableRow(page, 1)).toHaveText(["Oct 6, 2026", "1 mo 5 d", "4.30 kg", "47th"])
-    await expect(tableRow(page, 2)).toHaveText(["Sep 15, 2026", "14 d", "3.60 kg", "52nd"])
+    await expect(tableRow(page, 1)).toHaveText(["Oct 6, 2026", /^1\smo 5\sd/u, "4.30 kg", "47th"])
+    await expect(tableRow(page, 2)).toHaveText(["Sep 15, 2026", /^14\sd/u, "3.60 kg", "52nd"])
     await expect(tableRow(page, 3)).toHaveText(["Sep 1, 2026", "Birth", "3.20 kg", "47th"])
   })
 
@@ -182,7 +183,7 @@ test.describe("Growth, with the household's answers played by the test", () => {
     await openGrowth(page)
     await expect(axisTitle(page)).toHaveText("Weight (lb)")
     await page.getByText("Show as a table").click()
-    await expect(tableRow(page, 1)).toHaveText(["Oct 6, 2026", "1 mo 5 d", "9 lb 7.7 oz", "47th"])
+    await expect(tableRow(page, 1)).toHaveText(["Oct 6, 2026", /^1\smo 5\sd/u, "9 lb 7.7 oz", "47th"])
   })
 
   test("lists a measurement from after day 730 without plotting it or giving a percentile", async ({ page }) => {
@@ -192,7 +193,7 @@ test.describe("Growth, with the household's answers played by the test", () => {
     await openGrowth(page)
     await expect(herPoints(page)).toHaveCount(1)
     await page.getByText("Show as a table").click()
-    await expect(tableRow(page, 1)).toHaveText(["Oct 6, 2026", "25 mo 5 d", "12.50 kg", "Percentile unavailable"])
+    await expect(tableRow(page, 1)).toHaveText(["Oct 6, 2026", /^25\smo 5\sd/u, "12.50 kg", "Percentile unavailable"])
   })
 
   for (const { birthDate, months, ticks } of [
@@ -244,7 +245,7 @@ test.describe("Growth, with the household's answers played by the test", () => {
       "Percentile unavailable",
     ])
     await page.getByText("Show as a table").click()
-    await expect(tableRow(page, 1)).toHaveText(["Oct 6, 2026", "1 mo 5 d", "4.30 kg", "Percentile unavailable"])
+    await expect(tableRow(page, 1)).toHaveText(["Oct 6, 2026", /^1\smo 5\sd/u, "4.30 kg", "Percentile unavailable"])
   })
 
   test("draws the curves in the muted ink and her points in the accent, in light and in dark", async ({ page }) => {

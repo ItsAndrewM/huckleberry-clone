@@ -30,6 +30,15 @@ export const formatAge = (age: MonthsAndDays | null) => {
   return days === 0 ? `${months}${NO_BREAK}mo` : `${months}${NO_BREAK}mo ${days}${NO_BREAK}d`
 }
 
+const counted = (count: number, unit: string) => `${count} ${unit}${count === 1 ? "" : "s"}`
+
+export const formatAgeWords = (age: MonthsAndDays | null) => {
+  if (age === null) return "Before birth"
+  const { months, days } = age
+  const said = [...(months === 0 ? [] : [counted(months, "month")]), ...(days === 0 ? [] : [counted(days, "day")])]
+  return said.length === 0 ? "Birth" : said.join(" ")
+}
+
 const oneDecimal = (value: number) => roundTo(value, 1).toFixed(1)
 
 const formatWeight = (grams: number, weight: Units["weight"]) => {

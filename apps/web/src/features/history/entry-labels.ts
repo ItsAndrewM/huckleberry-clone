@@ -1,6 +1,6 @@
-import type { Diaper, Dose, Feed, RecentEntry, Sleep, VolumeUnit } from "@bt/contracts"
-import { feedSummary, sleepElapsed } from "@bt/domain"
-import { clockTime } from "../../clock-time.ts"
+import type { Diaper, Dose, Feed, LocalDate, RecentEntry, Sleep, VolumeUnit } from "@bt/contracts"
+import { feedSummary, localDateOf, sleepElapsed } from "@bt/domain"
+import { clockTime, dayClockTime } from "../../clock-time.ts"
 import { type Display, supplementName } from "../today/display.ts"
 import { feedParts, feedTitle } from "../today/feed-parts.ts"
 import { formatVolume, presentParts } from "../today/format.ts"
@@ -64,13 +64,21 @@ const doseName = (dose: Dose, display: Display, time: string) => {
   return dose.dose === "" ? name : `${name}: ${dose.dose}`
 }
 
-const sleepName = (sleep: Sleep, display: Display, now: number) =>
-  `${sleepTitle(sleep)} at ${clockTime(sleep.startedAt, display.timeZone, display.locale)}: ${sleepParts(sleep, display.timeZone, now, display.locale).join(", ")}`
+const sleepName = (sleep: Sleep, display: Display, now: number, time: string) =>
+  `${sleepTitle(sleep)} at ${time}: ${sleepParts(sleep, display.timeZone, now, display.locale).join(", ")}`
 
-export const entryName = (entry: RecentEntry, display: Display, now: number) => {
-  const time = (at: number) => clockTime(at, display.timeZone, display.locale)
-  if (entry.kind === "diaper") return `Diaper at ${time(entry.diaper.occurredAt)}: ${diaperText(entry.diaper)}`
-  if (entry.kind === "sleep") return sleepName(entry.sleep, display, now)
+const diaperSaid = (diaper: Diaper) =>
+  diaperChip(diaper) === "Both" ? `Both, ${diaperText(diaper).toLowerCase()}` : diaperText(diaper)
+
+const timeOn = (display: Display, day: LocalDate | undefined) => (at: number) =>
+  day === undefined || localDateOf(at, display.timeZone) === day
+    ? clockTime(at, display.timeZone, display.locale)
+    : dayClockTime(at, display.timeZone, display.locale)
+
+export const entryName = (entry: RecentEntry, display: Display, now: number, day?: LocalDate) => {
+  const time = timeOn(display, day)
+  if (entry.kind === "diaper") return `Diaper at ${time(entry.diaper.occurredAt)}: ${diaperSaid(entry.diaper)}`
+  if (entry.kind === "sleep") return sleepName(entry.sleep, display, now, time(entry.sleep.startedAt))
   if (entry.kind === "dose") return doseName(entry.dose, display, time(entry.dose.occurredAt))
   const { feed } = entry
   const details = [...progressOf(feed, "in progress"), ...feedParts(feed, display.volume, now)]

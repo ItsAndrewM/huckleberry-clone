@@ -34,6 +34,7 @@ export interface DayPieces {
 export type Entry = RecentEntry
 
 export interface DayModel {
+  readonly date: LocalDate
   readonly grid: DayGrid<Side>
   readonly sleeps: ReadonlyArray<PlacedBlock<Side>>
   readonly entries: ReadonlyMap<string, Entry>
@@ -84,6 +85,7 @@ export const dayModel = (day: DayPeriod, zone: string, now: number, hidden: Hidd
   const { blocks, bottles, diapers, sleeps, doses } = piecesOf(shownSlice(day, hidden))
   const input = { date: day.date, zone, bounds: day.bounds, now }
   return {
+    date: day.date,
     grid: layoutDay({ ...input, blocks, points: [...bottles, ...diapers, ...doses] }, SCALE),
     sleeps: layoutDay({ ...input, blocks: sleeps, points: [] }, SCALE).blocks,
     entries: entriesOf(day),
