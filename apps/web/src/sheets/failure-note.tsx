@@ -5,10 +5,10 @@ import { noteTakesFocus } from "../shell/focus-hand-off.ts"
 import { signInUrl } from "../shell/sign-in.ts"
 import { draftStorage, stashDraft } from "./drafts.ts"
 import { failureNote } from "./failure.ts"
+import { keptOnFor } from "./kept-on.ts"
 import { RecoveryButtons } from "./recovery-buttons.tsx"
 import type { Sending, SheetKind } from "./sending.ts"
 import { failedFor, useSheets } from "./sheets-context.ts"
-import { isEntry } from "./sheets-state.ts"
 import { useHousehold } from "./use-household.ts"
 
 const CANT_KEEP = "This phone can't keep the entry while you sign in. Sign in, then log it again."
@@ -55,7 +55,7 @@ export const FailureNote = ({ sheet }: { readonly sheet: SheetKind }) => {
   const household = useHousehold()
   const failed = failedFor(sheets, sheet)
   if (failed === null || household === null) return null
-  const keptOn = isEntry(failed.sending) ? (sheets.keeping ? "phone" : "app") : null
+  const keptOn = keptOnFor(failed.sending, sheets.keeping)
   const { message, retry, signIn, about } = failureNote(failed.error, household, {
     keptOn,
     sheet,

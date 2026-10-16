@@ -1,11 +1,12 @@
 import { DoseConflict, FeedConflict } from "@bt/contracts"
 import { describe, expect, it } from "vitest"
 import type { Action } from "../src/api/actions.ts"
-import { Offline } from "../src/api/errors.ts"
+import { AuthRequired, Offline } from "../src/api/errors.ts"
 import { heldFor } from "../src/sheets/held.ts"
 import { closesOnSend, type Failed, type Sending } from "../src/sheets/sending.ts"
 import {
   CLOSED,
+  discardedState,
   dismissedState,
   expiredState,
   failedState,
@@ -318,6 +319,42 @@ describe("a failed send", () => {
   it("leaves another open sheet as it is when this one's failure lands", () => {
     const failed = { sending: DIAPER, error: new Offline() }
     expect(failedState(shownState(CLOSED, "bottle"), failed, NOW)).toMatchObject({ open: "bottle", opened: 1 })
+  })
+
+  it.each([
+    { label: "a diaper", sending: DIAPER, editing: null },
+    { label: "a wake", sending: WOKE, editing: null },
+    { label: "a dose", sending: DOSE, editing: "supplement-1" },
+    { label: "an edited dose", sending: DOSE_MOVED, editing: "dose-1" },
+    { label: "a new measurement", sending: MEASURED, editing: null },
+    { label: "an edited measurement", sending: MEASUREMENT_EDITED, editing: "measurement-1" },
+  ])(
+    "opens its own sheet again on the reason when the parent opened it after the send, without holding taps: $label",
+    ({ sending, editing }) => {
+      const failed = { sending, error: new Offline() }
+      const sent = sendingState(shownState(CLOSED, sending.sheet, editing), sending, true)
+      const reopened = shownState(sent, sending.sheet, editing)
+      expect(failedState(reopened, failed, NOW)).toMatchObject({
+        open: sending.sheet,
+        opened: 3,
+        queued: false,
+        held: [failed],
+      })
+    },
+  )
+
+  it("leaves its sheet as it is when the parent opened it on another record", () => {
+    const failed = { sending: DOSE_MOVED, error: new Offline() }
+    const sent = sendingState(shownState(CLOSED, "editDose", "dose-1"), DOSE_MOVED, true)
+    const another = shownState(sent, "editDose", "dose-2")
+    expect(failedState(another, failed, NOW)).toMatchObject({ open: "editDose", editing: "dose-2", opened: 2 })
+  })
+
+  it("leaves Add measurement on the new measurement it opened with when an edit sent just before it fails", () => {
+    const failed = { sending: MEASUREMENT_EDITED, error: new Offline() }
+    const sent = sendingState(shownState(CLOSED, "measurement", "measurement-1"), MEASUREMENT_EDITED, true)
+    const adding = shownState(sent, "measurement")
+    expect(failedState(adding, failed, NOW)).toMatchObject({ open: "measurement", editing: null, opened: 2 })
   })
 
   it("says so in a toast when it was an undo", () => {
@@ -636,5 +673,65 @@ describe("a dose sheet opened from History's Log at menu", () => {
     expect(heldFor(shown.held, "dose", shown.editing)).toBe(OWN)
     const onlyOther = doseSheetFrom([OTHER])
     expect(heldFor(onlyOther.held, "dose", onlyOther.editing)).toBeNull()
+  })
+})
+
+describe("closing a sheet that holds a failed control", () => {
+  const shownWith = (failed: Failed) => failedState(CLOSED, failed, NOW)
+
+  it.each([
+    { label: "a wake", sending: WOKE },
+    { label: "a pause", sending: PAUSE },
+    { label: "a switch", sending: SWITCH },
+    { label: "a resume", sending: RESUME },
+    { label: "a finish", sending: FINISH },
+    { label: "an edit", sending: DOSE_MOVED },
+    { label: "a delete", sending: SLEEP_DELETED },
+  ])("asks before letting it go while it could still be saved as it is: $label", ({ sending }) => {
+    const failed = { sending, error: new Offline() }
+    expect(dismissedState(shownWith(failed))).toMatchObject({ open: sending.sheet, asking: true, held: [failed] })
+  })
+
+  it("asks for one that waits on a sign-in or wasn't saved for another reason", () => {
+    for (const error of [new AuthRequired(), new Error("Not saved")]) {
+      expect(dismissedState(shownWith({ sending: WOKE, error }))).toMatchObject({ open: "sleep", asking: true })
+    }
+  })
+
+  it("lets one go without asking when it can't be saved as it is", () => {
+    const current = feedAt(NOW, { id: "feed-1", version: 4 })
+    const failed = { sending: PAUSE, error: new FeedConflict({ code: "STALE_VERSION", current }) }
+    expect(dismissedState(shownWith(failed))).toMatchObject({ open: null, asking: false, held: [] })
+  })
+
+  it("lets it go once the parent discards it", () => {
+    const failed = { sending: WOKE, error: new Offline() }
+    const asking = dismissedState(shownWith(failed))
+    expect(discardedState(asking, failed)).toMatchObject({ open: null, asking: false, held: [] })
+  })
+
+  it("keeps it while a sheet opened from its own is open, and opens its sheet again once that one closes", () => {
+    const failed = { sending: PAUSE, error: new Offline() }
+    const bottle = shownState(shownWith(failed), "bottle")
+    expect(bottle).toMatchObject({ open: "bottle", held: [failed] })
+    expect(dismissedState(bottle)).toMatchObject({ open: "nursing", queued: true, held: [failed] })
+  })
+
+  const SWITCHED: Sending = {
+    sheet: "nursing",
+    action: { kind: "switchSide", id: "feed-1", payload: { actionId: RENEWED, version: 3, occurredAt: NOW } },
+  }
+
+  it("lets it go when another control on its sheet is sent, which acts at its own tap", () => {
+    const failed = { sending: PAUSE, error: new Offline() }
+    expect(sendingState(shownWith(failed), SWITCHED, true).held).toEqual([])
+  })
+
+  it("holds one failed control on a running feed at a time, so a tap again meets the latest failure", () => {
+    const paused = { sending: PAUSE, error: new Offline() }
+    const switched = { sending: SWITCHED, error: new Offline() }
+    const state = failedState(sendingState(shownWith(paused), SWITCHED, true), switched, NOW)
+    expect(state.held).toEqual([switched])
+    expect(heldFor(state.held, "nursing")).toBe(switched)
   })
 })

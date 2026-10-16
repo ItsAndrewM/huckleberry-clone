@@ -5,6 +5,7 @@ import { heldFor } from "../src/sheets/held.ts"
 import { closesOnSend, type Failed, type Sending } from "../src/sheets/sending.ts"
 import {
   CLOSED,
+  discardedState,
   dismissedKindState,
   dismissedState,
   failedState,
@@ -53,11 +54,12 @@ describe("an edit sheet", () => {
     expect(heldFor(other.held, "editDiaper", "diaper-1")).toBe(failed)
   })
 
-  it("lets its own record's failure go as it closes, and then opens the other record's", () => {
+  it("asks before letting its own record's failure go as it closes, and then opens the other record's", () => {
     const first = offline(edited("diaper-1", "action-1"))
     const second = offline(edited("diaper-2", "action-2"))
-    const state = dismissedState(afterFailures(first, second))
-    expect(state).toMatchObject({ open: "editDiaper", editing: "diaper-2", held: [second] })
+    const asking = dismissedState(afterFailures(first, second))
+    expect(asking).toMatchObject({ open: "editDiaper", editing: "diaper-1", asking: true })
+    expect(discardedState(asking, first)).toMatchObject({ open: "editDiaper", editing: "diaper-2", held: [second] })
   })
 
   it("keeps a held new entry while it closes, and opens that entry's sheet next", () => {

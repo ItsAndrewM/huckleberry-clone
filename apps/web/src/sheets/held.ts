@@ -58,6 +58,9 @@ const refusesAnotherTry = (error: Error) =>
 
 export const offersRetry = (error: Error) => !refusesAnotherTry(error)
 
+export const savesAsItIs = (error: Error) =>
+  offersRetry(error) || error instanceof AuthRequired || error instanceof Unauthorized
+
 const switchesTo = ({ action }: Sending) => (action.kind === "switchSide" ? action.to : undefined)
 
 const sameControl = (held: Sending, fresh: Sending) =>

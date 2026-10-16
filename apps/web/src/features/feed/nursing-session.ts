@@ -1,4 +1,5 @@
 import { FeedConflict } from "@bt/contracts"
+import { savesAsItIs } from "../../sheets/held.ts"
 import type { Failed } from "../../sheets/sending.ts"
 import { NOW, type Resolved, resolveSent, type When, whenAt } from "../../sheets/when.ts"
 
@@ -45,3 +46,6 @@ export const emptiedBy = (failed: Failed | null) => {
 }
 
 export const finishingAfter = (failed: Failed | null): failed is Failed => failed?.sending.action.kind === "finishFeed"
+
+export const backAsksFirst = (failed: Failed | null): failed is Failed =>
+  finishingAfter(failed) && savesAsItIs(failed.error)

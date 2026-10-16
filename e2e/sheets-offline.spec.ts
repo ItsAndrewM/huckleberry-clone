@@ -80,9 +80,11 @@ test("tries again with the actionId of the attempt that failed, so the household
   })
   await page.clock.setFixedTime(NOW)
   await openWithSavedCopy(page)
+  const diaper = page.getByRole("region", { name: "Log", exact: true }).getByRole("button", { name: "Diaper" })
+  await expect(diaper).toBeEnabled()
   offline = true
   await context.setOffline(true)
-  await page.getByRole("region", { name: "Log", exact: true }).getByRole("button", { name: "Diaper" }).click()
+  await diaper.click()
   const sheet = page.getByRole("dialog", { name: "Diaper" })
   await sheet.getByRole("button", { name: "Pee" }).click()
   await expect(sheet.getByRole("alert")).toContainText("No connection")

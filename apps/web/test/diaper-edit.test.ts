@@ -79,7 +79,7 @@ describe("editing a diaper", () => {
   })
 
   it("says the diaper was deleted when the household no longer has it", () => {
-    expect(failureNote(new NotFound(), HOUSEHOLD, { keptOn: null, sheet: "editDiaper" }).message).toBe(
+    expect(failureNote(new NotFound(), HOUSEHOLD, { keptOn: "app", sheet: "editDiaper" }).message).toBe(
       "This was deleted since it opened.",
     )
   })

@@ -339,7 +339,9 @@ test("offers your side on the feed the other phone started, without starting a s
   expect(switched?.actionId).not.toBe(start?.actionId)
 })
 
-test("lets Back drop a finish that wasn't saved, so the running feed shows no stale note", async ({ page }) => {
+test("asks before Back lets go of a finish that wasn't saved, and Discard shows the running feed with no stale note", async ({
+  page,
+}) => {
   const { andrew } = await caregiversOf(page)
   const { played, answer } = await playHousehold(page, todayWith(runningFeed(andrew.id, STARTED, "left", 2)))
   await answer("**/api/feeds/feed-1/finish", () => ({ status: 500, json: {} }))
@@ -349,6 +351,12 @@ test("lets Back drop a finish that wasn't saved, so the running feed shows no st
   await sheet.getByRole("button", { name: "Finish feed" }).click()
   await expect(sheet.getByRole("alert")).toContainText("Not saved.")
   await sheet.getByRole("button", { name: "Back" }).click()
+  await expect(sheet.getByRole("alert")).toHaveText(/^Discard the finish at 9:30\sAM\?DiscardKeep$/u)
+  await sheet.getByRole("button", { name: "Keep" }).click()
+  await expect(sheet.getByRole("alert")).toContainText("Not saved.")
+  await expect(sheet.getByRole("button", { name: "Finish feed" })).toBeVisible()
+  await sheet.getByRole("button", { name: "Back" }).click()
+  await sheet.getByRole("button", { name: "Discard" }).click()
   await expect(sheet.getByText("Left side")).toBeVisible()
   await expect(sheet.getByRole("alert")).toHaveCount(0)
   expect(played.sent).toHaveLength(1)

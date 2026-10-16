@@ -52,6 +52,13 @@ describe("a control tapped again while its failure is held", () => {
     expect(retapped(held(pause("action-first")), otherFeed)).toBe(otherFeed)
   })
 
+  it("sends a held delete again, as Try again does", () => {
+    const remove = (actionId: string) =>
+      nursing({ kind: "deleteFeed", id: "feed-1", payload: { actionId, version: 3 } })
+    const first = remove("action-first")
+    expect(retapped(held(first), remove("action-later"))).toBe(first)
+  })
+
   it("sends what was tapped when nothing is held", () => {
     const tapped = pause("action-first")
     expect(retapped(null, tapped)).toBe(tapped)

@@ -31,6 +31,10 @@ const keepAnOpenSocket = `new Promise((resolve) => {
   socket.onopen = () => resolve()
 })`
 
+const PLAYED = "/api/played-answer"
+
+const howARequestEnds = `fetch("${PLAYED}").then(() => "answered", () => "refused")`
+
 test("answers the household's heartbeat on a page's played socket", async ({ page }) => {
   await page.goto("/")
   expect(await page.evaluate<string>(answerToPing)).toBe("pong")
@@ -47,4 +51,28 @@ test("closes a page's played socket as the test goes offline, and refuses anothe
   expect(await page.evaluate<string>(howANewSocketEnds)).toBe("closed 1011")
   await context.setOffline(false)
   expect(await page.evaluate<string>(howANewSocketEnds)).toBe("opened")
+})
+
+test("refuses an answer the test plays once it has gone offline, as a phone's network would, and answers again once it's back", async ({
+  page,
+  context,
+}) => {
+  let release = () => {}
+  const held = new Promise<void>((resolve) => {
+    release = resolve
+  })
+  let asked = 0
+  await page.route(`**${PLAYED}`, async (route) => {
+    asked += 1
+    if (asked === 1) await held
+    await route.fulfill({ json: {} })
+  })
+  await page.goto("/")
+  const first = page.evaluate<string>(howARequestEnds)
+  await expect.poll(() => asked).toBe(1)
+  await context.setOffline(true)
+  release()
+  expect(await first).toBe("refused")
+  await context.setOffline(false)
+  expect(await page.evaluate<string>(howARequestEnds)).toBe("answered")
 })

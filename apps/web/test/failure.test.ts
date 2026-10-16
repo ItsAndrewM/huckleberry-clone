@@ -16,7 +16,9 @@ import { AuthRequired, Offline, Unexpected } from "../src/api/errors.ts"
 import { StaleDraft } from "../src/sheets/drafts.ts"
 import { failureNote, type Household } from "../src/sheets/failure.ts"
 import { offersRetry } from "../src/sheets/held.ts"
+import { keptOnFor } from "../src/sheets/kept-on.ts"
 import { Unsaved } from "../src/sheets/kept.ts"
+import type { Sending } from "../src/sheets/sending.ts"
 import { measurement } from "./growth-fixtures.ts"
 import { ANDREW, diaperAt, dosedAt, EMILY, feedAt, MINUTE, NOW, sleptAt, ZONE } from "./today-fixtures.ts"
 
@@ -30,11 +32,28 @@ const HOUSEHOLD: Household = {
   locale: "en-US",
 }
 
+const WOKE: Sending = {
+  sheet: "sleep",
+  action: {
+    kind: "wakeSleep",
+    id: "sleep-1",
+    payload: { actionId: "4b1c2a5e-8f3d-4c6b-9a7e-2d1f0e3c5b6a", version: 1, occurredAt: NOW },
+  },
+}
+
+const DIAPER: Sending = {
+  sheet: "diaper",
+  action: {
+    kind: "logDiaper",
+    payload: { actionId: "4b1c2a5e-8f3d-4c6b-9a7e-2d1f0e3c5b6a", occurredAt: NOW, wet: true, dirty: false },
+  },
+}
+
 const message = (error: Error) => failureNote(error, HOUSEHOLD, { keptOn: "phone" }).message.replace(/\s/gu, " ")
 
 const staleSleep = (current: Sleep, action: Action["kind"]) => {
   const error = new SleepConflict({ code: "STALE_VERSION", current })
-  return failureNote(error, HOUSEHOLD, { keptOn: null, sheet: "sleep", action }).message.replace(/\s/gu, " ")
+  return failureNote(error, HOUSEHOLD, { keptOn: "app", sheet: "sleep", action }).message.replace(/\s/gu, " ")
 }
 
 describe("failureNote", () => {
@@ -53,12 +72,16 @@ describe("failureNote", () => {
     )
   })
 
-  it("promises nothing kept for a control with no connection, since it goes with its sheet", () => {
-    expect(failureNote(new Offline(), HOUSEHOLD, { keptOn: null })).toEqual({
-      message: "No connection. Try again once you're back online.",
+  it("asks to keep the app open for a control with no connection, since its sheet asks before letting it go", () => {
+    expect(failureNote(new Offline(), HOUSEHOLD, { keptOn: keptOnFor(WOKE, true) })).toEqual({
+      message: "No connection. Keep the app open, and try again once you're back online.",
       retry: "Try again",
       signIn: false,
     })
+  })
+
+  it("keeps an entry on this phone while the phone can keep it, and asks to keep the app open when it can't", () => {
+    expect([keptOnFor(DIAPER, true), keptOnFor(DIAPER, false)]).toEqual(["phone", "app"])
   })
 
   it("asks to sign in when Access or the household has signed the parent out", () => {
@@ -163,7 +186,7 @@ describe("failureNote", () => {
 
   it("explains a refused sleep time in a sleep's words", () => {
     const refused = (issue: "end_not_after_start" | "out_of_range", sheet: "sleep" | "pastSleep" | "editSleep") =>
-      failureNote(new InvalidInput({ fieldErrors: [{ path: "endedAt", issue }] }), HOUSEHOLD, { keptOn: null, sheet })
+      failureNote(new InvalidInput({ fieldErrors: [{ path: "endedAt", issue }] }), HOUSEHOLD, { keptOn: "app", sheet })
         .message
     expect(refused("end_not_after_start", "sleep")).toBe("Pick a time after she fell asleep.")
     expect(refused("out_of_range", "pastSleep")).toBe("A sleep can last a day at most.")
@@ -173,7 +196,7 @@ describe("failureNote", () => {
   it("asks a sleep sheet to check only the times when the household refuses a field with no message of its own", () => {
     const refused = (sheet: "sleep" | "pastSleep" | "editSleep" | "pastFeed" | "diaper") =>
       failureNote(new InvalidInput({ fieldErrors: [{ path: "kind", issue: "invalid" }] }), HOUSEHOLD, {
-        keptOn: null,
+        keptOn: "app",
         sheet,
       }).message
     expect([refused("sleep"), refused("pastSleep"), refused("editSleep")]).toEqual([
@@ -282,6 +305,6 @@ describe("offersRetry", () => {
     ["a sleep conflict", new SleepConflict({ code: "STALE_VERSION", current: sleptAt(NOW) })],
     ["a dose that day already", new DoseConflict({ code: "SUPPLEMENT_DUPLICATE_DAY", current: dosedAt(NOW) })],
   ])("is true exactly when the note offers a retry button: %s", (_case, error) => {
-    expect(offersRetry(error)).toBe(failureNote(error, HOUSEHOLD, { keptOn: null }).retry !== null)
+    expect(offersRetry(error)).toBe(failureNote(error, HOUSEHOLD, { keptOn: "app" }).retry !== null)
   })
 })

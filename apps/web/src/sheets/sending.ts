@@ -68,6 +68,8 @@ export const editsARecord = (sheet: SheetKind) => EDIT_SHEETS.has(sheet)
 
 export const opensOnOne = (sheet: SheetKind) => editsARecord(sheet) || sheet === "dose"
 
+export const addsOrEdits = (sheet: SheetKind | null) => sheet === "measurement"
+
 export const isUndo = ({ sheet }: Sending) => sheet === "undo"
 
 export const closesOnSend = (sending: Sending) =>

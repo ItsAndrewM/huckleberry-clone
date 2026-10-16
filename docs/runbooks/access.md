@@ -129,6 +129,7 @@ From the main checkout, run `git switch main`, `git pull --ff-only`, `pnpm insta
 When GitHub Actions can't run CI (an outage, or the month's minutes are spent, as on 15 October 2026), run `pnpm release --gates-local` instead, on Andrew's word (#96):
 - **What it changes:** it skips the question to GitHub and runs CI's own commands on the checkout, in ci.yml's order: `pnpm install --frozen-lockfile`, `pins:check`, `lint`, `typecheck`, `test`, `coverage`, `build`, `bundle:check`, then `e2e` in both engines.
 - **How they run:** with `CI=1`, as on GitHub, so E2E keeps its one retry and refuses a busy port 4173. A test ties the list to ci.yml's `run:` steps.
+- **Its browsers:** E2E needs Playwright's Chromium and WebKit. CI installs them on every run, but the release doesn't. After an install that moves Playwright's version, run `pnpm exec playwright install chromium webkit` first; otherwise the E2E gate fails and the release stops before it deploys.
 - **When one fails:** the release stops at the first command that fails and names it. Otherwise it goes on as usual: the clean checkout at `origin/main`, the build and its checks, the restore point, the upload, the deploy.
 - **Its record:** the deployment's message ends in `local gates`.
 - **How long:** expect several minutes, most of them E2E. Stop any `vite preview` on port 4173 first.
