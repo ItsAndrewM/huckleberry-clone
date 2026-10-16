@@ -24,10 +24,10 @@ interface DetailsItemProps {
 
 const DetailsItem = ({ details: { title, when, lines, by }, name, named, onEdit }: DetailsItemProps) => (
   <li className="flex flex-col gap-1 py-3 first:pt-0 last:pb-0">
-    {named ? <p className="font-medium">{title}</p> : null}
+    {named ? <p className="font-medium break-words">{title}</p> : null}
     <p className="text-sm text-muted-foreground tabular-nums">{when}</p>
     {lines.map((line) => (
-      <p key={line} className="tabular-nums">
+      <p key={line} className="tabular-nums break-words">
         {line}
       </p>
     ))}

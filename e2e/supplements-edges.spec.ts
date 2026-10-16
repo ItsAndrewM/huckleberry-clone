@@ -1,4 +1,5 @@
 import type { Locator, Page, Route } from "@playwright/test"
+import { DAY, dose as doseEntry, emptyDay, local, openHistory, playHistory } from "./played-day.ts"
 import {
   caregiversOf,
   type DoseAnswer,
@@ -83,11 +84,10 @@ const playWith = async (page: Page, added: ReadonlyArray<ReturnType<typeof suppl
   return { andrew, emily, vitaminD }
 }
 
-const LONGEST = [
-  supplementOf("supplement-long", "Long dose", "2 drops (0.1 mL) once daily with a feed!"),
-  supplementOf("supplement-wide", "Wide dose", "W".repeat(40)),
-  supplementOf("supplement-unbroken", "Multivitamin".repeat(5), "5 mL"),
-]
+const LONG_DOSE = supplementOf("supplement-long", "Long dose", "2 drops (0.1 mL) once daily with a feed!")
+const WIDE_DOSE = supplementOf("supplement-wide", "Wide dose", "W".repeat(40))
+const UNBROKEN_NAME = supplementOf("supplement-unbroken", "Multivitamin".repeat(5), "5 mL")
+const LONGEST = [LONG_DOSE, WIDE_DOSE, UNBROKEN_NAME]
 
 const playLongest = async (page: Page, logged: boolean) => {
   await page.setViewportSize({ width: 360, height: 900 })
@@ -143,6 +143,104 @@ test.describe("The longest doses and names, on a 360-pixel-wide phone", () => {
       await endsBefore(item.getByText(name), time)
       await endsBefore(item.getByText(dose), time)
     }
+  })
+})
+
+const rightEdgeOf = async (target: Locator) => {
+  const { x, width } = await boxOf(target)
+  return x + width
+}
+
+const openLongestOnHistory = async (
+  page: Page,
+  doses: ReadonlyArray<readonly [id: string, at: string, given: string]>,
+) => {
+  await page.setViewportSize({ width: 360, height: 900 })
+  const { played, emily, me } = await playHistory(page, [])
+  const household = { ...me.household, supplements: [...me.household.supplements, ...LONGEST] }
+  await page.route("**/api/me", (route) => route.fulfill({ json: { ...me, household } }))
+  played.days.push({
+    ...emptyDay(DAY),
+    doses: doses.map(([supplementId, at, given], index) => ({
+      ...doseEntry(`dose-${index}`, supplementId, local(at), emily),
+      dose: given,
+    })),
+  })
+  await openHistory(page)
+  return page.getByRole("region", { name: "The day by hour" })
+}
+
+test.describe("Long unbroken text, in the sheets that show it, on a 360-pixel-wide phone", () => {
+  test("wraps the second-dose question inside the dose sheet", async ({ page }) => {
+    const { emily } = await playWith(page, LONGEST)
+    await page.setViewportSize({ width: 360, height: 900 })
+    const earlier = doseAt("supplement-unbroken", NOW - 200 * MINUTE, emily.id, "dose-0")
+    await playHousehold(page, todayWith())
+    await page.route("**/api/doses", (route) =>
+      route.fulfill({
+        status: 409,
+        json: { _tag: "Conflict", code: "SUPPLEMENT_DUPLICATE_DAY", current: earlier },
+      }),
+    )
+    await openToday(page)
+    await rowOf(page, UNBROKEN_NAME.name).click()
+    const sheet = doseSheet(page, UNBROKEN_NAME.name)
+    await sheet.getByRole("button", { name: `Log ${UNBROKEN_NAME.name}` }).click()
+    const question = sheet.getByRole("alert").getByText(/Record another dose anyway\?/u)
+    await expect(question).toBeVisible()
+    expect(await textEndOf(question)).toBeLessThanOrEqual(await rightEdgeOf(sheet))
+    expect(await scrollsSideways(sheet)).toBe(false)
+  })
+
+  test("wraps a dose of 40 W's in the details sheet", async ({ page }) => {
+    const grid = await openLongestOnHistory(page, [[WIDE_DOSE.id, "08:00", WIDE_DOSE.dose]])
+    await grid.getByRole("button", { name: /^Wide dose at 8:00/u }).click()
+    const sheet = page.getByRole("dialog", { name: "Wide dose" })
+    const line = sheet.getByText(WIDE_DOSE.dose, { exact: true })
+    await expect(line).toBeVisible()
+    expect(await textEndOf(line)).toBeLessThanOrEqual(await rightEdgeOf(sheet))
+    expect(await scrollsSideways(sheet)).toBe(false)
+  })
+
+  test("wraps a 60-character supplement name above the details of several entries", async ({ page }) => {
+    const grid = await openLongestOnHistory(page, [
+      [UNBROKEN_NAME.id, "08:00", UNBROKEN_NAME.dose],
+      [LONG_DOSE.id, "08:05", "1 mL"],
+    ])
+    await grid.getByRole("button", { name: /^2 entries from 8:00/u }).click()
+    const sheet = page.getByRole("dialog", { name: "2 entries" })
+    const title = sheet.getByText(UNBROKEN_NAME.name, { exact: true })
+    await expect(title).toBeVisible()
+    expect(await textEndOf(title)).toBeLessThanOrEqual(await rightEdgeOf(sheet))
+    expect(await scrollsSideways(sheet)).toBe(false)
+  })
+
+  test("keeps the stale note's two buttons inside the sheet, wrapping them rather than scrolling it sideways", async ({
+    page,
+  }) => {
+    const { emily } = await playWith(page, LONGEST)
+    await page.setViewportSize({ width: 360, height: 900 })
+    const logged = doseAt(LONG_DOSE.id, NOW - 20 * MINUTE, emily.id, "dose-0", LONG_DOSE.dose)
+    await playHousehold(page, { ...todayWith(), doses: [logged], recent: [{ kind: "dose", dose: logged }] })
+    const theirs = { ...logged, occurredAt: NOW - 45 * MINUTE, version: 2, updatedBy: emily.id }
+    await page.route("**/api/doses/dose-0", (route) =>
+      route.fulfill({ status: 409, json: { _tag: "Conflict", code: "STALE_VERSION", current: theirs } }),
+    )
+    await openToday(page)
+    await page
+      .getByRole("list", { name: "Last 24 hours" })
+      .getByRole("button", { name: /^Long dose/u })
+      .click()
+    const sheet = doseSheet(page, "Edit dose")
+    await sheet.getByLabel("When").fill("2026-10-09T08:15")
+    await sheet.getByRole("button", { name: "Save" }).click()
+    const note = sheet.getByRole("alert")
+    await expect(note).toContainText("changed this a moment ago.")
+    const edge = await rightEdgeOf(note)
+    for (const button of await note.getByRole("button").all()) {
+      expect(await rightEdgeOf(button)).toBeLessThanOrEqual(edge)
+    }
+    expect(await scrollsSideways(sheet)).toBe(false)
   })
 })
 
