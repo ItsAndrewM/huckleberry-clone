@@ -1,7 +1,15 @@
 import type { Action } from "../api/actions.ts"
 import type { Saved } from "../api/send.ts"
 import { actionIdOf, editingOf, heldFor, isOnOpening, settlesWithoutAsking, withoutAction } from "./held.ts"
-import { closesOnSave, closesOnSend, type Failed, isUndo, type Sending, type SheetKind } from "./sending.ts"
+import {
+  addsOrEdits,
+  closesOnSave,
+  closesOnSend,
+  type Failed,
+  isUndo,
+  type Sending,
+  type SheetKind,
+} from "./sending.ts"
 import { editLost, type Toast, toastFor, undoLost } from "./undo.ts"
 
 export interface SheetsState {
@@ -104,13 +112,20 @@ export const discardedState = (state: SheetsState, failed: Failed): SheetsState 
   return state.asking ? closing({ ...state, held }) : { ...state, held }
 }
 
+const onTheRecordItOpenedWith = (state: SheetsState, failed: Failed) =>
+  !addsOrEdits(state.open) || editingOf(failed.sending) === state.editing
+
+const landsInItsOwnSheet = (state: SheetsState, failed: Failed, own: boolean) =>
+  closesOnSend(failed.sending) &&
+  (own || (isOnOpening(failed, state.open, state.editing) && onTheRecordItOpenedWith(state, failed)))
+
 export const failedState = (state: SheetsState, failed: Failed, now: number): SheetsState => {
   if (isUndo(failed.sending)) return { ...state, toast: undoLost(failed.error, now) }
   const own = state.keptOpen === actionIdOf(failed.sending)
   if (closesOnSave(failed.sending) && !own) return { ...state, toast: editLost(failed.error, now) }
   const held = [...state.held, failed]
   if (state.open === null) return opening({ ...state, held }, openingFor(failed), true)
-  if (own && closesOnSend(failed.sending)) return opening({ ...state, held }, openingFor(failed), false)
+  if (landsInItsOwnSheet(state, failed, own)) return opening({ ...state, held }, openingFor(failed), false)
   return { ...state, held, keptOpen: own ? null : state.keptOpen }
 }
 

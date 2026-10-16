@@ -320,6 +320,42 @@ describe("a failed send", () => {
     expect(failedState(shownState(CLOSED, "bottle"), failed, NOW)).toMatchObject({ open: "bottle", opened: 1 })
   })
 
+  it.each([
+    { label: "a diaper", sending: DIAPER, editing: null },
+    { label: "a wake", sending: WOKE, editing: null },
+    { label: "a dose", sending: DOSE, editing: "supplement-1" },
+    { label: "an edited dose", sending: DOSE_MOVED, editing: "dose-1" },
+    { label: "a new measurement", sending: MEASURED, editing: null },
+    { label: "an edited measurement", sending: MEASUREMENT_EDITED, editing: "measurement-1" },
+  ])(
+    "opens its own sheet again on the reason when the parent opened it after the send, without holding taps: $label",
+    ({ sending, editing }) => {
+      const failed = { sending, error: new Offline() }
+      const sent = sendingState(shownState(CLOSED, sending.sheet, editing), sending, true)
+      const reopened = shownState(sent, sending.sheet, editing)
+      expect(failedState(reopened, failed, NOW)).toMatchObject({
+        open: sending.sheet,
+        opened: 3,
+        queued: false,
+        held: [failed],
+      })
+    },
+  )
+
+  it("leaves its sheet as it is when the parent opened it on another record", () => {
+    const failed = { sending: DOSE_MOVED, error: new Offline() }
+    const sent = sendingState(shownState(CLOSED, "editDose", "dose-1"), DOSE_MOVED, true)
+    const another = shownState(sent, "editDose", "dose-2")
+    expect(failedState(another, failed, NOW)).toMatchObject({ open: "editDose", editing: "dose-2", opened: 2 })
+  })
+
+  it("leaves Add measurement on the new measurement it opened with when an edit sent just before it fails", () => {
+    const failed = { sending: MEASUREMENT_EDITED, error: new Offline() }
+    const sent = sendingState(shownState(CLOSED, "measurement", "measurement-1"), MEASUREMENT_EDITED, true)
+    const adding = shownState(sent, "measurement")
+    expect(failedState(adding, failed, NOW)).toMatchObject({ open: "measurement", editing: null, opened: 2 })
+  })
+
   it("says so in a toast when it was an undo", () => {
     const undo: Sending = {
       sheet: "undo",
