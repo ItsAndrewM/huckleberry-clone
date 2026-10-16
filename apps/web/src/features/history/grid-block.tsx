@@ -17,7 +17,7 @@ export const GridBlock = ({ block, text, name, onOpen }: GridBlockProps) => (
     aria-label={name}
     onClick={onOpen}
     className={cn(
-      "group pointer-events-auto absolute px-0.5 text-left outline-none focus-visible:z-20",
+      "group pointer-events-auto absolute px-0.5 text-left outline-none",
       atStep(block.top),
       stepsTall(block.height),
       inLane(block.lane, block.lanes),
