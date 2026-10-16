@@ -38,7 +38,7 @@ export const StaleNote = ({ failed, stale, display, onUseTheirs }: StaleNoteProp
           OK
         </Button>
       ) : (
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <Button variant="outline" size="lg" className="flex-1" onClick={resend}>
             {stale.deleting ? "Delete anyway" : "Save mine anyway"}
           </Button>
