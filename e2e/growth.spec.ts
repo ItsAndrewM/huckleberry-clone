@@ -63,7 +63,10 @@ const curveLabels = (page: Page) => page.locator('g[data-ts-key="curve-labels"] 
 const monthTicks = (page: Page) => page.locator('text[data-ts-key^="x-tick-label"]')
 const axisTitle = (page: Page) => page.locator('text[data-ts-key="y-label"]')
 const tooltip = (page: Page) => page.locator(".ts-chart-tooltip")
+const shownLines = (page: Page) => tooltip(page).locator('p[aria-hidden="true"]')
+const spokenLine = (page: Page) => tooltip(page).locator("p.sr-only")
 const tableRow = (page: Page, index: number) => page.getByRole("table").getByRole("row").nth(index).locator("th, td")
+const ageCell = (page: Page, index: number) => tableRow(page, index).nth(1)
 const tiles = (page: Page) => page.getByRole("group", { name: "Measurement" }).getByRole("button")
 const tileTexts = (page: Page, index: number) => tiles(page).nth(index).locator("span")
 const measurementsRegion = (page: Page) => page.getByRole("region", { name: "Measurements" })
@@ -72,6 +75,13 @@ const tapPoint = async (page: Page, index: number) => {
   const box = await herPoints(page).nth(index).boundingBox()
   if (box === null) throw new Error(`Measurement ${index} isn't on screen to tap`)
   await page.touchscreen.tap(box.x + box.width / 2, box.y + box.height / 2)
+}
+
+const expectAgeInWords = async (page: Page, row: number, shown: string, said: string) => {
+  const cell = ageCell(page, row)
+  await expect(cell).toHaveAccessibleName(said)
+  await expect(cell.locator('[aria-hidden="true"]')).toHaveText(shown)
+  await expect(cell.locator(".sr-only")).toHaveText(said)
 }
 
 test.use({ timezoneId: "Europe/London" })
@@ -140,8 +150,8 @@ test.describe("Growth, with the household's answers played by the test", () => {
     await openGrowth(page)
     await tapPoint(page, 2)
     await expect(page.getByRole("dialog", { name: "Oct 6, 2026, 1 month 5 days, 4.30 kg, 47th" })).toBeVisible()
-    await expect(tooltip(page)).toContainText("4.30 kg · 47th")
-    await expect(tooltip(page)).toContainText("Oct 6, 2026 · 1 mo 5 d")
+    await expect(shownLines(page)).toHaveText(["4.30 kg · 47th", "Oct 6, 2026 · 1 mo 5 d"])
+    await expect(spokenLine(page)).toHaveText("4.30 kg, 47th, Oct 6, 2026, 1 month 5 days")
     await page.getByRole("heading", { name: "Growth", level: 1 }).tap()
     await expect(tooltip(page)).toBeHidden()
     const label = await curveLabels(page).filter({ hasText: "97th" }).boundingBox()
@@ -155,8 +165,10 @@ test.describe("Growth, with the household's answers played by the test", () => {
     await openGrowth(page)
     await chart(page).focus()
     await expect(page.getByRole("status", { name: "Sep 1, 2026, Birth, 3.20 kg, 47th" })).toBeVisible()
+    await expect(spokenLine(page)).toHaveText("3.20 kg, 47th, Sep 1, 2026, Birth")
     await page.keyboard.press("ArrowRight")
     await expect(page.getByRole("status", { name: "Sep 15, 2026, 14 days, 3.60 kg, 52nd" })).toBeVisible()
+    await expect(spokenLine(page)).toHaveText("3.60 kg, 52nd, Sep 15, 2026, 14 days")
     await page.keyboard.press("End")
     await page.keyboard.press("Enter")
     await expect(page.getByRole("dialog", { name: "Oct 6, 2026, 1 month 5 days, 4.30 kg, 47th" })).toBeVisible()
@@ -173,9 +185,11 @@ test.describe("Growth, with the household's answers played by the test", () => {
     await expect(table.getByRole("columnheader")).toHaveText(["Date", "Age", "Weight", "Percentile"])
     await expect(table.getByRole("row")).toHaveCount(4)
     await expect(table.getByRole("rowheader")).toHaveText(["Oct 6, 2026", "Sep 15, 2026", "Sep 1, 2026"])
-    await expect(tableRow(page, 1)).toHaveText(["Oct 6, 2026", /^1\smo 5\sd/u, "4.30 kg", "47th"])
-    await expect(tableRow(page, 2)).toHaveText(["Sep 15, 2026", /^14\sd/u, "3.60 kg", "52nd"])
+    await expect(tableRow(page, 1)).toHaveText(["Oct 6, 2026", /^1\smo 5\sd1 month 5 days$/u, "4.30 kg", "47th"])
+    await expect(tableRow(page, 2)).toHaveText(["Sep 15, 2026", /^14\sd14 days$/u, "3.60 kg", "52nd"])
     await expect(tableRow(page, 3)).toHaveText(["Sep 1, 2026", "Birth", "3.20 kg", "47th"])
+    await expectAgeInWords(page, 1, "1 mo 5 d", "1 month 5 days")
+    await expectAgeInWords(page, 2, "14 d", "14 days")
   })
 
   test("plots pounds and lists pounds and ounces when the household weighs in lb & oz", async ({ page }) => {
@@ -183,7 +197,7 @@ test.describe("Growth, with the household's answers played by the test", () => {
     await openGrowth(page)
     await expect(axisTitle(page)).toHaveText("Weight (lb)")
     await page.getByText("Show as a table").click()
-    await expect(tableRow(page, 1)).toHaveText(["Oct 6, 2026", /^1\smo 5\sd/u, "9 lb 7.7 oz", "47th"])
+    await expect(tableRow(page, 1)).toHaveText(["Oct 6, 2026", /^1\smo 5\sd1 month 5 days$/u, "9 lb 7.7 oz", "47th"])
   })
 
   test("lists a measurement from after day 730 without plotting it or giving a percentile", async ({ page }) => {
@@ -193,7 +207,13 @@ test.describe("Growth, with the household's answers played by the test", () => {
     await openGrowth(page)
     await expect(herPoints(page)).toHaveCount(1)
     await page.getByText("Show as a table").click()
-    await expect(tableRow(page, 1)).toHaveText(["Oct 6, 2026", /^25\smo 5\sd/u, "12.50 kg", "Percentile unavailable"])
+    await expect(tableRow(page, 1)).toHaveText([
+      "Oct 6, 2026",
+      /^25\smo 5\sd25 months 5 days$/u,
+      "12.50 kg",
+      "Percentile unavailable",
+    ])
+    await expectAgeInWords(page, 1, "25 mo 5 d", "25 months 5 days")
   })
 
   for (const { birthDate, months, ticks } of [
@@ -245,7 +265,12 @@ test.describe("Growth, with the household's answers played by the test", () => {
       "Percentile unavailable",
     ])
     await page.getByText("Show as a table").click()
-    await expect(tableRow(page, 1)).toHaveText(["Oct 6, 2026", /^1\smo 5\sd/u, "4.30 kg", "Percentile unavailable"])
+    await expect(tableRow(page, 1)).toHaveText([
+      "Oct 6, 2026",
+      /^1\smo 5\sd1 month 5 days$/u,
+      "4.30 kg",
+      "Percentile unavailable",
+    ])
   })
 
   test("draws the curves in the muted ink and her points in the accent, in light and in dark", async ({ page }) => {

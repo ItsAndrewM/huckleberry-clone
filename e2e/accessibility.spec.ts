@@ -11,6 +11,7 @@ const STILL = "*, *::before, *::after { transition: none !important; animation: 
 
 const violationsOn = async (page: Page) => {
   await page.addStyleTag({ content: STILL })
+  expect(await page.evaluate("document.getAnimations().length")).toBe(0)
   const { violations } = await new AxeBuilder({ page }).withTags(WCAG_A_AND_AA).exclude(BASE_UI_FOCUS_GUARDS).analyze()
   return violations.map(({ id, nodes }) => `${id}: ${nodes.map(({ target }) => target.join(" ")).join(" | ")}`)
 }
