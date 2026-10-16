@@ -458,6 +458,50 @@ const playDiaperSaves = async (page: Page) => {
 
 const todayHeading = (page: Page) => page.getByRole("heading", { name: "Today", level: 1 })
 
+interface PlayedSupplement {
+  readonly id: string
+  readonly name: string
+  readonly dose: string
+  readonly stoppedAt: number | null
+  readonly version: number
+  readonly createdBy: string | null
+  readonly createdAt: number
+  readonly updatedBy: string | null
+  readonly updatedAt: number
+}
+
+const VITAMIN_D: PlayedSupplement = {
+  id: "supplement-vitamin-d",
+  name: "Vitamin D",
+  dose: "400 IU",
+  stoppedAt: null,
+  version: 1,
+  createdBy: null,
+  createdAt: NOW,
+  updatedBy: null,
+  updatedAt: NOW,
+}
+
+const openVitaminD = async (page: Page, saved: Promise<void> = Promise.resolve()) => {
+  const { me } = await caregiversOf(page)
+  const played = { supplements: [VITAMIN_D] }
+  await page.route("**/api/me", (route) =>
+    route.fulfill({ json: { ...me, household: { ...me.household, supplements: played.supplements } } }),
+  )
+  await page.route("**/api/supplements/*", async (route) => {
+    const { name, dose, stopped } = route.request().postDataJSON()
+    await saved
+    const supplement = { ...VITAMIN_D, name, dose, stoppedAt: stopped === true ? NOW : null, version: 2 }
+    played.supplements = [supplement]
+    return route.fulfill({ json: { supplement, changed: [["me"]] } })
+  })
+  await page.clock.setFixedTime(NOW)
+  await page.goto("/settings")
+  const row = page.getByRole("list", { name: "Supplements" }).getByRole("button", { name: /^Vitamin D/u })
+  await row.click()
+  return { row, sheet: page.getByRole("dialog", { name: "Vitamin D" }) }
+}
+
 test.describe("a control that gives way hands focus on", () => {
   test("Change on a When field to its time, and Now back to Change", async ({ page }) => {
     await playHousehold(page, todayWith())
@@ -533,15 +577,7 @@ test.describe("a control that gives way hands focus on", () => {
   })
 
   test("Keep giving it back to Stop giving it", async ({ page }) => {
-    const { me } = await caregiversOf(page)
-    const supplements = [{ ...me.household.supplements[0], name: "Vitamin D", dose: "400 IU", stoppedAt: null }]
-    await page.route("**/api/me", (route) =>
-      route.fulfill({ json: { ...me, household: { ...me.household, supplements } } }),
-    )
-    await page.clock.setFixedTime(NOW)
-    await page.goto("/settings")
-    await page.getByRole("list", { name: "Supplements" }).getByRole("button", { name: "Vitamin D · 400 IU" }).click()
-    const sheet = page.getByRole("dialog", { name: "Vitamin D" })
+    const { sheet } = await openVitaminD(page)
     const stop = sheet.getByRole("button", { name: "Stop giving it" })
     await stop.press("Enter")
     await sheet.getByRole("button", { name: "Keep giving it" }).press("Enter")
@@ -731,5 +767,55 @@ test.describe("a failure note's Try again hands focus to the control it retries"
     await expectWaitingWithFocus(page, change)
     retried.open()
     await expect(note).toBeFocused()
+  })
+})
+
+const playChildSave = async (page: Page, saved: Promise<void>) => {
+  const { me } = await caregiversOf(page)
+  const played = { child: me.child }
+  await page.route("**/api/me", (route) => route.fulfill({ json: { ...me, child: played.child } }))
+  await page.route("**/api/child", async (route) => {
+    const { version, name } = route.request().postDataJSON()
+    await saved
+    played.child = { ...played.child, name, version: version + 1 }
+    return route.fulfill({ json: { child: played.child, changed: [["me"]] } })
+  })
+  await page.clock.setFixedTime(NOW)
+  await page.goto("/settings")
+}
+
+test.describe("a Settings save keeps focus while it saves", () => {
+  test("the child's Save, which keeps it once the child has saved", async ({ page }) => {
+    const saved = gate()
+    await playChildSave(page, saved.opened)
+    await page.getByLabel("Name").fill("Robin Rae")
+    await page.getByRole("button", { name: "Save", exact: true }).press("Enter")
+    await expectWaitingWithFocus(page, page.getByRole("button", { name: "Saving…" }))
+    saved.open()
+    await expect(page.getByText("Saved", { exact: true })).toBeVisible()
+    await expect(page.getByRole("button", { name: "Save", exact: true })).toBeFocused()
+  })
+
+  test("the supplement sheet's Save, until the sheet closes and its row takes focus", async ({ page }) => {
+    const saved = gate()
+    const { row, sheet } = await openVitaminD(page, saved.opened)
+    await sheet.getByLabel("Dose").fill("500 IU")
+    const save = sheet.getByRole("button", { name: "Save", exact: true })
+    await save.press("Enter")
+    await expectWaitingWithFocus(page, save)
+    saved.open()
+    await expect(sheet).toBeHidden()
+    await expect(row).toBeFocused()
+  })
+
+  test("the supplement sheet's Stop, until the sheet closes", async ({ page }) => {
+    const saved = gate()
+    const { sheet } = await openVitaminD(page, saved.opened)
+    await sheet.getByRole("button", { name: "Stop giving it" }).press("Enter")
+    const stop = sheet.getByRole("button", { name: "Stop", exact: true })
+    await stop.press("Enter")
+    await expectWaitingWithFocus(page, stop)
+    saved.open()
+    await expect(sheet).toBeHidden()
   })
 })

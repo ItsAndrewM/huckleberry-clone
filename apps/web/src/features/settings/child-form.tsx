@@ -1,5 +1,5 @@
 import type { Child } from "@bt/contracts"
-import { type FormEvent, useState } from "react"
+import { type FormEvent, type RefCallback, useState } from "react"
 import type { SaveChild } from "../../api/hooks.ts"
 import { Button } from "../../components/ui/button.tsx"
 import { childFieldsOf } from "./child-fields.ts"
@@ -12,9 +12,10 @@ import { TextField } from "./text-field.tsx"
 interface ChildFormProps {
   readonly child: Child
   readonly save: SaveChild
+  readonly saveRef: RefCallback<HTMLElement>
 }
 
-export const ChildForm = ({ child, save }: ChildFormProps) => {
+export const ChildForm = ({ child, save, saveRef }: ChildFormProps) => {
   const [edited, setEdited] = useState(false)
   const submit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
@@ -44,7 +45,7 @@ export const ChildForm = ({ child, save }: ChildFormProps) => {
         error={fieldMessage(failure, "gestationalAgeDays")}
       />
       <div className="flex items-center gap-3">
-        <Button type="submit" size="lg" disabled={!edited || save.isPending}>
+        <Button ref={saveRef} type="submit" size="lg" disabled={!edited || save.isPending} focusableWhenDisabled>
           {save.isPending ? "Saving…" : "Save"}
         </Button>
         {saved ? <output className="text-sm text-muted-foreground">Saved</output> : null}
