@@ -388,6 +388,7 @@ for (const { written, name, given } of LONGEST) {
 test("waits with a reason while there's no connection", async ({ page, context }) => {
   await playDeleted(page, (andrew) => ({ ...NOTHING, diapers: [diaper(deletedBy(andrew, NOW - 5 * MINUTE))] }))
   await openDeleted(page)
+  await expect(page.getByRole("button", { name: /^Restore Diaper/u })).toBeEnabled()
   await context.setOffline(true)
   await expect(page.getByText("Restoring needs a connection.")).toBeVisible()
   await expect(page.getByRole("button", { name: /^Restore Diaper/u })).toBeDisabled()
