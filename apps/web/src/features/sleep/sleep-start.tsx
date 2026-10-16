@@ -30,6 +30,7 @@ export const SleepStart = ({ sleep, zone, busy }: SleepStartProps) => {
             size="lg"
             aria-label="Change, Fell asleep"
             disabled={busy}
+            focusableWhenDisabled
             onClick={() => setWhen(whenAt(sleep.startedAt, zone))}
           >
             Change

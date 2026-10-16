@@ -15,7 +15,14 @@ export const DeleteEntry = ({ noun, emptied, disabled = false, onDelete }: Delet
   const [asked, setAsked] = useState(false)
   if (!asked && emptied === null) {
     return (
-      <Button variant="ghost" size="lg" className="text-destructive" disabled={disabled} onClick={() => setAsked(true)}>
+      <Button
+        variant="ghost"
+        size="lg"
+        className="text-destructive"
+        disabled={disabled}
+        focusableWhenDisabled
+        onClick={() => setAsked(true)}
+      >
         <Trash2Icon aria-hidden="true" />
         Delete {noun}
       </Button>
@@ -25,7 +32,14 @@ export const DeleteEntry = ({ noun, emptied, disabled = false, onDelete }: Delet
     <div role="alert" className="flex flex-col gap-3 rounded-lg border p-3">
       <p className="text-sm">{emptied === null ? `Delete this ${noun}?` : `${emptied} Delete this ${noun}?`}</p>
       <div className="flex gap-2">
-        <Button variant="destructive" size="lg" className="flex-1" disabled={disabled} onClick={onDelete}>
+        <Button
+          variant="destructive"
+          size="lg"
+          className="flex-1"
+          disabled={disabled}
+          focusableWhenDisabled
+          onClick={onDelete}
+        >
           Delete
         </Button>
         <Button

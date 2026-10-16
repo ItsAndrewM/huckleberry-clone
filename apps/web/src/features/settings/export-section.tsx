@@ -61,6 +61,7 @@ export const ExportSection = ({ timeZone }: { readonly timeZone: TimeZone }) => 
             size="lg"
             className="flex-1"
             disabled={waits || exporting.busy}
+            focusableWhenDisabled
             aria-describedby={waits ? reasonId : undefined}
             onClick={() => exporting.start(kind)}
           >

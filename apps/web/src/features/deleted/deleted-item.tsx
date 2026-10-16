@@ -40,6 +40,7 @@ export const DeletedItem = ({ row, household, reasonId }: DeletedItemProps) => {
           variant="secondary"
           size="lg"
           disabled={reasonId !== undefined || restoring.busy}
+          focusableWhenDisabled
           aria-label={`${label} ${row.title}, ${row.when}`}
           aria-describedby={reasonId}
           onClick={restoring.restore}

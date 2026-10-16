@@ -32,6 +32,7 @@ export const FeedStart = ({ feed, zone, busy }: FeedStartProps) => {
             size="lg"
             aria-label="Change, Started"
             disabled={busy}
+            focusableWhenDisabled
             onClick={() => setWhen(whenAt(first.startedAt, zone))}
           >
             Change
