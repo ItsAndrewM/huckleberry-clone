@@ -792,7 +792,7 @@ test.describe("a Settings save keeps focus while it saves", () => {
     await page.getByRole("button", { name: "Save", exact: true }).press("Enter")
     await expectWaitingWithFocus(page, page.getByRole("button", { name: "Saving…" }))
     saved.open()
-    await expect(page.getByText("Saved", { exact: true })).toBeVisible()
+    await expect(page.locator("form").getByText("Saved", { exact: true })).toBeVisible()
     await expect(page.getByRole("button", { name: "Save", exact: true })).toBeFocused()
   })
 
@@ -825,7 +825,7 @@ const beforeAnyMessage = async (scope: Locator, fields: ReadonlyArray<Locator>) 
     await expect(field).toBeVisible()
     await expect(field).not.toHaveAttribute("aria-invalid", "true")
   }
-  await scope.locator('[aria-live="polite"]').evaluateAll((regions) => {
+  await scope.locator('[aria-live="polite"], output, [role="status"]').evaluateAll((regions) => {
     for (const region of regions) region.setAttribute("data-polite-before", "")
   })
 }
@@ -1040,4 +1040,21 @@ test.describe("a field's message describes each field it's about and is said pol
     await expectToldPolitely(sheet, /Enter a number\./u, { about: [formula], notAbout: [breastMilk], stopsSave: true })
     await expect(sheet.getByRole("button", { name: "Save" })).toBeDisabled()
   })
+})
+
+test("Settings' Saved is said politely from a region that outlives the form's remount, and goes once the form is edited", async ({
+  page,
+}) => {
+  await playChildSave(page, Promise.resolve())
+  const child = page.locator("section", { has: page.getByRole("heading", { name: "Child", exact: true }) })
+  const name = child.getByLabel("Name", { exact: true })
+  const spoken = child.locator("[data-polite-before]").filter({ hasText: "Saved" })
+  await beforeAnyMessage(child, [name])
+  await name.fill("Robin Rae")
+  await child.getByRole("button", { name: "Save", exact: true }).click()
+  await expect(child.locator("form").getByText("Saved", { exact: true })).toBeVisible()
+  await expect(spoken).toHaveCount(1)
+  await name.fill("Robin Ray")
+  await expect(child.locator("form").getByText("Saved", { exact: true })).toHaveCount(0)
+  await expect(spoken).toHaveCount(0)
 })

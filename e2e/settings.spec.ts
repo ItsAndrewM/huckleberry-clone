@@ -146,7 +146,7 @@ test.describe("Settings, with the household's answers played by the test", () =>
     await page.goto("/settings")
     await page.getByLabel("Name").fill("Robin Rae")
     await page.getByRole("button", { name: "Save" }).click()
-    await expect(page.getByText("Saved", { exact: true })).toBeVisible()
+    await expect(page.locator("form").getByText("Saved", { exact: true })).toBeVisible()
     await expect(page.getByRole("button", { name: "Save" })).toBeDisabled()
     expect(sentBodies(played)).toEqual([
       { actionId: expect.any(String), version, name: "Robin Rae", birthDate, sex, gestationalAgeDays },
@@ -174,11 +174,11 @@ test.describe("Settings, with the household's answers played by the test", () =>
     await page.goto("/settings")
     await page.getByLabel("Name").fill("Robin Rae")
     await page.getByRole("button", { name: "Save" }).click()
-    await expect(page.getByText("Saved", { exact: true })).toBeVisible()
+    await expect(page.locator("form").getByText("Saved", { exact: true })).toBeVisible()
     await page.getByLabel("Name").fill("Robin Ray")
     await otherPhoneSaves({ name: "Robbie" }, played)
     await expect(page.getByLabel("Name")).toHaveValue("Robbie")
-    await expect(page.getByText("Saved", { exact: true })).toBeHidden()
+    await expect(page.locator("form").getByText("Saved", { exact: true })).toBeHidden()
   })
 
   test("drops a refusal once the other phone's save has replaced what it was about", async ({ page, socket }) => {
