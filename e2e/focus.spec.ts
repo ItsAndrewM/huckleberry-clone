@@ -578,3 +578,25 @@ test.describe("a control that gives way hands focus on", () => {
     await expect(page.getByRole("heading", { name: "History", level: 1 })).toBeFocused()
   })
 })
+
+test("a When field's message describes its time and is said politely, from a region that was there before it", async ({
+  page,
+}) => {
+  await playHousehold(page, todayWith())
+  await openToday(page)
+  await quickAction(page, "Diaper").click()
+  const sheet = page.getByRole("dialog", { name: "Diaper" })
+  await sheet.getByRole("button", { name: "Change, When" }).click()
+  const when = sheet.getByLabel("When", { exact: true })
+  const messageId = await when.getAttribute("aria-describedby")
+  expect(messageId).not.toBeNull()
+  const message = sheet.locator(`[id="${messageId}"]`)
+  await expect(message).toHaveAttribute("aria-live", "polite")
+  await expect(message).toBeEmpty()
+  await expect(when).not.toHaveAttribute("aria-invalid", "true")
+  await message.evaluate((element) => element.setAttribute("data-probe", "1"))
+  await when.fill("2027-01-01T10:00")
+  await expect(when).toHaveAttribute("aria-invalid", "true")
+  await expect(when).toHaveAccessibleDescription("That's in the future.")
+  await expect(message).toHaveAttribute("data-probe", "1")
+})

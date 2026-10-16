@@ -1,4 +1,4 @@
-import { type Ref, useState } from "react"
+import { type Ref, useId, useState } from "react"
 import { Button } from "../components/ui/button.tsx"
 import { Input } from "../components/ui/input.tsx"
 import { focusFollowsSwap } from "../shell/focus-hand-off.ts"
@@ -43,6 +43,7 @@ const NowRow = ({ label, onChange, ref }: NowRowProps) => (
 
 export const WhenField = ({ label, when, onChange, zone, now, earliest, tooEarly }: WhenFieldProps) => {
   const [followsSwap] = useState(focusFollowsSwap)
+  const messageId = useId()
   if (when.kind === "now") {
     return <NowRow ref={followsSwap} label={label} onChange={() => onChange(whenAt(now, zone))} />
   }
@@ -58,6 +59,8 @@ export const WhenField = ({ label, when, onChange, zone, now, earliest, tooEarly
             type="datetime-local"
             step={60}
             value={when.local}
+            aria-invalid={message !== ""}
+            aria-describedby={messageId}
             onChange={(event) => onChange({ kind: "at", local: event.target.value, pick: null })}
           />
         </label>
@@ -66,7 +69,9 @@ export const WhenField = ({ label, when, onChange, zone, now, earliest, tooEarly
         </Button>
       </div>
       <AmbiguityChoice when={when} zone={zone} onChange={onChange} />
-      {message === "" ? null : <p className="text-sm text-destructive">{message}</p>}
+      <p id={messageId} aria-live="polite" className="text-sm text-destructive empty:sr-only">
+        {message}
+      </p>
     </div>
   )
 }
