@@ -86,8 +86,8 @@ export const entryName = (entry: RecentEntry, display: Display, now: number, day
   return details.length === 0 ? name : `${name}: ${details.join(", ")}`
 }
 
-export const clusterName = (count: number, first: number, display: Display) =>
-  `${count} entries from ${clockTime(first, display.timeZone, display.locale)}`
+export const clusterName = (count: number, first: number, display: Display, day: LocalDate) =>
+  `${count} entries from ${timeOn(display, day)(first)}`
 
 export const compactLength = (seconds: number) => {
   if (seconds < MINUTE_S) return "<1m"

@@ -73,6 +73,13 @@ describe("dayModel", () => {
     expect(entriesIn(next, [BOTTLE_AT_MIDNIGHT.id])).toEqual([{ kind: "feed", feed: BOTTLE_AT_MIDNIGHT }])
   })
 
+  it("says the weekday of a marker gathering that bottle with a diaper, from the evening before", () => {
+    const next = dayModel(dayWith({ feeds: [BOTTLE_AT_MIDNIGHT], diapers: [DIAPER_AFTER_MIDNIGHT] }), ZONE, NOW_ON_DAY)
+    expect(markersOf(next, DISPLAY, NOW_ON_DAY)).toEqual([
+      expect.objectContaining({ kind: "several", name: "2 entries from Thu 11:30 PM" }),
+    ])
+  })
+
   it("keeps that feed a block on the day it nursed, ending at the bottom of the grid", () => {
     const bounds = zonedDayBounds(DAY_BEFORE, ZONE)
     const before = dayModel(
