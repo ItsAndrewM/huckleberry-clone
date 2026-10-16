@@ -48,6 +48,15 @@ const VITAMIN_D_SHEET: Opening = {
       .click(),
 }
 
+const GROWTH_POINT: Opening = {
+  dialog: "Oct 6, 2026, 1 month 5 days, 4.30 kg, 47th",
+  open: async (page) => {
+    await page.getByRole("img", { name: /-for-age, girls, birth to/u }).focus()
+    await page.keyboard.press("End")
+    await page.keyboard.press("Enter")
+  },
+}
+
 test.use({ timezoneId: "America/Vancouver" })
 
 for (const colorScheme of ["light", "dark"] as const) {
@@ -69,7 +78,7 @@ for (const colorScheme of ["light", "dark"] as const) {
     test("Today's sheets pass axe", async ({ page }) => {
       await page.goto("/")
       await expect(page.getByText("Totals")).toBeVisible()
-      for (const name of ["Bottle", "Nursing", "Diaper", "Sleep"]) {
+      for (const name of ["Bottle", "Nursing", "Diaper", "Sleep", "Past sleep"]) {
         await expectNoViolationsIn(page, openedSheet(name))
       }
       await expectNoViolationsIn(page, VITAMIN_D_SHEET)
@@ -77,7 +86,7 @@ for (const colorScheme of ["light", "dark"] as const) {
 
     test("History's details, Log at and Go to pass axe", async ({ page }) => {
       await page.goto("/history")
-      for (const name of ["History's details", "History's Log at"]) {
+      for (const name of ["History's details", "History's Log at", "Past feed"]) {
         await expectNoViolationsIn(page, openedSheet(name))
       }
       const days = page.getByRole("navigation", { name: "Days" })
@@ -106,6 +115,7 @@ for (const colorScheme of ["light", "dark"] as const) {
       for (const name of ["Add measurement", "Edit measurement"]) {
         await expectNoViolationsIn(page, openedSheet(name))
       }
+      await expectNoViolationsIn(page, GROWTH_POINT)
       await page.goto("/settings")
       await expectNoViolationsIn(page, VITAMIN_D_SHEET)
     })
