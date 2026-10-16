@@ -66,6 +66,8 @@ const textEndOf = (target: Locator) =>
 const scrollsSideways = (sheet: Locator) =>
   sheet.evaluate((dialog) => {
     const view = dialog.ownerDocument.defaultView
+    const root = dialog.ownerDocument.documentElement
+    if (root.scrollWidth > root.clientWidth) return true
     return [dialog, ...dialog.querySelectorAll("*")].some((element) => {
       const overflowX = view?.getComputedStyle(element).overflowX
       return (overflowX === "auto" || overflowX === "scroll") && element.scrollWidth > element.clientWidth
