@@ -61,7 +61,10 @@ export const HistorySwitcher = ({ navigation, today, birthDate, hidden }: Histor
     void navigate({ to: "/history", search, resetScroll: opensAtTop(search) })
   }
   return (
-    <div className="sticky top-[env(safe-area-inset-top)] z-[5] -mx-4 -mt-3 flex flex-col bg-background px-4 pb-1">
+    <div
+      data-sticky-switcher
+      className="sticky top-[env(safe-area-inset-top)] z-[5] -mx-4 -mt-3 flex flex-col bg-background px-4 pb-1"
+    >
       <nav aria-label={NAMES[noun]} className="flex items-center justify-between gap-2">
         <Step search={navigation.previous} label={`Previous ${noun}`} Icon={ChevronLeftIcon} />
         <div className="flex min-h-11 flex-col items-center justify-center">

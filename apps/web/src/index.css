@@ -115,7 +115,31 @@
   * {
     @apply border-border outline-ring;
   }
+  html {
+    scroll-padding-bottom: calc(4rem + env(safe-area-inset-bottom));
+  }
+  html:has([data-quick-actions]) {
+    scroll-padding-bottom: calc(8.5rem + env(safe-area-inset-bottom));
+  }
+  html:has([data-sticky-switcher]) {
+    scroll-padding-top: calc(4.5rem + env(safe-area-inset-top));
+  }
   body {
     @apply bg-background text-foreground antialiased;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :where(*:not([data-slot="drawer-popup"], [data-slot="drawer-overlay"])),
+  ::before,
+  ::after {
+    transition-duration: 0s !important;
+    animation-duration: 0s !important;
+  }
+  [data-slot="drawer-popup"] {
+    --closed-transform: none !important;
+  }
+  [data-slot="drawer-popup"]:is([data-starting-style], [data-ending-style]) {
+    opacity: 0 !important;
   }
 }
