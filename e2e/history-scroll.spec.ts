@@ -59,6 +59,16 @@ const days = (page: Page) => page.getByRole("navigation", { name: "Days" })
 const toggleChipWithoutScrolling = (page: Page, kind: "Diapers" | "Growth") =>
   page.getByRole("group", { name: "Show" }).getByRole("button", { name: kind }).dispatchEvent("click")
 
+const diapersHidden = (page: Page) => page.getByText("Diapers hidden", { exact: true })
+
+const scrollAwayFromNow = async (page: Page) => {
+  await page.evaluate("window.scrollTo(0, 0)")
+  await expect(nowRow(page)).not.toBeInViewport()
+}
+
+const tapHistory = (page: Page) =>
+  page.getByRole("navigation", { name: "Main" }).getByRole("link", { name: "History" }).click()
+
 const expectTodayAtNow = async (page: Page) => {
   await expect(dayHeading(page)).toHaveText("Fri, Oct 9")
   await expect(nowRow(page)).toBeAttached()
@@ -162,10 +172,33 @@ test("opens today's grid at now from the History tab, after another tab", async 
   await playHousehold(page, todayWith())
   await openHistory(page)
   await expectTodayAtNow(page)
-  const tabs = page.getByRole("navigation", { name: "Main" })
-  await tabs.getByRole("link", { name: "Today" }).click()
+  await page.getByRole("navigation", { name: "Main" }).getByRole("link", { name: "Today" }).click()
   await expect(page.getByText("Totals")).toBeVisible()
-  await tabs.getByRole("link", { name: "History" }).click()
+  await tapHistory(page)
+  await expectTodayAtNow(page)
+})
+
+test("brings today's grid back to now each time the History tab is tapped again", async ({ page }) => {
+  await playTodayAndYesterday(page)
+  await openHistory(page)
+  await expectTodayAtNow(page)
+  await scrollAwayFromNow(page)
+  await tapHistory(page)
+  await expectTodayAtNow(page)
+  await scrollAwayFromNow(page)
+  await tapHistory(page)
+  await expectTodayAtNow(page)
+})
+
+test("brings today's grid back to now when the History tab is tapped again with a kind hidden", async ({ page }) => {
+  await playTodayAndYesterday(page)
+  await openHistory(page)
+  await expectTodayAtNow(page)
+  await toggleChipWithoutScrolling(page, "Diapers")
+  await expect(diapersHidden(page)).toBeVisible()
+  await scrollAwayFromNow(page)
+  await tapHistory(page)
+  await expect(diapersHidden(page)).toBeHidden()
   await expectTodayAtNow(page)
 })
 
@@ -195,9 +228,23 @@ test("keeps the grid where it is when a chip hides a kind", async ({ page }) => 
   await openHistory(page)
   await expectTodayAtNow(page)
   await toggleChipWithoutScrolling(page, "Diapers")
-  await expect(page.getByText("Diapers hidden", { exact: true })).toBeVisible()
+  await expect(diapersHidden(page)).toBeVisible()
   await afterFrames(page)
   await expect(nowRow(page)).toBeInViewport()
+})
+
+test("keeps the grid where it is when a chip shows a kind again after the History tab", async ({ page }) => {
+  await playTodayAndYesterday(page)
+  await openHistory(page)
+  await tapHistory(page)
+  await expectTodayAtNow(page)
+  await toggleChipWithoutScrolling(page, "Diapers")
+  await expect(diapersHidden(page)).toBeVisible()
+  await scrollAwayFromNow(page)
+  await toggleChipWithoutScrolling(page, "Diapers")
+  await expect(diapersHidden(page)).toBeHidden()
+  await afterFrames(page)
+  await expect(nowRow(page)).not.toBeInViewport()
 })
 
 test("keeps the list where it is when a chip hides a kind", async ({ page }) => {
