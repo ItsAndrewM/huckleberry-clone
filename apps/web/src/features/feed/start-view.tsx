@@ -2,7 +2,8 @@ import type { Side } from "@bt/contracts"
 import { useState } from "react"
 import { Button } from "../../components/ui/button.tsx"
 import { FailureNote } from "../../sheets/failure-note.tsx"
-import { failedFor, useSheets } from "../../sheets/sheets-context.ts"
+import { heldAs } from "../../sheets/retap.ts"
+import { useSheets } from "../../sheets/sheets-context.ts"
 import { tapTime } from "../../sheets/tap-time.ts"
 import { WhenField } from "../../sheets/when-field.tsx"
 import { useNow } from "../../timer/use-now.ts"
@@ -16,7 +17,7 @@ interface StartViewProps {
 
 export const StartView = ({ lastSide, zone }: StartViewProps) => {
   const sheets = useSheets()
-  const [session] = useState(() => startSession(failedFor(sheets, "nursing"), zone))
+  const [session] = useState(() => startSession(heldAs(sheets.held, "startFeed"), zone))
   const [when, setWhen] = useState(session.when)
   const now = useNow()
   const start = (side: Side) => {

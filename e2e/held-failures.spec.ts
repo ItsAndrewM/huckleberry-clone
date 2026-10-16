@@ -264,3 +264,166 @@ test("a pause whose resend meets a change Pause anyway would still save asks bef
   await expect.poll(() => sent.length).toBe(3)
   expect(sent[2]).toMatchObject({ actionId: sent[0]?.actionId, version: 2, occurredAt: FIRST_TAP })
 })
+
+test("a pause that fails beside a start this phone kept shows first, and Pause tapped again saves the first tap's time", async ({
+  page,
+}) => {
+  const { andrew } = await caregiversOf(page)
+  const feed = runningFeed(andrew.id, STARTED, "left")
+  await playHousehold(page, todayWith(feed))
+  const kept = [
+    {
+      sending: {
+        sheet: "nursing",
+        action: {
+          kind: "startFeed",
+          payload: { actionId: "4b1c2a5e-8f3d-4c6b-9a7e-2d1f0e3c5b6a", side: "left", startedAt: STARTED },
+        },
+      },
+      keptAt: STARTED,
+      idSince: STARTED,
+      failed: false,
+    },
+  ]
+  await page.addInitScript((stored) => localStorage.setItem("bt.kept", stored), JSON.stringify(kept))
+  const paused = await loseSaves(page, "**/api/feeds/feed-1/pause", {
+    lost: 1,
+    until: Promise.resolve(),
+    answer: () => ({ feed: { ...feed, version: 2 }, changed: [["today"]] }),
+  })
+  await openToday(page)
+  const sheet = page.getByRole("dialog", { name: "Nursing" })
+  await expect(sheet.getByRole("alert")).toContainText("might not have been saved")
+  await expect(sheet.getByRole("button", { name: "Pause", exact: true })).toBeEnabled()
+  await page.clock.setFixedTime(FIRST_TAP)
+  await sheet.getByRole("button", { name: "Pause", exact: true }).click()
+  await expect(sheet.getByRole("alert")).toContainText("No connection")
+  await page.clock.setFixedTime(FIRST_TAP + 3 * MINUTE)
+  await sheet.getByRole("button", { name: "Pause", exact: true }).click()
+  await expect.poll(() => paused.length).toBe(2)
+  expect(paused[1]?.actionId).toBe(paused[0]?.actionId)
+  expect(paused[1]?.occurredAt).toBe(FIRST_TAP)
+})
+
+test("a pause that met the other phone's change, tapped again, saves the first tap's time as Pause anyway would", async ({
+  page,
+}) => {
+  const { andrew, emily } = await caregiversOf(page)
+  const feed = runningFeed(andrew.id, STARTED, "left")
+  await playHousehold(page, todayWith(feed))
+  const theirs = { ...feed, version: 2, updatedBy: emily.id }
+  const sent: Array<{ readonly actionId?: string; readonly version?: number; readonly occurredAt?: number }> = []
+  await page.route("**/api/feeds/feed-1/pause", async (route) => {
+    sent.push(route.request().postDataJSON())
+    if (sent.length === 1) {
+      return route.fulfill({ status: 409, json: { _tag: "Conflict", code: "STALE_VERSION", current: theirs } })
+    }
+    return route.fulfill({ status: 200, json: { feed: { ...theirs, version: 3 }, changed: [["today"]] } })
+  })
+  await openToday(page)
+  await page.clock.setFixedTime(FIRST_TAP)
+  const sheet = await openSheet(page, "Nursing")
+  await sheet.getByRole("button", { name: "Pause", exact: true }).click()
+  await expect(sheet.getByRole("alert")).toContainText(`${emily.displayName} changed this feed a moment ago.`)
+  await page.clock.setFixedTime(FIRST_TAP + 3 * MINUTE)
+  await sheet.getByRole("button", { name: "Pause", exact: true }).click()
+  await expect.poll(() => sent.length).toBe(2)
+  expect(sent[1]).toMatchObject({ actionId: sent[0]?.actionId, version: 2, occurredAt: FIRST_TAP })
+})
+
+test("a pause after a failed start change goes out at once, and the change stays with its note", async ({ page }) => {
+  const { andrew } = await caregiversOf(page)
+  const feed = runningFeed(andrew.id, STARTED, "left")
+  const { played, answer } = await playHousehold(page, todayWith(feed))
+  await page.route("**/api/segments/segment-1", (route) => route.abort("internetdisconnected"))
+  await answer("**/api/feeds/feed-1/pause", () => ({
+    status: 200,
+    json: { feed: { ...feed, version: 2 }, changed: [["today"]] },
+  }))
+  await openToday(page)
+  await page.clock.setFixedTime(FIRST_TAP)
+  const sheet = await openSheet(page, "Nursing")
+  await sheet.getByRole("button", { name: "Change" }).click()
+  await sheet.getByLabel("Started").fill("2026-10-09T08:45")
+  await sheet.getByRole("button", { name: "Save start" }).click()
+  await expect(sheet.getByRole("alert")).toContainText("No connection")
+  await sheet.getByRole("button", { name: "Pause", exact: true }).click()
+  await expect.poll(() => played.sent.length).toBe(1)
+  expect(played.sent[0]?.body).toMatchObject({ occurredAt: FIRST_TAP })
+  await expect(sheet.getByRole("alert")).toContainText("No connection")
+  await page.keyboard.press("Escape")
+  await expect(sheet.getByRole("alert")).toHaveText(/^Discard your changes\?DiscardKeep$/u)
+})
+
+const pauseAndFinishLost = async (page: Page) => {
+  const { andrew } = await caregiversOf(page)
+  const feed = runningFeed(andrew.id, STARTED, "left")
+  const { played, answer } = await playHousehold(page, todayWith(feed))
+  await answer("**/api/diapers", ({ body }) => ({ status: 201, json: savedDiaper(andrew.id)(body) }))
+  await answer("**/api/segments/segment-1", () => ({
+    status: 200,
+    json: { feed: { ...feed, version: 2 }, changed: [["today"]] },
+  }))
+  const pauseLost = gate()
+  const finishLost = gate()
+  const paused: unknown[] = []
+  await page.route("**/api/feeds/feed-1/pause", async (route) => {
+    paused.push(route.request().postDataJSON())
+    if (paused.length > 1) {
+      return route.fulfill({ status: 200, json: { feed: { ...feed, version: 2 }, changed: [["today"]] } })
+    }
+    await pauseLost.opened
+    return route.abort("internetdisconnected")
+  })
+  await page.route("**/api/feeds/feed-1/finish", async (route) => {
+    await finishLost.opened
+    return route.abort("internetdisconnected")
+  })
+  await openToday(page)
+  await page.clock.setFixedTime(FIRST_TAP)
+  const sheet = await openSheet(page, "Nursing")
+  await sheet.getByRole("button", { name: "Pause", exact: true }).click()
+  await expect.poll(() => paused.length).toBe(1)
+  await page.keyboard.press("Escape")
+  await expect(sheet).toBeHidden()
+  const diaper = await openSheet(page, "Diaper")
+  await diaper.getByRole("button", { name: "Pee" }).click()
+  await expect(diaper).toBeHidden()
+  await expect.poll(() => played.sent.length).toBe(1)
+  await page.clock.setFixedTime(FIRST_TAP + MINUTE)
+  await openSheet(page, "Nursing")
+  await sheet.getByRole("button", { name: "Finish", exact: true }).click()
+  await sheet.getByRole("button", { name: "Finish feed" }).click()
+  await expect(sheet).toBeHidden()
+  pauseLost.open()
+  await expect(sheet.getByRole("alert")).toContainText("No connection")
+  finishLost.open()
+  await expect(sheet.getByRole("button", { name: "Pause", exact: true })).toBeEnabled()
+  return { sheet, played, paused }
+}
+
+test("a pause and a finish that both failed on their way: Try again on the pause keeps the finish, which closing then asks about", async ({
+  page,
+}) => {
+  const { sheet, paused } = await pauseAndFinishLost(page)
+  await sheet.getByRole("button", { name: "Try again" }).click()
+  await expect.poll(() => paused.length).toBe(2)
+  await expect(sheet.getByRole("alert")).toContainText("No connection")
+  await page.keyboard.press("Escape")
+  await expect(sheet.getByRole("alert")).toHaveText(/^Discard the finish at 9:31\sAM\?DiscardKeep$/u)
+})
+
+test("discarding a failed pause before a start change asks about the finish held behind it before the change goes out", async ({
+  page,
+}) => {
+  const { sheet, played } = await pauseAndFinishLost(page)
+  await sheet.getByRole("button", { name: "Change" }).click()
+  await sheet.getByLabel("Started").fill("2026-10-09T08:45")
+  await sheet.getByRole("button", { name: "Save start" }).click()
+  await expect(sheet.getByRole("alert")).toHaveText(/^Discard the pause at 9:30\sAM\?DiscardKeep$/u)
+  await sheet.getByRole("button", { name: "Discard" }).click()
+  await expect(sheet.getByRole("alert")).toHaveText(/^Discard the finish at 9:31\sAM\?DiscardKeep$/u)
+  expect(played.sent.filter(({ path }) => path === "/api/segments/segment-1")).toHaveLength(0)
+  await sheet.getByRole("button", { name: "Discard" }).click()
+  await expect.poll(() => played.sent.filter(({ path }) => path === "/api/segments/segment-1").length).toBe(1)
+})

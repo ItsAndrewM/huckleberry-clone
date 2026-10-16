@@ -804,16 +804,21 @@ describe("one failed control per sheet", () => {
       failed: { sending: PAUSE, error: new FeedConflict({ code: "STALE_VERSION", current: running }) },
       fresh: START_CHANGED,
     },
-    {
-      label: "a failed start change, before the feed is switched",
-      failed: { sending: START_CHANGED, error: new Offline() },
-      fresh: SWITCHED_AFTER,
-    },
   ])("asks first when another send would leave a second failure: $label", ({ failed, fresh }) => {
     expect(blockerFor(holding(failed), fresh)).toBe(failed)
   })
 
   it.each([
+    {
+      label: "a tap, which never waits on a failed edit: Switch after a failed start change",
+      failed: { sending: START_CHANGED, error: new Offline() },
+      fresh: SWITCHED_AFTER,
+    },
+    {
+      label: "a tap, which never waits on a failed edit: Wake up after a failed Nap or night",
+      failed: { sending: NIGHT, error: new Offline() },
+      fresh: WOKE,
+    },
     { label: "a send that replaces it, Switch after a pause", failed: paused, fresh: SWITCHED_AFTER },
     { label: "its own resend", failed: paused, fresh: PAUSE },
     { label: "a send from another sheet", failed: paused, fresh: ANOTHER_BOTTLE },
@@ -864,5 +869,52 @@ describe("one failed control per sheet", () => {
     const both = failedState(holding(edited), paused, NOW)
     expect(both.held).toEqual([paused, edited])
     expect(heldFor(both.held, "nursing")).toBe(paused)
+  })
+
+  const STARTED_BEFORE: Sending = {
+    sheet: "nursing",
+    action: { kind: "startFeed", payload: { actionId: RENEWED, side: "left", startedAt: NOW - 600_000 } },
+  }
+  const FINISHED_AFTER: Sending = {
+    sheet: "nursing",
+    action: {
+      kind: "finishFeed",
+      id: "feed-1",
+      payload: { actionId: "7c6b5a4d-3e2f-4a1b-8c9d-0e1f2a3b4c5d", version: 3, occurredAt: NOW, deleteIfEmpty: false },
+    },
+  }
+  const finished = { sending: FINISHED_AFTER, error: new Offline() }
+
+  it("puts a failed control ahead of a held entry on its sheet, so its note shows first", () => {
+    const restored = { sending: STARTED_BEFORE, error: new Offline() }
+    const both = failedState(holding(restored), paused, NOW)
+    expect(both.held).toEqual([paused, restored])
+    expect(heldFor(both.held, "nursing")).toBe(paused)
+  })
+
+  it("keeps another held control when one is sent again, since a resend is no new tap", () => {
+    const both = failedState(holding(paused), finished, NOW)
+    expect(sendingState(both, PAUSE, false).held).toEqual([finished])
+  })
+
+  it("keeps the question about a held change when a failure lands in its own sheet meanwhile", () => {
+    const asking = askedBeforeSending(holding(paused), START_CHANGED, paused)
+    expect(failedState(asking, finished, NOW)).toMatchObject({
+      open: "nursing",
+      asking: true,
+      pending: { sending: START_CHANGED, blocker: paused },
+      held: [paused, finished],
+    })
+  })
+
+  it("asks about the next earlier failure on Discard before the held change goes out", () => {
+    const both = failedState(holding(paused), finished, NOW)
+    const asking = askedBeforeSending(both, START_CHANGED, paused)
+    expect(discardedState(asking, paused)).toMatchObject({
+      open: "nursing",
+      asking: true,
+      pending: { sending: START_CHANGED, blocker: finished },
+      held: [finished],
+    })
   })
 })

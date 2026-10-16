@@ -3,6 +3,7 @@ import { useState } from "react"
 import { Button } from "../../components/ui/button.tsx"
 import { DiscardPrompt } from "../../sheets/discard-prompt.tsx"
 import { FailureNote } from "../../sheets/failure-note.tsx"
+import { heldAs } from "../../sheets/retap.ts"
 import { failedFor, useSheets } from "../../sheets/sheets-context.ts"
 import { tapTime } from "../../sheets/tap-time.ts"
 import { WhenField } from "../../sheets/when-field.tsx"
@@ -20,7 +21,7 @@ interface FinishViewProps {
 export const FinishView = ({ feed, segment, zone, onBack }: FinishViewProps) => {
   const sheets = useSheets()
   const failed = failedFor(sheets, "nursing")
-  const [session] = useState(() => stopSession(failed, feed.id, zone))
+  const [session] = useState(() => stopSession(heldAs(sheets.held, "finishFeed", feed.id), feed.id, zone))
   const [when, setWhen] = useState(session.when)
   const [askingBack, setAskingBack] = useState(false)
   const now = useNow()

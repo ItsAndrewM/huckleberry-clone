@@ -77,8 +77,9 @@ export const SheetsProvider = ({ restored, children }: SheetsProviderProps) => {
     discard: (failed) => {
       kept.done(failed.sending)
       const waiting = state.pending
+      const asksNext = discardedState(state, failed).pending !== null
       setState((current) => discardedState(current, failed))
-      if (waiting !== null) deliver(waiting.sending)
+      if (waiting !== null && !asksNext) deliver(waiting.sending)
     },
     send,
     announce: (toast) => {

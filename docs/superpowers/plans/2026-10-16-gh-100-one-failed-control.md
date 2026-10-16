@@ -1044,3 +1044,38 @@ None block the build. P1–P7 are the plan's own calls, for veto. Three go beyon
 - **P2:** any send that would leave a second failure asks, not only an edit.
 - **P5:** two sends already in flight are ordered rather than asked about.
 - **P6:** a feed's delete asks first about a failed start change.
+
+## Post-review notes
+
+- **Execution:** native, as Andrew chose ("Approved: PR + CodeRabbit", 16 Oct 2026). Each task's files came from the replay, tests first and watched failing, byte-identical to `scratch/gh-100-v2-replay`: Task 1 `e36d3a0`, Task 2 `89e384a`, Task 3 `56d6b1f`.
+- **The final review (Opus, the whole branch, probed through the provider):** "No, with fixes". No Critical, five Important and four Minor. Sends made one at a time were safe and pinned. Five paths still lost a tap.
+  - **A:** a control that fails beside a held entry (a start kept through a restart, or one refused while the other phone's feed ran) sat second. Its note never showed, and its own button seeded from the first failure, so the next tap was fresh and dropped it. No race needed.
+  - **B:** two steps already on their way both fail. Try again on the first replaced the second, and Finish re-seeded from the pause.
+  - **C:** a failure landing on its own sheet while the question was up reopened the sheet. That cleared the question and the held change without a word.
+  - **D:** on the Nursing sheet, Pause, Switch or Resume tapped again on a held "… anyway" conflict sent a fresh tap, which replaced it without asking. Wake up and Finish feed already resent the first tap's time.
+  - **E:** after a failed edit, a tap asked "Discard your changes?", and Keep dropped the tap, so its time was lost.
+- **Andrew's calls on D and E (16 Oct 2026):**
+  - **E: a tap goes out at once.** Pause, Switch, Resume, Finish, Wake up and Start never wait on a failed edit. The edit stays held behind the tap, and if the tap fails too it comes first. Edits and deletes still ask. This replaces P2 for taps.
+  - **D: the same button tapped again does what "… anyway" does.** It sends the first tap's time with the feed's current version. This amends #75's P4.
+- **The fixes, test first:**
+  - **A:** the sheet's own buttons pick up their own held failure wherever it sits: `retapped` and `heldAs` move to `retap.ts`, and the views seed from them. A failed step now goes ahead of a held entry (`rankOf`).
+  - **B:** a resend replaces no other held failure.
+  - **C:** the question about a held change survives a failure landing on its own sheet. Discard then asks about the next earlier failure before the change goes out.
+  - **D:** `retapped` sends the redo's sending when "… anyway" would save the held tap.
+  - **E:** `blockerFor` lets taps through.
+  - **Pinned by:**
+    - `retap.test.ts`, which moved with the code and gained rows for A and D, plus `heldAs`
+    - five reducer rows: E, ordering, B and the two for C
+    - five E2E flows in both engines, all seen failing first: 10 of 28 runs
+- **Rulings:**
+  - **Start Nursing and Start sleep seed from `heldAs` too.** That's A's rule, for a start held behind a step after the other phone ends the record. The lookup is pinned by unit tests; the views aren't.
+  - **A delete tapped again on a conflict still goes out fresh, with the current version.** That has the same effect as "Delete anyway", since a delete has no time.
+  - **An own button's resend replaces nothing either.** So Finish feed resending a held finish leaves a held pause, which then meets the finished feed as a conflict nothing would save.
+- **Deferred minors:**
+  - **A discarded wake comes back.** After its Discard (Nap or night held behind it), the next Wake up in the same opening still sends its time, though the Woke field shows that time.
+  - **The tie test is narrow.** `saveable.test.ts` covers 12 kinds; the reviewer's 220-row probe found no disagreement.
+  - **The provider reads render-time state** in `send` and `discard`. It's safe for every caller, as probed.
+- **After the fixes:**
+  - `pnpm test`: 3,979 tests in 235 files.
+  - `held-failures.spec.ts`: 28 passed.
+  - The other sheet specs with `kept-entries.spec.ts`: 148 passed.

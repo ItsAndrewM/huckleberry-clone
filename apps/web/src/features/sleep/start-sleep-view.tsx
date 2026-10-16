@@ -1,7 +1,8 @@
 import { useState } from "react"
 import { Button } from "../../components/ui/button.tsx"
 import { FailureNote } from "../../sheets/failure-note.tsx"
-import { failedFor, useSheets } from "../../sheets/sheets-context.ts"
+import { heldAs } from "../../sheets/retap.ts"
+import { useSheets } from "../../sheets/sheets-context.ts"
 import { tapTime } from "../../sheets/tap-time.ts"
 import { WhenField } from "../../sheets/when-field.tsx"
 import { useNow } from "../../timer/use-now.ts"
@@ -11,7 +12,7 @@ import { startAction } from "./sleep-state.ts"
 
 export const StartSleepView = ({ zone }: { readonly zone: string }) => {
   const sheets = useSheets()
-  const [session] = useState(() => sleepStartSession(failedFor(sheets, "sleep"), zone))
+  const [session] = useState(() => sleepStartSession(heldAs(sheets.held, "startSleep"), zone))
   const [when, setWhen] = useState(session.when)
   const [picked, setPicked] = useState(session.picked)
   const now = useNow()
