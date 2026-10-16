@@ -147,15 +147,19 @@ describe("a wake", () => {
     expect(session.actionId).not.toBe(ACTION_ID)
   })
 
-  it("starts fresh at Now once its held wake is let go, but not while it's held or the sheet still sends", () => {
+  it("starts fresh at Now once its held wake is let go on the Sleep sheet, and never when it started fresh", () => {
     const failed = {
       sending: { sheet: "sleep" as const, action: wakeAction(RUNNING, FIRST_TAP, ACTION_ID) },
       error: new Offline(),
     }
     const session = wakeSession(failed, RUNNING.id, ZONE)
-    expect(wakeLetGo(session, null, false)).toBe(true)
-    expect([wakeLetGo(session, failed, false), wakeLetGo(session, null, true)]).toEqual([false, false])
-    expect(wakeLetGo(NO_WAKE_HELD, null, false)).toBe(false)
+    const shown = { open: "sleep" as const, busy: null }
+    expect(wakeLetGo(session, null, shown)).toBe(true)
+    expect([
+      wakeLetGo(session, failed, shown),
+      wakeLetGo(NO_WAKE_HELD, null, shown),
+      wakeLetGo(session, null, { open: "nursing", busy: null }),
+    ]).toEqual([false, false, false])
   })
 
   it("asks for a time after she fell asleep when the start moved past the held wake", () => {

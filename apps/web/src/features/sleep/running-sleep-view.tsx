@@ -27,7 +27,7 @@ export const RunningSleepView = ({ sleep, zone }: RunningSleepViewProps) => {
   const [session, setSession] = useState(() => wakeSession(held, sleep.id, zone))
   const [woke, setWoke] = useState(session.when)
   const busy = sleepWaits(sheets.busy)
-  if (wakeLetGo(session, held, busy)) {
+  if (wakeLetGo(session, held, sheets)) {
     const fresh = wakeSession(null, sleep.id, zone)
     setSession(fresh)
     setWoke(fresh.when)

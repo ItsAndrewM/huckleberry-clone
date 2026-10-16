@@ -8,7 +8,7 @@ import { failedFor, useSheets } from "../../sheets/sheets-context.ts"
 import { tapTime } from "../../sheets/tap-time.ts"
 import { WhenField } from "../../sheets/when-field.tsx"
 import { useNow } from "../../timer/use-now.ts"
-import { backAsksFirst, emptiedBy, stoppedAtOf, stopSession } from "./nursing-session.ts"
+import { backAsksFirst, emptiedBy, finishLetGo, stoppedAtOf, stopSession } from "./nursing-session.ts"
 import { controlsWait, finishAction } from "./nursing-state.ts"
 
 interface FinishViewProps {
@@ -21,10 +21,16 @@ interface FinishViewProps {
 export const FinishView = ({ feed, segment, zone, onBack }: FinishViewProps) => {
   const sheets = useSheets()
   const failed = failedFor(sheets, "nursing")
-  const [session] = useState(() => stopSession(heldAs(sheets.held, "finishFeed", feed.id), feed.id, zone))
+  const held = heldAs(sheets.held, "finishFeed", feed.id)
+  const [session, setSession] = useState(() => stopSession(held, feed.id, zone))
   const [when, setWhen] = useState(session.when)
   const [askingBack, setAskingBack] = useState(false)
   const now = useNow()
+  if (finishLetGo(session, held, sheets)) {
+    const fresh = stopSession(null, feed.id, zone)
+    setSession(fresh)
+    setWhen(fresh.when)
+  }
   const emptied = emptiedBy(failed)
   if (emptied !== null) {
     const deleteFeed = () => {

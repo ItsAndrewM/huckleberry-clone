@@ -1,5 +1,6 @@
 import { FeedConflict } from "@bt/contracts"
 import { describe, expect, it } from "vitest"
+import { letGo } from "../src/sheets/held.ts"
 import type { Failed, Sending } from "../src/sheets/sending.ts"
 import {
   CLOSED,
@@ -46,6 +47,27 @@ describe("a refused running-feed control", () => {
   it("keeps waiting, and opens its sheet, when another sheet's entry is sent", () => {
     const waiting = failedState(shownState(CLOSED, "bottle"), REFUSED_SWITCH, NOW)
     expect(sendingState(waiting, BOTTLE, true)).toMatchObject({ open: "nursing", held: [REFUSED_SWITCH] })
+  })
+})
+
+describe("a control the sheet let go", () => {
+  const START_CHANGE: Sending = {
+    sheet: "nursing",
+    action: { kind: "editSegment", id: "segment-1", payload: { actionId: "action-start", version: 3, startedAt: NOW } },
+  }
+
+  it("is let go once it's no longer held, while its sheet shows and its own resend isn't on its way", () => {
+    expect(letGo({ open: "nursing", busy: null }, "nursing", null, "action-pause")).toBe(true)
+    expect(letGo({ open: "nursing", busy: START_CHANGE }, "nursing", null, "action-pause")).toBe(true)
+  })
+
+  it("isn't while it's held, while its own resend is on its way, or while its sheet is closed or another shows", () => {
+    expect([
+      letGo({ open: "nursing", busy: null }, "nursing", held(PAUSE), "action-pause"),
+      letGo({ open: "nursing", busy: PAUSE }, "nursing", null, "action-pause"),
+      letGo({ open: null, busy: null }, "nursing", null, "action-pause"),
+      letGo({ open: "sleep", busy: null }, "nursing", null, "action-pause"),
+    ]).toEqual([false, false, false, false])
   })
 })
 

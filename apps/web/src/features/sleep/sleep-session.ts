@@ -1,5 +1,6 @@
 import type { SleepKind } from "@bt/contracts"
 import { sleepKindAt } from "@bt/domain"
+import { letGo, type Showing } from "../../sheets/held.ts"
 import type { Failed } from "../../sheets/sending.ts"
 import { NOW, type Resolved, resolveSent, type When, whenAt } from "../../sheets/when.ts"
 
@@ -42,8 +43,8 @@ export const wakeSession = (failed: Failed | null, sleepId: string, zone: string
   return { actionId, when: whenAt(occurredAt, zone), occurredAt }
 }
 
-export const wakeLetGo = (session: WakeSession, held: Failed | null, sending: boolean) =>
-  session.occurredAt !== null && held === null && !sending
+export const wakeLetGo = (session: WakeSession, held: Failed | null, showing: Showing) =>
+  session.occurredAt !== null && letGo(showing, "sleep", held, session.actionId)
 
 export const wakeAt = (session: WakeSession, woke: When, zone: string, now: number, startedAt: number): Resolved => {
   const resolved =
