@@ -5,6 +5,7 @@ import { clockTime } from "../../clock-time.ts"
 import { Button } from "../../components/ui/button.tsx"
 import { Sheet } from "../../sheets/sheet.tsx"
 import { type TimedSheet, useSheets } from "../../sheets/sheets-context.ts"
+import { useLastOpen } from "../../sheets/use-last-open.ts"
 import { useTodayLoaded } from "../../sheets/use-today-loaded.ts"
 import { KIND_ICONS } from "../today/kind-icons.ts"
 import { supplementChoices } from "./log-at-supplements.ts"
@@ -39,7 +40,7 @@ const SupplementButtons = ({ at, disabled, onChoose }: SupplementButtonsProps) =
       onClick={() => onChoose(id)}
     >
       <DoseIcon aria-hidden="true" />
-      <span className="truncate">{label}</span>
+      <span className="line-clamp-2 break-words whitespace-normal">{label}</span>
     </Button>
   ))
 }
@@ -85,7 +86,8 @@ const LogAtChoices = ({ at }: { readonly at: number | null }) => {
 }
 
 export const LogAtSheet = ({ zone }: { readonly zone: string }) => {
-  const { at } = useSheets()
+  const sheets = useSheets()
+  const at = useLastOpen(sheets.open === "logAt", sheets.at)
   return (
     <Sheet sheet="logAt" title={at === null ? "Log" : `Log at ${clockTime(at, zone)}`}>
       <LogAtChoices at={at} />
