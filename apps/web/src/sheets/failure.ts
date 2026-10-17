@@ -16,7 +16,7 @@ import { AuthRequired, Offline } from "../api/errors.ts"
 import { clockTime } from "../clock-time.ts"
 import { offersRetry } from "./held.ts"
 import { restoredNote } from "./restored-note.ts"
-import { editsARecord, type SheetKind } from "./sending.ts"
+import { editsARecord, type Sending, type SheetKind } from "./sending.ts"
 
 export interface Note {
   readonly message: string
@@ -120,14 +120,14 @@ const doseNote = ({ code, current }: DoseConflict, household: Household): Note =
   return note(`${nameOf(household, current.updatedBy)} ${changed} this dose a moment ago.`)
 }
 
-const staleSleepSentence = (current: Sleep, household: Household, action: NoteOptions["action"]) => {
+const staleSleepSentence = (current: Sleep, household: Household, action?: Action["kind"]) => {
   const name = nameOf(household, current.updatedBy)
   if (current.deletedAt !== null) return `${name} deleted this sleep a moment ago.`
   if (action !== "wakeSleep" || current.endedAt === null) return `${name} changed this sleep a moment ago.`
   return `${name} woke her at ${timeOf(household, current.endedAt)}.`
 }
 
-const sleepNote = ({ code, current }: SleepConflict, household: Household, action: NoteOptions["action"]): Note => {
+const sleepNote = ({ code, current }: SleepConflict, household: Household, action?: Action["kind"]): Note => {
   switch (code) {
     case "SLEEP_ALREADY_ACTIVE":
       return note(`${nameOf(household, current.createdBy)} started a sleep at ${timeOf(household, current.startedAt)}.`)
@@ -140,7 +140,7 @@ const sleepNote = ({ code, current }: SleepConflict, household: Household, actio
   }
 }
 
-const conflictNote = (error: Error, household: Household, action: NoteOptions["action"]): Note | null => {
+const conflictNote = (error: Error, household: Household, action?: Action["kind"]): Note | null => {
   if (error instanceof SleepConflict) return sleepNote(error, household, action)
   if (error instanceof FeedConflict) return feedNote(error, household)
   if (error instanceof DiaperConflict) return diaperNote(error, household)
@@ -158,7 +158,7 @@ export type KeptOn = "phone" | "app"
 export interface NoteOptions {
   readonly keptOn: KeptOn
   readonly sheet?: SheetKind
-  readonly action?: Action["kind"]
+  readonly sending?: Sending
 }
 
 const OFFLINE = {
@@ -177,16 +177,16 @@ const goneMessage = (sheet: SheetKind | undefined) => {
 
 const goneNote = (sheet: SheetKind | undefined): Note => note(goneMessage(sheet))
 
-const noteFor = (error: Error, household: Household, { keptOn, sheet, action }: NoteOptions): Note => {
+const noteFor = (error: Error, household: Household, { keptOn, sheet, sending }: NoteOptions): Note => {
   if (error instanceof Offline) return offlineNote(keptOn)
   if (error instanceof AuthRequired || error instanceof Unauthorized) {
     return { message: "Your sign-in has expired. Sign in, and this will be saved.", retry: null, signIn: true }
   }
-  const restored = restoredNote(error, household)
+  const restored = restoredNote(error, household, sending)
   if (restored !== null) return restored
   if (error instanceof InvalidInput) return fieldNote(error, household, sheet)
   if (error instanceof NotFound) return goneNote(sheet)
-  return conflictNote(error, household, action) ?? note("Not saved.")
+  return conflictNote(error, household, sending?.action.kind) ?? note("Not saved.")
 }
 
 export const failureNote = (error: Error, household: Household, options: NoteOptions): Note => {

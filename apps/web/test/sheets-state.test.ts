@@ -437,6 +437,13 @@ describe("entries back from a reload", () => {
     expect(restoredState([])).toEqual(CLOSED)
   })
 
+  it("holds them in the order they were held before, a tap ahead of a failed edit on its sheet", () => {
+    const change = { sending: STARTED_EARLIER, error: new Offline() }
+    const pause = { sending: PAUSE, error: new Offline() }
+    const diaper = { sending: DIAPER, error: new Offline() }
+    expect(restoredState([change, diaper, pause]).held).toEqual([pause, change, diaper])
+  })
+
   it("opens the first one's sheet on its own once ready", () => {
     const opened = reopenedState(restoredState(back))
     expect(opened).toMatchObject({ open: "diaper", opened: 1, queued: true })

@@ -1,9 +1,16 @@
 import { Data, Option, Schema } from "effect"
 import { attempt, type BrowserStorage } from "../storage.ts"
 import { actionIdOf, settlesWithoutAsking } from "./held.ts"
-import { type Failed, isEntry, Sending } from "./sending.ts"
+import { stillSaveable } from "./saveable.ts"
+import { type Failed, isEntry, Sending, type SheetKind } from "./sending.ts"
 
 export const KEPT_KEY = "bt.kept"
+
+const CONTROL_SHEETS = new Set<SheetKind>(["nursing", "sleep"])
+
+const isKeptControl = (sending: Sending) => !isEntry(sending) && CONTROL_SHEETS.has(sending.sheet)
+
+export const isKept = (sending: Sending) => isEntry(sending) || isKeptControl(sending)
 
 export const KeptEntry = Schema.Struct({
   sending: Sending,
@@ -30,7 +37,7 @@ export const readKept = (openStorage: () => BrowserStorage): Stored => {
   const stored = attempt(() => openStorage().getItem(KEPT_KEY), null)
   const records = stored === null ? [] : Option.getOrElse(decodeStored(stored), () => [])
   return {
-    entries: records.flatMap((record) => (isKeptEntry(record) && isEntry(record.sending) ? [record] : [])),
+    entries: records.flatMap((record) => (isKeptEntry(record) && isKept(record.sending) ? [record] : [])),
     unreadable: records.filter((record) => !isKeptEntry(record)),
   }
 }
@@ -65,6 +72,52 @@ export const keptAfterSend = (entries: ReadonlyArray<KeptEntry>, sending: Sendin
 export const keptAfterFailure = (entries: ReadonlyArray<KeptEntry>, { sending, error }: Failed, now: number) => {
   if (!isEntry(sending)) return entries
   return settlesWithoutAsking(error) ? keptWithout(entries, actionIdOf(sending)) : upsert(entries, sending, true, now)
+}
+
+interface KeptControl {
+  readonly sending: Sending
+  readonly failed: boolean
+}
+
+const surelyFailed = ({ error }: Failed) => !(error instanceof Unsaved) || error.failed
+
+const controlsToKeep = (
+  entries: ReadonlyArray<KeptEntry>,
+  held: ReadonlyArray<Failed>,
+  onTheirWay: ReadonlyArray<Sending>,
+): ReadonlyArray<KeptControl> => {
+  const asking = held.flatMap((failed) =>
+    isKeptControl(failed.sending) && stillSaveable(failed)
+      ? [{ sending: failed.sending, failed: surelyFailed(failed) }]
+      : [],
+  )
+  const resent = onTheirWay.flatMap((sending) =>
+    isKeptControl(sending) && entries.some((entry) => idOf(entry) === actionIdOf(sending))
+      ? [{ sending, failed: false }]
+      : [],
+  )
+  return [...asking, ...resent]
+}
+
+const withControl = (entries: ReadonlyArray<KeptEntry>, { sending, failed }: KeptControl, now: number) =>
+  entries.some((entry) => entry.sending === sending && entry.failed === failed)
+    ? entries
+    : upsert(entries, sending, failed, now)
+
+const sameRecords = (next: ReadonlyArray<KeptEntry>, entries: ReadonlyArray<KeptEntry>) =>
+  next.length === entries.length && next.every((entry, index) => entry === entries[index])
+
+export const keptWithHeld = (
+  entries: ReadonlyArray<KeptEntry>,
+  held: ReadonlyArray<Failed>,
+  onTheirWay: ReadonlyArray<Sending>,
+  now: number,
+) => {
+  const controls = controlsToKeep(entries, held, onTheirWay)
+  const ids = new Set(controls.map(({ sending }) => actionIdOf(sending)))
+  const still = entries.filter((entry) => isEntry(entry.sending) || ids.has(idOf(entry)))
+  const next = controls.reduce<ReadonlyArray<KeptEntry>>((list, control) => withControl(list, control, now), still)
+  return sameRecords(next, entries) ? entries : next
 }
 
 export class Unsaved extends Data.TaggedError("Unsaved")<{ readonly keptAt: number; readonly failed: boolean }> {}

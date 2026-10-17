@@ -99,7 +99,7 @@ test("a wake that failed offline asks before its sheet lets it go, and Keep leav
   const sheet = await openSheet(page, "Sleep")
   await sheet.getByRole("button", { name: "Wake up", exact: true }).click()
   await expect(sheet.getByRole("alert")).toContainText(
-    "No connection. Keep the app open, and try again once you're back online.",
+    "No connection. This is kept on this phone: try again once you're back online.",
   )
   await page.keyboard.press("Escape")
   await expect(sheet.getByRole("alert")).toHaveText(/^Discard the wake-up at 9:30\sAM\?DiscardKeep$/u)

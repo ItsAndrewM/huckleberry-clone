@@ -59,7 +59,7 @@ export const FailureNote = ({ sheet }: { readonly sheet: SheetKind }) => {
   const { message, retry, signIn, about } = failureNote(failed.error, household, {
     keptOn,
     sheet,
-    action: failed.sending.action.kind,
+    sending: failed.sending,
   })
   return (
     <div

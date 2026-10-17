@@ -20,6 +20,15 @@ const PAUSE: Sending = {
   action: { kind: "pauseFeed", id: "feed-1", payload: { actionId: "action-pause", version: 2, occurredAt: NOW } },
 }
 
+const EDITED_SLEEP: Sending = {
+  sheet: "editSleep",
+  action: {
+    kind: "editSleep",
+    id: "sleep-1",
+    payload: { actionId: "action-edit", version: 2, kind: "nap", startedAt: NOW - HOUR, endedAt: NOW },
+  },
+}
+
 describe("entries back from a reload", () => {
   it("asks about each one, keeping the actionId of one kept under 12 hours", () => {
     expect(restored(null, stored(failedDiaper, sendingBottle), NOW, newId)).toEqual({
@@ -80,13 +89,13 @@ describe("entries back from a reload", () => {
     })
   })
 
-  it("asks about a stale draft of a control, but never keeps it", () => {
+  it("asks about a stale draft of a control, keeping one from Nursing or Sleep but not one from an Edit sheet", () => {
     const draft = { route: "/", sending: PAUSE, createdAt: NOW - DRAFT_RETRY_MS }
+    const sending = renewed(PAUSE, RENEWED)
     const back = restored(draft, stored(), NOW, newId)
-    expect(back.held).toEqual([
-      { sending: renewed(PAUSE, RENEWED), error: new StaleDraft({ createdAt: draft.createdAt }) },
-    ])
-    expect(back.kept).toEqual([])
+    expect(back.held).toEqual([{ sending, error: new StaleDraft({ createdAt: draft.createdAt }) }])
+    expect(back.kept).toEqual([{ sending, keptAt: draft.createdAt, idSince: NOW, failed: true }])
+    expect(restored({ ...draft, sending: EDITED_SLEEP }, stored(), NOW, newId).kept).toEqual([])
   })
 
   it("passes on what it couldn't read, to be written back after its own", () => {
