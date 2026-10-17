@@ -20,7 +20,7 @@ const playDays = async (page: Page) => {
 
 const chart = (page: Page, name: string) => page.getByRole("region", { name })
 const days = (page: Page) => page.getByRole("navigation", { name: "days" })
-const pickedDay = (page: Page) => page.getByRole("main").getByRole("status")
+const pickedDay = (page: Page) => page.getByRole("main").getByRole("status").first()
 const historyLink = (page: Page) => page.getByRole("link", { name: "Open in History" })
 
 const spareWidth = (link: Locator) =>

@@ -1,5 +1,6 @@
 import { Button } from "../../components/ui/button.tsx"
 import type { Household } from "../../sheets/failure.ts"
+import { focusHomeOnLeave } from "../../shell/focus-hand-off.ts"
 import { Parts } from "../today/parts.tsx"
 import { DELETED_ICONS } from "./deleted-icons.ts"
 import type { DeletedRow } from "./deleted-rows.ts"
@@ -37,9 +38,11 @@ export const DeletedItem = ({ row, household, reasonId }: DeletedItemProps) => {
           </p>
         </div>
         <Button
+          ref={focusHomeOnLeave}
           variant="secondary"
           size="lg"
           disabled={reasonId !== undefined || restoring.busy}
+          focusableWhenDisabled
           aria-label={`${label} ${row.title}, ${row.when}`}
           aria-describedby={reasonId}
           onClick={restoring.restore}

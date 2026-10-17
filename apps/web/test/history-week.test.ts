@@ -180,28 +180,30 @@ describe("weekModel", () => {
 
 describe("columnName", () => {
   it("names a day by its date and what was logged, or that nothing was", () => {
-    expect(columnName(columnOn(DATE), "ml", CONTEXT.hidden, LOCALE)).toBe(
-      "Fri, Oct 9: 4 feeds started, 58 min nursing, 150 mL in bottles; 3 diapers, 2 pee; a measurement",
+    expect(columnName(columnOn(DATE), "ml", CONTEXT.hidden, DATE, LOCALE)).toBe(
+      "Fri, Oct 9, today: 4 feeds started, 58 min nursing, 150 mL in bottles; 3 diapers, 2 pee; a measurement",
     )
-    expect(columnName(columnOn(THURSDAY), "ml", CONTEXT.hidden, LOCALE)).toBe("Thu, Oct 8: nothing logged")
+    expect(columnName(columnOn(THURSDAY), "ml", CONTEXT.hidden, DATE, LOCALE)).toBe("Thu, Oct 8: nothing logged")
   })
 
   it("leaves what's hidden out of a day's name", () => {
     const hidden = hiddenIn("feeds,growth")
-    expect(columnName(columnOn(DATE, { ...CONTEXT, hidden }), "ml", hidden, LOCALE)).toBe(
-      "Fri, Oct 9: 3 diapers, 2 pee",
+    expect(columnName(columnOn(DATE, { ...CONTEXT, hidden }), "ml", hidden, DATE, LOCALE)).toBe(
+      "Fri, Oct 9, today: 3 diapers, 2 pee",
     )
   })
 
   it("says nothing is shown when a day's entries are all hidden, and nothing logged only when nothing was", () => {
     const all = hiddenIn("feeds,diapers,growth")
-    expect(columnName(columnOn(DATE, { ...CONTEXT, hidden: all }), "ml", all, LOCALE)).toBe("Fri, Oct 9: nothing shown")
-    expect(columnName(columnOn(THURSDAY, { ...CONTEXT, hidden: all }), "ml", all, LOCALE)).toBe(
+    expect(columnName(columnOn(DATE, { ...CONTEXT, hidden: all }), "ml", all, DATE, LOCALE)).toBe(
+      "Fri, Oct 9, today: nothing shown",
+    )
+    expect(columnName(columnOn(THURSDAY, { ...CONTEXT, hidden: all }), "ml", all, DATE, LOCALE)).toBe(
       "Thu, Oct 8: nothing logged",
     )
     const growth = hiddenIn("growth")
     const weighed = weekWith({ measurements: [{ ...WEIGHED, measuredAt: local("08:00", THURSDAY) }] })
-    expect(columnName(columnOn(THURSDAY, { ...CONTEXT, hidden: growth }, weighed), "ml", growth, LOCALE)).toBe(
+    expect(columnName(columnOn(THURSDAY, { ...CONTEXT, hidden: growth }, weighed), "ml", growth, DATE, LOCALE)).toBe(
       "Thu, Oct 8: nothing shown",
     )
   })
@@ -242,9 +244,9 @@ describe("a week's sleeps", () => {
     }
     expect(shownTotals(totals, hiddenIn("sleep"))).toEqual(NO_TOTALS)
     const column = { ...columnOn(DATE, CONTEXT, week), totals }
-    expect(columnName(column, "ml", hiddenIn(undefined), LOCALE)).toBe(
-      "Fri, Oct 9: 7 h 10 min asleep, 50 min naps, 6 h 20 min night; a measurement",
+    expect(columnName(column, "ml", hiddenIn(undefined), DATE, LOCALE)).toBe(
+      "Fri, Oct 9, today: 7 h 10 min asleep, 50 min naps, 6 h 20 min night; a measurement",
     )
-    expect(columnName(column, "ml", hiddenIn("sleep"), LOCALE)).toBe("Fri, Oct 9: a measurement")
+    expect(columnName(column, "ml", hiddenIn("sleep"), DATE, LOCALE)).toBe("Fri, Oct 9, today: a measurement")
   })
 })

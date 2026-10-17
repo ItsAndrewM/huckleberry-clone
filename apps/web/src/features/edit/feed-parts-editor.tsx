@@ -1,11 +1,18 @@
 import { PlusIcon } from "lucide-react"
 import { Button } from "../../components/ui/button.tsx"
 import { BottleEditor } from "./bottle-editor.tsx"
+import { linksTo } from "./feed-faults.ts"
 import { SideEditor } from "./side-editor.tsx"
 import type { FeedEditor } from "./use-feed-editor.ts"
 
-export const FeedPartsEditor = ({ editor }: { readonly editor: FeedEditor }) => {
+interface FeedPartsEditorProps {
+  readonly editor: FeedEditor
+  readonly issueId: string
+}
+
+export const FeedPartsEditor = ({ editor, issueId }: FeedPartsEditorProps) => {
   const { draft, zone, now, unit } = editor
+  const linksOf = (key: string) => linksTo(issueId, editor.faults.get(key) ?? [])
   return (
     <>
       {draft.sides.map(({ key, fields }, index) => (
@@ -13,6 +20,7 @@ export const FeedPartsEditor = ({ editor }: { readonly editor: FeedEditor }) => 
           key={key}
           name={`Side ${index + 1}`}
           fields={fields}
+          links={linksOf(key)}
           zone={zone}
           now={now}
           onChange={(changed) => editor.setSide(key, changed)}
@@ -24,6 +32,7 @@ export const FeedPartsEditor = ({ editor }: { readonly editor: FeedEditor }) => 
           key={key}
           name={`Bottle ${index + 1}`}
           fields={fields}
+          links={linksOf(key)}
           unit={unit}
           zone={zone}
           now={now}

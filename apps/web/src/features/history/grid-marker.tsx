@@ -17,7 +17,7 @@ export const GridMarker = ({ top, Icon, text, name, onOpen }: GridMarkerProps) =
     aria-label={name}
     onClick={onOpen}
     className={cn(
-      "pointer-events-auto absolute inset-x-0 flex items-center gap-1 rounded-full bg-secondary px-2 outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
+      "pointer-events-auto absolute inset-x-0 flex items-center gap-1 rounded-full bg-secondary px-2 outline-none focus-visible:ring-3 focus-visible:ring-ring",
       "text-[0.6875rem] font-medium text-secondary-foreground tabular-nums",
       atStep(top),
       stepsTall(SCALE.pointSteps),

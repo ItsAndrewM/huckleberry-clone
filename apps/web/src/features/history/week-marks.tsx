@@ -43,7 +43,7 @@ const Stripe = ({ block }: { readonly block: PlacedBlock<Side> }) => (
   <span
     data-kind="sleep"
     className={cn(
-      "absolute inset-x-0 rounded-[2px] bg-muted-foreground/45",
+      "absolute inset-x-0 rounded-[2px] bg-muted-foreground/70",
       atStep(block.top),
       stepsTall(block.height),
       block.startsBefore && "rounded-t-none",

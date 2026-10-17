@@ -83,6 +83,18 @@ export const dose = (id: string, supplementId: string, at: number, by: string) =
   deletedAt: null,
 })
 
+export const supplement = (id: string, name: string, dose: string, stoppedAt: number | null = null) => ({
+  id,
+  name,
+  dose,
+  stoppedAt,
+  version: 1,
+  createdBy: null,
+  createdAt: NOW,
+  updatedBy: null,
+  updatedAt: NOW,
+})
+
 export const NO_TOTALS = {
   feedsStarted: 0,
   leftSeconds: 0,

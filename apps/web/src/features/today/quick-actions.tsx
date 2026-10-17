@@ -18,7 +18,10 @@ export const QuickActions = () => {
   const ready = useTodayLoaded()
   const waitsId = useId()
   return (
-    <div className="fixed inset-x-0 bottom-[calc(3.5rem+env(safe-area-inset-bottom))] border-t bg-background/95 backdrop-blur-sm">
+    <div
+      data-quick-actions
+      className="fixed inset-x-0 bottom-[calc(3.5rem+env(safe-area-inset-bottom))] border-t bg-background/95 backdrop-blur-sm"
+    >
       <section aria-label="Log" className="mx-auto flex max-w-lg flex-col gap-1.5 px-4 py-2">
         {ready ? null : (
           <p id={waitsId} className="text-center text-sm text-muted-foreground">

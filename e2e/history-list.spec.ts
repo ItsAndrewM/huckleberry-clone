@@ -201,7 +201,7 @@ test("logs on an earlier day at the same clock time", async ({ page }) => {
     .getByRole("dialog", { name: /^Log\b/u })
     .getByRole("button", { name: "Bottle" })
     .click()
-  await expect(page.getByRole("dialog", { name: "Bottle" }).getByLabel("When")).toHaveCount(0)
+  await expect(page.getByRole("dialog", { name: "Bottle" }).getByLabel("When", { exact: true })).toHaveCount(0)
 })
 
 test("logs a supplement's dose at the same clock time on an earlier day, and at now on today", async ({ page }) => {
@@ -220,7 +220,7 @@ test("logs a supplement's dose at the same clock time on an earlier day, and at 
     .click()
   const sheet = page.getByRole("dialog", { name: "Vitamin D" })
   await expect(sheet.getByText("Now", { exact: true })).toBeVisible()
-  await expect(sheet.getByLabel("When")).toHaveCount(0)
+  await expect(sheet.getByLabel("When", { exact: true })).toHaveCount(0)
 })
 
 test("offers a supplement stopped since on an earlier day's menu, as it was in use then, but not at now on today", async ({
@@ -253,7 +253,7 @@ test("logs on today as Today's buttons do: a diaper now, and a past feed from ha
     .click()
   const diaper = page.getByRole("dialog", { name: "Diaper" })
   await expect(diaper.getByText("Now", { exact: true })).toBeVisible()
-  await expect(diaper.getByLabel("When")).toHaveCount(0)
+  await expect(diaper.getByLabel("When", { exact: true })).toHaveCount(0)
   await page.keyboard.press("Escape")
   await expect(diaper).toBeHidden()
   await theList(page).getByRole("button", { name: "Log on this day…" }).click()

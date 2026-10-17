@@ -34,6 +34,7 @@ export interface MeasurementCard {
   readonly id: string
   readonly measuredOn: string
   readonly age: string
+  readonly ageWords: string
   readonly cells: ReadonlyArray<CardCell>
   readonly saving: boolean
 }
@@ -45,10 +46,10 @@ export const measurementCards = (
   locale?: string,
 ): ReadonlyArray<MeasurementCard> =>
   measurements.map((measurement) => {
-    const { measuredOn, age } = datedOf(measurement, me, locale)
+    const { measuredOn, age, ageWords } = datedOf(measurement, me, locale)
     const cells = GROWTH_METRICS.map((info) => {
       const row = growthRowOf(measurement, info, me, locale)
       return { info, value: row?.value ?? null, percentile: row?.percentile ?? null }
     })
-    return { id: measurement.id, measuredOn, age, cells, saving: isSaving(measurement.id) }
+    return { id: measurement.id, measuredOn, age, ageWords, cells, saving: isSaving(measurement.id) }
   })

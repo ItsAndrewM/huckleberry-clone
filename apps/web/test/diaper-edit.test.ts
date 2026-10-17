@@ -116,7 +116,7 @@ describe("a save the other phone got to first", () => {
     const found = staleOf(stale)
     expect(found).toEqual({ current: { kind: "diaper", diaper: theirs }, deleting: false })
     expect(found === null ? "" : spaced(staleMessage(DISPLAY, found, NOW))).toBe(
-      "Emily changed this a moment ago. It now reads: Diaper at 2:10 AM: Pee and poo.",
+      "Emily changed this a moment ago. It now reads: Diaper at 2:10 AM: Both, pee and poo.",
     )
   })
 

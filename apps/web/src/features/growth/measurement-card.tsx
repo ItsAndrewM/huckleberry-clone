@@ -37,7 +37,7 @@ interface MeasurementCardViewProps {
 export const MeasurementCardView = ({ card, onEdit }: MeasurementCardViewProps) => (
   <li className="relative flex flex-col gap-3 rounded-xl border bg-card p-4">
     <div className="flex min-h-11 items-center justify-between gap-3">
-      <h3 className="text-sm font-medium">
+      <h3 aria-label={`${card.measuredOn}, ${card.ageWords}`} className="text-sm font-medium">
         {card.measuredOn} · {card.age}
       </h3>
       {card.saving ? (

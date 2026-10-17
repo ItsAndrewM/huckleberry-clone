@@ -14,6 +14,7 @@ import { markersOf } from "../src/features/history/grid-markers.ts"
 import {
   BOTH,
   BOTTLE,
+  DATE,
   DISPLAY,
   dayWith,
   local,
@@ -86,7 +87,9 @@ describe("a marker's label", () => {
 
 describe("what a screen reader hears for an entry", () => {
   it("names its kind, time and details", () => {
-    expect(entryName({ kind: "diaper", diaper: BOTH }, DISPLAY, NOW_ON_DAY)).toBe("Diaper at 5:30 AM: Pee and poo")
+    expect(entryName({ kind: "diaper", diaper: BOTH }, DISPLAY, NOW_ON_DAY)).toBe(
+      "Diaper at 5:30 AM: Both, pee and poo",
+    )
     expect(entryName({ kind: "feed", feed: PAUSED }, DISPLAY, NOW_ON_DAY)).toBe(
       "Nursing and bottle at 3:00 AM: Left 10 min, Right 10 min, 60 mL",
     )
@@ -134,7 +137,11 @@ describe("what a screen reader hears for an entry", () => {
   })
 
   it("counts the entries gathered in one marker, from the first one's time", () => {
-    expect(clusterName(2, PEE.occurredAt, DISPLAY)).toBe("2 entries from 2:10 AM")
+    expect(clusterName(2, PEE.occurredAt, DISPLAY, DATE)).toBe("2 entries from 2:10 AM")
+  })
+
+  it("says the weekday of a marker whose first entry began before the day shown", () => {
+    expect(clusterName(2, local("23:30", "2026-10-08"), DISPLAY, DATE)).toBe("2 entries from Thu 11:30 PM")
   })
 })
 

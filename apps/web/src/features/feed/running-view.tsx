@@ -33,18 +33,31 @@ export const RunningView = ({ feed, segment, zone, onFinish }: RunningViewProps)
         size="lg"
         className="h-14 text-lg"
         disabled={busy}
+        focusableWhenDisabled
         onClick={() => act(switchAction(feed, segment.side, tapTime()))}
       >
         Switch to {SIDE_NAMES[OTHER_SIDE[segment.side]]}
       </Button>
       <div className="grid grid-cols-3 gap-2">
-        <Button variant="secondary" size="lg" disabled={busy} onClick={() => act(pauseAction(feed, tapTime()))}>
+        <Button
+          variant="secondary"
+          size="lg"
+          disabled={busy}
+          focusableWhenDisabled
+          onClick={() => act(pauseAction(feed, tapTime()))}
+        >
           Pause
         </Button>
-        <Button variant="secondary" size="lg" disabled={busy} onClick={() => sheets.show("bottle")}>
+        <Button
+          variant="secondary"
+          size="lg"
+          disabled={busy}
+          focusableWhenDisabled
+          onClick={() => sheets.show("bottle")}
+        >
           Add bottle
         </Button>
-        <Button variant="secondary" size="lg" disabled={busy} onClick={onFinish}>
+        <Button variant="secondary" size="lg" disabled={busy} focusableWhenDisabled onClick={onFinish}>
           Finish
         </Button>
       </div>

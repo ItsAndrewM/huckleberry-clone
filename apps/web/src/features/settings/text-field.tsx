@@ -1,3 +1,4 @@
+import { FieldMessage } from "../../components/field-message.tsx"
 import { Input } from "../../components/ui/input.tsx"
 
 interface TextFieldProps {
@@ -22,13 +23,9 @@ export const TextField = ({ name, label, type = "text", defaultValue, error }: T
         defaultValue={defaultValue}
         autoComplete="off"
         aria-invalid={error !== undefined}
-        aria-describedby={error === undefined ? undefined : errorId}
+        aria-describedby={errorId}
       />
-      {error === undefined ? null : (
-        <p id={errorId} className="text-sm text-destructive">
-          {error}
-        </p>
-      )}
+      <FieldMessage id={errorId}>{error}</FieldMessage>
     </div>
   )
 }

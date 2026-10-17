@@ -21,7 +21,7 @@ export const DuplicatePrompt = ({ duplicate, name, household }: DuplicatePromptP
   }
   return (
     <div role="alert" className="flex flex-col gap-3">
-      <p className="text-base">{duplicateMessage(name, duplicate.current, household)}</p>
+      <p className="text-base break-words">{duplicateMessage(name, duplicate.current, household)}</p>
       <Button size="lg" onClick={recordAnyway}>
         Record another dose
       </Button>

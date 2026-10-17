@@ -61,7 +61,7 @@ export const DayView = ({ day, me, now, hidden, asList }: DayViewProps) => {
         <DayGrid model={model} display={display} now={now} onOpen={open} />
       )}
       {detailsLeftFromAnotherDay ? null : (
-        <DetailsSheet entries={entriesIn(model, shown ?? [])} display={display} now={now} />
+        <DetailsSheet entries={entriesIn(model, shown ?? [])} display={display} now={now} day={model.date} />
       )}
       <LogAtSheet zone={display.timeZone} />
     </div>

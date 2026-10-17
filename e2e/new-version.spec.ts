@@ -77,6 +77,7 @@ test("checks for a new version when the app comes back, and Open it now opens it
   await leaveAndComeBack(page)
   await expect(page.getByText(NEWER)).toBeVisible({ timeout: SAVING_TAKES_MS })
   const reloaded = page.waitForEvent("load")
+  await expect(page.getByRole("button", { name: "Open it now" })).toHaveAccessibleName("Open it now, the newer version")
   await page.getByRole("button", { name: "Open it now" }).click()
   await reloaded
   await expect(page.getByText(SAVED)).toBeVisible()

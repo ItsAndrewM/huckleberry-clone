@@ -1,5 +1,6 @@
 import type { LocalDate, VolumeUnit } from "@bt/contracts"
 import { Link } from "@tanstack/react-router"
+import { ShowAsTable } from "../../components/show-as-table.tsx"
 import { Parts } from "../today/parts.tsx"
 import { historySearchOf } from "./history-link.ts"
 import { TRENDS_METRICS } from "./metrics.ts"
@@ -13,10 +14,7 @@ interface TrendsTableProps {
 }
 
 export const TrendsTable = ({ days, volume, today }: TrendsTableProps) => (
-  <details>
-    <summary className="flex min-h-11 cursor-pointer items-center text-sm font-medium text-primary">
-      Show as a table
-    </summary>
+  <ShowAsTable>
     <table className="w-full text-left text-sm tabular-nums">
       <caption className="sr-only">Each day's totals, oldest first</caption>
       <thead className="text-muted-foreground">
@@ -59,5 +57,5 @@ export const TrendsTable = ({ days, volume, today }: TrendsTableProps) => (
         ))}
       </tbody>
     </table>
-  </details>
+  </ShowAsTable>
 )

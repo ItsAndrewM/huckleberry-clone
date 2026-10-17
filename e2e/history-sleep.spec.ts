@@ -40,7 +40,7 @@ test("draws each sleep in its own column beside the hours, the feeds it overlaps
 }) => {
   await playSleptDay(page)
   await openHistory(page)
-  const night = await boxOf(page, /^Night at 8:30\sPM/u)
+  const night = await boxOf(page, /^Night at Thu 8:30\sPM/u)
   const feed = await boxOf(page, /^Nursing at 1:05\sAM/u)
   expect(night.x + night.width).toBeLessThanOrEqual(feed.x)
   expect(feed.width).toBeGreaterThan(120)
@@ -103,7 +103,7 @@ test("keeps a 10-hour night's length whole, and a 25-minute nap's name clear of 
   ])
   await openHistory(page)
   const length = grid(page)
-    .getByRole("button", { name: /^Night at 7:30\sPM/u })
+    .getByRole("button", { name: /^Night at Thu 7:30\sPM/u })
     .getByText("10h30", { exact: true })
   await expect(length).toBeVisible()
   const { needs, has } = await length.evaluate((element) => ({ needs: element.scrollWidth, has: element.clientWidth }))

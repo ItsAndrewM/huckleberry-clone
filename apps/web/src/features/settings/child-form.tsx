@@ -1,5 +1,5 @@
 import type { Child } from "@bt/contracts"
-import { type FormEvent, useState } from "react"
+import type { FormEvent, RefCallback } from "react"
 import type { SaveChild } from "../../api/hooks.ts"
 import { Button } from "../../components/ui/button.tsx"
 import { childFieldsOf } from "./child-fields.ts"
@@ -12,22 +12,24 @@ import { TextField } from "./text-field.tsx"
 interface ChildFormProps {
   readonly child: Child
   readonly save: SaveChild
+  readonly saveRef: RefCallback<HTMLElement>
+  readonly edited: boolean
+  readonly saved: boolean
+  readonly onEdit: () => void
 }
 
-export const ChildForm = ({ child, save }: ChildFormProps) => {
-  const [edited, setEdited] = useState(false)
+export const ChildForm = ({ child, save, saveRef, edited, saved, onEdit }: ChildFormProps) => {
   const submit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     save.mutate({ child, fields: childFieldsOf(new FormData(event.currentTarget)) })
   }
-  const saved = !edited && save.data?.child.version === child.version
   const failure = save.variables?.child.version === child.version ? save.error : null
   return (
     <form
       noValidate
       data-unsaved={edited || undefined}
       className="flex flex-col gap-4"
-      onChange={() => setEdited(true)}
+      onChange={onEdit}
       onSubmit={submit}
     >
       <TextField name="name" label="Name" defaultValue={child.name} error={fieldMessage(failure, "name")} />
@@ -44,10 +46,14 @@ export const ChildForm = ({ child, save }: ChildFormProps) => {
         error={fieldMessage(failure, "gestationalAgeDays")}
       />
       <div className="flex items-center gap-3">
-        <Button type="submit" size="lg" disabled={!edited || save.isPending}>
+        <Button ref={saveRef} type="submit" size="lg" disabled={!edited || save.isPending} focusableWhenDisabled>
           {save.isPending ? "Saving…" : "Save"}
         </Button>
-        {saved ? <output className="text-sm text-muted-foreground">Saved</output> : null}
+        {saved ? (
+          <span aria-hidden="true" className="text-sm text-muted-foreground">
+            Saved
+          </span>
+        ) : null}
       </div>
       <SaveFailure error={failure} />
     </form>

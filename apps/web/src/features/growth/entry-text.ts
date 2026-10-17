@@ -1,3 +1,4 @@
+import { NUMBER_MESSAGES } from "../../number-messages.ts"
 import type { EntryUnit, LengthUnit, Reading, WeightUnit } from "./entry.ts"
 
 export interface UnitChoice<Unit extends EntryUnit> {
@@ -18,12 +19,5 @@ export const LENGTH_UNITS = [
 
 export const entryMessage = (reading: Reading) => {
   if (reading.kind !== "invalid") return null
-  switch (reading.issue) {
-    case "not_a_number":
-      return "Enter a number."
-    case "ounces":
-      return "Ounces go up to 15.9."
-    case "out_of_range":
-      return "Out of range. Check the number and its unit."
-  }
+  return reading.issue === "ounces" ? "Ounces go up to 15.9." : NUMBER_MESSAGES[reading.issue]
 }

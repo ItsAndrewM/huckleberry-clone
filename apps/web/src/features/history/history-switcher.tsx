@@ -1,8 +1,9 @@
 import type { LocalDate } from "@bt/contracts"
 import { Link, useNavigate } from "@tanstack/react-router"
 import { ChevronLeftIcon, ChevronRightIcon, type LucideIcon } from "lucide-react"
-import { useState } from "react"
+import { useRef, useState } from "react"
 import { buttonVariants } from "../../components/ui/button.tsx"
+import { usePublishedHeight } from "../../shell/use-published-height.ts"
 import { GoToDate } from "./go-to-date.tsx"
 import type { HistorySearch } from "./history-date.ts"
 import { type Hidden, hiddenNotice } from "./history-kinds.ts"
@@ -49,21 +50,33 @@ export const HistorySwitcher = ({ navigation, today, birthDate, hidden }: Histor
   const { period, isCurrent } = navigation
   const key = periodKey(period)
   const [changingFor, setChangingFor] = useState<string | null>(null)
+  const change = useRef<HTMLButtonElement>(null)
+  const publishHeight = usePublishedHeight("switcher-height")
   if (changingFor !== null && changingFor !== key) setChangingFor(null)
   const changing = changingFor === key
   const notice = hiddenNotice(hidden)
   const noun = unitOf(period.view)
-  const goTo = (date: LocalDate) => {
+  const close = () => {
+    change.current?.focus()
     setChangingFor(null)
+  }
+  const goTo = (date: LocalDate) => {
+    close()
     const search = searchFor(periodOf(period.view, date), today, hidden)
     void navigate({ to: "/history", search, resetScroll: opensAtTop(search) })
   }
   return (
-    <div className="sticky top-[env(safe-area-inset-top)] z-[5] -mx-4 -mt-3 flex flex-col bg-background px-4 pb-1">
+    <div
+      ref={publishHeight}
+      data-sticky-switcher
+      className="sticky top-[calc(env(safe-area-inset-top)+var(--banner-height,0px))] z-[5] -mx-4 -mt-3 flex flex-col bg-background px-4 pb-1"
+    >
       <nav aria-label={NAMES[noun]} className="flex items-center justify-between gap-2">
         <Step search={navigation.previous} label={`Previous ${noun}`} Icon={ChevronLeftIcon} />
         <div className="flex min-h-11 flex-col items-center justify-center">
-          <h2 className="text-lg font-semibold tabular-nums">{periodTitle(period)}</h2>
+          <h2 aria-live="polite" className="text-lg font-semibold tabular-nums">
+            {periodTitle(period)}
+          </h2>
           <div className="flex items-center gap-2 text-xs">
             {isCurrent ? (
               <p className="text-muted-foreground">{currentLabel(period.view)}</p>
@@ -82,7 +95,9 @@ export const HistorySwitcher = ({ navigation, today, birthDate, hidden }: Histor
               ·
             </span>
             <button
+              ref={change}
               type="button"
+              aria-label={`Change ${noun}`}
               aria-expanded={changing}
               onClick={() => setChangingFor(changing ? null : key)}
               className={LINK_TEXT}
@@ -97,7 +112,13 @@ export const HistorySwitcher = ({ navigation, today, birthDate, hidden }: Histor
         <p className="pointer-events-none text-center text-xs text-muted-foreground">{notice}</p>
       )}
       {changing ? (
-        <GoToDate shown={goToOpensOn(period, birthDate)} earliest={birthDate} latest={today} onPick={goTo} />
+        <GoToDate
+          shown={goToOpensOn(period, birthDate)}
+          earliest={birthDate}
+          latest={today}
+          onPick={goTo}
+          onClose={close}
+        />
       ) : null}
     </div>
   )

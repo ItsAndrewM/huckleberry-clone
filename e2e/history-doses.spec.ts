@@ -69,7 +69,7 @@ test("shows a dose on the Week view in its own lane, named in its day's link and
   const { day } = await playDosedDay(page)
   await playWeeks(page, { [THIS_WEEK]: weekOf(THIS_WEEK, [day]) })
   await openHistory(page, "?view=week")
-  await expect(weekGrid(page).getByRole("link", { name: "Fri, Oct 9: a dose" })).toBeVisible()
+  await expect(weekGrid(page).getByRole("link", { name: "Fri, Oct 9, today: a dose" })).toBeVisible()
   await expect(page.getByText("Dose", { exact: true })).toBeVisible()
 })
 
